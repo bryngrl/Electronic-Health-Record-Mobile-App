@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.user import User
-from app.core.security import verify_password, create_access_token
+from app.core.security import verify_password, create_access_token, hash_password
 
 
 # Logic checker for login
@@ -29,3 +29,21 @@ def authenticate_user(db: Session, email: str, password: str):
         "role": user.role,
         "full_name": user.full_name
     }
+
+# Nurse or Doctor creation
+def create_user(db: Session, full_name: str, email: str, password: str, role: str):
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        return None  # User already exists
+    hashed_password = hash_password(password)
+    user = User(
+        full_name=full_name,
+        email=email,
+        password=hashed_password,
+        role=role,
+        is_active=True
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
