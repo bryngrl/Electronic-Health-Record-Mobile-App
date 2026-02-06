@@ -6,12 +6,10 @@ from app.database.base import Base
 from app.models.user import User
 from app.models.patient import Patient
 from app.models.physical_exam.physical_exam import PhysicalExam
-from app.models.nursing_diagnosis import NursingDiagnosis
 
 # Router imports
 from app.routers import auth, patient
 from app.routers.physical_exam import physical_exam as pe_router
-from app.routers.physical_exam import nursing_diagnosis as nd_router
 
 app = FastAPI(title="EHR Backend API")
 
@@ -19,9 +17,8 @@ app = FastAPI(title="EHR Backend API")
 app.include_router(auth.router)
 app.include_router(patient.router)
 
-# Physical Exam + DPIE
+# Physical Exam (with ADPIE)
 app.include_router(pe_router.router)
-app.include_router(nd_router.router)
 
 Base.metadata.create_all(bind=engine)
 

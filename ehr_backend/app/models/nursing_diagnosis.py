@@ -10,7 +10,7 @@ class NursingDiagnosis(Base):
     id = Column(BIGINT(unsigned=True), primary_key=True, autoincrement=True)
     patient_id = Column(String(255), nullable=True)
 
-    # Foreign keys to each component
+    # Foreign keys to each component (nullable — only one is set per record)
     physical_exam_id = Column(BIGINT(unsigned=True), ForeignKey("physical_exams.id", ondelete="CASCADE"), nullable=True)
     intake_and_output_id = Column(BIGINT, nullable=True)
     vital_signs_id = Column(BIGINT, nullable=True)

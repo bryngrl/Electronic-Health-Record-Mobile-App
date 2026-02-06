@@ -11,13 +11,18 @@ from app.core.cdss_engine import CDSSEngine
 
 router = APIRouter(prefix="/physical-exam", tags=["Physical Exam"])
 
-# Initialize the CDSS engine for physical exam assessment
+# Initialize the CDSS engines
 assessment_engine = CDSSEngine("cdss_rules/physical_exam/assessment.yaml")
+diagnosis_engine = CDSSEngine("cdss_rules/dpie/diagnosis.yaml")
+planning_engine = CDSSEngine("cdss_rules/dpie/planning.yaml")
+intervention_engine = CDSSEngine("cdss_rules/dpie/intervention.yaml")
+evaluation_engine = CDSSEngine("cdss_rules/dpie/evaluation.yaml")
 
 
 # ──────────────── Pydantic Schemas ────────────────
 
-class PhysicalExamCreate(BaseModel):
+class AssessmentCreate(BaseModel):
+    """Step 1: Create Physical Exam (Assessment)"""
     patient_id: int
     general_appearance: Optional[str] = None
     skin_condition: Optional[str] = None
@@ -31,7 +36,8 @@ class PhysicalExamCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class PhysicalExamUpdate(BaseModel):
+class AssessmentUpdate(BaseModel):
+    """Update Assessment fields"""
     general_appearance: Optional[str] = None
     skin_condition: Optional[str] = None
     eye_condition: Optional[str] = None
@@ -40,13 +46,43 @@ class PhysicalExamUpdate(BaseModel):
     abdomen_condition: Optional[str] = None
     extremities: Optional[str] = None
     neurological: Optional[str] = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class DiagnosisUpdate(BaseModel):
+    """Step 2: Add Diagnosis"""
+    diagnosis: str
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class PlanningUpdate(BaseModel):
+    """Step 3: Add Planning"""
+    planning: str
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class InterventionUpdate(BaseModel):
+    """Step 4: Add Intervention"""
+    intervention: str
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class EvaluationUpdate(BaseModel):
+    """Step 5: Add Evaluation"""
+    evaluation: str
 
     model_config = ConfigDict(extra="forbid")
 
 
 class PhysicalExamRead(BaseModel):
+    """Complete ADPIE record"""
     id: int
     patient_id: int
+    # Assessment
     general_appearance: Optional[str] = None
     skin_condition: Optional[str] = None
     eye_condition: Optional[str] = None
@@ -63,6 +99,19 @@ class PhysicalExamRead(BaseModel):
     abdomen_alert: Optional[str] = None
     extremities_alert: Optional[str] = None
     neurological_alert: Optional[str] = None
+    # Diagnosis
+    diagnosis: Optional[str] = None
+    diagnosis_alert: Optional[str] = None
+    # Planning
+    planning: Optional[str] = None
+    planning_alert: Optional[str] = None
+    # Intervention
+    intervention: Optional[str] = None
+    intervention_alert: Optional[str] = None
+    # Evaluation
+    evaluation: Optional[str] = None
+    evaluation_alert: Optional[str] = None
+    # Metadata
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -71,8 +120,8 @@ class PhysicalExamRead(BaseModel):
 
 # ──────────────── Helper ────────────────
 
-def _run_cdss(data: dict) -> dict:
-    """Run the CDSS engine on the nurse's input fields and return alert values."""
+def _run_assessment_cdss(data: dict) -> dict:
+    """Run CDSS on assessment fields and return alert values."""
     input_fields = {
         "general_appearance": data.get("general_appearance"),
         "skin_condition": data.get("skin_condition"),
@@ -86,11 +135,11 @@ def _run_cdss(data: dict) -> dict:
     return assessment_engine.evaluate(input_fields)
 
 
-# ──────────────── Endpoints ────────────────
+# ──────────────── STEP 1: ASSESSMENT ────────────────
 
 @router.post("/", response_model=PhysicalExamRead)
-def create_physical_exam(payload: PhysicalExamCreate, db: Session = Depends(get_db)):
-    """Create a physical exam record. CDSS alerts are auto-generated."""
+def create_physical_exam(payload: AssessmentCreate, db: Session = Depends(get_db)):
+    """Step 1: Create Physical Exam (Assessment). CDSS alerts are auto-generated."""
     # Verify patient exists
     patient = db.query(Patient).filter(Patient.patient_id == payload.patient_id).first()
     if not patient:
@@ -99,7 +148,7 @@ def create_physical_exam(payload: PhysicalExamCreate, db: Session = Depends(get_
     data = payload.model_dump()
 
     # Run CDSS to generate alerts
-    alerts = _run_cdss(data)
+    alerts = _run_assessment_cdss(data)
 
     # Build the record
     now = datetime.utcnow()
@@ -116,6 +165,114 @@ def create_physical_exam(payload: PhysicalExamCreate, db: Session = Depends(get_
     return record
 
 
+@router.put("/{exam_id}/assessment", response_model=PhysicalExamRead)
+def update_assessment(exam_id: int, payload: AssessmentUpdate, db: Session = Depends(get_db)):
+    """Update Assessment fields. CDSS alerts are re-generated."""
+    record = db.query(PhysicalExam).filter(PhysicalExam.id == exam_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Physical exam not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+
+    # Apply updates
+    for key, value in update_data.items():
+        setattr(record, key, value)
+
+    # Re-run CDSS with latest values
+    current_data = {
+        "general_appearance": record.general_appearance,
+        "skin_condition": record.skin_condition,
+        "eye_condition": record.eye_condition,
+        "oral_condition": record.oral_condition,
+        "cardiovascular": record.cardiovascular,
+        "abdomen_condition": record.abdomen_condition,
+        "extremities": record.extremities,
+        "neurological": record.neurological,
+    }
+    alerts = _run_assessment_cdss(current_data)
+    for key, value in alerts.items():
+        setattr(record, key, value)
+
+    record.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+# ──────────────── STEP 2: DIAGNOSIS ────────────────
+
+@router.put("/{exam_id}/diagnosis", response_model=PhysicalExamRead)
+def add_diagnosis(exam_id: int, payload: DiagnosisUpdate, db: Session = Depends(get_db)):
+    """Step 2: Add Diagnosis. CDSS alert is auto-generated."""
+    record = db.query(PhysicalExam).filter(PhysicalExam.id == exam_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Physical exam not found")
+
+    record.diagnosis = payload.diagnosis
+    record.diagnosis_alert = diagnosis_engine.evaluate_single(payload.diagnosis) or None
+    record.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+# ──────────────── STEP 3: PLANNING ────────────────
+
+@router.put("/{exam_id}/planning", response_model=PhysicalExamRead)
+def add_planning(exam_id: int, payload: PlanningUpdate, db: Session = Depends(get_db)):
+    """Step 3: Add Planning. CDSS alert is auto-generated."""
+    record = db.query(PhysicalExam).filter(PhysicalExam.id == exam_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Physical exam not found")
+
+    record.planning = payload.planning
+    record.planning_alert = planning_engine.evaluate_single(payload.planning) or None
+    record.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+# ──────────────── STEP 4: INTERVENTION ────────────────
+
+@router.put("/{exam_id}/intervention", response_model=PhysicalExamRead)
+def add_intervention(exam_id: int, payload: InterventionUpdate, db: Session = Depends(get_db)):
+    """Step 4: Add Intervention. CDSS alert is auto-generated."""
+    record = db.query(PhysicalExam).filter(PhysicalExam.id == exam_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Physical exam not found")
+
+    record.intervention = payload.intervention
+    record.intervention_alert = intervention_engine.evaluate_single(payload.intervention) or None
+    record.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+# ──────────────── STEP 5: EVALUATION ────────────────
+
+@router.put("/{exam_id}/evaluation", response_model=PhysicalExamRead)
+def add_evaluation(exam_id: int, payload: EvaluationUpdate, db: Session = Depends(get_db)):
+    """Step 5: Add Evaluation. CDSS alert is auto-generated."""
+    record = db.query(PhysicalExam).filter(PhysicalExam.id == exam_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Physical exam not found")
+
+    record.evaluation = payload.evaluation
+    record.evaluation_alert = evaluation_engine.evaluate_single(payload.evaluation) or None
+    record.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+# ──────────────── READ ENDPOINTS ────────────────
+
 @router.get("/patient/{patient_id}", response_model=List[PhysicalExamRead])
 def list_physical_exams_by_patient(patient_id: int, db: Session = Depends(get_db)):
     """Get all physical exam records for a patient."""
@@ -130,44 +287,10 @@ def list_physical_exams_by_patient(patient_id: int, db: Session = Depends(get_db
 
 @router.get("/{exam_id}", response_model=PhysicalExamRead)
 def get_physical_exam(exam_id: int, db: Session = Depends(get_db)):
-    """Get a single physical exam record by ID."""
+    """Get a single physical exam record (complete ADPIE) by ID."""
     record = db.query(PhysicalExam).filter(PhysicalExam.id == exam_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Physical exam not found")
-    return record
-
-
-@router.put("/{exam_id}", response_model=PhysicalExamRead)
-def update_physical_exam(exam_id: int, payload: PhysicalExamUpdate, db: Session = Depends(get_db)):
-    """Update a physical exam record. CDSS alerts are re-generated."""
-    record = db.query(PhysicalExam).filter(PhysicalExam.id == exam_id).first()
-    if not record:
-        raise HTTPException(status_code=404, detail="Physical exam not found")
-
-    update_data = payload.model_dump(exclude_unset=True)
-
-    # Apply nurse input updates
-    for key, value in update_data.items():
-        setattr(record, key, value)
-
-    # Re-run CDSS with the latest field values
-    current_data = {
-        "general_appearance": record.general_appearance,
-        "skin_condition": record.skin_condition,
-        "eye_condition": record.eye_condition,
-        "oral_condition": record.oral_condition,
-        "cardiovascular": record.cardiovascular,
-        "abdomen_condition": record.abdomen_condition,
-        "extremities": record.extremities,
-        "neurological": record.neurological,
-    }
-    alerts = _run_cdss(current_data)
-    for key, value in alerts.items():
-        setattr(record, key, value)
-
-    record.updated_at = datetime.utcnow()
-    db.commit()
-    db.refresh(record)
     return record
 
 
@@ -180,3 +303,67 @@ def delete_physical_exam(exam_id: int, db: Session = Depends(get_db)):
     db.delete(record)
     db.commit()
     return {"detail": "Physical exam deleted"}
+
+
+# ──────────────── EXTRACT & PRINT ────────────────
+
+@router.get("/{exam_id}/extract-adpie")
+def extract_adpie(exam_id: int, db: Session = Depends(get_db)):
+    """
+    Extract complete ADPIE record and return formatted output.
+    Nurse can use this to view/print the full physical exam workflow.
+    """
+    record = db.query(PhysicalExam).filter(PhysicalExam.id == exam_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Physical exam not found")
+
+    # Get patient info
+    patient = db.query(Patient).filter(Patient.patient_id == record.patient_id).first()
+
+    return {
+        "patient": {
+            "id": patient.patient_id,
+            "name": f"{patient.first_name} {patient.last_name}",
+            "age": patient.age,
+            "admission_date": patient.admission_date,
+        },
+        "physical_exam_id": record.id,
+        "adpie": {
+            "assessment": {
+                "general_appearance": record.general_appearance,
+                "general_appearance_alert": record.general_appearance_alert,
+                "skin_condition": record.skin_condition,
+                "skin_alert": record.skin_alert,
+                "eye_condition": record.eye_condition,
+                "eye_alert": record.eye_alert,
+                "oral_condition": record.oral_condition,
+                "oral_alert": record.oral_alert,
+                "cardiovascular": record.cardiovascular,
+                "cardiovascular_alert": record.cardiovascular_alert,
+                "abdomen_condition": record.abdomen_condition,
+                "abdomen_alert": record.abdomen_alert,
+                "extremities": record.extremities,
+                "extremities_alert": record.extremities_alert,
+                "neurological": record.neurological,
+                "neurological_alert": record.neurological_alert,
+            },
+            "diagnosis": {
+                "input": record.diagnosis,
+                "alert": record.diagnosis_alert,
+            },
+            "planning": {
+                "input": record.planning,
+                "alert": record.planning_alert,
+            },
+            "intervention": {
+                "input": record.intervention,
+                "alert": record.intervention_alert,
+            },
+            "evaluation": {
+                "input": record.evaluation,
+                "alert": record.evaluation_alert,
+            },
+        },
+        "created_at": record.created_at,
+        "updated_at": record.updated_at,
+    }
