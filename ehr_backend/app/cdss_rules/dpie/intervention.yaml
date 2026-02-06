@@ -1,0 +1,35 @@
+# The evaluation rules for all across the components
+rules:
+  - keywords: ["educate", "education", "teaching"]
+    severity: info
+    alert: "Include 'teach-back' method to confirm understanding."
+  - keywords: ["antipyretic", "medication"]
+    severity: info
+    alert: "Administer antipyretic medications as ordered and monitor effectiveness."
+  - keywords: ["fluid bolus", "IV fluids"]
+    severity: warning
+    alert: "Administer IV fluids as ordered. Monitor intake/output and assess for fluid overload."
+  - keywords: ["repositioning", "turning", "position"]
+    severity: info
+    alert: "Reposition patient every 2 hours. Document position changes and skin assessment."
+  - keywords: ["suction", "suctioning"]
+    severity: info
+    alert: "Perform suctioning as needed. Assess respiratory status before and after. Limit suction attempts."
+  - keywords: ["oxygen", "O2"]
+    severity: info
+    alert: "Administer supplemental oxygen as ordered. Monitor SpO2 and titrate to maintain target range."
+  - keywords: ["dressing change", "wound care"]
+    severity: info
+    alert: "Perform dressing change using sterile technique. Document wound assessment findings."
+  - keywords: ["pain medication", "analgesic"]
+    severity: info
+    alert: "Administer pain medication as ordered. Reassess pain level 30 minutes after administration."
+  - keywords: ["insomnia", "sleep"]
+    severity: info
+    alert: "Provide a quiet environment. Cluster care to minimize interruptions. Offer a warm beverage before sleep."
+  - keywords: ["nutrition", "dietary", "supplements"]
+    severity: info
+    alert: "Provide a diet rich in iron, vitamin B12, and folate. Administer nutritional supplements as ordered. Monitor dietary intake and tolerance."
+  - keywords: ["blood transfusion", "transfusion"]
+    severity: critical
+    alert: "Follow blood transfusion protocol. Verify patient ID, blood type, and crossmatch. Monitor for transfusion reactions."

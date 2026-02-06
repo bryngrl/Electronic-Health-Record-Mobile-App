@@ -1,0 +1,47 @@
+# The evaluation rules for all across the components
+rules:
+  - keywords: ["pain"]
+    severity: info
+    alert: "Recommend pain assessment (e.g., PQRST, 0-10 scale)."
+  - keywords: ["acute pain"]
+    severity: warning
+    alert: "Acute pain identified. Assess onset, location, duration, characteristics. Consider pharmacological and non-pharmacological interventions."
+  - keywords: ["chronic pain"]
+    severity: info
+    alert: "Chronic pain noted. Evaluate current pain management regimen. Consider multidisciplinary approach."
+  - keywords: ["infection", "risk for infection"]
+    severity: warning
+    alert: "Risk for infection identified. Monitor WBC, temperature, and signs of local/systemic infection. Ensure aseptic technique."
+  - keywords: ["fall", "risk for falls"]
+    severity: warning
+    alert: "Risk for falls related to impaired physical mobility."
+  - keywords: ["impaired mobility", "immobility"]
+    severity: info
+    alert: "Impaired physical mobility. Assess ROM, strength, and balance. Consider PT referral and fall precautions."
+  - keywords: ["impaired skin integrity", "skin breakdown"]
+    severity: warning
+    alert: "Impaired skin integrity. Perform Braden scale assessment. Implement turning schedule and pressure-relieving devices."
+  - keywords: ["ineffective airway", "airway clearance"]
+    severity: critical
+    alert: "Ineffective airway clearance. Assess respiratory rate, SpO2, and lung sounds. Position for optimal breathing and suction as needed."
+  - keywords: ["hyperthermia", "fever", "temperature"]
+    severity: warning
+    alert: "Risk for hyperthermia related to fever. Consider sepsis protocol if temperature > 38.5°C."
+  - keywords: ["oliguria"]
+    severity: warning
+    alert: "Oliguria noted. Monitor fluid balance closely. Assess for dehydration or renal impairment."
+  - keywords: ["edema", "fluid overload", "fluid volume excess"]
+    severity: warning
+    alert: "Fluid volume excess related to compromised regulatory mechanisms."
+  - keywords: ["anxiety"]
+    severity: info
+    alert: "Anxiety identified. Assess triggers and severity. Provide therapeutic communication and relaxation techniques."
+  - keywords: ["nutrition", "malnutrition", "imbalanced nutrition"]
+    severity: info
+    alert: "Imbalanced nutrition. Assess dietary intake, BMI, and lab values (albumin, prealbumin). Consider dietitian referral."
+  - keywords: ["leukopenia", "low wbc"]
+    severity: warning
+    alert: "Risk for Infection related to low white blood cell count."
+  - keywords: ["anemia", "low hemoglobin"]
+    severity: warning
+    alert: "Anemia identified. Monitor hemoglobin, hematocrit, and signs of tissue hypoxia. Assess for bleeding."

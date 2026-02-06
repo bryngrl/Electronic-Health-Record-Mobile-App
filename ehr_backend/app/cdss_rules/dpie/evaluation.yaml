@@ -1,0 +1,29 @@
+# The evaluation rules for all across the components
+rules:
+  - keywords: ["goal met", "met"]
+    severity: info
+    alert: "Excellent. Document the specific data that supports this (e.g., 'Goal met: Patient ambulated 100 feet with walker')."
+  - keywords: ["partially met"]
+    severity: info
+    alert: "Plan needs modification. Specify which parts were met and revise the plan for the parts that were not."
+  - keywords: ["not met", "unmet"]
+    severity: warning
+    alert: "Goal not met. Reassess the nursing diagnosis and plan. Identify barriers and modify interventions accordingly."
+  - keywords: ["normalized", "normal", "resolved"]
+    severity: info
+    alert: "Condition returned to normal range, continue monitoring for changes."
+  - keywords: ["worsened", "deteriorated", "declining"]
+    severity: critical
+    alert: "Patient condition has worsened. Reassess immediately. Consider escalation of care and notify physician."
+  - keywords: ["stable", "unchanged"]
+    severity: info
+    alert: "Patient condition stable. Continue current plan of care. Reassess at next scheduled interval."
+  - keywords: ["imbalanced nutrition", "nutrition"]
+    severity: info
+    alert: "Evaluate food intake. Assess patient's weight. Goal met if patient is consuming at least 75% of meals and weight is stable."
+  - keywords: ["risk for ineffective tissue perfusion", "tissue perfusion"]
+    severity: info
+    alert: "Evaluate skin color, temperature, and capillary refill. Review hemoglobin and hematocrit levels. Goal met if patient's skin is warm and dry, and H&H levels are stable or improving."
+  - keywords: ["temperature"]
+    severity: info
+    alert: "Temperature returned to normal range, continue monitoring for changes."

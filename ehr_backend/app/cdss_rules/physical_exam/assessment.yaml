@@ -1,0 +1,142 @@
+# Specific rules for the component name pshysical exam
+
+fields:
+  general_appearance:
+    alert_field: general_appearance_alert
+    rules:
+      - keywords: ["pale", "pallor"]
+        severity: warning
+        alert: "Abnormal Circulation (Pallor): Patient appears pale. Pallor can be an early sign of shock due to peripheral vasoconstriction or anemia. Assess perfusion status immediately."
+      - keywords: ["lethargic", "drowsy"]
+        severity: warning
+        alert: "Patient appears lethargic. Assess level of consciousness using GCS. Consider metabolic, neurological, or medication-related causes."
+      - keywords: ["diaphoretic", "sweating"]
+        severity: warning
+        alert: "Diaphoresis noted. May indicate pain, hypoglycemia, cardiac event, or autonomic dysfunction. Assess vitals and blood glucose."
+      - keywords: ["cyanotic", "cyanosis", "blue"]
+        severity: critical
+        alert: "Cyanosis detected. Indicates inadequate oxygenation. Check SpO2, administer oxygen as ordered, and assess respiratory status immediately."
+      - keywords: ["distressed", "agitated", "restless"]
+        severity: warning
+        alert: "Patient appears distressed/agitated. Assess for pain, anxiety, hypoxia, or delirium. Consider appropriate interventions."
+
+  skin_condition:
+    alert_field: skin_alert
+    rules:
+      - keywords: ["jaundice", "yellow", "icteric"]
+        severity: warning
+        alert: "Jaundice (yellowing of skin and sclera) indicates high bilirubin levels. Assess for liver disease or hemolysis."
+      - keywords: ["rash", "rashes"]
+        severity: info
+        alert: "Skin rash noted. Document distribution, type, and any associated symptoms. Consider allergic reaction or infection."
+      - keywords: ["edema", "swelling", "swollen"]
+        severity: warning
+        alert: "Edema observed. Assess for pitting vs non-pitting, location, and severity. Consider cardiac, renal, or hepatic causes."
+      - keywords: ["wound", "laceration", "ulcer"]
+        severity: info
+        alert: "Open wound/ulcer noted. Assess wound bed, drainage, and surrounding tissue. Ensure wound care protocol is followed."
+      - keywords: ["dry", "flaky", "cracked"]
+        severity: info
+        alert: "Dry/cracked skin noted. Assess hydration status and skin integrity. Apply moisturizer and monitor for breakdown."
+      - keywords: ["bruise", "ecchymosis", "bruising"]
+        severity: warning
+        alert: "Bruising noted. Assess for trauma history, coagulopathy, or medication side effects (anticoagulants)."
+
+  eye_condition:
+    alert_field: eye_alert
+    rules:
+      - keywords: ["blurry", "blurred"]
+        severity: warning
+        alert: "Strabismus (misalignment of the eyes) is common in young children but persistence after 4-6 months of age is abnormal. It can lead to amblyopia (lazy eye) if not corrected. Requires pediatric ophthalmology evaluation."
+      - keywords: ["red", "redness", "conjunctivitis"]
+        severity: info
+        alert: "Eye redness noted. Assess for conjunctivitis, allergic reaction, or trauma. Check for discharge and visual changes."
+      - keywords: ["unequal pupils", "anisocoria"]
+        severity: critical
+        alert: "Unequal pupils detected. May indicate neurological emergency (increased ICP, stroke, or brain herniation). Notify physician immediately."
+      - keywords: ["drooping", "ptosis"]
+        severity: warning
+        alert: "Eyelid ptosis noted. May indicate cranial nerve III palsy, myasthenia gravis, or Horner syndrome. Further neurological assessment needed."
+
+  oral_condition:
+    alert_field: oral_alert
+    rules:
+      - keywords: ["dry mouth", "xerostomia"]
+        severity: info
+        alert: "Dry mouth noted. Assess hydration status and medication side effects. Encourage oral hygiene and fluid intake."
+      - keywords: ["lesion", "ulcer", "sore"]
+        severity: info
+        alert: "Oral lesion noted. Document location, size, and appearance. Consider infectious, autoimmune, or nutritional causes."
+      - keywords: ["bleeding gums", "gum bleeding"]
+        severity: warning
+        alert: "Gum bleeding noted. Assess for coagulopathy, thrombocytopenia, or vitamin K deficiency. Review medications."
+      - keywords: ["thrush", "white patches", "candida"]
+        severity: info
+        alert: "Oral thrush suspected. Common in immunocompromised patients. Consider antifungal treatment."
+
+  cardiovascular:
+    alert_field: cardiovascular_alert
+    rules:
+      - keywords: ["murmur"]
+        severity: warning
+        alert: "Heart murmur detected. Grade the murmur and assess for associated symptoms. Consider echocardiogram referral."
+      - keywords: ["irregular", "arrhythmia", "palpitations"]
+        severity: warning
+        alert: "Irregular heart rhythm noted. Obtain 12-lead ECG. Monitor continuously and notify physician."
+      - keywords: ["chest pain", "angina"]
+        severity: critical
+        alert: "Chest pain reported. Activate chest pain protocol. Obtain 12-lead ECG, troponin levels, and notify physician immediately."
+      - keywords: ["tachycardia", "rapid heart"]
+        severity: warning
+        alert: "Tachycardia noted. Assess for pain, fever, dehydration, anxiety, or cardiac causes. Monitor continuously."
+
+  abdomen_condition:
+    alert_field: abdomen_alert
+    rules:
+      - keywords: ["distended", "distension", "bloated"]
+        severity: warning
+        alert: "Abdominal distension noted. Assess for bowel obstruction, ascites, or ileus. Auscultate bowel sounds and monitor."
+      - keywords: ["tender", "tenderness", "pain"]
+        severity: info
+        alert: "Abdominal tenderness noted. Document location and severity. Assess for guarding, rebound tenderness, and associated symptoms."
+      - keywords: ["rigid", "guarding"]
+        severity: critical
+        alert: "Abdominal rigidity/guarding detected. May indicate peritonitis or acute surgical abdomen. Notify physician immediately."
+      - keywords: ["absent bowel sounds", "no bowel sounds"]
+        severity: critical
+        alert: "Absent bowel sounds. May indicate paralytic ileus or bowel obstruction. Keep NPO, notify physician, and prepare for imaging."
+
+  extremities:
+    alert_field: extremities_alert
+    rules:
+      - keywords: ["edema", "swelling", "swollen"]
+        severity: warning
+        alert: "Extremity edema noted. Assess for DVT risk, cardiac failure, or venous insufficiency. Measure and document circumference."
+      - keywords: ["weak pulse", "diminished pulse"]
+        severity: warning
+        alert: "Diminished peripheral pulse. Assess for peripheral arterial disease or compartment syndrome. Check capillary refill."
+      - keywords: ["numbness", "tingling", "paresthesia"]
+        severity: warning
+        alert: "Numbness/tingling reported. Assess neurovascular status. Consider nerve compression, diabetes, or vascular insufficiency."
+      - keywords: ["contracture", "limited ROM"]
+        severity: info
+        alert: "Limited range of motion noted. Assess for joint disease, post-surgical changes, or prolonged immobility. Consider PT referral."
+
+  neurological:
+    alert_field: neurological_alert
+    rules:
+      - keywords: ["confused", "disoriented", "confusion"]
+        severity: warning
+        alert: "Confusion/disorientation noted. Perform full neurological assessment. Consider delirium, metabolic causes, or medication effects."
+      - keywords: ["seizure", "convulsion"]
+        severity: critical
+        alert: "Seizure activity reported. Ensure safety, time the seizure, and administer anticonvulsants as ordered. Notify physician immediately."
+      - keywords: ["weakness", "paresis", "paralysis"]
+        severity: warning
+        alert: "Motor weakness noted. Assess for stroke (use FAST screening), spinal cord injury, or neuromuscular disease."
+      - keywords: ["slurred speech", "aphasia", "dysarthria"]
+        severity: critical
+        alert: "Speech impairment detected. Activate stroke protocol. Assess onset time and perform NIHSS scoring immediately."
+      - keywords: ["tremor", "shaking"]
+        severity: info
+        alert: "Tremor noted. Assess for Parkinson's disease, essential tremor, or medication side effects. Document characteristics."
