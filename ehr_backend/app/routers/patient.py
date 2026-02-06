@@ -4,29 +4,51 @@ from app.database.db import get_db
 from app.models.patient import Patient
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
-from datetime import datetime
+from datetime import date, datetime
 
 router = APIRouter(prefix="/patients", tags=["Patients"])
 
 class PatientCreate(BaseModel):
-    name: str
+    first_name: str
+    last_name: str
+    middle_name: Optional[str] = None
     age: int
+    birthdate: Optional[date] = None
     sex: str
-    address: str
-    birth_place: str
+    address: Optional[str] = None
+    birthplace: Optional[str] = None
     religion: Optional[str] = None
     ethnicity: Optional[str] = None
     chief_complaints: Optional[str] = None
-    admission_date: datetime
+    admission_date: date
     room_no: Optional[str] = None
     bed_no: Optional[str] = None
     contact_name: Optional[str] = None
     contact_relationship: Optional[str] = None
     contact_number: Optional[str] = None
+    user_id: int
     model_config = ConfigDict(extra="forbid")
 
-class PatientRead(PatientCreate):
+class PatientRead(BaseModel):
     patient_id: int
+    first_name: str
+    last_name: str
+    middle_name: Optional[str] = None
+    age: int
+    birthdate: Optional[date] = None
+    sex: str
+    address: Optional[str] = None
+    birthplace: Optional[str] = None
+    religion: Optional[str] = None
+    ethnicity: Optional[str] = None
+    chief_complaints: Optional[str] = None
+    admission_date: Optional[date] = None
+    room_no: Optional[str] = None
+    bed_no: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_relationship: Optional[str] = None
+    contact_number: Optional[str] = None
+    user_id: int
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)

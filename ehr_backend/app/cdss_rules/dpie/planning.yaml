@@ -1,0 +1,32 @@
+# The evaluation rules for all across the components
+rules:
+  - keywords: ["monitor intake", "fluid monitoring"]
+    severity: warning
+    alert: "Plan: Maintain fluid restriction as ordered, monitor for compliance."
+  - keywords: ["fever", "temperature", "monitoring"]
+    severity: info
+    alert: "Plan: Implement fever reduction protocol and continuous temperature monitoring."
+  - keywords: ["smart", "goal setting"]
+    severity: info
+    alert: "Ensure goals are Specific, Measurable, Achievable, Relevant, and Time-bound."
+  - keywords: ["fall prevention", "risk for falls"]
+    severity: info
+    alert: "Goal: Patient will remain free from falls. Outcome: Patient will demonstrate ability to use call bell for assistance."
+  - keywords: ["pain management", "pain control"]
+    severity: info
+    alert: "Plan: Implement multimodal pain management. Set goal for pain score < 4/10 within 1 hour of intervention."
+  - keywords: ["wound care", "dressing"]
+    severity: info
+    alert: "Plan: Follow wound care protocol. Document wound measurements and characteristics at each dressing change."
+  - keywords: ["activity intolerance", "activity"]
+    severity: info
+    alert: "Goal: Patient will demonstrate increased tolerance for activity. Outcome: Patient will report decreased fatigue during activity."
+  - keywords: ["limit intake", "fluid restriction"]
+    severity: warning
+    alert: "Plan: Maintain fluid restriction as ordered, monitor for compliance."
+  - keywords: ["discharge", "discharge planning"]
+    severity: info
+    alert: "Begin discharge planning. Assess patient/family readiness, home environment, and follow-up needs."
+  - keywords: ["education", "patient education", "teaching"]
+    severity: info
+    alert: "Include patient education in plan. Use teach-back method to confirm understanding."
