@@ -1,0 +1,68 @@
+fields:
+  temperature:
+    alert_field: temperature_alert
+    rules:
+      - keywords: ["38", "39", "40", "fever", "high temp"]
+        severity: warning
+        alert: "Fever detected (≥38°C). Assess for infection. Monitor vital signs, obtain cultures if indicated, and administer antipyretics as ordered."
+      - keywords: ["36", "35", "34", "hypothermia", "low temp", "cold"]
+        severity: warning
+        alert: "Hypothermia detected (<36°C). Assess for sepsis, medication effects, or environmental exposure. Initiate rewarming measures."
+      - keywords: ["37"]
+        severity: info
+        alert: "Temperature within normal range."
+
+  hr:
+    alert_field: hr_alert
+    rules:
+      - keywords: ["120", "130", "140", "150", "160", "tachycardia", "rapid", "fast"]
+        severity: warning
+        alert: "Tachycardia detected (HR >100 bpm). Assess for pain, anxiety, fever, dehydration, or cardiac causes. Monitor continuously."
+      - keywords: ["40", "45", "50", "55", "60", "bradycardia", "slow"]
+        severity: warning
+        alert: "Bradycardia detected (HR <60 bpm). May indicate athletic condition, medication effect, or cardiac issue. Assess symptoms and notify if symptomatic."
+      - keywords: ["irregular", "arrhythmia"]
+        severity: warning
+        alert: "Irregular heart rhythm detected. Obtain 12-lead ECG and continuous monitoring. Notify physician."
+
+  rr:
+    alert_field: rr_alert
+    rules:
+      - keywords: ["25", "26", "27", "28", "29", "30", "tachypnea", "rapid breathing"]
+        severity: warning
+        alert: "Tachypnea detected (RR >20 bpm). Assess for respiratory distress, metabolic acidosis, pain, or anxiety. Monitor oxygen saturation."
+      - keywords: ["8", "9", "10", "bradypnea", "slow breathing", "shallow"]
+        severity: critical
+        alert: "Severe Bradypnea detected (RR <12 bpm). Possible CNS depression, opioid overdose, or respiratory failure. Notify physician immediately."
+      - keywords: ["asd", "irregular"]
+        severity: critical
+        alert: "Severe Bradypnea (Possible CNS depression); Apply oxygen if SpO2 <95%, prepare for possible airway intervention."
+
+  bp:
+    alert_field: bp_alert
+    rules:
+      - keywords: ["140", "150", "160", "170", "180", "hypertension", "high", "elevated"]
+        severity: warning
+        alert: "Hypertension detected (≥140/90 mmHg). Assess for pain, anxiety, or chronic hypertension. Monitor closely and notify if >180/120."
+      - keywords: ["90", "85", "80", "70", "60", "hypotension", "low", "dropped"]
+        severity: critical
+        alert: "Hypotension detected (<90/60 mmHg). Assess for shock, dehydration, or medication effects. Check perfusion and notify physician immediately."
+      - keywords: ["120"]
+        severity: info
+        alert: "Blood pressure within normal range."
+
+  spo2:
+    alert_field: spo2_alert
+    rules:
+      - keywords: ["95", "96", "97", "98", "99", "100"]
+        severity: info
+        alert: "Oxygen saturation within normal range (≥95%)."
+      - keywords: ["90", "91", "92", "93", "94"]
+        severity: warning
+        alert: "Low SpO2 detected (90-94%). Apply supplemental oxygen as ordered and monitor closely."
+      - keywords: ["20", "30", "40", "50", "60", "70", "80", "85", "hypoxemia", "low O2"]
+        severity: critical
+        alert: "Severe Hypoxemia detected (SpO2 <90%). Apply oxygen immediately, assess respiratory status, notify physician urgently."
+      - keywords: ["asd"]
+        severity: critical
+        alert: "Severe Hypoxemia (Apply O₂, urgent eval); Low SpO2 with tachypnea — Possible respiratory distress."

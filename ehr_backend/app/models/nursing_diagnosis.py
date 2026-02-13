@@ -12,10 +12,10 @@ class NursingDiagnosis(Base):
 
     # Foreign keys to each component (nullable — only one is set per record)
     physical_exam_id = Column(BIGINT(unsigned=True), ForeignKey("physical_exams.id", ondelete="CASCADE"), nullable=True)
-    intake_and_output_id = Column(BIGINT, nullable=True)
-    vital_signs_id = Column(BIGINT, nullable=True)
-    adl_id = Column(BIGINT, nullable=True)
-    lab_values_id = Column(BIGINT, nullable=True)
+    intake_and_output_id = Column(BIGINT(unsigned=True), nullable=True)
+    vital_signs_id = Column(BIGINT(unsigned=True), nullable=True)
+    adl_id = Column(BIGINT(unsigned=True), nullable=True)
+    lab_values_id = Column(BIGINT(unsigned=True), nullable=True)
 
     # DPIE fields: nurse input + CDSS auto-generated alert
     diagnosis = Column(Text, nullable=False)
