@@ -20,12 +20,8 @@ class VitalSigns(Base):
     bp = Column(String(255), nullable=True)
     spo2 = Column(String(255), nullable=True)
 
-    # CDSS auto-generated alert fields
-    temperature_alert = Column(String(255), nullable=True)
-    hr_alert = Column(String(255), nullable=True)
-    rr_alert = Column(String(255), nullable=True)
-    bp_alert = Column(String(255), nullable=True)
-    spo2_alert = Column(String(255), nullable=True)
+    # CDSS auto-generated combined alert field (based on all 5 vital signs)
+    assessment_alert = Column(Text, nullable=True)
 
     # DPIE fields: nurse input + CDSS auto-generated alert
     diagnosis = Column(Text, nullable=True)

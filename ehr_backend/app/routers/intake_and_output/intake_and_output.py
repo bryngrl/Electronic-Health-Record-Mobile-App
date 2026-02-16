@@ -99,51 +99,79 @@ class IntakeAndOutputRead(BaseModel):
 # ──────────────── Helper ────────────────
 
 def _run_assessment_cdss(data: dict) -> dict:
-    """Run CDSS on all 3 assessment inputs and return combined alert."""
+    """
+    Run CDSS on all 3 assessment inputs using NUMERICAL COMPARISON.
+    Evaluates combined fluid intake vs output to determine hydration status.
+    """
     oral = data.get("oral_intake") or 0
     iv = data.get("iv_fluids") or 0
     urine = data.get("urine_output") or 0
     total_intake = oral + iv
     
-    # Determine severity and alert based on combination of inputs
-    alerts = {}
+    # Numerical comparison-based alert generation
+    alerts = []
+    severity = "info"
     
-    # Check for oliguria (critical)
-    if urine > 0 and urine < 400:
-        alerts["severity"] = "critical"
-        alerts["alert"] = f"⚠️ OLIGURIA: Urine output {urine}mL (< 400mL). Risk of acute kidney injury. Monitor vital signs and assess hydration status."
+    # CRITICAL: Oliguria (urine output <400 mL in 24hr, <200 mL in 8hr)
+    if 0 < urine < 400:
+        alerts.append(f"🔴 OLIGURIA ALERT: Urine output {urine}mL (<400mL). Risk of acute kidney injury (AKI).")
+        alerts.append("Monitor vital signs, assess fluid status, check BUN/Cr levels, consider catheterization for accurate I&O.")
+        severity = "critical"
     
-    # Check for dehydration (low intake + low output)
-    elif total_intake < 500 and urine < 800:
-        alerts["severity"] = "critical"
-        alerts["alert"] = f"⚠️ DEHYDRATION RISK: Total intake {total_intake}mL is low and urine output {urine}mL is decreased. Increase fluid intake and monitor closely."
+    # CRITICAL: Anuria (urine output near zero)
+    elif urine == 0:
+        alerts.append(f"🔴 ANURIA ALERT: No urine output detected. Risk of acute renal failure.")
+        alerts.append("Assess for urinary retention, check catheter patency, notify provider immediately.")
+        severity = "critical"
     
-    # Check for fluid overload (high intake + adequate output)
-    elif total_intake > 2000 and urine < 1500:
-        alerts["severity"] = "warning"
-        alerts["alert"] = f"⚠️ FLUID OVERLOAD RISK: High intake ({total_intake}mL) vs lower output ({urine}mL). Monitor for edema, dyspnea, and weight gain."
+    # CRITICAL: Severe dehydration (very low intake + very low output)
+    elif total_intake < 500 and urine < 500:
+        alerts.append(f"🔴 SEVERE DEHYDRATION: Intake {total_intake}mL is critically low, output {urine}mL also decreased.")
+        alerts.append("Risk of hypovolemic shock. Increase IV fluid rate, monitor vital signs continuously, assess mucous membranes/skin turgor.")
+        severity = "critical"
     
-    # Check for adequate hydration
-    elif 1000 <= total_intake <= 2000 and 800 <= urine <= 1500:
-        alerts["severity"] = "info"
-        alerts["alert"] = f"✓ Hydration status adequate: Intake {total_intake}mL, Output {urine}mL. Continue current regimen."
+    # WARNING: Moderate dehydration (low intake + low output)
+    elif total_intake < 800 and urine < 800:
+        alerts.append(f"🟠 DEHYDRATION WARNING: Low intake {total_intake}mL and low output {urine}mL.")
+        alerts.append("Monitor for dizziness, weakness. Increase fluid intake gradually, reassess in 2-4 hours.")
+        if severity != "critical": severity = "warning"
     
-    # Low intake but adequate output (may indicate dehydration or catch-up)
-    elif total_intake < 1000 and urine > 1000:
-        alerts["severity"] = "warning"
-        alerts["alert"] = f"⚠️ OUTPUT EXCEEDS INTAKE: Output {urine}mL exceeds intake {total_intake}mL. Increase fluid replacement."
+    # WARNING: Fluid overload (high intake + inadequate output)
+    elif total_intake > 2500 and urine < 1500:
+        alerts.append(f"🟠 FLUID OVERLOAD WARNING: High intake {total_intake}mL vs output {urine}mL.")
+        alerts.append("Monitor for edema, dyspnea, weight gain, pulmonary crackles. Consider fluid restriction, diuretics if indicated.")
+        if severity != "critical": severity = "warning"
     
-    # No data yet
+    # WARNING: Output significantly exceeds intake (potential dehydration or excessive losses)
+    elif total_intake > 0 and urine > (total_intake * 1.5):
+        alerts.append(f"🟠 OUTPUT EXCEEDS INTAKE: Output {urine}mL >> Intake {total_intake}mL.")
+        alerts.append("Fluid losses exceed replacement. Increase intake, assess for diuretics/laxatives, monitor for dehydration signs.")
+        if severity != "critical": severity = "warning"
+    
+    # INFO: Adequate hydration (balanced intake/output)
+    elif 1200 <= total_intake <= 2500 and 800 <= urine <= 1500:
+        alerts.append(f"✓ Hydration ADEQUATE: Intake {total_intake}mL, Output {urine}mL (balanced).")
+        alerts.append("Continue current fluid regimen. Maintain monitoring of I&O q4-8h.")
+        severity = "info"
+    
+    # INFO: Acceptable range (slightly low but within acceptable limits)
+    elif 800 <= total_intake <= 1200 and 500 <= urine <= 1000:
+        alerts.append(f"✓ Hydration ACCEPTABLE: Intake {total_intake}mL, Output {urine}mL (low-normal).")
+        alerts.append("Monitor closely. Encourage oral intake if patient is alert and able to drink.")
+        severity = "info"
+    
+    # INFO: No data yet
     elif total_intake == 0 and urine == 0:
-        alerts["severity"] = "info"
-        alerts["alert"] = "Awaiting intake and output data."
+        alerts.append("⚠️ Awaiting intake and output data for assessment.")
+        severity = "info"
     
     else:
-        alerts["severity"] = "info"
-        alerts["alert"] = f"Intake {total_intake}mL, Output {urine}mL. Continue monitoring."
+        alerts.append(f"Intake {total_intake}mL, Output {urine}mL. Continue monitoring I&O trends.")
+        severity = "info"
     
-    # Map to database field
-    return {"assessment_alert": f"[{alerts['severity'].upper()}] {alerts['alert']}"}
+    # Combine alerts into single string
+    combined_alert = " | ".join(alerts)
+    return {"assessment_alert": f"[{severity.upper()}] {combined_alert}"}
 
 
 # ──────────────── STEP 1: ASSESSMENT ────────────────
