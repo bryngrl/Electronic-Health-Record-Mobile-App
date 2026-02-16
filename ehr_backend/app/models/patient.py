@@ -32,3 +32,4 @@ class Patient(Base):
 
     # Relationships
     physical_exams = relationship("PhysicalExam", back_populates="patient")
+    intake_and_outputs = relationship("IntakeAndOutput", back_populates="patient")

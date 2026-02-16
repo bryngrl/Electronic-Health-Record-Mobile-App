@@ -8,11 +8,13 @@ from app.models.user import User
 from app.models.patient import Patient
 from app.models.physical_exam.physical_exam import PhysicalExam
 from app.models.vital_signs.vital_signs import VitalSigns
+from app.models.intake_and_output.intake_and_output import IntakeAndOutput
 
 # Router imports
 from app.routers import auth, patient
 from app.routers.physical_exam import physical_exam as pe_router
 from app.routers.vital_signs import vital_signs as vs_router
+from app.routers.intake_and_output import intake_and_output as iao_router
 
 app = FastAPI(title="EHR Backend API")
 
@@ -46,6 +48,9 @@ app.include_router(pe_router.router)
 
 # Vital Signs (with ADPIE)
 app.include_router(vs_router.router)
+
+# Intake and Output (with ADPIE)
+app.include_router(iao_router.router)
 
 Base.metadata.create_all(bind=engine)
 

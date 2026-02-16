@@ -1,0 +1,25 @@
+# Intake and Output Assessment CDSS Rules
+# Note: Assessment alerts for I&O are now COMBINED based on the relationship between
+# oral intake, IV fluids, and urine output (see router helper function).
+# This file is kept for reference and future enhancements.
+
+fields:
+  combined:
+    alert_field: assessment_alert
+    rules:
+      - keywords: ["oliguria", "<400"]
+        severity: critical
+        alert: "OLIGURIA: Urine output < 400mL. Risk of acute kidney injury."
+      
+      - keywords: ["dehydration", "low intake", "low output"]
+        severity: critical
+        alert: "DEHYDRATION RISK: Low total intake with decreased urine output."
+      
+      - keywords: ["fluid overload", "high intake"]
+        severity: warning
+        alert: "FLUID OVERLOAD RISK: High intake vs lower output. Monitor for edema."
+      
+      - keywords: ["adequate", "normal"]
+        severity: info
+        alert: "Hydration status adequate. Continue current regimen."
+
