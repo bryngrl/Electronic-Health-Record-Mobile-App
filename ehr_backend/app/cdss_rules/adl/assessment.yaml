@@ -1,0 +1,163 @@
+# Activities of Daily Living (ADL) Assessment CDSS Rules
+# Evaluates nurse input for ADL status and flags dependencies or concerns
+
+fields:
+  mobility:
+    alert_field: mobility_alert
+    rules:
+      - keywords: ["independent", "ambulates"]
+        severity: info
+        alert: "Patient is independent with mobility. Continue current level of activity."
+      - keywords: ["with assist", "assisted ambulation", "walker", "crutches"]
+        severity: info
+        alert: "Patient requires assistance with mobility. Provide appropriate assistive device and supervision."
+      - keywords: ["wheelchair", "wheelchair bound"]
+        severity: warning
+        alert: "Patient is wheelchair dependent. Ensure proper wheelchair maintenance and positioning. Assess fall risk."
+      - keywords: ["bed rest", "bedbound", "confined"]
+        severity: warning
+        alert: "Patient on bed rest. Implement DVT prophylaxis, repositioning every 2 hours, and skin care protocol."
+      - keywords: ["restricted", "limited"]
+        severity: warning
+        alert: "Patient has limited mobility. Assess reason and implement fall prevention measures."
+
+  hygiene:
+    alert_field: hygiene_alert
+    rules:
+      - keywords: ["independent", "self-care"]
+        severity: info
+        alert: "Patient is independent with hygiene. Continue current regimen."
+      - keywords: ["needs assist", "assist with", "partial assist"]
+        severity: info
+        alert: "Patient requires assistance with hygiene. Assist with bathing, grooming, and oral care as needed."
+      - keywords: ["dependent", "total care"]
+        severity: warning
+        alert: "Patient is dependent for hygiene care. Provide total assistance with bathing, grooming, and skin care. Monitor for pressure injuries."
+      - keywords: ["bed bath", "sponge bath"]
+        severity: info
+        alert: "Patient receiving bed baths. Ensure warm water, privacy, and gentle handling."
+      - keywords: ["cannot bathe", "unable"]
+        severity: warning
+        alert: "Patient unable to bathe independently. Provide safe, supervised hygiene care daily."
+
+  toileting:
+    alert_field: toileting_alert
+    rules:
+      - keywords: ["independent", "self-care"]
+        severity: info
+        alert: "Patient is independent with toileting. Continue current regimen."
+      - keywords: ["needs assist", "assist to bathroom", "partial assist"]
+        severity: info
+        alert: "Patient requires assistance with toileting. Assist to bathroom and provide privacy."
+      - keywords: ["dependent", "total assist"]
+        severity: warning
+        alert: "Patient is dependent for toileting. Provide bedpan/urinal or assist to bathroom every 2-4 hours."
+      - keywords: ["incontinent", "continent precautions"]
+        severity: warning
+        alert: "Patient is incontinent. Implement incontinence care plan: frequent checks, skin protection, and catheterization if appropriate."
+      - keywords: ["catheter", "foley", "indwelling catheter"]
+        severity: info
+        alert: "Patient has indwelling catheter. Monitor output, maintain sterile technique, assess for infection signs."
+      - keywords: ["constipation", "no BM"]
+        severity: warning
+        alert: "Patient experiencing constipation. Assess last BM, fluid intake, and mobility. Consider stool softener or laxative."
+      - keywords: ["diarrhea"]
+        severity: warning
+        alert: "Patient has diarrhea. Assess frequency, consistency, and fluid loss. Monitor for dehydration and skin breakdown."
+
+  feeding:
+    alert_field: feeding_alert
+    rules:
+      - keywords: ["independent", "self-feed"]
+        severity: info
+        alert: "Patient is independent with feeding. Continue current diet as ordered."
+      - keywords: ["needs assist", "assist with", "partial assist"]
+        severity: info
+        alert: "Patient requires assistance with feeding. Assist and ensure adequate nutritional intake."
+      - keywords: ["dependent", "total assist"]
+        severity: warning
+        alert: "Patient is dependent for feeding. Provide meals in soft/pureed form if needed. Ensure proper positioning (HOB 30°) during feeding."
+      - keywords: ["tube feeding", "feeding tube", "NG tube", "PEG"]
+        severity: warning
+        alert: "Patient on tube feeding. Monitor residual volume before each feeding, maintain tube placement, assess for aspiration risk."
+      - keywords: ["NPO", "nothing by mouth"]
+        severity: warning
+        alert: "Patient is NPO. Ensure IV hydration or TPN support as ordered. Monitor for signs of malnutrition."
+      - keywords: ["swallowing difficulty", "dysphagia", "aspiration risk"]
+        severity: critical
+        alert: "ASPIRATION RISK: Patient has swallowing difficulty. Ensure proper positioning (HOB 30°+), use thickened liquids, and monitor closely during feeding."
+      - keywords: ["pureed", "soft diet"]
+        severity: info
+        alert: "Patient on pureed/soft diet due to swallowing difficulty. Ensure appropriate food texture and positioning."
+
+  hydration:
+    alert_field: hydration_alert
+    rules:
+      - keywords: ["adequate", "good", "drinking well"]
+        severity: info
+        alert: "Patient has adequate hydration. Continue encouraging fluids and monitor daily."
+      - keywords: ["limited", "minimal", "poor intake"]
+        severity: warning
+        alert: "Patient has limited fluid intake. Assess reason (nausea, weakness, NPO). Consider IV fluids or assistance with drinking."
+      - keywords: ["unable to drink", "cannot", "refusing"]
+        severity: warning
+        alert: "Patient unable or refusing fluids. Provide IV hydration, consider NG tube for fluids if appropriate, and monitor signs of dehydration."
+      - keywords: ["fluid restriction", "restricted"]
+        severity: info
+        alert: "Patient on fluid restriction. Monitor intake carefully and place restriction sign at bedside."
+      - keywords: ["thirst", "complaining of thirst"]
+        severity: warning
+        alert: "Patient reports excessive thirst. Assess hydration status and diabetes control if applicable."
+
+  sleep_pattern:
+    alert_field: sleep_pattern_alert
+    rules:
+      - keywords: ["8 hours", "adequate sleep", "resting well", "sleeping well"]
+        severity: info
+        alert: "Patient has adequate sleep pattern. Continue current sleep environment and routine."
+      - keywords: ["restless", "frequent waking", "interrupted"]
+        severity: warning
+        alert: "Patient has restless sleep. Assess for pain, discomfort, noise, or medication side effects. Provide quiet environment."
+      - keywords: ["insomnia", "cannot sleep", "difficulty sleeping"]
+        severity: warning
+        alert: "Patient experiencing insomnia. Assess for anxiety, pain, caffeine intake, or medical causes. Consider sleep aid if ordered."
+      - keywords: ["<4 hours", "minimal sleep"]
+        severity: critical
+        alert: "CRITICAL: Patient getting minimal sleep (< 4 hours). Assess cause immediately and implement interventions to improve sleep quality."
+      - keywords: ["excessive sleeping", "somnolence", "drowsy"]
+        severity: warning
+        alert: "Patient experiencing excessive daytime sleepiness. Assess for medication side effects, sleep apnea, or depression."
+      - keywords: ["nightmares", "night terrors"]
+        severity: warning
+        alert: "Patient experiencing nightmares or night terrors. Assess for PTSD, anxiety, or medication causes."
+
+  pain_level:
+    alert_field: pain_level_alert
+    rules:
+      - keywords: ["0", "no pain", "pain-free"]
+        severity: info
+        alert: "Patient reports no pain. Continue current pain management plan."
+      - keywords: ["1", "2", "3", "mild"]
+        severity: info
+        alert: "Patient reports mild pain (1-3/10). Continue current pain management and comfort measures."
+      - keywords: ["4", "5", "6", "moderate"]
+        severity: warning
+        alert: "Patient reports moderate pain (4-6/10). Assess location and type. Consider pain medication or comfort measures."
+      - keywords: ["7", "8", "severe", "severe pain"]
+        severity: critical
+        alert: "CRITICAL: Patient reports severe pain (7-8/10). Assess immediately, provide pain relief, and notify physician if uncontrolled."
+      - keywords: ["9", "10", "worst pain", "unbearable"]
+        severity: critical
+        alert: "CRITICAL: Patient reports worst possible pain (9-10/10). IMMEDIATE intervention required. Notify physician and provide emergency pain relief."
+      - keywords: ["shooting", "stabbing", "sharp"]
+        severity: warning
+        alert: "Patient describes sharp/stabbing pain. Assess location and associated symptoms. May indicate acute condition."
+      - keywords: ["dull", "aching", "constant"]
+        severity: info
+        alert: "Patient reports dull/aching pain. Monitor duration and pattern. Provide comfort measures."
+      - keywords: ["breakthrough pain", "pain relief not working"]
+        severity: warning
+        alert: "Patient experiencing breakthrough pain. Current pain regimen may be inadequate. Notify physician for medication adjustment."
+      - keywords: ["post-operative pain", "surgical pain"]
+        severity: warning
+        alert: "Patient has post-operative pain. Assess surgical site, provide pain medication per protocol, and encourage movement as tolerated."

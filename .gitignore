@@ -4,3 +4,6 @@ ehr_backend/COMPONENT_TEMPLATE.md
 ehr_backend/INTAKE_AND_OUTPUT_FLOW.md
 ehr_backend/INTAKE_OUTPUT_IMPLEMENTATION.md
 ehr_backend/.md
+ehr_backend/ADL_COMPONENT.md
+ehr_backend/ADL_IMPLEMENTATION.md
+ehr_backend/ADL_QUICK_START.md
