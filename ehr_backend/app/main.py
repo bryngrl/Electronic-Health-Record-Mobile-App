@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.database.db import engine
 from app.database.base import Base
 
@@ -14,6 +15,27 @@ from app.routers.physical_exam import physical_exam as pe_router
 from app.routers.vital_signs import vital_signs as vs_router
 
 app = FastAPI(title="EHR Backend API")
+
+# ──────────────── CORS Configuration ────────────────
+origins = [
+    "http://localhost",
+    "http://localhost:3000",      # React/Node
+    "http://localhost:8080",      # Laravel
+    "http://localhost:5000",      # Additional dev port
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8080",
+    "http://127.0.0.1:5000",
+    "http://localhost:8000",      # Backend
+]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Auth & Patient
 app.include_router(auth.router)
