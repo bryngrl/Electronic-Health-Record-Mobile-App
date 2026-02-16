@@ -1,0 +1,170 @@
+# Lab Values Assessment CDSS Rules
+# These rules are REFERENCES for clinical context
+# Actual alert generation uses numerical comparison in the router:
+# Compare result vs normal_range to determine alert severity and message
+
+fields:
+  wbc:
+    alert_field: wbc_alert
+    clinical_context:
+      test_name: "White Blood Cell Count"
+      unit: "K/uL (thousands per microliter)"
+      normal_range: "4.5-11.0"
+      critical_low: 2.0
+      critical_high: 30.0
+      conditions:
+        low: "Leukopenia - Increased infection risk, immunosuppression"
+        high: "Leukocytosis - Infection, inflammation, leukemia, stress response"
+
+  rbc:
+    alert_field: rbc_alert
+    clinical_context:
+      test_name: "Red Blood Cell Count"
+      unit: "M/uL (millions per microliter)"
+      normal_range: "4.5-5.5 (males), 4.0-5.0 (females)"
+      critical_low: 2.0
+      critical_high: 8.0
+      conditions:
+        low: "Anemia - Fatigue, weakness, shortness of breath, pallor"
+        high: "Polycythemia - Increased viscosity, thrombosis risk"
+
+  hgb:
+    alert_field: hgb_alert
+    clinical_context:
+      test_name: "Hemoglobin"
+      unit: "g/dL (grams per deciliter)"
+      normal_range: "13.5-17.5 (males), 12.0-15.5 (females)"
+      critical_low: 7.0
+      critical_high: 20.0
+      conditions:
+        low: "Anemia - Oxygen carrying capacity decreased"
+        high: "Polycythemia - Increased oxygen carrying capacity, thrombosis risk"
+
+  hct:
+    alert_field: hct_alert
+    clinical_context:
+      test_name: "Hematocrit"
+      unit: "% (percentage)"
+      normal_range: "40-54 (males), 36-46 (females)"
+      critical_low: 20
+      critical_high: 70
+      conditions:
+        low: "Anemia - Similar to low hemoglobin"
+        high: "Polycythemia - Dehydration or primary polycythemia"
+
+  platelets:
+    alert_field: platelets_alert
+    clinical_context:
+      test_name: "Platelet Count"
+      unit: "K/uL (thousands per microliter)"
+      normal_range: "150-400"
+      critical_low: 50
+      critical_high: 1000
+      conditions:
+        low: "Thrombocytopenia - Bleeding risk, petechiae, ecchymosis"
+        high: "Thrombocytosis - Clotting risk, stroke risk"
+
+  mcv:
+    alert_field: mcv_alert
+    clinical_context:
+      test_name: "Mean Corpuscular Volume"
+      unit: "fL (femtoliters)"
+      normal_range: "80-100"
+      critical_low: 60
+      critical_high: 140
+      conditions:
+        low: "Microcytic - Small RBCs, iron deficiency anemia"
+        high: "Macrocytic - Large RBCs, vitamin B12/folate deficiency"
+
+  mch:
+    alert_field: mch_alert
+    clinical_context:
+      test_name: "Mean Corpuscular Hemoglobin"
+      unit: "pg (picograms)"
+      normal_range: "27-31"
+      critical_low: 20
+      critical_high: 40
+      conditions:
+        low: "Hypochromic - Reduced hemoglobin per RBC"
+        high: "Hyperchromic - Increased hemoglobin per RBC (rare)"
+
+  mchc:
+    alert_field: mchc_alert
+    clinical_context:
+      test_name: "Mean Corpuscular Hemoglobin Concentration"
+      unit: "g/dL (grams per deciliter)"
+      normal_range: "32-36"
+      critical_low: 25
+      critical_high: 50
+      conditions:
+        low: "Hypochromic - Anemia, iron deficiency"
+        high: "Hyperchromic - Rare, RBCs fully saturated with hemoglobin"
+
+  rdw:
+    alert_field: rdw_alert
+    clinical_context:
+      test_name: "Red Cell Distribution Width"
+      unit: "% (percentage)"
+      normal_range: "11-14.5"
+      critical_low: 8
+      critical_high: 20
+      conditions:
+        high: "Increased variation in RBC size - Anemia, mixed deficiencies, hemolysis"
+
+  neutrophils:
+    alert_field: neutrophils_alert
+    clinical_context:
+      test_name: "Neutrophils"
+      unit: "% or K/uL"
+      normal_range: "54-62 (%) or 2.0-7.5 (K/uL)"
+      critical_low: 1.5
+      critical_high: 15.0
+      conditions:
+        low: "Neutropenia - Increased infection risk, bone marrow disorders"
+        high: "Neutrophilia - Infection, inflammation, stress, leukemia"
+
+  lymphocytes:
+    alert_field: lymphocytes_alert
+    clinical_context:
+      test_name: "Lymphocytes"
+      unit: "% or K/uL"
+      normal_range: "24-35 (%) or 1.0-4.8 (K/uL)"
+      critical_low: 0.5
+      critical_high: 10.0
+      conditions:
+        low: "Lymphopenia - HIV/AIDS, immunosuppression, bone marrow disorders"
+        high: "Lymphocytosis - Viral infection, lymphocytic leukemia, autoimmune"
+
+  monocytes:
+    alert_field: monocytes_alert
+    clinical_context:
+      test_name: "Monocytes"
+      unit: "% or K/uL"
+      normal_range: "3-7 (%) or 0.2-0.8 (K/uL)"
+      critical_low: 0.1
+      critical_high: 2.0
+      conditions:
+        low: "Monocytopenia - Rare, bone marrow failure"
+        high: "Monocytosis - Infection, inflammation, monocytic leukemia"
+
+  eosinophils:
+    alert_field: eosinophils_alert
+    clinical_context:
+      test_name: "Eosinophils"
+      unit: "% or K/uL"
+      normal_range: "1-4 (%) or 0.0-0.4 (K/uL)"
+      critical_low: 0.0
+      critical_high: 1.5
+      conditions:
+        high: "Eosinophilia - Allergies, parasitic infection, eosinophilic disorders"
+
+  basophils:
+    alert_field: basophils_alert
+    clinical_context:
+      test_name: "Basophils"
+      unit: "% or K/uL"
+      normal_range: "0-1 (%) or 0.0-0.1 (K/uL)"
+      critical_low: 0.0
+      critical_high: 0.5
+      conditions:
+        high: "Basophilia - Allergic reaction, leukemia, myeloproliferative disorder"
