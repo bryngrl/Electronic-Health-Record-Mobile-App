@@ -6,6 +6,8 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker'; 
 import { Dropdown } from 'react-native-element-dropdown'; 
 import Icon from 'react-native-vector-icons/MaterialIcons'; 
+// Import your custom button component
+import CustomButton from '../../../components/button'; 
 
 interface FormProps {
   updateField: (field: string, value: string) => void;
@@ -17,14 +19,12 @@ const genderData = [
   { label: 'Female', value: 'Female' },
 ];
 
-// Export as default to match your Screen's import
 export default function RegistrationForm({ updateField, onBack }: FormProps) {
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedSex, setSelectedSex] = useState(null);
   const [age, setAge] = useState('');
 
-  // --- EMERGENCY CONTACT STATE MANAGEMENT ---
   const [emergencyContacts, setEmergencyContacts] = useState([
     { id: Date.now().toString(), name: '', relationship: '', contactNumber: '' }
   ]);
@@ -53,6 +53,11 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
     }
   };
 
+  const handleSave = () => {
+    console.log("Patient Data Saved Locally");
+    // Add logic here to push to your Laravel backend later
+  };
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* --- PATIENT DETAILS CARD --- */}
@@ -68,23 +73,29 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
             </View>
           </View>
 
-          <Text style={styles.label}>Middle Name</Text>
-          <TextInput style={styles.input} placeholder="Optional" onChangeText={(v) => updateField('middleName', v)} />
+          <View style={styles.row}>
+            <View style={styles.col}><Text style={styles.label}>Birthdate *</Text>
+              <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
+                <Text>{date.toLocaleDateString()}</Text>
+              </TouchableOpacity>
+              {showDatePicker && <DateTimePicker value={date} mode="date" display="calendar" onChange={onDateChange} />}
+            </View>
+            <View style={styles.col}><Text style={styles.label}>Middle Name</Text>
+              <TextInput style={styles.input} placeholder="Optional" onChangeText={(v) => updateField('middleName', v)} />
+            </View>
+          </View>
 
           <View style={styles.row}>
             <View style={styles.col}><Text style={styles.label}>Age</Text>
               <TextInput style={[styles.input, styles.disabled]} value={age} editable={false} />
             </View>
-            <View style={styles.col}><Text style={styles.label}>Sex</Text>
-              <Dropdown style={styles.dropdown} data={genderData} labelField="label" valueField="value" value={selectedSex} onChange={item => setSelectedSex(item.value)} />
+            <View style={styles.col} ><Text style={styles.label}>Gender</Text>
+              <Dropdown style={styles.dropdown} data={genderData} labelField="label" placeholder="Select" valueField="value" value={selectedSex} onChange={item => {
+                setSelectedSex(item.value);
+                updateField('gender', item.value);
+              }} />
             </View>
           </View>
-
-          <Text style={styles.label}>Birthdate *</Text>
-          <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
-            <Text>{date.toLocaleDateString()}</Text>
-          </TouchableOpacity>
-          {showDatePicker && <DateTimePicker value={date} mode="date" display="default" onChange={onDateChange} />}
 
           <Text style={styles.label}>Address</Text>
           <TextInput style={styles.input} placeholder="Street, City, Province" onChangeText={(v) => updateField('address', v)} />
@@ -109,9 +120,6 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
               <TextInput style={styles.input} placeholder="Bed #" onChangeText={(v) => updateField('bedNo', v)} />
             </View>
           </View>
-
-          <Text style={styles.label}>Admission Date</Text>
-          <TextInput style={[styles.input, styles.disabled]} value={new Date().toLocaleDateString()} editable={false} />
         </View>
       </View>
 
@@ -131,17 +139,15 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
                   <Icon name="remove-circle" size={18} color="red" /><Text style={styles.removeText}>Remove</Text>
                 </TouchableOpacity>
               )}
-              {/* Full Name in 1 Column layout */}
               <Text style={styles.label}>Full Name</Text>
               <TextInput style={[styles.input, { marginBottom: 10 }]} placeholder="Full Name" />
 
-              {/* Relationship & Number in 2 Column layout */}
               <View style={styles.row}>
                 <View style={styles.col}><Text style={styles.label}>Relationship</Text>
                   <TextInput style={styles.input} placeholder="e.g. Parent" />
                 </View>
                 <View style={styles.col}><Text style={styles.label}>Contact Number</Text>
-                  <TextInput style={styles.input} placeholder="09XX..." keyboardType="phone-pad" />
+                  <TextInput style={styles.input} placeholder="09XX-XXX-XXXX" keyboardType="phone-pad" />
                 </View>
               </View>
             </View>
@@ -149,16 +155,20 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
         </View>
       </View>
 
+      {/* --- UPDATED BUTTON ROW WITH CUSTOM COMPONENTS --- */}
       <View style={styles.buttonRow}>
-       <TouchableOpacity 
-  style={[styles.actionBtn, styles.backBtn]} 
-  onPress={onBack} // Triggers the setActiveTab("Home") in the parent
->
-  <Text style={styles.backBtnText}>BACK</Text>
-</TouchableOpacity>
-        <TouchableOpacity style={[styles.actionBtn, styles.saveBtn]}>
-          <Text style={styles.saveBtnText}>SAVE</Text>
-        </TouchableOpacity>
+        <CustomButton 
+          title="BACK" 
+          onPress={onBack} 
+          variant="outlined" 
+          style={styles.flexBtn}
+        />
+        <CustomButton 
+          title="SAVE" 
+          onPress={handleSave} 
+          variant="gradient" 
+          style={styles.flexBtn}
+        />
       </View>
     </ScrollView>
   );
@@ -167,7 +177,7 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 10, backgroundColor: '#f8f9fa' },
   card: { backgroundColor: '#fff', borderRadius: 10, elevation: 4, marginBottom: 15, overflow: 'hidden' },
-  cardHeader: { backgroundColor: '#004d26', padding: 12 },
+  cardHeader: { backgroundColor: '#1A6A24', padding: 12 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   headerText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   formPadding: { padding: 15 },
@@ -181,10 +191,15 @@ const styles = StyleSheet.create({
   divider: { borderTopWidth: 1, borderTopColor: '#eee', marginTop: 15, paddingTop: 10 },
   removeBtn: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', marginBottom: 5 },
   removeText: { color: 'red', fontSize: 12, marginLeft: 5 },
-  buttonRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, marginBottom: 50 },
-  actionBtn: { width: '48%', padding: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', elevation: 3 },
-  saveBtn: { backgroundColor: '#004d26' },
-  saveBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  backBtn: { backgroundColor: '#e0e0e0', borderWidth: 1, borderColor: '#ccc' },
-  backBtnText: { color: '#333', fontWeight: 'bold', fontSize: 16 }
+  buttonRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginTop: 10, 
+    marginBottom: 50,
+    paddingHorizontal: 5
+  },
+  // Ensure custom buttons expand to fill half the row width
+  flexBtn: {
+    width: 10
+  }
 });
