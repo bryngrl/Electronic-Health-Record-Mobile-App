@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F5F5F5',
   },
   idCol: { flex: 0.15, alignItems: 'center', justifyContent: 'center' },
-  nameCol: { flex: 0.55, paddingLeft: 10 },
+  nameCol: { flex: 0.55, paddingLeft: 30 },
   actionsCol: {
     flex: 0.3,
     paddingRight: 25,
@@ -111,7 +111,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 12,
   },
-  idText: { color: '#035022', fontSize: 14, fontWeight: '500' },
+  idText: {
+    color: '#035022',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   emptyIdCircle: {
     width: 20,
     height: 20,

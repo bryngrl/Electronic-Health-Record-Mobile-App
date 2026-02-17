@@ -119,8 +119,7 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
             >
               ID
             </Text>
-            <Text style={[styles.headerText, { flex: 0.55, paddingLeft: 10 }]}>
-              {' '}
+            <Text style={[styles.headerText, { flex: 0.55, paddingLeft: 20 }]}>
               PATIENT NAME
             </Text>
             <Text
@@ -140,7 +139,6 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
             <FlatList
               data={typedPatients}
               keyExtractor={item => item.patient_id.toString()}
-              /* REMOVED refreshControl HERE TO STOP AUTO-REFRESH ON SCROLL */
               renderItem={({ item }) => (
                 <PatientRow
                   item={{
