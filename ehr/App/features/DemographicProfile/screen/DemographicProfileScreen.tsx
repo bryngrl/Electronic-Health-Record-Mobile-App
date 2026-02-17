@@ -79,7 +79,6 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
           <View style={styles.header}>
             <Text style={styles.title}>Demographic{'\n'}Profile</Text>
 
-            {/* UPDATED: Replaced TouchableOpacity with your custom Button component */}
             {isSelectionMode && (
               <Button title="DONE" onPress={() => setSelectedIds(new Set())} />
             )}
@@ -158,26 +157,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginTop: -10,
+    marginTop: 0,
     marginBottom: 40,
     paddingHorizontal: 20,
   },
   title: {
-    fontSize: 32,
-    color: '#004d40',
+    fontSize: 42,
+    color: '#035022',
     lineHeight: 36,
     fontFamily: 'MinionPro-SemiboldItalic',
+    marginBottom: 20,
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E5FFE8',
     paddingVertical: 12,
     paddingHorizontal: 0,
     borderRadius: 8,
     marginBottom: 8,
     marginHorizontal: 20,
   },
-  headerText: { color: '#2E7D32', fontWeight: 'bold', fontSize: 12 },
+  headerText: { color: '#29A539', fontWeight: 'bold', fontSize: 12 },
   actionFooter: {
     flexDirection: 'row',
     justifyContent: 'center',

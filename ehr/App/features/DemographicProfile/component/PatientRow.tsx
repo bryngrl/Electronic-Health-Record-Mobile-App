@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 12,
   },
-  idText: { color: '#2E7D32', fontSize: 14, fontWeight: '500' },
+  idText: { color: '#035022', fontSize: 14, fontWeight: '500' },
   emptyIdCircle: {
     width: 20,
     height: 20,
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
   },
-  nameText: { color: '#004D40', fontSize: 15 },
+  nameText: { color: '#035022', fontSize: 15 },
   actionBtn: { padding: 0 },
   iconCircle: {
     width: 34,
