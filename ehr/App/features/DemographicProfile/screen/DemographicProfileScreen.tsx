@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,121 +8,174 @@ import {
   FlatList,
   SafeAreaView,
   StatusBar,
+  Platform,
+  useColorScheme,
 } from 'react-native';
 
-// Importing the row component from your component folder
 import PatientRow from '../component/PatientRow';
 
-// Export the interface so the Row component can import it
 export interface Patient {
   id: number | string | null;
   name: string;
   isActive: boolean;
 }
 
-// Props interface to handle the navigation from HomeScreen.tsx
 interface ProfileProps {
   onBack: () => void;
+  onSelectionChange: (isSelecting: boolean) => void; // Controls the HomeScreen Navbar
 }
 
 const MOCK_PATIENTS: Patient[] = [
-  { id: null, name: 'Esquerra, Jovilyn F.', isActive: false },
-  { id: 1, name: 'Robles, Rain Louie', isActive: true },
-  { id: null, name: 'Esquerra, Jovilyn F.', isActive: true },
-  { id: null, name: 'Roblerra, Jovilyn F.', isActive: false },
-  { id: null, name: 'Esquerra, Jovilyn F.', isActive: true },
-  { id: '12', name: 'Esquerra, Jovilyn F.', isActive: false },
-  { id: '14', name: 'Eobles, Rain Louie', isActive: true },
+  { id: 1, name: 'Esquerra, Jovilyn F.', isActive: false },
+  { id: 2, name: 'Robles, Rain Louie', isActive: true },
+  { id: 3, name: 'Esquerra, Jovilyn F.', isActive: false },
+  { id: 4, name: 'Robles, Rain Louie', isActive: true },
+  { id: 5, name: 'Esquerra, Jovilyn F.', isActive: false },
+  { id: 6, name: 'Robles, Rain Louie', isActive: true },
 ];
 
-const DemographicProfileScreen: React.FC<ProfileProps> = ({ onBack }) => {
+const DemographicProfileScreen: React.FC<ProfileProps> = ({
+  onBack,
+  onSelectionChange,
+}) => {
+  const [patients, setPatients] = useState<Patient[]>(MOCK_PATIENTS);
   const [search, setSearch] = useState<string>('');
+  const [selectedIds, setSelectedIds] = useState<Set<number | string>>(
+    new Set(),
+  );
 
-  // Filtering logic for the search bar
-  const filteredPatients = MOCK_PATIENTS.filter(p =>
+  const isSelectionMode = selectedIds.size > 0;
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+
+  // Tell the HomeScreen to hide/show the BottomNav whenever selection changes
+  useEffect(() => {
+    onSelectionChange(isSelectionMode);
+  }, [isSelectionMode]);
+
+  const toggleSelection = (id: number | string | null) => {
+    if (id === null) return;
+    const newSelection = new Set(selectedIds);
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+    } else {
+      newSelection.add(id);
+    }
+    setSelectedIds(newSelection);
+  };
+
+  const filteredPatients = patients.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.container}>
-        {/* Header Section */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Demographic{'\n'}Profile</Text>
-          {/* DONE button now triggers the onBack function to return to the Grid */}
-          <TouchableOpacity style={styles.doneBtn} onPress={onBack}>
-            <Text style={styles.doneBtnText}>DONE</Text>
-          </TouchableOpacity>
-        </View>
+    <View style={styles.root}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor={isDarkMode ? '#000' : '#FFF'}
+        translucent={false}
+      />
 
-        {/* Search Bar Section */}
-        <View style={styles.searchBox}>
-          <Text style={styles.searchIcon}>🔍</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="search patient..."
-            placeholderTextColor="#999"
-            value={search}
-            onChangeText={text => setSearch(text)}
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Demographic{'\n'}Profile</Text>
+            {isSelectionMode && (
+              <TouchableOpacity
+                style={styles.doneBtn}
+                onPress={() => setSelectedIds(new Set())}
+              >
+                <Text style={styles.doneBtnText}>DONE</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Search Bar - hidden during selection to match image */}
+          {!isSelectionMode && (
+            <View style={styles.searchBox}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="search patient..."
+                placeholderTextColor="#999"
+                value={search}
+                onChangeText={text => setSearch(text)}
+              />
+            </View>
+          )}
+
+          <View style={styles.tableHeader}>
+            <Text
+              style={[styles.headerText, { flex: 0.15, textAlign: 'center' }]}
+            >
+              ID
+            </Text>
+            <Text style={[styles.headerText, { flex: 0.55 }]}>
+              PATIENT NAME
+            </Text>
+            <Text
+              style={[styles.headerText, { flex: 0.3, textAlign: 'center' }]}
+            >
+              ACTIONS
+            </Text>
+          </View>
+
+          <FlatList
+            data={filteredPatients}
+            keyExtractor={(_, index) => index.toString()}
+            renderItem={({ item }) => (
+              <PatientRow
+                item={item}
+                isSelected={item.id !== null && selectedIds.has(item.id)}
+                onPress={() => isSelectionMode && toggleSelection(item.id)}
+                onLongPress={() => toggleSelection(item.id)}
+              />
+            )}
+            showsVerticalScrollIndicator={false}
           />
-        </View>
 
-        {/* Add Patient FAB */}
-        <TouchableOpacity style={styles.addFab}>
-          <Text style={styles.addText}>+</Text>
-        </TouchableOpacity>
+          {/* CIRCLED PART IN RED: Only shows when a patient is selected */}
+          {isSelectionMode && (
+            <View style={styles.actionFooter}>
+              <TouchableOpacity style={styles.footerItem}>
+                <View
+                  style={[styles.statusCircle, { backgroundColor: '#E8F5E9' }]}
+                >
+                  <Text style={styles.footerEmoji}>👤</Text>
+                </View>
+                <Text style={styles.footerText}>Active</Text>
+              </TouchableOpacity>
 
-        {/* Table Header Section */}
-        <View style={styles.tableHeader}>
-          <Text
-            style={[styles.headerText, { flex: 0.15, textAlign: 'center' }]}
-          >
-            ID
-          </Text>
-          <Text style={[styles.headerText, { flex: 0.55 }]}>PATIENT NAME</Text>
-          <Text style={[styles.headerText, { flex: 0.3, textAlign: 'center' }]}>
-            ACTIONS
-          </Text>
-        </View>
-
-        {/* List of Patients */}
-        <FlatList
-          data={filteredPatients}
-          keyExtractor={(_, index) => index.toString()}
-          renderItem={({ item }) => <PatientRow item={item} />}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 40 }}
-        />
-
-        {/* Status Legend Footer */}
-        <View style={styles.legend}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendIcon, { backgroundColor: '#E8F5E9' }]}>
-              <Text>👤</Text>
+              <TouchableOpacity style={styles.footerItem}>
+                <View
+                  style={[styles.statusCircle, { backgroundColor: '#FFEBEE' }]}
+                >
+                  <Text style={styles.footerEmoji}>🚫</Text>
+                </View>
+                <Text style={styles.footerText}>Inactive</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.legendLabel}>Active</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendIcon, { backgroundColor: '#FFEBEE' }]}>
-              <Text>🚫</Text>
-            </View>
-            <Text style={styles.legendLabel}>Inactive</Text>
-          </View>
+          )}
         </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#FFF' },
+  root: { flex: 1, backgroundColor: '#FFF' },
+  safeArea: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
   container: { flex: 1, paddingHorizontal: 20 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
-    marginBottom: 20,
+    alignItems: 'flex-start',
+    marginTop: 25,
+    marginBottom: 15,
   },
   title: {
     fontSize: 32,
@@ -132,66 +185,58 @@ const styles = StyleSheet.create({
     lineHeight: 36,
   },
   doneBtn: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#4CAF50',
     borderRadius: 20,
-    paddingHorizontal: 15,
-    height: 35,
+    paddingHorizontal: 20,
+    height: 36,
     justifyContent: 'center',
     backgroundColor: '#F1F8E9',
   },
-  doneBtnText: { color: '#004d40', fontWeight: 'bold', fontSize: 12 },
+  doneBtnText: { color: '#004d40', fontWeight: 'bold', fontSize: 13 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F5F5F5',
     borderRadius: 25,
     paddingHorizontal: 15,
-    height: 48,
+    height: 46,
+    marginBottom: 20,
   },
   searchIcon: { fontSize: 16, marginRight: 5 },
   input: { flex: 1, fontSize: 16, color: '#333' },
-  addFab: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#2E7D32',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 15,
-  },
-  addText: { color: '#FFF', fontSize: 28, fontWeight: 'bold', marginTop: -2 },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: '#E8F5E9',
     paddingVertical: 12,
-    paddingHorizontal: 10,
     borderRadius: 8,
-    marginBottom: 5,
+    marginBottom: 8,
   },
   headerText: { color: '#2E7D32', fontWeight: 'bold', fontSize: 12 },
-  legend: {
+  actionFooter: {
     flexDirection: 'row',
     justifyContent: 'center',
     paddingVertical: 20,
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
+    backgroundColor: '#FFF',
+    marginBottom: 10,
   },
-  legendItem: {
+  footerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 15,
+    marginHorizontal: 25,
   },
-  legendIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  statusCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 10,
   },
-  legendLabel: { color: '#004d40', fontSize: 14, fontWeight: '500' },
+  footerEmoji: { fontSize: 18 },
+  footerText: { color: '#004D40', fontSize: 15, fontWeight: '500' },
 });
 
 export default DemographicProfileScreen;
