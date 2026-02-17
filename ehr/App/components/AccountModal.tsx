@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: '#FFF', fontSize: 22, fontWeight: 'bold' },
   profileText: { marginLeft: 16 },
-  userName: { fontSize: 18, fontWeight: 'bold', color: '#1B4332' },
+  userName: { fontSize: 18, fontWeight: 'bold', color: '#1B5E20' },
   userRole: { fontSize: 14, color: '#8E8E93' },
   menuCard: {
     backgroundColor: '#FFFFFF',

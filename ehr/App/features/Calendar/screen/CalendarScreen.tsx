@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, Platform } from 'react-native';
 
-const THEME_GREEN = '#1B4332';
+const THEME_GREEN = '#1B5E20';
 
 export default function CalendarScreen() {
   return (

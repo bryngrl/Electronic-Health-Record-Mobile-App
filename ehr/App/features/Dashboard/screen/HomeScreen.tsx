@@ -1,23 +1,19 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, SafeAreaView } from 'react-native';
-
-// Local Feature Components
-// FIXED: Removed curly braces for default import
+import { View, StyleSheet, SafeAreaView } from 'react-native';
 import DashboardSummary from '../components/DashboardSummary';
 import { DashboardGrid } from '../../../components/navigation/DashboardGrid';
 import SearchScreen from '../../Search/screen/SearchScreen';
 import CalendarScreen from '../../Calendar/screen/CalendarScreen';
-import RegistrationForm from '../../PatientRegistration/component/RegistrationForm';
 
-// Global Shared Components
 import BottomNav from '../../../components/navigation/BottomNav';
 
-export default function HomeScreen() {
-  const [activeTab, setActiveTab] = useState("Home");
+// Corrected import path based on your folder structure
+import RegisterPatient from '../../PatientRegistration/component/RegisterPatient';
 
-  const handleNavigation = (route: string) => {
-    setActiveTab(route);
-  };
+export default function HomeScreen() {
+  const [activeTab, setActiveTab] = useState('Home');
+
+  const handleNavigation = (route: string) => setActiveTab(route);
 
   const renderPage = () => {
     switch (activeTab) {
@@ -30,12 +26,8 @@ export default function HomeScreen() {
       case "Calendar":
         return <CalendarScreen />;
       case "Register":
-        return (
-          <RegistrationForm 
-            updateField={() => {}} 
-            onBack={() => setActiveTab('Home')} 
-          />
-        );
+        // 'onBack' is now passed to match the interface in RegisterPatient
+        return <RegisterPatient onBack={() => setActiveTab('Home')} />;
       default:
         return <DashboardSummary onNavigate={handleNavigation} />;
     }
@@ -46,17 +38,21 @@ export default function HomeScreen() {
       <View style={styles.flex1}>
         {renderPage()}
       </View>
-      
-      <BottomNav 
-        activeRoute={activeTab} 
-        onNavigate={handleNavigation} 
-        onAddPatient={() => handleNavigation('Register')} 
+      <BottomNav
+        activeRoute={activeTab}
+        onNavigate={handleNavigation}
+        onAddPatient={() => setActiveTab('Register')}
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  flex1: { flex: 1 }
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  flex1: {
+    flex: 1,
+  },
 });
