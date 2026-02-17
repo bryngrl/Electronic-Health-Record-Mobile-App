@@ -5,12 +5,21 @@ import {
   StyleSheet,
   TouchableOpacity,
   Pressable,
+  Image,
 } from 'react-native';
 import { Patient } from '../screen/DemographicProfileScreen';
+
+// Asset Paths
+const editIcon = require('../../../../assets/icons/edit_icon.png');
+const activeIcon = require('../../../../assets/icons/active_icon.png');
+const inactiveIcon = require('../../../../assets/icons/inactive_icon.png');
+const checkedIcon = require('../../../../assets/icons/checked_icon.png');
+const uncheckedIcon = require('../../../../assets/icons/unchecked_icon.png');
 
 interface PatientRowProps {
   item: Patient;
   isSelected: boolean;
+  isSelectionMode: boolean;
   onPress: () => void;
   onLongPress: () => void;
 }
@@ -18,6 +27,7 @@ interface PatientRowProps {
 const PatientRow: React.FC<PatientRowProps> = ({
   item,
   isSelected,
+  isSelectionMode,
   onPress,
   onLongPress,
 }) => {
@@ -31,9 +41,12 @@ const PatientRow: React.FC<PatientRowProps> = ({
       ]}
     >
       <View style={styles.idCol}>
-        {isSelected ? (
-          <View style={styles.checkCircle}>
-            <Text style={styles.checkIcon}>✓</Text>
+        {isSelectionMode ? (
+          <View style={isSelected ? styles.checkCircle : styles.uncheckCircle}>
+            <Image
+              source={isSelected ? checkedIcon : uncheckedIcon}
+              style={styles.fullIcon}
+            />
           </View>
         ) : item.id ? (
           <Text style={styles.idText}>{String(item.id)}</Text>
@@ -46,14 +59,14 @@ const PatientRow: React.FC<PatientRowProps> = ({
         <Text style={styles.nameText}>{item.name}</Text>
       </View>
 
-      <View style={styles.actionsCol}>
-        <TouchableOpacity style={styles.actionBtn}>
+      <View style={[styles.actionsCol, isSelectionMode && { opacity: 0.5 }]}>
+        <TouchableOpacity style={styles.actionBtn} disabled={isSelectionMode}>
           <View style={[styles.iconCircle, { borderColor: '#FFD54F' }]}>
-            <Text>📝</Text>
+            <Image source={editIcon} style={styles.fullIcon} />
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionBtn}>
+        <TouchableOpacity style={styles.actionBtn} disabled={isSelectionMode}>
           <View
             style={[
               styles.iconCircle,
@@ -63,7 +76,10 @@ const PatientRow: React.FC<PatientRowProps> = ({
               },
             ]}
           >
-            <Text>{item.isActive ? '👤' : '🚫'}</Text>
+            <Image
+              source={item.isActive ? activeIcon : inactiveIcon}
+              style={styles.fullIcon}
+            />
           </View>
         </TouchableOpacity>
       </View>
@@ -76,18 +92,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 0,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
   },
-  idCol: { flex: 0.15, alignItems: 'center' },
-  nameCol: { flex: 0.55 },
+  idCol: { flex: 0.15, alignItems: 'center', justifyContent: 'center' },
+  nameCol: { flex: 0.55, paddingLeft: 10 },
   actionsCol: {
     flex: 0.3,
+    paddingRight: 25,
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'flex-end',
+    gap: 12,
   },
-  idText: { color: '#2E7D32', fontSize: 14 },
+  idText: { color: '#2E7D32', fontSize: 14, fontWeight: '500' },
   emptyIdCircle: {
     width: 20,
     height: 20,
@@ -95,16 +113,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
   },
   checkCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: '#4CAF50',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
-  checkIcon: { color: '#FFF', fontSize: 12, fontWeight: 'bold' },
+  uncheckCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
   nameText: { color: '#004D40', fontSize: 15 },
-  actionBtn: { padding: 2 },
+  actionBtn: { padding: 0 },
   iconCircle: {
     width: 34,
     height: 34,
@@ -112,7 +138,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
+  fullIcon: { width: '100%', height: '100%', resizeMode: 'cover' },
 });
 
 export default PatientRow;

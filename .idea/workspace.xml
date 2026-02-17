@@ -5,9 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="64dac766-4f9e-47dc-9efd-004b84659307" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ehr/App/features/DemographicProfile/component/PatientRow.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/DemographicProfile/component/PatientRow.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ehr/App/features/DemographicProfile/screen/DemographicProfileScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/DemographicProfile/screen/DemographicProfileScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/assets/fonts/MinionPro-SemiboldIt.otf" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

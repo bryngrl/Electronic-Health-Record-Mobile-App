@@ -3,16 +3,17 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   FlatList,
   SafeAreaView,
   StatusBar,
   Platform,
   useColorScheme,
+  Image,
 } from 'react-native';
 
 import PatientRow from '../component/PatientRow';
+import Button from '../../../components/button';
 
 export interface Patient {
   id: number | string | null;
@@ -22,8 +23,12 @@ export interface Patient {
 
 interface ProfileProps {
   onBack: () => void;
-  onSelectionChange: (isSelecting: boolean) => void; // Controls the HomeScreen Navbar
+  onSelectionChange: (isSelecting: boolean) => void;
 }
+
+// Assets
+const activeIcon = require('../../../../assets/icons/active_icon.png');
+const inactiveIcon = require('../../../../assets/icons/inactive_icon.png');
 
 const MOCK_PATIENTS: Patient[] = [
   { id: 1, name: 'Esquerra, Jovilyn F.', isActive: false },
@@ -31,24 +36,20 @@ const MOCK_PATIENTS: Patient[] = [
   { id: 3, name: 'Esquerra, Jovilyn F.', isActive: false },
   { id: 4, name: 'Robles, Rain Louie', isActive: true },
   { id: 5, name: 'Esquerra, Jovilyn F.', isActive: false },
-  { id: 6, name: 'Robles, Rain Louie', isActive: true },
 ];
 
 const DemographicProfileScreen: React.FC<ProfileProps> = ({
   onBack,
   onSelectionChange,
 }) => {
-  const [patients, setPatients] = useState<Patient[]>(MOCK_PATIENTS);
-  const [search, setSearch] = useState<string>('');
+  const [patients] = useState<Patient[]>(MOCK_PATIENTS);
   const [selectedIds, setSelectedIds] = useState<Set<number | string>>(
     new Set(),
   );
 
   const isSelectionMode = selectedIds.size > 0;
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
+  const isDarkMode = useColorScheme() === 'dark';
 
-  // Tell the HomeScreen to hide/show the BottomNav whenever selection changes
   useEffect(() => {
     onSelectionChange(isSelectionMode);
   }, [isSelectionMode]);
@@ -64,10 +65,6 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
     setSelectedIds(newSelection);
   };
 
-  const filteredPatients = patients.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()),
-  );
-
   return (
     <View style={styles.root}>
       <StatusBar
@@ -81,38 +78,22 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Demographic{'\n'}Profile</Text>
+
+            {/* UPDATED: Replaced TouchableOpacity with your custom Button component */}
             {isSelectionMode && (
-              <TouchableOpacity
-                style={styles.doneBtn}
-                onPress={() => setSelectedIds(new Set())}
-              >
-                <Text style={styles.doneBtnText}>DONE</Text>
-              </TouchableOpacity>
+              <Button title="DONE" onPress={() => setSelectedIds(new Set())} />
             )}
           </View>
 
-          {/* Search Bar - hidden during selection to match image */}
-          {!isSelectionMode && (
-            <View style={styles.searchBox}>
-              <Text style={styles.searchIcon}>🔍</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="search patient..."
-                placeholderTextColor="#999"
-                value={search}
-                onChangeText={text => setSearch(text)}
-              />
-            </View>
-          )}
-
+          {/* Table Header */}
           <View style={styles.tableHeader}>
             <Text
               style={[styles.headerText, { flex: 0.15, textAlign: 'center' }]}
             >
               ID
             </Text>
-            <Text style={[styles.headerText, { flex: 0.55 }]}>
-              {'     '}
+            <Text style={[styles.headerText, { flex: 0.55, paddingLeft: 10 }]}>
+              {'    '}
               PATIENT NAME
             </Text>
             <Text
@@ -123,27 +104,29 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
           </View>
 
           <FlatList
-            data={filteredPatients}
+            data={patients}
             keyExtractor={(_, index) => index.toString()}
             renderItem={({ item }) => (
               <PatientRow
                 item={item}
                 isSelected={item.id !== null && selectedIds.has(item.id)}
+                isSelectionMode={isSelectionMode}
                 onPress={() => isSelectionMode && toggleSelection(item.id)}
                 onLongPress={() => toggleSelection(item.id)}
               />
             )}
             showsVerticalScrollIndicator={false}
+            extraData={selectedIds}
           />
 
-          {/* CIRCLED PART IN RED: Only shows when a patient is selected */}
+          {/* Action Footer */}
           {isSelectionMode && (
             <View style={styles.actionFooter}>
               <TouchableOpacity style={styles.footerItem}>
                 <View
                   style={[styles.statusCircle, { backgroundColor: '#E8F5E9' }]}
                 >
-                  <Text style={styles.footerEmoji}>👤</Text>
+                  <Image source={activeIcon} style={styles.footerIcon} />
                 </View>
                 <Text style={styles.footerText}>Active</Text>
               </TouchableOpacity>
@@ -152,7 +135,7 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
                 <View
                   style={[styles.statusCircle, { backgroundColor: '#FFEBEE' }]}
                 >
-                  <Text style={styles.footerEmoji}>🚫</Text>
+                  <Image source={inactiveIcon} style={styles.footerIcon} />
                 </View>
                 <Text style={styles.footerText}>Inactive</Text>
               </TouchableOpacity>
@@ -170,13 +153,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
-  container: { flex: 1, paddingHorizontal: 25 },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginTop: 0,
-    marginBottom: 30,
+    marginTop: -10,
+    marginBottom: 40,
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 32,
@@ -184,34 +168,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontStyle: 'italic',
     lineHeight: 36,
+    fontFamily: 'MinionPro-SemiboldItalic',
   },
-  doneBtn: {
-    borderWidth: 1.5,
-    borderColor: '#4CAF50',
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    height: 36,
-    justifyContent: 'center',
-    backgroundColor: '#F1F8E9',
-  },
-  doneBtnText: { color: '#004d40', fontWeight: 'bold', fontSize: 13 },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 25,
-    paddingHorizontal: 15,
-    height: 46,
-    marginBottom: 20,
-  },
-  searchIcon: { fontSize: 16, marginRight: 5 },
-  input: { flex: 1, fontSize: 16, color: '#333' },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: '#E8F5E9',
     paddingVertical: 12,
+    paddingHorizontal: 0,
     borderRadius: 8,
     marginBottom: 8,
+    marginHorizontal: 20,
   },
   headerText: { color: '#2E7D32', fontWeight: 'bold', fontSize: 12 },
   actionFooter: {
@@ -221,12 +187,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
     backgroundColor: '#FFF',
-    marginBottom: 10,
+    gap: 125,
   },
   footerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 25,
   },
   statusCircle: {
     width: 36,
@@ -235,8 +200,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
+    overflow: 'hidden',
   },
-  footerEmoji: { fontSize: 18 },
+  footerIcon: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
   footerText: { color: '#004D40', fontSize: 15, fontWeight: '500' },
 });
 
