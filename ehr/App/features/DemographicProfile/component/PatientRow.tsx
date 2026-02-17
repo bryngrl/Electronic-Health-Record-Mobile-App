@@ -7,7 +7,20 @@ import {
   Pressable,
   Image,
 } from 'react-native';
-import { Patient } from '../screen/DemographicProfileScreen';
+
+export interface PatientDisplay {
+  id: number;
+  name: string;
+  isActive: boolean;
+}
+
+interface PatientRowProps {
+  item: PatientDisplay;
+  isSelected: boolean;
+  isSelectionMode: boolean;
+  onPress: () => void;
+  onLongPress: () => void;
+}
 
 // Asset Paths
 const editIcon = require('../../../../assets/icons/edit_icon.png');
@@ -15,14 +28,6 @@ const activeIcon = require('../../../../assets/icons/active_icon.png');
 const inactiveIcon = require('../../../../assets/icons/inactive_icon.png');
 const checkedIcon = require('../../../../assets/icons/checked_icon.png');
 const uncheckedIcon = require('../../../../assets/icons/unchecked_icon.png');
-
-interface PatientRowProps {
-  item: Patient;
-  isSelected: boolean;
-  isSelectionMode: boolean;
-  onPress: () => void;
-  onLongPress: () => void;
-}
 
 const PatientRow: React.FC<PatientRowProps> = ({
   item,
@@ -49,6 +54,7 @@ const PatientRow: React.FC<PatientRowProps> = ({
             />
           </View>
         ) : item.id ? (
+          // Use item.id (mapped from patient_id in backend)
           <Text style={styles.idText}>{String(item.id)}</Text>
         ) : (
           <View style={styles.emptyIdCircle} />
