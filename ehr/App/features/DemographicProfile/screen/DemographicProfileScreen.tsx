@@ -18,6 +18,13 @@ import PatientRow from '../component/PatientRow';
 import Button from '../../../components/button';
 import { useDemographicLogic } from '../hook/useDemographicLogic';
 
+interface Patient {
+  patient_id: number;
+  first_name: string;
+  last_name: string;
+  isActive?: boolean;
+}
+
 interface ProfileProps {
   onBack: () => void;
   onSelectionChange: (isSelecting: boolean) => void;
@@ -25,8 +32,8 @@ interface ProfileProps {
 
 const activeIcon = require('../../../../assets/icons/active_icon.png');
 const inactiveIcon = require('../../../../assets/icons/inactive_icon.png');
-// Ensure you have a 3-dots icon or use a library. Assuming local asset:
 const dotsIcon = require('../../../../assets/icons/dots_icon.png');
+const selectImage = require('../../../../assets/icons/select_icon.png');
 
 const DemographicProfileScreen: React.FC<ProfileProps> = ({
   onBack,
@@ -48,23 +55,34 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
     updateStatus,
   } = useDemographicLogic(onSelectionChange);
 
+  // Cast patients to Patient[] to fix the "never" TypeScript error
+  const typedPatients = patients as Patient[];
+
   useEffect(() => {
     loadPatients();
   }, [loadPatients]);
 
-  // Helper to enter selection mode from the menu
   const enterSelectionMode = () => {
     setShowSelectMenu(false);
-    // If no patients are selected yet, we can manually trigger the UI state
-    // by selecting the first one or just relying on your logic's isSelectionMode.
-    if (patients.length > 0) {
-      toggleSelection(patients[0].patient_id);
+    // patient_id is now recognized on the typed object
+    if (typedPatients.length > 0) {
+      toggleSelection(typedPatients[0].patient_id);
     }
   };
 
   return (
     <View style={styles.root}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+
+      {/* 50% Dark Background Overlay - appears only when menu is shown */}
+      {showSelectMenu && (
+        <TouchableOpacity
+          style={styles.darkOverlay}
+          activeOpacity={1}
+          onPress={() => setShowSelectMenu(false)}
+        />
+      )}
+
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           {/* Header */}
@@ -82,16 +100,13 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
                 </TouchableOpacity>
               )}
 
-              {/* Selection Menu Popup (Matches 2nd Picture) */}
               {showSelectMenu && (
                 <TouchableOpacity
                   style={styles.menuPopup}
                   onPress={enterSelectionMode}
                 >
-                  <Text style={styles.menuText}>Select</Text>
-                  <View style={styles.checkIconContainer}>
-                    <Text style={styles.checkIcon}>✓</Text>
-                  </View>
+                  {/* Image now fills the container 100% */}
+                  <Image source={selectImage} style={styles.fullSelectImage} />
                 </TouchableOpacity>
               )}
             </View>
@@ -123,15 +138,15 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
             />
           ) : (
             <FlatList
-              data={patients}
-              keyExtractor={(item: any) => item.patient_id.toString()}
+              data={typedPatients}
+              keyExtractor={item => item.patient_id.toString()}
               refreshControl={
                 <RefreshControl
                   refreshing={isRefreshing}
                   onRefresh={handleRefresh}
                 />
               }
-              renderItem={({ item }: any) => (
+              renderItem={({ item }) => (
                 <PatientRow
                   item={{
                     ...item,
@@ -186,6 +201,16 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#FFF' },
+  // Dark Background Overlay Style
+  darkOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 5,
+  },
   safeArea: {
     flex: 1,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
@@ -196,35 +221,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 50,
     paddingHorizontal: 20,
-    zIndex: 10, // Ensure menu stays on top
+    zIndex: 10,
   },
-  headerActions: { alignItems: 'flex-end', position: 'relative' },
+  headerActions: {
+    alignItems: 'flex-end',
+    position: 'relative',
+    marginTop: 10,
+  },
   title: {
     fontSize: 39,
     color: '#035022',
     fontFamily: 'MinionPro-SemiboldItalic',
   },
-  dotsIcon: { width: 24, height: 24, resizeMode: 'contain', marginTop: 15 },
+  dotsIcon: { width: 24, height: 24, resizeMode: 'contain', marginTop: 5 },
+
+  fullSelectImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+  },
 
   menuPopup: {
     position: 'absolute',
-    top: 50,
-    right: -10,
-    backgroundColor: '#FFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 8,
-    width: 150,
-    borderWidth: 1,
-    borderColor: '#49D65B',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    top: 30,
+    right: 10,
+    width: 165,
+    height: 60,
   },
   menuText: { color: '#29A539', fontSize: 16, fontWeight: '500' },
   checkIconContainer: { marginLeft: 10 },
@@ -237,7 +259,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginHorizontal: 20,
   },
-  headerText: { color: '#29A539', fontWeight: 'bold', fontSize: 12 },
+  headerText: {
+    color: '#29A539',
+    fontWeight: 'bold',
+    fontSize: 14,
+    paddingRight: 10,
+  },
   actionFooter: {
     flexDirection: 'row',
     justifyContent: 'space-around',
