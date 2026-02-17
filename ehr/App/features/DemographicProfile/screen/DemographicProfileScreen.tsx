@@ -140,12 +140,7 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
             <FlatList
               data={typedPatients}
               keyExtractor={item => item.patient_id.toString()}
-              refreshControl={
-                <RefreshControl
-                  refreshing={isRefreshing}
-                  onRefresh={handleRefresh}
-                />
-              }
+              /* REMOVED refreshControl HERE TO STOP AUTO-REFRESH ON SCROLL */
               renderItem={({ item }) => (
                 <PatientRow
                   item={{
