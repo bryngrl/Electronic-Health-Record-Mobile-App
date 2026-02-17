@@ -200,17 +200,16 @@ const styles = StyleSheet.create({
   },
   headerActions: { alignItems: 'flex-end', position: 'relative' },
   title: {
-    fontSize: 35,
+    fontSize: 39,
     color: '#035022',
     fontFamily: 'MinionPro-SemiboldItalic',
   },
-  dotsIcon: { width: 24, height: 24, resizeMode: 'contain', marginTop: 10 },
+  dotsIcon: { width: 24, height: 24, resizeMode: 'contain', marginTop: 15 },
 
-  // Menu Popup Styles (Matches 2nd Picture)
   menuPopup: {
     position: 'absolute',
-    top: 45,
-    right: 0,
+    top: 50,
+    right: -10,
     backgroundColor: '#FFF',
     flexDirection: 'row',
     alignItems: 'center',
@@ -220,7 +219,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     width: 150,
     borderWidth: 1,
-    borderColor: '#29A539',
+    borderColor: '#49D65B',
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
