@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 const BACKEND_PORT = 8000;
 
 // Update this to your USB Tethering IP from ipconfig
-const PHYSICAL_DEVICE_HOST = '10.248.106.213'; 
+const PHYSICAL_DEVICE_HOST = '192.168.1.36';
 
 // Use the physical device host directly for USB testing
 const host = PHYSICAL_DEVICE_HOST;

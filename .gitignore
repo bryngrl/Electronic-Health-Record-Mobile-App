@@ -7,3 +7,5 @@ ehr_backend/.md
 ehr_backend/ADL_COMPONENT.md
 ehr_backend/ADL_IMPLEMENTATION.md
 ehr_backend/ADL_QUICK_START.md
+ehr/android/local.properties
+ehr/.env

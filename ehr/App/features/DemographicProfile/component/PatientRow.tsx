@@ -1,72 +1,87 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-interface Patient {
-  id: string;
-  name: string;
-  age: string;
-  sex: string;
+import { Patient } from '../screen/demographicprofilescreen';
+
+interface PatientRowProps {
+  item: Patient;
 }
 
-export const PatientRow = ({ patient }: { patient: Patient }) => (
-  <View style={styles.row}>
-    <Text style={[styles.cellText, { flex: 0.6, textAlign: 'center' }]}>{patient.id}</Text>
-    <Text style={[styles.cellText, styles.nameText]}>{patient.name}</Text>
-    <Text style={[styles.cellText, { flex: 0.6, textAlign: 'center' }]}>{patient.age}</Text>
-    <Text style={[styles.cellText, { flex: 1, textAlign: 'center' }]}>{patient.sex}</Text>
-    
-    <View style={styles.actionContainer}>
-      <TouchableOpacity style={styles.editBtn}>
-        <Text style={styles.btnText}>EDIT</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.inactiveBtn}>
-        <Text style={styles.btnText}>SET INACTIVE</Text>
-      </TouchableOpacity>
+const PatientRow: React.FC<PatientRowProps> = ({ item }) => {
+  return (
+    <View style={styles.tableRow}>
+      <View style={styles.idCol}>
+        {item.id ? (
+          <Text style={styles.idText}>{String(item.id)}</Text>
+        ) : (
+          <View style={styles.emptyIdCircle} />
+        )}
+      </View>
+
+      <View style={styles.nameCol}>
+        <Text style={styles.nameText}>{item.name}</Text>
+      </View>
+
+      <View style={styles.actionsCol}>
+        <TouchableOpacity style={styles.editBtn}>
+          <Text style={styles.icon}>✏️</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.statusBtn,
+            item.isActive ? styles.statusActive : styles.statusInactive,
+          ]}
+        >
+          <Text style={styles.icon}>{item.isActive ? '👤' : '🚫'}</Text>
+        </TouchableOpacity>
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
-  row: {
+  tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff', // Light cream background from image
     paddingVertical: 12,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#ffffff',
+    borderBottomColor: '#F0F0F0',
   },
-  cellText: {
-    fontSize: 14,
-    color: '#AAA',
-    fontWeight: '500',
-  },
-  nameText: {
-    flex: 2.5,
-    color: '#AAA', // Brownish color for names from image
-    fontWeight: '700',
-    paddingLeft: 10,
-  },
-  actionContainer: {
-    flex: 2,
+  idCol: { flex: 0.15, alignItems: 'center' },
+  nameCol: { flex: 0.55 },
+  actionsCol: {
+    flex: 0.3,
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
+    justifyContent: 'space-around',
   },
+  idText: { color: '#2e7d32', fontWeight: 'bold' },
+  emptyIdCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#E0E0E0',
+  },
+  nameText: { color: '#004d40', fontSize: 14 },
   editBtn: {
-    backgroundColor: '#00C853',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#FFF3E0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  inactiveBtn: {
-    backgroundColor: '#FF0000',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
+  statusBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  btnText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '900',
-  },
+  statusActive: { backgroundColor: '#E8F5E9' },
+  statusInactive: { backgroundColor: '#FFEBEE' },
+  icon: { fontSize: 14 },
 });
+
+export default PatientRow;

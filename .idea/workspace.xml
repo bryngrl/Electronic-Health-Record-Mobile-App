@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="NONE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="64dac766-4f9e-47dc-9efd-004b84659307" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/ehr/App/api/apiClient.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ehr/App/components/SweetAlert.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ehr/App/features/PatientRegistration/component/RegisterPatient.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ehr/App/features/PatientRegistration/hook/usePatients.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/App/components/AccountModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/components/AccountModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/App/components/button.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/components/button.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/App/components/navigation/BottomNav.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/components/navigation/BottomNav.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/App/features/Calendar/screen/CalendarScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/Calendar/screen/CalendarScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/App/features/Dashboard/components/DashboardSummary.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/Dashboard/components/DashboardSummary.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/App/features/Dashboard/screen/HomeScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/Dashboard/screen/HomeScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/App/features/DemographicProfile/screen/DemographicProfileScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/DemographicProfile/screen/DemographicProfileScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/App/features/PatientRegistration/component/RegistrationForm.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/App/features/PatientRegistration/screen/RegistrationScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/PatientRegistration/screen/RegistrationScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr_backend/app/database/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/ehr_backend/app/database/db.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 0
+}</component>
+  <component name="ProjectId" id="39nNMHEWrSHy8hG94LNYTKXDSds" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
+    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
+    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;Merging setup&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="64dac766-4f9e-47dc-9efd-004b84659307" name="Changes" comment="" />
+      <created>1771327826225</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1771327826225</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="setup" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>
