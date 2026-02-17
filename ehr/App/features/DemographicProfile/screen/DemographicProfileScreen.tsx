@@ -180,12 +180,12 @@ const styles = StyleSheet.create({
   headerText: { color: '#29A539', fontWeight: 'bold', fontSize: 12 },
   actionFooter: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-around',
     paddingVertical: 20,
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
     backgroundColor: '#FFF',
-    gap: 125,
+    paddingHorizontal: 20,
   },
   footerItem: {
     flexDirection: 'row',
