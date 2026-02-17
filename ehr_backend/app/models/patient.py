@@ -35,3 +35,7 @@ class Patient(Base):
     intake_and_outputs = relationship("IntakeAndOutput", back_populates="patient")
     adls = relationship("ADL", back_populates="patient")
     lab_values = relationship("LabValues", back_populates="patient")
+    medication_administrations = relationship("MedicationAdministration", back_populates="patient")
+    home_medications = relationship("HomeMedication", back_populates="patient")
+    current_medications = relationship("CurrentMedication", back_populates="patient")
+    changes_in_medications = relationship("ChangesInMedication", back_populates="patient")
