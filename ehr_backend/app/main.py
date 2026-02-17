@@ -15,6 +15,8 @@ from app.models.medical_history.medical_history import (
     PresentIllness, PastMedicalSurgical, Allergies, Vaccination, DevelopmentalHistory
 )
 from app.models.diagnostics.diagnostics import Diagnostic
+from app.models.ivs_and_lines.ivs_and_lines import IVsAndLines
+from app.models.discharge_planning.discharge_planning import DischargePlanning
 
 # Router imports
 from app.routers import auth, patient
@@ -25,6 +27,8 @@ from app.routers.adl import adl as adl_router
 from app.routers.lab_values import lab_values as lv_router
 from app.routers.medical_history import medical_history as mh_router
 from app.routers.diagnostics import diagnostics as diag_router
+from app.routers.ivs_and_lines import ivs_and_lines as ial_router
+from app.routers.discharge_planning import discharge_planning as dp_router
 
 app = FastAPI(title="EHR Backend API")
 
@@ -73,6 +77,12 @@ app.include_router(mh_router.router)
 
 # Diagnostics (file upload/storage: medical imaging)
 app.include_router(diag_router.router)
+
+# IVs & Lines (data entry: IV fluid administration)
+app.include_router(ial_router.router)
+
+# Discharge Planning (data entry: discharge criteria & instructions)
+app.include_router(dp_router.router)
 
 Base.metadata.create_all(bind=engine)
 
