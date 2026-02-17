@@ -156,15 +156,15 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
-  container: { flex: 1, paddingHorizontal: 10 },
+  container: { flex: 1, paddingHorizontal: 20 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 40,
+    marginBottom: 50,
     paddingHorizontal: 20,
   },
   title: {
-    fontSize: 42,
+    fontSize: 35,
     color: '#035022',
     fontFamily: 'MinionPro-SemiboldItalic',
   },

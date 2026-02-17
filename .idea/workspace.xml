@@ -5,7 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="64dac766-4f9e-47dc-9efd-004b84659307" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/ehr/App/features/DemographicProfile/hook/useDemographicLogic.ts" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/DemographicProfile/hook/useDemographicLogic.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ehr/App/features/DemographicProfile/screen/DemographicProfileScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/DemographicProfile/screen/DemographicProfileScreen.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -38,7 +37,7 @@
     "RunOnceActivity.readMode.enableVisualFormatting": "true",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
-    "git-widget-placeholder": "setup",
+    "git-widget-placeholder": "demographic-profile",
     "kotlin-language-version-configured": "true"
   }
 }]]></component>
