@@ -5,19 +5,17 @@ import { DashboardGrid } from '../../../components/navigation/DashboardGrid';
 import SearchScreen from '../../Search/screen/SearchScreen';
 import CalendarScreen from '../../Calendar/screen/CalendarScreen';
 import BottomNav from '../../../components/navigation/BottomNav';
-import RegisterPatient from '../../PatientRegistration/component/RegisterPatient';
 
-// FIXED PATH: Replaced ../../../ with ../../ to resolve the module error
+import RegisterPatient from '../../PatientRegistration/component/RegisterPatient';
 import DemographicProfileScreen from '../../DemographicProfile/screen/DemographicProfileScreen';
 
 export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('Home');
-  // New state to hide/show the bottom navigation bar
-  const [isSelectingInProfile, setIsSelectingInProfile] = useState(false);
+  const [isSelecting, setIsSelecting] = useState(false);
 
   const handleNavigation = (route: string) => {
     setActiveTab(route);
-    setIsSelectingInProfile(false); // Reset when navigating away
+    setIsSelecting(false); // Reset selection state when navigating
   };
 
   const renderPage = () => {
@@ -32,13 +30,16 @@ export default function HomeScreen() {
         return <CalendarScreen />;
       case 'Register':
         return <RegisterPatient onBack={() => setActiveTab('Home')} />;
+
+      // Pass the onSelectionChange prop to detect when to hide BottomNav
       case 'Demographic Profile':
         return (
           <DemographicProfileScreen
             onBack={() => setActiveTab('Grid')}
-            onSelectionChange={selecting => setIsSelectingInProfile(selecting)}
+            onSelectionChange={selecting => setIsSelecting(selecting)}
           />
         );
+
       default:
         return <DashboardSummary onNavigate={handleNavigation} />;
     }
@@ -48,11 +49,10 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.flex1}>{renderPage()}</View>
 
-      {/* HIDE BottomNav if:
-        1. We are on the Demographic Profile screen AND 
-        2. A patient is currently selected/held.
+      {/* Logic: Hide BottomNav if we are in Demographic Profile 
+          AND the user has selected/held a patient.
       */}
-      {!(activeTab === 'Demographic Profile' && isSelectingInProfile) && (
+      {!(activeTab === 'Demographic Profile' && isSelecting) && (
         <BottomNav
           activeRoute={activeTab === 'Demographic Profile' ? 'Grid' : activeTab}
           onNavigate={handleNavigation}
@@ -64,6 +64,11 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  flex1: { flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  flex1: {
+    flex: 1,
+  },
 });
