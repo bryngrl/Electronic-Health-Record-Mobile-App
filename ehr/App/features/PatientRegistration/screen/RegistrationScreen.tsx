@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   col: { width: '48%' },
   label: { fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 5, marginTop: 5 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10, fontSize: 14, minHeight: 45, backgroundColor: '#fff' },
+  input: { borderWidth: 1, borderColor: '#EBEBEB', borderRadius: 8, padding: 10, fontSize: 14, minHeight: 45, backgroundColor: '#EBEBEB' },
   disabled: { backgroundColor: '#f5f5f5', color: '#666' },
   textArea: { height: 80, textAlignVertical: 'top' },
   dropdown: { height: 45, borderColor: '#ccc', borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, backgroundColor: '#fff' },

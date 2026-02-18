@@ -8,23 +8,25 @@ interface ButtonProps {
   style?: ViewStyle;
   // Ensure 'variant' is included in the interface to fix the ts(2322) error
   variant?: 'outlined' | 'gradient'; 
+  disabled?: boolean;
 }
 
-const CustomButton = ({ title, onPress, style }: ButtonProps) => {
+const CustomButton = ({ title, onPress, style, disabled }: ButtonProps) => {
   const [isPressed, setIsPressed] = useState(false);
 
   return (
     <TouchableOpacity 
-      onPress={onPress} 
+      onPress={disabled ? undefined : onPress} 
       onPressIn={() => setIsPressed(true)}  // Gradient on touch (mobile "hover")
       onPressOut={() => setIsPressed(false)} // Outlined on release
       activeOpacity={0.9}
-      style={[styles.container, style]}
+      style={[styles.container, style, disabled && styles.disabled]}
+      disabled={disabled}
     >
       {isPressed ? (
         <View style={styles.shadowWrapper}>
           <LinearGradient
-            colors={['#80C342', '#004d26']}
+            colors={['#80C342', '#1B5E20']}
             style={styles.gradientButton}
           >
             <Text style={styles.gradientText}>{title}</Text>
@@ -42,15 +44,15 @@ const CustomButton = ({ title, onPress, style }: ButtonProps) => {
 const styles = StyleSheet.create({
   container: { minWidth: 120 },
   outlinedButton: {
-    borderWidth: 2,
-    borderColor: '#004d26',
-    backgroundColor: '#E8F5E9',
+    borderWidth: 1,
+    borderColor: '#29A539',
+    backgroundColor: '#E5FFE8',
     borderRadius: 50,
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  outlinedText: { color: '#004d26', fontWeight: 'bold', fontSize: 15 },
+  outlinedText: { color: '#035022', fontWeight: 'bold', fontSize: 15 },
   shadowWrapper: {
     shadowColor: '#004d26',
     shadowOffset: { width: 0, height: 4 },
@@ -65,6 +67,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   gradientText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 15},
+  disabled: {
+    opacity: 0.6,
+  },
 });
 
 export default CustomButton;

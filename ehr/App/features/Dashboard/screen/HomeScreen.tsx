@@ -1,41 +1,45 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, SafeAreaView } from 'react-native';
-
-// Local Feature Components
-// FIXED: Removed curly braces for default import
+import { View, StyleSheet, SafeAreaView } from 'react-native';
 import DashboardSummary from '../components/DashboardSummary';
 import { DashboardGrid } from '../../../components/navigation/DashboardGrid';
 import SearchScreen from '../../Search/screen/SearchScreen';
 import CalendarScreen from '../../Calendar/screen/CalendarScreen';
-import RegistrationForm from '../../PatientRegistration/component/RegistrationForm';
-
-// Global Shared Components
 import BottomNav from '../../../components/navigation/BottomNav';
 
+import RegisterPatient from '../../PatientRegistration/component/RegisterPatient';
+import DemographicProfileScreen from '../../DemographicProfile/screen/DemographicProfileScreen';
+
 export default function HomeScreen() {
-  const [activeTab, setActiveTab] = useState("Home");
+  const [activeTab, setActiveTab] = useState('Home');
+  const [isSelecting, setIsSelecting] = useState(false);
 
   const handleNavigation = (route: string) => {
     setActiveTab(route);
+    setIsSelecting(false); // Reset selection state when navigating
   };
 
   const renderPage = () => {
     switch (activeTab) {
-      case "Home":
+      case 'Home':
         return <DashboardSummary onNavigate={handleNavigation} />;
-      case "Search":
+      case 'Search':
         return <SearchScreen />;
-      case "Grid":
+      case 'Grid':
         return <DashboardGrid onPressItem={handleNavigation} />;
-      case "Calendar":
+      case 'Calendar':
         return <CalendarScreen />;
-      case "Register":
+      case 'Register':
+        return <RegisterPatient onBack={() => setActiveTab('Home')} />;
+
+      // Pass the onSelectionChange prop to detect when to hide BottomNav
+      case 'Demographic Profile':
         return (
-          <RegistrationForm 
-            updateField={() => {}} 
-            onBack={() => setActiveTab('Home')} 
+          <DemographicProfileScreen
+            onBack={() => setActiveTab('Grid')}
+            onSelectionChange={selecting => setIsSelecting(selecting)}
           />
         );
+
       default:
         return <DashboardSummary onNavigate={handleNavigation} />;
     }
@@ -43,20 +47,28 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.flex1}>
-        {renderPage()}
-      </View>
-      
-      <BottomNav 
-        activeRoute={activeTab} 
-        onNavigate={handleNavigation} 
-        onAddPatient={() => handleNavigation('Register')} 
-      />
+      <View style={styles.flex1}>{renderPage()}</View>
+
+      {/* Logic: Hide BottomNav if we are in Demographic Profile 
+          AND the user has selected/held a patient.
+      */}
+      {!(activeTab === 'Demographic Profile' && isSelecting) && (
+        <BottomNav
+          activeRoute={activeTab === 'Demographic Profile' ? 'Grid' : activeTab}
+          onNavigate={handleNavigation}
+          onAddPatient={() => setActiveTab('Register')}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  flex1: { flex: 1 }
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  flex1: {
+    flex: 1,
+  },
 });

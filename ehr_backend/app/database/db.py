@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 
 # This is the database credentials
+# Update these to match your MySQL server if needed
 DATABASE_URL = "mysql+pymysql://root@localhost:3306/ehr_db"
 
 
@@ -49,7 +50,6 @@ SessionLocal = sessionmaker(
     autoflush=False,
     bind=engine
 )
-
 
 
 # for safe access sa db

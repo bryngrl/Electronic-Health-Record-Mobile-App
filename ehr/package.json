@@ -12,6 +12,7 @@
   "dependencies": {
     "@react-native-community/datetimepicker": "^8.6.0",
     "@react-native/new-app-screen": "0.83.1",
+    "axios": "^1.13.5",
     "react": "19.2.0",
     "react-native": "0.83.1",
     "react-native-element-dropdown": "^2.12.4",
