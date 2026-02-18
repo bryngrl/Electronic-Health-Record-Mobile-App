@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
 
 const BACKEND_PORT = 8000; // Changed from 8000 to avoid socket conflicts
 

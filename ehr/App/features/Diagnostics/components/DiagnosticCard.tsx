@@ -7,11 +7,22 @@ import { ViewMode } from '../screen/DiagnosticsScreen';
 interface Props {
   label: string;
   viewMode: ViewMode;
-  hasImage: boolean;
+  imageUrl?: string | null;
+  onImport: () => void;
+  onDelete?: () => void;
+  disabled?: boolean;
 }
 
-const DiagnosticCard: React.FC<Props> = ({ label, viewMode, hasImage }) => {
+const DiagnosticCard: React.FC<Props> = ({ 
+  label, 
+  viewMode, 
+  imageUrl, 
+  onImport, 
+  onDelete,
+  disabled 
+}) => {
   const isGrid = viewMode === 'grid';
+  const hasImage = !!imageUrl;
 
   return (
     <View style={[styles.cardWrapper, !isGrid && styles.fullWidth]}>
@@ -26,32 +37,38 @@ const DiagnosticCard: React.FC<Props> = ({ label, viewMode, hasImage }) => {
           styles.box,
           !isGrid && styles.boxLarge,
           !hasImage && styles.dashedBorder,
+          disabled && styles.disabledBox
         ]}
       >
         {hasImage ? (
           <View style={styles.imageContainer}>
             <Image
-              source={{ uri: 'https://via.placeholder.com/400' }} // Replace with actual patient image
+              source={{ uri: imageUrl! }}
               style={styles.mainImage}
+              resizeMode="cover"
             />
             {isGrid ? (
-              <TouchableOpacity style={styles.closeCircle}>
+              <TouchableOpacity style={styles.closeCircle} onPress={onDelete}>
                 <Ionicon name="close-circle" size={30} color="#FF5A5A" />
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity style={styles.deleteButton}>
+              <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
                 <Text style={styles.deleteText}>DELETE</Text>
               </TouchableOpacity>
             )}
           </View>
         ) : (
-          <TouchableOpacity style={styles.placeholder}>
+          <TouchableOpacity 
+            style={styles.placeholder} 
+            onPress={onImport}
+            disabled={disabled}
+          >
             <FeatherIcon
               name="upload"
               size={isGrid ? 35 : 50}
-              color="#C7C7CD"
+              color={disabled ? "#E8E8E8" : "#C7C7CD"}
             />
-            <Text style={styles.importText}>Import photo</Text>
+            <Text style={[styles.importText, disabled && styles.disabledText]}>Import photo</Text>
             <Text style={styles.clickText}>Click to upload</Text>
           </TouchableOpacity>
         )}
@@ -80,6 +97,7 @@ const styles = StyleSheet.create({
     borderColor: '#E8E8E8',
   },
   boxLarge: { height: 350 },
+  disabledBox: { opacity: 0.6 },
   dashedBorder: {
     borderStyle: 'dashed',
     borderWidth: 1.5,
@@ -87,6 +105,7 @@ const styles = StyleSheet.create({
   },
   placeholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   importText: { color: '#8E8E93', fontWeight: '600', marginTop: 8 },
+  disabledText: { color: '#C7C7CD' },
   clickText: { color: '#C7C7CD', fontSize: 11 },
   imageContainer: { flex: 1, position: 'relative' },
   mainImage: { width: '100%', height: '100%', borderRadius: 20 },
