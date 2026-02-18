@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, Enum, Text, TIMESTAMP
+from sqlalchemy import Column, Integer, String, Date, Enum, Text, TIMESTAMP, Boolean
 from sqlalchemy.dialects.mysql import BIGINT
 from sqlalchemy.orm import relationship
 from app.database.base import Base
@@ -26,6 +26,7 @@ class Patient(Base):
     contact_relationship = Column(String(255), nullable=True)
     contact_number = Column(String(255), nullable=True)
     user_id = Column(BIGINT(unsigned=True), nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(TIMESTAMP, nullable=True)
     updated_at = Column(TIMESTAMP, nullable=True)
     deleted_at = Column(TIMESTAMP, nullable=True)
