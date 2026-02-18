@@ -8,7 +8,7 @@ import PreciseVitalChart from '../component/VitalSignsChart';
 import { useVitalSignsLogic } from '../hook/useVitalSignsLogic';
 
 const { width } = Dimensions.get('window');
-const ITEM_WIDTH = width * 0.72; // Saktong width para sa peeking effect
+const ITEM_WIDTH = width * 0.72; // Mas maliit para makita ang onti ng next chart
 const ITEM_SPACING = 15;
 const SNAP_INTERVAL = ITEM_WIDTH + ITEM_SPACING;
 
@@ -17,7 +17,6 @@ const alertIcon = require('../../../../assets/icons/alert.png');
 const arrowIcon = require('../../../../assets/icons/ARROW.png'); 
 
 const VitalSignsScreen = () => {
-  // HOOKS (Dapat nasa pinakataas)
   const { 
     vitals, handleUpdateVital, patientName, setPatientName, 
     currentTime, vitalKeys, getChartData, handleNextTime, isDataEntered
@@ -26,11 +25,15 @@ const VitalSignsScreen = () => {
   const [chartIndex, setChartIndex] = useState(0);
   const chartListRef = useRef<FlatList>(null);
 
-  const scrollChart = () => {
-    if (chartIndex < vitalKeys.length - 1) {
-      const nextIdx = chartIndex + 1;
+  // FIXED: In-update para gumana ang Next at Previous
+  const scrollChart = (direction: 'next' | 'prev') => {
+    const nextIdx = direction === 'next' ? chartIndex + 1 : chartIndex - 1;
+    if (nextIdx >= 0 && nextIdx < vitalKeys.length) {
       setChartIndex(nextIdx);
-      chartListRef.current?.scrollToOffset({ offset: nextIdx * SNAP_INTERVAL, animated: true });
+      chartListRef.current?.scrollToOffset({ 
+        offset: nextIdx * SNAP_INTERVAL, 
+        animated: true 
+      });
     }
   };
 
@@ -48,6 +51,7 @@ const VitalSignsScreen = () => {
           <TouchableOpacity><Text style={styles.menuDots}>⋮</Text></TouchableOpacity>
         </View>
 
+        {/* Info Section */}
         <View style={styles.inputGroup}>
           <Text style={styles.fieldLabel}>PATIENT NAME :</Text>
           <TextInput style={styles.pillInput} placeholder="Select Patient" value={patientName} onChangeText={setPatientName} />
@@ -66,25 +70,35 @@ const VitalSignsScreen = () => {
           </View>
         </View>
 
-        {/* CHART CAROUSEL */}
+        {/* CHART CAROUSEL: Pinagsamang Left at Right Arrows */}
         <View style={styles.chartCarousel}>
+          {/* PREVIOUS ARROW (Left) */}
+          {chartIndex > 0 && (
+            <TouchableOpacity style={[styles.navArrow, { left: -10 }]} onPress={() => scrollChart('prev')}>
+              <View style={styles.arrowCircle}><Text style={styles.arrowLabelText}>←</Text></View>
+            </TouchableOpacity>
+          )}
+
           <FlatList
             ref={chartListRef}
             horizontal
+            scrollEnabled={true}
             showsHorizontalScrollIndicator={false}
             snapToInterval={SNAP_INTERVAL}
             decelerationRate="fast"
             data={vitalKeys}
             keyExtractor={(item) => item}
-            contentContainerStyle={{ paddingRight: 50 }}
+            contentContainerStyle={{ paddingRight: 60 }}
             renderItem={({ item }) => (
               <View style={{ width: ITEM_WIDTH, marginRight: ITEM_SPACING }}>
                 <PreciseVitalChart label={item.toUpperCase()} data={getChartData(item)} />
               </View>
             )}
           />
+
+          {/* NEXT ARROW (Right) */}
           {chartIndex < vitalKeys.length - 1 && (
-            <TouchableOpacity style={styles.navArrow} onPress={scrollChart}>
+            <TouchableOpacity style={[styles.navArrow, { right: 0 }]} onPress={() => scrollChart('next')}>
               <View style={styles.arrowCircle}><Text style={styles.arrowLabelText}>→</Text></View>
             </TouchableOpacity>
           )}
@@ -92,14 +106,14 @@ const VitalSignsScreen = () => {
 
         <View style={styles.timeBanner}><Text style={styles.timeText}>{currentTime}</Text></View>
 
-        {/* VITAL CARDS */}
+        {/* Vital Cards */}
         <VitalCard label="Temperature" value={vitals.temperature} onChangeText={(v)=>handleUpdateVital('temperature', v)} />
         <VitalCard label="HR" value={vitals.hr} onChangeText={(v)=>handleUpdateVital('hr', v)} />
         <VitalCard label="RR" value={vitals.rr} onChangeText={(v)=>handleUpdateVital('rr', v)} />
         <VitalCard label="BP" value={vitals.bp} onChangeText={(v)=>handleUpdateVital('bp', v)} />
         <VitalCard label="SP02" value={vitals.spo2} onChangeText={(v)=>handleUpdateVital('spo2', v)} />
 
-        {/* FOOTER ACTIONS (Figma Colors) */}
+        {/* Action Footer */}
         <View style={styles.footerAction}>
             <TouchableOpacity 
               style={[styles.alertIcon, { backgroundColor: isDataEntered ? '#FFECBD' : '#EBEBEB' }]}
@@ -121,7 +135,7 @@ const VitalSignsScreen = () => {
         </View>
       </ScrollView>
 
-      {/* BOTTOM NAV */}
+      {/* Bottom Nav */}
       <View style={styles.bottomNav}>
           <Text style={styles.navIcon}>🏠</Text><Text style={styles.navIcon}>🔍</Text>
           <View style={styles.fab}><Text style={styles.plusSign}>+</Text></View>
@@ -144,12 +158,14 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row' },
   dropdown: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 15 },
   arrowIconImage: { width: 14, height: 8, resizeMode: 'contain', tintColor: '#29A539' },
+
   chartCarousel: { height: 210, marginVertical: 20, position: 'relative' },
-  navArrow: { position: 'absolute', right: 20, top: '38%', zIndex: 10 },
-  arrowCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#A5D6A7', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#29A539', elevation: 4 },
-  arrowLabelText: { fontSize: 18, fontWeight: 'bold' },
+  navArrow: { position: 'absolute', top: '38%', zIndex: 10 },
+  arrowCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#A5D6A7', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#29A539', elevation: 5 },
+  arrowLabelText: { fontSize: 18, fontWeight: 'bold', color: '#035022' },
+
   timeBanner: { backgroundColor: '#E5FFE8', paddingVertical: 10, borderRadius: 20, alignItems: 'center', marginBottom: 20 },
-  timeText: { color: '#29A539', fontWeight: 'bold' },
+  timeText: { color: '#29A539', fontWeight: 'bold', fontSize: 16 },
   footerAction: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
   alertIcon: { width: 45, height: 45, borderRadius: 22.5, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#F0F0F0' },
   fullImg: { width: '80%', height: '80%', resizeMode: 'contain' },
