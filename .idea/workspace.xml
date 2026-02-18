@@ -5,7 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="64dac766-4f9e-47dc-9efd-004b84659307" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/ehr/App/features/DemographicProfile/screen/DemographicProfileScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/DemographicProfile/screen/DemographicProfileScreen.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/deviceManager.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/App/features/Dashboard/screen/HomeScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/Dashboard/screen/HomeScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/package.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -18,6 +22,12 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/bryngrl/EHR.git",
+    "accountId": "6ecc126c-f291-495f-bc18-cc865de1b25c"
+  }
+}]]></component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 0
@@ -35,9 +45,10 @@
     "RunOnceActivity.cidr.known.project.marker": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
-    "git-widget-placeholder": "demographic-profile",
+    "git-widget-placeholder": "vital",
     "kotlin-language-version-configured": "true"
   }
 }]]></component>

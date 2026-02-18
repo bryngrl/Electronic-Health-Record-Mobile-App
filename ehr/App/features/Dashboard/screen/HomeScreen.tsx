@@ -8,6 +8,7 @@ import BottomNav from '../../../components/navigation/BottomNav';
 
 import RegisterPatient from '../../PatientRegistration/component/RegisterPatient';
 import DemographicProfileScreen from '../../DemographicProfile/screen/DemographicProfileScreen';
+import VitalSignsScreen from '../../VitalSigns/screen/VitalSignsScreen';
 
 export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('Home');
@@ -39,6 +40,9 @@ export default function HomeScreen() {
             onSelectionChange={selecting => setIsSelecting(selecting)}
           />
         );
+
+      case 'Vital Signs':
+        return <VitalSignsScreen />;
 
       default:
         return <DashboardSummary onNavigate={handleNavigation} />;
