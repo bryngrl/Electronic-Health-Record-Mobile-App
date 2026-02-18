@@ -37,11 +37,28 @@ export const useDemographicLogic = (
       try {
         /**
          * Iterate through selected IDs and update status on the backend.
-         * Matches PUT /patient/{patient_id}.
+         * Matches PUT /patients/{patient_id} with is_active: 1 or 0.
          */
-        const updatePromises = Array.from(selectedIds).map(id =>
-          apiClient.put(`/patient/${id}`, { isActive: status }),
-        );
+        const updatePromises = Array.from(selectedIds).map(id => {
+          // Find the existing patient data to satisfy full PUT requirements if needed
+          const existingPatient = (patients as any[]).find(
+            p => p.patient_id === id,
+          );
+
+          // We send back the full patient object with the updated is_active status
+          // because the backend PUT endpoint uses PatientCreate schema (no partial updates).
+          const updatedData = {
+            ...existingPatient,
+            is_active: status ? 1 : 0,
+          };
+
+          // Remove fields that are not in PatientCreate schema if they exist
+          delete updatedData.patient_id;
+          delete updatedData.created_at;
+          delete updatedData.updated_at;
+
+          return apiClient.put(`/patients/${id}`, updatedData);
+        });
 
         await Promise.all(updatePromises);
 
@@ -54,7 +71,7 @@ export const useDemographicLogic = (
         setIsLoading(false);
       }
     },
-    [selectedIds, loadPatients],
+    [selectedIds, loadPatients, patients],
   );
 
   const toggleSelection = useCallback((id: number) => {

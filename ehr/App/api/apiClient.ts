@@ -11,10 +11,10 @@ const host = PHYSICAL_DEVICE_HOST;
 
 const apiClient = axios.create({
   // Adding /api if your FastAPI routes are prefixed with /api
-  baseURL: `http://${host}:${BACKEND_PORT}`, 
-  headers: { 
+  baseURL: `http://${host}:${BACKEND_PORT}`,
+  headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    Accept: 'application/json',
   },
   timeout: 10000, // 10 second timeout helps diagnose connection issues
 });

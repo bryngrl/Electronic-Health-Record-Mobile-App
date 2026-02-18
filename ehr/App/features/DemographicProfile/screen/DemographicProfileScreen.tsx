@@ -21,7 +21,7 @@ interface Patient {
   patient_id: number;
   first_name: string;
   last_name: string;
-  isActive?: boolean;
+  is_active: number | boolean;
 }
 
 interface ProfileProps {
@@ -122,7 +122,10 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
                     ...item,
                     name: `${item.last_name}, ${item.first_name}`,
                     id: item.patient_id,
-                    isActive: item.isActive ?? true,
+                    isActive:
+                      typeof item.is_active === 'number'
+                        ? item.is_active === 1
+                        : Boolean(item.is_active ?? true),
                   }}
                   isSelected={selectedIds.has(item.patient_id)}
                   isSelectionMode={isSelectionMode}
