@@ -8,11 +8,11 @@ import BottomNav from '../../../components/navigation/BottomNav';
 import RegisterPatient from '../../PatientRegistration/component/RegisterPatient';
 import DemographicProfileScreen from '../../DemographicProfile/screen/DemographicProfileScreen';
 
-// 1. Import the new Medical History screen
 import MedicalHistoryScreen from '../../MedicalHistory/screen/MedicalHistoryScreen';
 import PhysicalExamScreen from '../../PhysicalExam/screen/PhysicalExamScreen';
 import ADLMainScreen from '../../ADL/screen/ADLMainScreen';
 import LabValuesScreen from '../../LaboratoryValues/screen/LabValuesScreen';
+import DiagnosticsScreen from '../../Diagnostics/screen/DiagnosticsScreen';
 
 export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('Home');
@@ -55,6 +55,8 @@ export default function HomeScreen() {
         return <ADLMainScreen onBack={() => setActiveTab('Grid')} />;
       case 'LabValues':
         return <LabValuesScreen onBack={() => setActiveTab('Grid')} />;
+      case 'Diagnostics':
+        return <DiagnosticsScreen onBack={() => setActiveTab('Grid')} />;
 
       default:
         return <DashboardSummary onNavigate={handleNavigation} />;
