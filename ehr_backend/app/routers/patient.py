@@ -27,6 +27,7 @@ class PatientCreate(BaseModel):
     contact_relationship: Optional[str] = None
     contact_number: Optional[str] = None
     user_id: int
+    is_active: Optional[bool] = True
     model_config = ConfigDict(extra="forbid")
 
 class PatientRead(BaseModel):
@@ -49,6 +50,7 @@ class PatientRead(BaseModel):
     contact_relationship: Optional[str] = None
     contact_number: Optional[str] = None
     user_id: int
+    is_active: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)

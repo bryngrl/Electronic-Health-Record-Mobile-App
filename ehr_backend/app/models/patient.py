@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, Enum, Text, TIMESTAMP
+from sqlalchemy import Column, Integer, String, Date, Enum, Text, TIMESTAMP, Boolean
 from sqlalchemy.dialects.mysql import BIGINT
 from sqlalchemy.orm import relationship
 from app.database.base import Base
@@ -26,6 +26,7 @@ class Patient(Base):
     contact_relationship = Column(String(255), nullable=True)
     contact_number = Column(String(255), nullable=True)
     user_id = Column(BIGINT(unsigned=True), nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(TIMESTAMP, nullable=True)
     updated_at = Column(TIMESTAMP, nullable=True)
     deleted_at = Column(TIMESTAMP, nullable=True)
@@ -35,3 +36,7 @@ class Patient(Base):
     intake_and_outputs = relationship("IntakeAndOutput", back_populates="patient")
     adls = relationship("ADL", back_populates="patient")
     lab_values = relationship("LabValues", back_populates="patient")
+    medication_administrations = relationship("MedicationAdministration", back_populates="patient")
+    home_medications = relationship("HomeMedication", back_populates="patient")
+    current_medications = relationship("CurrentMedication", back_populates="patient")
+    changes_in_medications = relationship("ChangesInMedication", back_populates="patient")

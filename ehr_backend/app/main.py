@@ -17,6 +17,10 @@ from app.models.medical_history.medical_history import (
 from app.models.diagnostics.diagnostics import Diagnostic
 from app.models.ivs_and_lines.ivs_and_lines import IVsAndLines
 from app.models.discharge_planning.discharge_planning import DischargePlanning
+from app.models.medication_administration.medication_administration import MedicationAdministration
+from app.models.medication_reconciliation.medication_reconciliation import (
+    HomeMedication, CurrentMedication, ChangesInMedication
+)
 
 # Router imports
 from app.routers import auth, patient
@@ -29,6 +33,8 @@ from app.routers.medical_history import medical_history as mh_router
 from app.routers.diagnostics import diagnostics as diag_router
 from app.routers.ivs_and_lines import ivs_and_lines as ial_router
 from app.routers.discharge_planning import discharge_planning as dp_router
+from app.routers.medication_administration import medication_administration as ma_router
+from app.routers.medication_reconciliation import medication_reconciliation as mr_router
 
 app = FastAPI(title="EHR Backend API")
 
@@ -83,6 +89,12 @@ app.include_router(ial_router.router)
 
 # Discharge Planning (data entry: discharge criteria & instructions)
 app.include_router(dp_router.router)
+
+# Medication Administration (data entry: medication administration record)
+app.include_router(ma_router.router)
+
+# Medication Reconciliation (3 sub-components: home, current, changes)
+app.include_router(mr_router.router)
 
 Base.metadata.create_all(bind=engine)
 
