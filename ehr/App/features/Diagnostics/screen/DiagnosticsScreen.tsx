@@ -25,13 +25,15 @@ interface DiagnosticsProps {
 
 const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  
+
   // Patient Search State (Copied logic from PhysicalExam)
   const [searchText, setSearchText] = useState('');
   const [patients, setPatients] = useState<any[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
+    null,
+  );
 
   const {
     diagnostics,
@@ -48,11 +50,11 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
         const response = await apiClient.get('/patients/');
         const normalized = (response.data || []).map((p: any) => ({
           id: (p.patient_id ?? p.id).toString(),
-          fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim()
+          fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
         }));
         setPatients(normalized);
       } catch (e) {
-        console.error("Failed to load patients");
+        console.error('Failed to load patients');
       }
     };
     fetchPatients();
@@ -87,17 +89,17 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
   };
 
   const formatDate = () => {
-    return new Date().toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      month: 'long', 
-      day: 'numeric' 
+    return new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
     });
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
@@ -144,24 +146,33 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
         {/* PATIENT SEARCH (Copied from PhysicalExam) */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>PATIENT NAME :</Text>
-          <TextInput 
-            style={styles.searchBar} 
-            placeholder="Select or type Patient name" 
-            value={searchText} 
+          <TextInput
+            style={styles.searchBar}
+            placeholder="Select or type Patient name"
+            placeholderTextColor="#afafaf"
+            value={searchText}
             onChangeText={(text: string) => {
               setSearchText(text);
-              setFilteredPatients(patients.filter(p => p.fullName.toLowerCase().includes(text.toLowerCase())));
+              setFilteredPatients(
+                patients.filter(p =>
+                  p.fullName.toLowerCase().includes(text.toLowerCase()),
+                ),
+              );
               setShowDropdown(true);
-            }} 
+            }}
           />
           {showDropdown && filteredPatients.length > 0 && (
             <View style={styles.dropdown}>
-              {filteredPatients.map((p) => (
-                <Pressable key={p.id} onPress={() => {
-                  setSearchText(p.fullName);
-                  setSelectedPatientId(p.id);
-                  setShowDropdown(false);
-                }} style={styles.dropItem}>
+              {filteredPatients.map(p => (
+                <Pressable
+                  key={p.id}
+                  onPress={() => {
+                    setSearchText(p.fullName);
+                    setSelectedPatientId(p.id);
+                    setShowDropdown(false);
+                  }}
+                  style={styles.dropItem}
+                >
                   <Text>{p.fullName}</Text>
                 </Pressable>
               ))}
@@ -170,14 +181,18 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
         </View>
 
         {loading && diagnostics.length === 0 && (
-          <ActivityIndicator size="large" color="#14532d" style={{ marginVertical: 20 }} />
+          <ActivityIndicator
+            size="large"
+            color="#14532d"
+            style={{ marginVertical: 20 }}
+          />
         )}
 
         {/* DIAGNOSTIC CARDS GRID/LIST */}
         <View style={viewMode === 'grid' ? styles.gridWrap : styles.listWrap}>
           {diagnosticTypes.map(item => {
             const diagnostic = getDiagnosticForType(item.id);
-            const imageUrl = diagnostic 
+            const imageUrl = diagnostic
               ? `${BASE_URL}/diagnostics/${diagnostic.diagnostic_id}/file`
               : null;
 
@@ -188,7 +203,9 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
                 viewMode={viewMode}
                 imageUrl={imageUrl}
                 onImport={() => handleImport(item.id)}
-                onDelete={() => diagnostic && handleDelete(diagnostic.diagnostic_id)}
+                onDelete={() =>
+                  diagnostic && handleDelete(diagnostic.diagnostic_id)
+                }
                 disabled={!selectedPatientId || loading}
               />
             );
@@ -196,8 +213,11 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
         </View>
 
         {/* SUBMIT BUTTON */}
-        <TouchableOpacity 
-          style={[styles.submitButton, !selectedPatientId && styles.disabledButton]}
+        <TouchableOpacity
+          style={[
+            styles.submitButton,
+            !selectedPatientId && styles.disabledButton,
+          ]}
           disabled={!selectedPatientId}
           onPress={onBack}
         >
@@ -210,7 +230,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  scrollContent: { padding: 20, paddingBottom: 100 },
+  scrollContent: { padding: 30, paddingBottom: 100 },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -241,31 +261,31 @@ const styles = StyleSheet.create({
   },
   // Patient Search Styles
   section: { marginBottom: 25, zIndex: 10 },
-  sectionLabel: { 
-    fontSize: 12, 
-    fontWeight: 'bold', 
-    color: '#14532d', 
-    marginBottom: 8 
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#14532d',
+    marginBottom: 8,
   },
-  searchBar: { 
-    borderRadius: 25, 
-    paddingHorizontal: 20, 
-    height: 50, 
-    borderWidth: 1, 
+  searchBar: {
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    height: 50,
+    borderWidth: 1,
     borderColor: '#E8E8E8',
     backgroundColor: '#FFF',
   },
-  dropdown: { 
-    backgroundColor: '#fff', 
-    borderRadius: 10, 
-    borderWidth: 1, 
-    borderColor: '#eee', 
-    elevation: 3, 
-    position: 'absolute', 
-    top: 75, 
-    left: 0, 
-    right: 0, 
-    zIndex: 99 
+  dropdown: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#eee',
+    elevation: 3,
+    position: 'absolute',
+    top: 75,
+    left: 0,
+    right: 0,
+    zIndex: 99,
   },
   dropItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#f9f9f9' },
   gridWrap: {

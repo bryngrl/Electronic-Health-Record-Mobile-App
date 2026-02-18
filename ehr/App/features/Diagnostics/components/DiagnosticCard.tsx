@@ -13,13 +13,13 @@ interface Props {
   disabled?: boolean;
 }
 
-const DiagnosticCard: React.FC<Props> = ({ 
-  label, 
-  viewMode, 
-  imageUrl, 
-  onImport, 
+const DiagnosticCard: React.FC<Props> = ({
+  label,
+  viewMode,
+  imageUrl,
+  onImport,
   onDelete,
-  disabled 
+  disabled,
 }) => {
   const isGrid = viewMode === 'grid';
   const hasImage = !!imageUrl;
@@ -37,7 +37,7 @@ const DiagnosticCard: React.FC<Props> = ({
           styles.box,
           !isGrid && styles.boxLarge,
           !hasImage && styles.dashedBorder,
-          disabled && styles.disabledBox
+          disabled && styles.disabledBox,
         ]}
       >
         {hasImage ? (
@@ -58,17 +58,19 @@ const DiagnosticCard: React.FC<Props> = ({
             )}
           </View>
         ) : (
-          <TouchableOpacity 
-            style={styles.placeholder} 
+          <TouchableOpacity
+            style={styles.placeholder}
             onPress={onImport}
             disabled={disabled}
           >
             <FeatherIcon
               name="upload"
               size={isGrid ? 35 : 50}
-              color={disabled ? "#E8E8E8" : "#C7C7CD"}
+              color={disabled ? '#636363' : '#C7C7CD'}
             />
-            <Text style={[styles.importText, disabled && styles.disabledText]}>Import photo</Text>
+            <Text style={[styles.importText, disabled && styles.disabledText]}>
+              Import photo
+            </Text>
             <Text style={styles.clickText}>Click to upload</Text>
           </TouchableOpacity>
         )}
@@ -87,11 +89,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  pillText: { color: '#22c55e', fontWeight: 'bold', fontSize: 12 },
+  pillText: { color: '#14532d', fontWeight: 'bold', fontSize: 12 },
   box: {
-    height: 180,
+    height: 200,
     borderRadius: 20,
-    backgroundColor: '#F9F9F9',
+    backgroundColor: '#c8c8c8',
     overflow: 'visible',
     borderWidth: 1,
     borderColor: '#E8E8E8',
@@ -104,11 +106,19 @@ const styles = StyleSheet.create({
     borderColor: '#D1D1D1',
   },
   placeholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  importText: { color: '#8E8E93', fontWeight: '600', marginTop: 8 },
-  disabledText: { color: '#C7C7CD' },
+  importText: { color: '#585858', fontWeight: '600', marginTop: 8 },
+  disabledText: { color: '#585859' },
   clickText: { color: '#C7C7CD', fontSize: 11 },
-  imageContainer: { flex: 1, position: 'relative' },
-  mainImage: { width: '100%', height: '100%', borderRadius: 20 },
+  imageContainer: {
+    flex: 1,
+    position: 'relative',
+    padding: 12,
+  },
+  mainImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
   closeCircle: {
     position: 'absolute',
     top: -10,
