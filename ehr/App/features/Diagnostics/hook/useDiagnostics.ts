@@ -67,9 +67,8 @@ export const useDiagnostics = () => {
         },
       });
 
-      Alert.alert('Success', 'Image uploaded successfully');
       await fetchDiagnostics(patientId);
-      return response.data;
+      return { success: true, data: response.data };
     } catch (error: any) {
       console.error('Error uploading diagnostic:', error);
       let errorMsg = 'Failed to upload image';
@@ -81,42 +80,26 @@ export const useDiagnostics = () => {
           error.response.data?.detail ||
           `Server error: ${error.response.status}`;
       } else if (error.request) {
-        // The request was made but no response was received
         errorMsg = 'No response from server. Check your connection.';
       }
 
-      Alert.alert('Error', errorMsg);
-      return null;
+      return { success: false, error: errorMsg };
     } finally {
       setLoading(false);
     }
   };
 
-  const deleteDiagnostic = async (patientId: string, diagnosticId: number) => {
-    Alert.alert(
-      'Delete Image',
-      'Are you sure you want to delete this diagnostic image?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setLoading(true);
-            try {
-              await apiClient.delete(`/diagnostics/${diagnosticId}`);
-              Alert.alert('Success', 'Image deleted');
-              await fetchDiagnostics(patientId);
-            } catch (error) {
-              console.error('Error deleting diagnostic:', error);
-              Alert.alert('Error', 'Failed to delete image');
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ],
-    );
+  const deleteDiagnostic = async (diagnosticId: number) => {
+    setLoading(true);
+    try {
+      await apiClient.delete(`/diagnostics/${diagnosticId}`);
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting diagnostic:', error);
+      return { success: false, error: 'Failed to delete image' };
+    } finally {
+      setLoading(false);
+    }
   };
 
   return {

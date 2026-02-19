@@ -19,6 +19,7 @@ const CARD_WIDTH = 350;
 const CARD_GAP = 20;
 
 import DiagnosticCard from '../components/DiagnosticCard';
+import SweetAlert from '../../../components/SweetAlert';
 import apiClient, { BASE_URL } from '../../../api/apiClient';
 import { useDiagnostics, DiagnosticRecord } from '../hook/useDiagnostics';
 
@@ -54,6 +55,20 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
     null,
   );
 
+  // SweetAlert State
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'delete';
+    onConfirm?: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'success',
+  });
+
   const {
     diagnostics,
     loading,
@@ -61,6 +76,25 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
     uploadDiagnostic,
     deleteDiagnostic,
   } = useDiagnostics();
+
+  const showAlert = (
+    title: string,
+    message: string,
+    type: 'success' | 'error' | 'delete',
+    onConfirm?: () => void,
+  ) => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+      onConfirm,
+    });
+  };
+
+  const hideAlert = () => {
+    setAlertConfig(prev => ({ ...prev, visible: false }));
+  };
 
   // Load patient list on mount
   useEffect(() => {
@@ -88,18 +122,42 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
 
   const handleImport = async (imageType: string) => {
     if (!selectedPatientId) {
-      Alert.alert(
+      showAlert(
         'Patient Required',
         'Please select a patient before importing a photo.',
+        'error',
       );
       return;
     }
-    await uploadDiagnostic(selectedPatientId, imageType);
+    const result = await uploadDiagnostic(selectedPatientId, imageType);
+    if (result && result.success) {
+      showAlert('Success', 'Image uploaded successfully', 'success');
+    } else if (result && result.error) {
+      const msg = typeof result.error === 'string' 
+        ? result.error 
+        : JSON.stringify(result.error);
+      showAlert('Error', msg, 'error');
+    }
   };
 
   const handleDelete = async (diagnosticId: number) => {
     if (!selectedPatientId) return;
-    await deleteDiagnostic(selectedPatientId, diagnosticId);
+
+    showAlert(
+      'Delete Image',
+      'Are you sure you want to delete this diagnostic image?',
+      'delete',
+      async () => {
+        hideAlert();
+        const result = await deleteDiagnostic(diagnosticId);
+        if (result.success) {
+          await fetchDiagnostics(selectedPatientId);
+          showAlert('Deleted', 'Image has been removed.', 'success');
+        } else {
+          showAlert('Error', result.error || 'Failed to delete', 'error');
+        }
+      },
+    );
   };
 
   const diagnosticTypes = [
@@ -285,6 +343,17 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
           <Text style={styles.submitText}>DONE</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* SWEET ALERT */}
+      <SweetAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onCancel={hideAlert}
+        onConfirm={alertConfig.onConfirm || hideAlert}
+        confirmText={alertConfig.type === 'delete' ? 'DELETE' : 'OK'}
+      />
     </View>
   );
 };
