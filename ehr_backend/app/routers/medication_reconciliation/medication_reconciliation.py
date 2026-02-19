@@ -44,8 +44,8 @@ class HomeMedicationRead(BaseModel):
     home_frequency: Optional[str] = None
     home_indication: Optional[str] = None
     home_text: Optional[str] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -79,15 +79,15 @@ class CurrentMedicationRead(BaseModel):
     """Schema for reading a current medication record."""
     id: int
     patient_id: int
-    date: Optional[str] = None
+    date: Optional[datetime] = None
     current_med: Optional[str] = None
     current_dose: Optional[str] = None
     current_route: Optional[str] = None
     current_frequency: Optional[str] = None
     current_indication: Optional[str] = None
     current_text: Optional[str] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -122,8 +122,8 @@ class ChangesInMedicationRead(BaseModel):
     change_route: Optional[str] = None
     change_frequency: Optional[str] = None
     change_text: Optional[str] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     model_config = ConfigDict(from_attributes=True)
 

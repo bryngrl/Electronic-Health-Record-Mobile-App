@@ -67,11 +67,14 @@ const LabValuesScreen = ({ onBack }: any) => {
     type: 'error',
   });
 
-  const showAlert = (title: string, message: string, type: 'success' | 'error' = 'error') => {
+  const showAlert = (
+    title: string,
+    message: string,
+    type: 'success' | 'error' = 'error',
+  ) => {
     setAlertConfig({ visible: true, title, message, type });
   };
 
-  // FIX: Accurate backend prefix mapping
   const getBackendPrefix = (label: string) => label.split(' ')[0].toLowerCase();
 
   useEffect(() => {
@@ -84,30 +87,37 @@ const LabValuesScreen = ({ onBack }: any) => {
     });
   }, []);
 
-  // FIXED REAL-TIME CDSS: Triggers only when BOTH fields have text
+  /**
+   * INTEGRATED FIX: REAL-TIME CDSS
+   * This effect now triggers the bell as you type, provided a patient is selected.
+   * We removed the requirement for labId to exist first.
+   */
   useEffect(() => {
-    // Only proceed if patient is selected, record ID exists, and both inputs are filled
-    if (!selectedPatientId || !labId || !result.trim() || !normalRange.trim())
-      return;
+    // Only proceed if patient is selected and both inputs are filled
+    if (!selectedPatientId || !result.trim() || !normalRange.trim()) return;
 
     const prefix = getBackendPrefix(selectedTest);
     const timer = setTimeout(async () => {
       try {
-        await checkLabAlerts(labId, {
+        // We pass the labId if it exists (for updates), otherwise it sends as null
+        await checkLabAlerts(labId as number, {
           [`${prefix}_result`]: result,
           [`${prefix}_normal_range`]: normalRange,
         });
       } catch (e) {
         console.error('Lab CDSS Error:', e);
       }
-    }, 1000);
+    }, 1000); // Debounce to prevent too many API calls while typing
+
     return () => clearTimeout(timer);
-    // Dependency list now includes normalRange to trigger the active bell immediately
   }, [result, normalRange, selectedTest, labId, selectedPatientId]);
 
   const handleCDSSPress = async () => {
     if (!selectedPatientId) {
-      return showAlert('Patient Required', 'Please select a patient first in the search bar.');
+      return showAlert(
+        'Patient Required',
+        'Please select a patient first in the search bar.',
+      );
     }
     const prefix = getBackendPrefix(selectedTest);
     const payload = {
@@ -119,7 +129,7 @@ const LabValuesScreen = ({ onBack }: any) => {
       const res = await saveLabAssessment(payload);
       if (res && res.id) {
         setLabId(res.id);
-        setIsAdpieActive(true); // Navigate to ADPIE Stepper
+        setIsAdpieActive(true);
       }
     } catch (e) {
       showAlert('Error', 'Could not initiate nursing process.');
@@ -128,7 +138,10 @@ const LabValuesScreen = ({ onBack }: any) => {
 
   const handleNextOrSave = async () => {
     if (!selectedPatientId) {
-      return showAlert('Patient Required', 'Please select a patient first in the search bar.');
+      return showAlert(
+        'Patient Required',
+        'Please select a patient first in the search bar.',
+      );
     }
     const prefix = getBackendPrefix(selectedTest);
     const payload: any = {
@@ -146,15 +159,14 @@ const LabValuesScreen = ({ onBack }: any) => {
           [`${prefix}_normal_range`]: normalRange,
         });
       }
+
       if (selectedTest === 'Basophils (%)') {
         showAlert('Success', 'Complete Lab Assessment Saved.', 'success');
-        setTimeout(() => {
-          onBack();
-        }, 1500);
+        setTimeout(() => onBack(), 1500);
       } else {
         const idx = LAB_TESTS.indexOf(selectedTest);
         setSelectedTest(LAB_TESTS[idx + 1]);
-        setResult(''); // Clear for next input
+        setResult('');
         setNormalRange('');
       }
     } catch (e) {
@@ -173,15 +185,27 @@ const LabValuesScreen = ({ onBack }: any) => {
     );
   }
 
-  // FIXED BELL LOGIC: Active only when both inputs have content
+  /**
+   * INTEGRATED FIX: BELL LOGIC
+   * The bell becomes active (Gold/Amber) if results are present and the CDSS returns an alert string
+   */
+  // 1. Get the raw alert string from your hook
   const currentAlert = alerts[`${getBackendPrefix(selectedTest)}_alert`];
-  const isBellActive =
-    result.trim() !== '' &&
-    normalRange.trim() !== '' &&
+
+  // 2. Check if the user has actually finished entering data
+  const hasInputData = result.trim() !== '' && normalRange.trim() !== '';
+
+  // 3. Determine if the alert is "Clinical" (High/Low/Abnormal)
+  // vs "Neutral" (Normal/Pending/Error)
+  const isClinicalAlert =
     currentAlert &&
+    currentAlert !== 'Normal' &&
     !currentAlert.includes('No result') &&
     !currentAlert.includes('Unable to compare');
 
+  // 4. THE FIX: The bell is "Active" (clickable) if there is data.
+  // It is "Highlighted" (Gold) only if there is a clinical alert.
+  const isBellActive = hasInputData && isClinicalAlert;
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -269,7 +293,9 @@ const LabValuesScreen = ({ onBack }: any) => {
           onResultChange={setResult}
           onRangeChange={setNormalRange}
           disabled={!selectedPatientId}
-          onDisabledPress={() => showAlert('Patient Required', 'Please select a patient first in the search bar.')}
+          onDisabledPress={() =>
+            showAlert('Patient Required', 'Please select a patient first.')
+          }
         />
 
         <View style={styles.footerRow}>
@@ -405,13 +431,16 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#F3F4F6', // Default Gray-ish
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: '#D1D5DB',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  activeBell: { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
+  activeBell: {
+    backgroundColor: '#FFFBEB', // Amber background
+    borderColor: '#FDE68A',
+  },
   cdssBtn: {
     flex: 1,
     height: 50,

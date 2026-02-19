@@ -1,5 +1,5 @@
 // MedAdministration/screen/MedAdministrationScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -28,12 +28,14 @@ const MedAdministrationScreen = ({ onBack }: any) => {
     updateCurrentMed,
     nextStep,
     saveMedAdministration,
+    fetchPatientData,
   } = useMedAdministration();
 
   const [patients, setPatients] = useState<any[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const lastFetched = useRef<{ id: number | null, date: string }>({ id: null, date: '' });
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -66,6 +68,14 @@ const MedAdministrationScreen = ({ onBack }: any) => {
     });
   }, []);
 
+  // Fetch patient data when patient or date changes
+  useEffect(() => {
+    if (formData.patient_id && (formData.patient_id !== lastFetched.current.id || formData.date !== lastFetched.current.date)) {
+      lastFetched.current = { id: formData.patient_id, date: formData.date };
+      fetchPatientData(formData.patient_id, formData.date);
+    }
+  }, [formData.patient_id, formData.date, fetchPatientData]);
+
   const handleSearch = (text: string) => {
     setSearchText(text);
     if (text.length > 0) {
@@ -76,17 +86,21 @@ const MedAdministrationScreen = ({ onBack }: any) => {
       setShowDropdown(true);
     } else {
       setShowDropdown(false);
-      setFormData({ ...formData, patient_id: null, patientName: '' });
+      setFormData({ ...formData, patient_id: null, patientName: '', medications: [
+        { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
+        { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
+        { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
+      ] });
     }
   };
 
   const onSelectPatient = (patient: any) => {
     setSearchText(patient.fullName);
-    setFormData({
-      ...formData,
-      patient_id: patient.id,
+    setFormData(prev => ({
+      ...prev,
+      patient_id: parseInt(patient.id, 10),
       patientName: patient.fullName,
-    });
+    }));
     setShowDropdown(false);
   };
 

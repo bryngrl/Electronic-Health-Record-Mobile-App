@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from datetime import date, time
+from datetime import date, time, datetime
 from typing import Optional, List
 from app.database.db import get_db
 from app.models.medication_administration.medication_administration import MedicationAdministration
@@ -45,8 +45,8 @@ class MedicationAdministrationRead(BaseModel):
     comments: Optional[str] = None
     time: Optional[time] = None
     date: Optional[date] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     model_config = ConfigDict(from_attributes=True)
 
