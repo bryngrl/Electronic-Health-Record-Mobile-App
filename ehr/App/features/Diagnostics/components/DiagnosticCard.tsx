@@ -66,7 +66,7 @@ const DiagnosticCard: React.FC<Props> = ({
             <FeatherIcon
               name="upload"
               size={isGrid ? 35 : 50}
-              color={disabled ? '#636363' : '#C7C7CD'}
+              color={disabled ? '#e2e2e2' : '#585858'}
             />
             <Text style={[styles.importText, disabled && styles.disabledText]}>
               Import photo

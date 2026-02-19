@@ -10,6 +10,7 @@ import {
   Pressable,
   ActivityIndicator,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import Ionicon from 'react-native-vector-icons/Ionicons';
@@ -86,7 +87,13 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
   }, [selectedPatientId, fetchDiagnostics]);
 
   const handleImport = async (imageType: string) => {
-    if (!selectedPatientId) return;
+    if (!selectedPatientId) {
+      Alert.alert(
+        'Patient Required',
+        'Please select a patient before importing a photo.',
+      );
+      return;
+    }
     await uploadDiagnostic(selectedPatientId, imageType);
   };
 
@@ -233,7 +240,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
                       onDelete={() =>
                         diagnostic && handleDelete(diagnostic.diagnostic_id)
                       }
-                      disabled={!selectedPatientId || loading}
+                      disabled={loading}
                     />
                   </View>
                   <View style={{ width: CARD_GAP }} />
@@ -259,7 +266,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
                     onDelete={() =>
                       diagnostic && handleDelete(diagnostic.diagnostic_id)
                     }
-                    disabled={!selectedPatientId || loading}
+                    disabled={loading}
                   />
                 </View>
               );
