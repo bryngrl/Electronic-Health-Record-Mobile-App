@@ -8,13 +8,13 @@ import {
   ScrollView,
   TextInput,
   SafeAreaView,
-  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import HistoryInputCard from '../components/HistoryInputCard';
 import Button from '../../../components/button';
 import apiClient from '../../../api/apiClient';
 import { useMedicalHistory } from '../hook/useMedicalHistory';
+import SweetAlert from '../../../components/SweetAlert';
 
 const THEME_GREEN = '#035022';
 const LIGHT_GREEN_BG = '#E8F5E9';
@@ -33,6 +33,23 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(
     null,
   );
+
+  // SweetAlert State
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'error',
+  });
+
+  const showAlert = (title: string, message: string, type: 'success' | 'error' = 'error') => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
 
   const [formData, setFormData] = useState({
     present: {
@@ -123,25 +140,23 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
   };
 
   const handleNext = async () => {
+    if (!selectedPatientId) {
+      return showAlert('Patient Required', 'Please select a patient first in the search bar.');
+    }
+
     if (step < steps.length - 1) {
       setStep(step + 1);
     } else {
-      if (!selectedPatientId) {
-        Alert.alert('Error', 'Please select a valid patient from the list.');
-        return;
-      }
-
       try {
         // Submit all 5 components to the backend router endpoints
         await saveMedicalHistory(selectedPatientId, formData);
 
-        Alert.alert(
-          'Success',
-          'Medical History components saved successfully.',
-        );
-        onBack();
+        showAlert('Success', 'Medical History components saved successfully.', 'success');
+        setTimeout(() => {
+          onBack();
+        }, 1500);
       } catch (error: any) {
-        Alert.alert('Error', error.message || 'Failed to save history.');
+        showAlert('Error', error.message || 'Failed to save history.');
       }
     }
   };
@@ -235,6 +250,8 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
                 ]
               }
               onChangeText={(val: string) => updateField(field, val)}
+              disabled={!selectedPatientId}
+              onDisabledPress={() => showAlert('Patient Required', 'Please select a patient first in the search bar.')}
             />
           ),
         )}
@@ -247,6 +264,15 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
         </View>
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      <SweetAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onConfirm={() => setAlertConfig({ ...alertConfig, visible: false })}
+        confirmText="OK"
+      />
     </SafeAreaView>
   );
 };

@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   TextInput,
   Pressable,
-  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LabResultCard from '../components/LabResultCard';
@@ -16,6 +15,7 @@ import apiClient from '../../../api/apiClient';
 import { useLabValues } from '../hook/useLabValues';
 import CDSSModal from '../../../components/CDSSModal';
 import ADPIEScreen from './ADPIEScreen';
+import SweetAlert from '../../../components/SweetAlert';
 
 const THEME_GREEN = '#035022';
 const LAB_TESTS = [
@@ -54,6 +54,23 @@ const LabValuesScreen = ({ onBack }: any) => {
     null,
   );
 
+  // SweetAlert State
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error';
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'error',
+  });
+
+  const showAlert = (title: string, message: string, type: 'success' | 'error' = 'error') => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
+
   // FIX: Accurate backend prefix mapping
   const getBackendPrefix = (label: string) => label.split(' ')[0].toLowerCase();
 
@@ -89,8 +106,9 @@ const LabValuesScreen = ({ onBack }: any) => {
   }, [result, normalRange, selectedTest, labId, selectedPatientId]);
 
   const handleCDSSPress = async () => {
-    if (!selectedPatientId)
-      return Alert.alert('Error', 'Select patient first.');
+    if (!selectedPatientId) {
+      return showAlert('Patient Required', 'Please select a patient first in the search bar.');
+    }
     const prefix = getBackendPrefix(selectedTest);
     const payload = {
       patient_id: parseInt(selectedPatientId, 10),
@@ -104,13 +122,14 @@ const LabValuesScreen = ({ onBack }: any) => {
         setIsAdpieActive(true); // Navigate to ADPIE Stepper
       }
     } catch (e) {
-      Alert.alert('Error', 'Could not initiate nursing process.');
+      showAlert('Error', 'Could not initiate nursing process.');
     }
   };
 
   const handleNextOrSave = async () => {
-    if (!selectedPatientId)
-      return Alert.alert('Error', 'Select patient first.');
+    if (!selectedPatientId) {
+      return showAlert('Patient Required', 'Please select a patient first in the search bar.');
+    }
     const prefix = getBackendPrefix(selectedTest);
     const payload: any = {
       patient_id: parseInt(selectedPatientId, 10),
@@ -128,8 +147,10 @@ const LabValuesScreen = ({ onBack }: any) => {
         });
       }
       if (selectedTest === 'Basophils (%)') {
-        Alert.alert('Success', 'Complete Lab Assessment Saved.');
-        onBack();
+        showAlert('Success', 'Complete Lab Assessment Saved.', 'success');
+        setTimeout(() => {
+          onBack();
+        }, 1500);
       } else {
         const idx = LAB_TESTS.indexOf(selectedTest);
         setSelectedTest(LAB_TESTS[idx + 1]);
@@ -137,7 +158,7 @@ const LabValuesScreen = ({ onBack }: any) => {
         setNormalRange('');
       }
     } catch (e) {
-      Alert.alert('Error', 'Submission failed.');
+      showAlert('Error', 'Submission failed.');
     }
   };
 
@@ -247,6 +268,8 @@ const LabValuesScreen = ({ onBack }: any) => {
           rangeValue={normalRange}
           onResultChange={setResult}
           onRangeChange={setNormalRange}
+          disabled={!selectedPatientId}
+          onDisabledPress={() => showAlert('Patient Required', 'Please select a patient first in the search bar.')}
         />
 
         <View style={styles.footerRow}>
@@ -291,6 +314,15 @@ const LabValuesScreen = ({ onBack }: any) => {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         alertText={currentAlert}
+      />
+
+      <SweetAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onConfirm={() => setAlertConfig({ ...alertConfig, visible: false })}
+        confirmText="OK"
       />
     </SafeAreaView>
   );

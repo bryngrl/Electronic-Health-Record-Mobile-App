@@ -1,18 +1,34 @@
 import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 
 interface LinedInputProps {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
   numberOfLines?: number;
+  disabled?: boolean;
+  onDisabledPress?: () => void;
 }
 
-const LinedInputCard = ({ label, value, onChangeText, numberOfLines = 4 }: LinedInputProps) => {
+const LinedInputCard = ({ 
+  label, 
+  value, 
+  onChangeText, 
+  numberOfLines = 4,
+  disabled = false,
+  onDisabledPress
+}: LinedInputProps) => {
   const LINE_HEIGHT = 30;
 
   return (
-    <View style={styles.card}>
+    <Pressable 
+      onPress={() => {
+        if (disabled && onDisabledPress) {
+          onDisabledPress();
+        }
+      }}
+      style={styles.card}
+    >
       <View style={styles.labelRow}>
         <View style={styles.labelBadge}>
           <Text style={styles.labelText}>{label}</Text>
@@ -20,7 +36,7 @@ const LinedInputCard = ({ label, value, onChangeText, numberOfLines = 4 }: Lined
         <View style={styles.sideLine} />
       </View>
       
-      <View style={styles.inputWrapper}>
+      <View style={styles.inputWrapper} pointerEvents={disabled ? 'none' : 'auto'}>
         {/* Background Lines */}
         <View style={StyleSheet.absoluteFill}>
           {[...Array(numberOfLines)].map((_, i) => (
@@ -39,9 +55,10 @@ const LinedInputCard = ({ label, value, onChangeText, numberOfLines = 4 }: Lined
           multiline
           scrollEnabled={false}
           placeholder=""
+          editable={!disabled}
         />
       </View>
-    </View>
+    </Pressable>
   );
 };
 

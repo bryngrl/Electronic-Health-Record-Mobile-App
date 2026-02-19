@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, TextInput } from 'react-native';
+import { StyleSheet, View, Text, TextInput, Pressable } from 'react-native';
 
 // Synchronize these names with the screen
 interface LabInputProps {
@@ -8,6 +8,8 @@ interface LabInputProps {
   rangeValue: string;       // Changed from 'range'
   onResultChange: (text: string) => void;
   onRangeChange: (text: string) => void;
+  disabled?: boolean;
+  onDisabledPress?: () => void;
 }
 
 const LabResultCard: React.FC<LabInputProps> = ({ 
@@ -15,39 +17,50 @@ const LabResultCard: React.FC<LabInputProps> = ({
   resultValue, 
   rangeValue, 
   onResultChange, 
-  onRangeChange 
+  onRangeChange,
+  disabled = false,
+  onDisabledPress
 }) => {
   return (
-    <View style={styles.container}>
+    <Pressable 
+      onPress={() => {
+        if (disabled && onDisabledPress) {
+          onDisabledPress();
+        }
+      }}
+      style={styles.container}
+    >
       {/* Label Banner matching image_e5b9e3.png */}
       <View style={styles.testHeader}>
         <Text style={styles.testHeaderText}>{testLabel}</Text>
       </View>
 
       {/* Result Section */}
-      <View style={styles.inputGroup}>
+      <View style={styles.inputGroup} pointerEvents={disabled ? 'none' : 'auto'}>
         <View style={styles.boxHeader}><Text style={styles.boxHeaderText}>Result</Text></View>
         <View style={styles.boxBody}>
           <TextInput 
             style={styles.input} 
             value={resultValue} 
             onChangeText={onResultChange}
+            editable={!disabled}
           />
         </View>
       </View>
 
       {/* Normal Range Section */}
-      <View style={styles.inputGroup}>
+      <View style={styles.inputGroup} pointerEvents={disabled ? 'none' : 'auto'}>
         <View style={styles.boxHeader}><Text style={styles.boxHeaderText}>Normal Range</Text></View>
         <View style={styles.boxBody}>
           <TextInput 
             style={styles.input} 
             value={rangeValue} 
             onChangeText={onRangeChange}
+            editable={!disabled}
           />
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 };
 
