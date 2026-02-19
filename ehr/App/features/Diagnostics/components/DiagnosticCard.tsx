@@ -91,19 +91,19 @@ const styles = StyleSheet.create({
   },
   pillText: { color: '#14532d', fontWeight: 'bold', fontSize: 12 },
   box: {
-    height: 200,
+    height: 250, // Grid (Tablet) mode height
     borderRadius: 20,
-    backgroundColor: '#c8c8c8',
+    backgroundColor: '#d5d4d4',
     overflow: 'visible',
     borderWidth: 1,
-    borderColor: '#E8E8E8',
+    borderColor: '#9d9d9d',
   },
-  boxLarge: { height: 350 },
+  boxLarge: { height: 380 }, // List (Mobile/Horizontal) mode height
   disabledBox: { opacity: 0.6 },
   dashedBorder: {
     borderStyle: 'dashed',
     borderWidth: 1.5,
-    borderColor: '#D1D1D1',
+    borderColor: '#9d9d9d',
   },
   placeholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   importText: { color: '#585858', fontWeight: '600', marginTop: 8 },
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   imageContainer: {
     flex: 1,
     position: 'relative',
-    padding: 12,
+    padding: 25,
   },
   mainImage: {
     width: '100%',

@@ -5,13 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="64dac766-4f9e-47dc-9efd-004b84659307" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ehr/App/api/apiClient.ts" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/api/apiClient.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ehr/App/features/Diagnostics/components/DiagnosticCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/Diagnostics/components/DiagnosticCard.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ehr/App/features/Diagnostics/screen/DiagnosticsScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/Diagnostics/screen/DiagnosticsScreen.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ehr/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ehr/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ehr_backend/app/routers/diagnostics/diagnostics.py" beforeDir="false" afterPath="$PROJECT_DIR$/ehr_backend/app/routers/diagnostics/diagnostics.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
