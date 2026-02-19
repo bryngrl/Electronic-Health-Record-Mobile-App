@@ -66,7 +66,16 @@ const DashboardSummary = ({
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
-            <Text style={[styles.greeting, { fontStyle: 'italic' }]}>
+            <Text
+              style={[
+                styles.greeting,
+                {
+                  fontSize: 35,
+                  color: '#035022',
+                  fontFamily: 'MinionPro-SemiboldItalic',
+                },
+              ]}
+            >
               Hello, Jovilyn
             </Text>
             <Text style={styles.dateText}>{formatDate()}</Text>
