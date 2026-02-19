@@ -33,33 +33,42 @@ export const useMedAdministration = () => {
       throw new Error('Patient is required');
     }
 
+    const medsToSubmit = formData.medications
+      .map((med, index) => ({ med, index }))
+      .filter(item => item.med.medication.trim() !== '');
+
+    if (medsToSubmit.length === 0) {
+      throw new Error('No medication data to submit');
+    }
+
     try {
-      // Save each medication administration entry
-      const requests = formData.medications
-        .map((med, index) => ({ med, index })) // Keep track of original index for timeSlots
-        .filter(item => item.med.medication.trim() !== '')
-        .map(item => {
-          return apiClient.post('/medication-administration/', {
-            patient_id: formData.patient_id,
-            medication: item.med.medication,
-            dose: item.med.dose,
-            route: item.med.route,
-            frequency: item.med.frequency,
-            comments: item.med.comments,
-          });
-        });
+      for (const item of medsToSubmit) {
+        // Omitting time/date entirely to satisfy "Input should be None" 
+        // while avoiding potential DB nullability crashes.
+        const payload = {
+          patient_id: parseInt(formData.patient_id.toString(), 10),
+          medication: item.med.medication.trim() || null,
+          dose: item.med.dose.trim() || null,
+          route: item.med.route.trim() || null,
+          frequency: item.med.frequency.trim() || null,
+          comments: item.med.comments.trim() || null,
+        };
 
-      if (requests.length === 0) {
-        throw new Error('No medication data to submit');
+        console.log('Sending MedAdmin Payload:', payload);
+        const response = await apiClient.post('/medication-administration/', payload);
+        console.log('MedAdmin Success:', response.status);
+
+        // Brief delay between requests to prevent DB lock/race conditions
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
-
-      await Promise.all(requests);
     } catch (err: any) {
-      const message =
-        err?.response?.data?.detail || err?.message || 'Submission Error';
-      throw new Error(
-        typeof message === 'string' ? message : JSON.stringify(message),
-      );
+      console.error('Submission Error:', err?.response?.data || err.message);
+      if (err?.response?.status === 500) {
+        throw new Error('Server Error (500). Please check if the medication table exists in the database.');
+      }
+      const detail = err?.response?.data?.detail;
+      const errorMessage = typeof detail === 'string' ? detail : JSON.stringify(detail || err.message);
+      throw new Error(errorMessage);
     }
   };
 

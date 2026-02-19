@@ -57,21 +57,13 @@ const MedAdministrationScreen = ({ onBack }: any) => {
   };
 
   useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const response = await apiClient.get('/patients/');
-        const raw = response.data || [];
-        const normalized = raw.map((p: any) => ({
-          ...p,
-          id: p.patient_id ?? p.id ?? null,
-          fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-        }));
-        setPatients(normalized);
-      } catch (error) {
-        console.error('Fetch Error:', error);
-      }
-    };
-    fetchPatients();
+    apiClient.get('/patients/').then(res => {
+      const normalized = (res.data || []).map((p: any) => ({
+        id: (p.patient_id ?? p.id).toString(),
+        fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+      }));
+      setPatients(normalized);
+    });
   }, []);
 
   const handleSearch = (text: string) => {
@@ -153,134 +145,132 @@ const MedAdministrationScreen = ({ onBack }: any) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Pressable style={{ flex: 1 }} onPress={() => setShowDropdown(false)}>
-        <ScrollView
-          style={styles.container}
-          contentContainerStyle={{ paddingBottom: 100 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="always"
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.title}>Medication {'\n'}Administration</Text>
-              <Text style={styles.dateText}>{formatDate()}</Text>
-            </View>
-            <TouchableOpacity onPress={onBack}>
-              <Icon name="more-vert" size={35} color={THEME_GREEN} />
-            </TouchableOpacity>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Medication {'\n'}Administration</Text>
+            <Text style={styles.dateText}>{formatDate()}</Text>
           </View>
-
-          {/* Patient Selection & Date */}
-          <View style={[styles.section, showDropdown && { zIndex: 9999 }]}>
-            <Text style={styles.sectionLabel}>PATIENT NAME :</Text>
-            <View style={styles.searchWrap}>
-              <View style={styles.searchBar}>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Select Patient name"
-                  placeholderTextColor="#BDBDBD"
-                  value={searchText}
-                  onChangeText={handleSearch}
-                  onFocus={() => {
-                    if (patients.length > 0) {
-                      setFilteredPatients(
-                        searchText.length > 0
-                          ? patients.filter(p =>
-                              p.fullName
-                                .toLowerCase()
-                                .includes(searchText.toLowerCase()),
-                            )
-                          : patients,
-                      );
-                      setShowDropdown(true);
-                    }
-                  }}
-                />
-              </View>
-
-              {showDropdown && filteredPatients.length > 0 && (
-                <View style={styles.dropdown}>
-                  {filteredPatients.map((item, index) => (
-                    <Pressable
-                      key={item.id ? item.id.toString() : `p-${index}`}
-                      style={({ pressed }) => [
-                        styles.dropdownItem,
-                        pressed && { opacity: 0.6 },
-                      ]}
-                      onPress={() => onSelectPatient(item)}
-                    >
-                      <Text style={styles.dropdownText}>{item.fullName}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-            </View>
-          </View>
-
-          <View style={[styles.section, { zIndex: 1 }]}>
-            <Text style={styles.sectionLabel}>DATE :</Text>
-            <TextInput
-              style={styles.inputField}
-              value={formData.date}
-              onChangeText={t => setFormData({ ...formData, date: t })}
-            />
-          </View>
-
-          {/* Time Progress Banner */}
-          <View style={styles.timeBanner}>
-            <Text style={styles.timeText}>{timeSlots[step]}</Text>
-          </View>
-
-          {/* Input Cards */}
-          <MedAdministrationInputCard
-            label="Medication"
-            value={currentMed.medication}
-            onChangeText={t => updateCurrentMed('medication', t)}
-            editable={!!formData.patient_id}
-            onDisabledPress={onDisabledPress}
-          />
-          <MedAdministrationInputCard
-            label="Dose"
-            value={currentMed.dose}
-            onChangeText={t => updateCurrentMed('dose', t)}
-            editable={!!formData.patient_id}
-            onDisabledPress={onDisabledPress}
-          />
-          <MedAdministrationInputCard
-            label="Route"
-            value={currentMed.route}
-            onChangeText={t => updateCurrentMed('route', t)}
-            editable={!!formData.patient_id}
-            onDisabledPress={onDisabledPress}
-          />
-          <MedAdministrationInputCard
-            label="Frequency"
-            value={currentMed.frequency}
-            onChangeText={t => updateCurrentMed('frequency', t)}
-            editable={!!formData.patient_id}
-            onDisabledPress={onDisabledPress}
-          />
-          <MedAdministrationInputCard
-            label="Comments"
-            value={currentMed.comments}
-            onChangeText={t => updateCurrentMed('comments', t)}
-            multiline
-            editable={!!formData.patient_id}
-            onDisabledPress={onDisabledPress}
-          />
-
-          {/* Footer Navigation Button */}
-          <TouchableOpacity style={styles.actionBtn} onPress={handleAction}>
-            <Text style={styles.actionBtnText}>
-              {step === 2 ? 'SUBMIT' : 'NEXT'}
-            </Text>
-            {step < 2 && (
-              <Icon name="chevron-right" size={24} color={THEME_GREEN} />
-            )}
+          <TouchableOpacity onPress={onBack}>
+            <Icon name="more-vert" size={35} color={THEME_GREEN} />
           </TouchableOpacity>
-        </ScrollView>
-      </Pressable>
+        </View>
+
+        {/* Patient Selection & Date */}
+        <View style={[styles.section, showDropdown && { zIndex: 9999 }]}>
+          <Text style={styles.sectionLabel}>PATIENT NAME :</Text>
+          <View style={styles.searchWrap}>
+            <View style={styles.searchBar}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Select Patient name"
+                placeholderTextColor="#BDBDBD"
+                value={searchText}
+                onChangeText={handleSearch}
+                onFocus={() => {
+                  if (patients.length > 0) {
+                    setFilteredPatients(
+                      searchText.length > 0
+                        ? patients.filter(p =>
+                            p.fullName
+                              .toLowerCase()
+                              .includes(searchText.toLowerCase()),
+                          )
+                        : patients,
+                    );
+                    setShowDropdown(true);
+                  }
+                }}
+              />
+            </View>
+
+            {showDropdown && filteredPatients.length > 0 && (
+              <View style={styles.dropdown}>
+                {filteredPatients.map((item, index) => (
+                  <Pressable
+                    key={item.id ? item.id.toString() : `p-${index}`}
+                    style={({ pressed }) => [
+                      styles.dropdownItem,
+                      pressed && { opacity: 0.6 },
+                    ]}
+                    onPress={() => onSelectPatient(item)}
+                  >
+                    <Text style={styles.dropdownText}>{item.fullName}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
+
+        <View style={[styles.section, { zIndex: 1 }]}>
+          <Text style={styles.sectionLabel}>DATE :</Text>
+          <TextInput
+            style={styles.inputField}
+            value={formData.date}
+            onChangeText={t => setFormData({ ...formData, date: t })}
+          />
+        </View>
+
+        {/* Time Progress Banner */}
+        <View style={styles.timeBanner}>
+          <Text style={styles.timeText}>{timeSlots[step]}</Text>
+        </View>
+
+        {/* Input Cards */}
+        <MedAdministrationInputCard
+          label="Medication"
+          value={currentMed.medication}
+          onChangeText={t => updateCurrentMed('medication', t)}
+          editable={!!formData.patient_id}
+          onDisabledPress={onDisabledPress}
+        />
+        <MedAdministrationInputCard
+          label="Dose"
+          value={currentMed.dose}
+          onChangeText={t => updateCurrentMed('dose', t)}
+          editable={!!formData.patient_id}
+          onDisabledPress={onDisabledPress}
+        />
+        <MedAdministrationInputCard
+          label="Route"
+          value={currentMed.route}
+          onChangeText={t => updateCurrentMed('route', t)}
+          editable={!!formData.patient_id}
+          onDisabledPress={onDisabledPress}
+        />
+        <MedAdministrationInputCard
+          label="Frequency"
+          value={currentMed.frequency}
+          onChangeText={t => updateCurrentMed('frequency', t)}
+          editable={!!formData.patient_id}
+          onDisabledPress={onDisabledPress}
+        />
+        <MedAdministrationInputCard
+          label="Comments"
+          value={currentMed.comments}
+          onChangeText={t => updateCurrentMed('comments', t)}
+          multiline
+          editable={!!formData.patient_id}
+          onDisabledPress={onDisabledPress}
+        />
+
+        {/* Footer Navigation Button */}
+        <TouchableOpacity style={styles.actionBtn} onPress={handleAction}>
+          <Text style={styles.actionBtnText}>
+            {step === 2 ? 'SUBMIT' : 'NEXT'}
+          </Text>
+          {step < 2 && (
+            <Icon name="chevron-right" size={24} color={THEME_GREEN} />
+          )}
+        </TouchableOpacity>
+      </ScrollView>
 
       {/* Bottom Navigation Mockup */}
       <View style={styles.bottomNav}>
