@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 39,
+    fontSize: 35,
     color: '#035022',
     fontFamily: 'MinionPro-SemiboldItalic',
   },
