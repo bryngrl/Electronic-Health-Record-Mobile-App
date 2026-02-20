@@ -1,121 +1,304 @@
-import React from 'react';
-import { View, Text, Modal as RNModal, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import {
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  Pressable,
+  Platform,
+} from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+  interpolate,
+} from 'react-native-reanimated';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
+let BlurViewSafe: any = null;
+try {
+  BlurViewSafe = require('@react-native-community/blur').BlurView;
+} catch (e) {
+  BlurViewSafe = null;
+}
+
+const THEME = {
+  success: { color: '#2BB673', icon: 'check-circle-outline' as const },
+  error: { color: '#E05260', icon: 'alert-circle-outline' as const },
+  delete: { color: '#E05260', icon: 'trash-can-outline' as const },
+  warning: { color: '#F5A623', icon: 'alert-outline' as const },
+  info: { color: '#3B9EE8', icon: 'information-outline' as const },
+} as const;
+
+type AlertType = keyof typeof THEME;
 
 interface SweetAlertProps {
   visible: boolean;
   title: string;
   message: string;
-  type?: 'success' | 'error' | 'delete';
+  type?: AlertType;
   onCancel?: () => void;
   onConfirm?: () => void;
   confirmText?: string;
   cancelText?: string;
+  dismissOnBackdrop?: boolean;
 }
 
-const SweetAlert: React.FC<SweetAlertProps> = ({
+const { width } = Dimensions.get('window');
+
+export default function SweetAlert({
   visible,
   title,
   message,
-  type = 'delete',
+  type = 'info',
   onCancel,
   onConfirm,
   confirmText,
   cancelText,
-}) => {
-  const isError = type === 'error' || type === 'delete';
-  const mainColor = isError ? '#d93025' : '#29A539';
-  const icon = isError ? '✕' : '✓';
+  dismissOnBackdrop = true,
+}: SweetAlertProps) {
+  const theme = THEME[type];
+
+  const HasBlur = !!BlurViewSafe;
+
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = visible
+      ? withTiming(1, { duration: 240, easing: Easing.out(Easing.cubic) })
+      : withTiming(0, { duration: 180, easing: Easing.in(Easing.cubic) });
+  }, [visible]);
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+  }));
+
+  const cardStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [
+      { translateY: interpolate(progress.value, [0, 1], [26, 0]) },
+      { scale: interpolate(progress.value, [0, 1], [0.98, 1]) },
+    ],
+  }));
+
+  const defaultConfirmText =
+    confirmText ?? (type === 'delete' ? 'Delete' : type === 'error' ? 'OK' : 'Confirm');
+  const defaultCancelText = cancelText ?? 'Cancel';
+
+  const handleBackdrop = () => {
+    if (!dismissOnBackdrop) return;
+    onCancel?.();
+  };
+
+
+  const blurType = useMemo(() => {
+    // Android-safe values: "light" / "dark"
+    // iOS can use system materials, but you’re on Android so keep it safe:
+    return Platform.OS === 'ios' ? 'systemMaterial' : 'light';
+  }, []);
 
   return (
-    <RNModal transparent visible={visible} animationType="fade">
-      <View style={styles.overlay}>
-        <View style={styles.alertBox}>
-          <View style={[styles.iconCircle, { backgroundColor: mainColor }]}>
-            <Text style={styles.iconText}>{icon}</Text>
-          </View>
-          <Text style={[styles.alertTitle, { color: mainColor }]}>{title}</Text>
-          <Text style={styles.alertMessage}>{message}</Text>
-          <View style={styles.btnRow}>
-            {onCancel && (
-              <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
-                <Text style={styles.cancelBtnText}>
-                  {cancelText || 'CANCEL'}
-                </Text>
-              </TouchableOpacity>
+    <Modal transparent visible={visible} animationType="none" statusBarTranslucent>
+      <Animated.View style={[styles.overlay, overlayStyle]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={handleBackdrop} />
+
+        <Animated.View style={[styles.cardWrap, cardStyle]}>
+          <View style={styles.card}>
+            {}
+            {HasBlur ? (
+              <BlurViewSafe
+                style={StyleSheet.absoluteFill}
+                blurType={blurType}
+                blurAmount={25}
+                reducedTransparencyFallbackColor="rgba(255,255,255,0.92)"
+              />
+            ) : (
+        
+              <View style={[StyleSheet.absoluteFill, styles.fallbackFrost]} />
             )}
-            {onConfirm && (
-              <TouchableOpacity
-                style={[styles.confirmBtn, { borderColor: mainColor }]}
-                onPress={onConfirm}
-              >
-                <Text style={[styles.confirmBtnText, { color: mainColor }]}>
-                  {confirmText || (type === 'delete' ? 'DELETE' : 'OK')}
-                </Text>
-              </TouchableOpacity>
-            )}
+
+            {/* Glass tint overlay (works for both Blur + fallback) */}
+            <View style={styles.glassTint} />
+
+            {/* Close button */}
+            <TouchableOpacity
+              onPress={onCancel}
+              disabled={!onCancel}
+              style={[styles.closeBtn, !onCancel && { opacity: 0 }]}
+              activeOpacity={0.85}
+            >
+              <MaterialCommunityIcons name="close" size={18} color="#7B8496" />
+            </TouchableOpacity>
+
+            {/* Center content */}
+            <View style={styles.centerContent}>
+              <View style={[styles.iconBadge, { borderColor: `${theme.color}40` }]}>
+                <View style={[styles.iconFill, { backgroundColor: `${theme.color}E6` }]}>
+                  <MaterialCommunityIcons name={theme.icon} size={46} color="#fff" />
+                </View>
+              </View>
+
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.message}>{message}</Text>
+
+         
+
+              <View style={styles.btnRow}>
+                {onCancel && (
+                  <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} activeOpacity={0.85}>
+                    <Text style={styles.cancelTxt}>{defaultCancelText}</Text>
+                  </TouchableOpacity>
+                )}
+
+                {onConfirm && (
+                  <TouchableOpacity
+                    style={[
+                      styles.confirmBtn,
+                      { backgroundColor: theme.color },
+                      !onCancel && styles.fullBtn,
+                    ]}
+                    onPress={onConfirm}
+                    activeOpacity={0.9}
+                  >
+                    <Text style={styles.confirmTxt}>{defaultConfirmText}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
-    </RNModal>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
   );
-};
+}
 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(10, 14, 25, 0.30)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  alertBox: {
-    width: '85%',
-    backgroundColor: '#fff',
-    borderRadius: 25,
-    padding: 25,
-    alignItems: 'center',
+
+  cardWrap: {
+    width: width * 0.88,
+    maxWidth: 420,
   },
-  iconCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+
+  card: {
+    borderRadius: 28,
+    overflow: 'hidden',
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.55)',
+    elevation: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 14 },
+  },
+
+  fallbackFrost: {
+    backgroundColor: 'rgba(255,255,255,0.78)',
+  },
+
+  glassTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+  },
+
+  closeBtn: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+    zIndex: 5,
   },
-  iconText: { color: '#fff', fontSize: 35, fontWeight: 'bold' },
-  alertTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 15 },
-  alertMessage: {
-    fontSize: 14,
-    color: '#5f6368',
+
+  centerContent: {
+    alignItems: 'center',
+    paddingTop: 20,
+  },
+
+  iconBadge: {
+    width: 110,
+    height: 110,
+    borderRadius: 32,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    marginBottom: 16,
+  },
+
+  iconFill: {
+    width: 80,
+    height: 80,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  title: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#101626',
     textAlign: 'center',
-    marginBottom: 25,
-    lineHeight: 20,
   },
+
+  message: {
+    marginTop: 8,
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#56607A',
+    textAlign: 'center',
+    paddingHorizontal: 12,
+  },
+
   btnRow: {
     flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
     width: '100%',
-    justifyContent: 'space-around',
   },
+
   cancelBtn: {
     flex: 1,
-    height: 45,
-    borderWidth: 1,
-    borderColor: '#3c4043',
-    borderRadius: 25,
+    height: 48,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    backgroundColor: 'rgba(255,255,255,0.40)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.60)',
   },
-  cancelBtnText: { color: '#3c4043', fontWeight: 'bold' },
+
+  cancelTxt: {
+    fontWeight: '800',
+    color: '#5E687F',
+  },
+
   confirmBtn: {
     flex: 1,
-    height: 45,
-    borderWidth: 1,
-    borderRadius: 25,
+    height: 48,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  confirmBtnText: { fontWeight: 'bold' },
-});
 
-export default SweetAlert;
+  fullBtn: { flex: 1 },
+
+  confirmTxt: {
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: 0.2,
+  },
+});
