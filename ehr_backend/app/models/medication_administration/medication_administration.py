@@ -1,4 +1,5 @@
-from sqlalchemy import Column, BIGINT, String, Time, Date, DateTime, ForeignKey
+from sqlalchemy import Column, String, Time, Date, DateTime, ForeignKey, BigInteger
+from sqlalchemy.dialects.mysql import BIGINT
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database.base import Base
@@ -20,6 +21,7 @@ class MedicationAdministration(Base):
         nullable=False,
         index=True
     )
+
     medication = Column(String(255), nullable=True)
     dose = Column(String(255), nullable=True)
     route = Column(String(255), nullable=True)  # e.g., oral, IV, IM, SC, topical

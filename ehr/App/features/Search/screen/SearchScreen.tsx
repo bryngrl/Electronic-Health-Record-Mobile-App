@@ -50,7 +50,7 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 20, paddingTop: 40 },
+  container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 20, paddingTop: 15 },
   content: { flex: 1 },
   resultsTitle: { fontSize: 14, fontWeight: '700', color: '#999', marginBottom: 15 },
   sortTrigger: {

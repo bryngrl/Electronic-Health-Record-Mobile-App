@@ -85,13 +85,16 @@ async def save_upload_file(upload_file: UploadFile, patient_id: int, image_type:
     
     # Save file
     try:
+        content = await upload_file.read()
         with open(file_path, "wb") as f:
-            f.write(upload_file.file.read())
+            f.write(content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+    finally:
+        await upload_file.close()
     
     # Return relative path for database storage
-    relative_path = os.path.relpath(file_path, STORAGE_DIR)
+    relative_path = os.path.relpath(file_path, STORAGE_DIR).replace(os.sep, '/')
     
     return relative_path, original_name
 
@@ -123,7 +126,10 @@ async def create_diagnostic(
     - **file**: Image file to upload (required)
     """
     # Validate file type
-    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/tiff", "application/dicom"]
+    allowed_types = [
+        "image/jpeg", "image/png", "image/gif", "image/tiff", 
+        "application/dicom", "image/heic", "image/heif", "image/webp"
+    ]
     if file.content_type not in allowed_types:
         raise HTTPException(
             status_code=400,
@@ -197,15 +203,37 @@ def download_diagnostic_file(
     if not diagnostic:
         raise HTTPException(status_code=404, detail="Diagnostic not found")
     
-    file_path = os.path.join(STORAGE_DIR, diagnostic.file_path)
+    # Normalize relative path to use correct separator for the OS
+    normalized_rel_path = diagnostic.file_path.replace('/', os.sep)
+    file_path = os.path.join(STORAGE_DIR, normalized_rel_path)
     
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found on storage")
     
+    import mimetypes
+    mime_type, _ = mimetypes.guess_type(file_path)
+    
     return FileResponse(
         path=file_path,
         filename=diagnostic.original_name,
+        media_type=mime_type or "application/octet-stream"
     )
+
+
+@router.get("/file-by-path")
+def get_file_by_path(path: str):
+    """
+    Get diagnostic file by relative path
+    """
+    import mimetypes
+    # Normalize relative path to use correct separator for the OS
+    normalized_path = path.replace('/', os.sep)
+    file_path = os.path.join(STORAGE_DIR, normalized_path)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    mime_type, _ = mimetypes.guess_type(file_path)
+    return FileResponse(file_path, media_type=mime_type or "application/octet-stream")
 
 
 @router.delete("/{diagnostic_id}", status_code=status.HTTP_204_NO_CONTENT)

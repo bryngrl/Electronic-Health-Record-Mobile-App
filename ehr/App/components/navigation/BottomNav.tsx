@@ -29,7 +29,7 @@ const BottomNav = ({ onAddPatient, onNavigate, activeRoute }: BottomNavProps) =>
           <Icon 
             name="home" 
             size={26} 
-            color={activeRoute === 'Home' ? '#2D6A4F' : '#B0B0B0'} 
+            color={activeRoute === 'Home' ? '#1B5E20' : '#B0B0B0'} 
           />
         </TouchableOpacity>
 
@@ -40,7 +40,7 @@ const BottomNav = ({ onAddPatient, onNavigate, activeRoute }: BottomNavProps) =>
           <Icon 
             name="search" 
             size={26} 
-            color={activeRoute === 'Search' ? '#2D6A4F' : '#B0B0B0'} 
+            color={activeRoute === 'Search' ? '#1B5E20' : '#B0B0B0'} 
           />
         </TouchableOpacity>
 
@@ -54,7 +54,7 @@ const BottomNav = ({ onAddPatient, onNavigate, activeRoute }: BottomNavProps) =>
           <Icon 
             name="dashboard" 
             size={26} 
-            color={activeRoute === 'Grid' ? '#2D6A4F' : '#B0B0B0'} 
+            color={activeRoute === 'Grid' ? '#1B5E20' : '#B0B0B0'} 
           />
         </TouchableOpacity>
 
@@ -65,7 +65,7 @@ const BottomNav = ({ onAddPatient, onNavigate, activeRoute }: BottomNavProps) =>
           <Icon 
             name="calendar-today" 
             size={26} 
-            color={activeRoute === 'Calendar' ? '#2D6A4F' : '#B0B0B0'} 
+            color={activeRoute === 'Calendar' ? '#1B5E20' : '#B0B0B0'} 
           />
         </TouchableOpacity>
       </View>
@@ -77,7 +77,7 @@ const BottomNav = ({ onAddPatient, onNavigate, activeRoute }: BottomNavProps) =>
         onPress={onAddPatient}
       >
         <View style={styles.fabInner}>
-          <Icon name="person-add" size={28} color={activeRoute === 'Register' ? '#2D6A4F' : '#B0B0B0'}  />
+          <Icon name="person-add" size={28} color={activeRoute === 'Register' ? '#1B5E20' : '#B0B0B0'}  />
         </View>
       </TouchableOpacity>
     </View>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, Platform } from 'react-native';
 
-const THEME_GREEN = '#1B4332';
+const THEME_GREEN = '#1B5E20';
 
 export default function CalendarScreen() {
   return (
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     color: THEME_GREEN,
-    fontWeight: 'bold',
+    fontWeight: 'semibold',
   },
   emptyContent: {
     flex: 1,

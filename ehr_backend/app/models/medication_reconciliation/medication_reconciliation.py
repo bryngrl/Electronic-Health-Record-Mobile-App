@@ -1,4 +1,5 @@
-from sqlalchemy import Column, BIGINT, String, DateTime, ForeignKey
+from sqlalchemy import Column, String, DateTime, ForeignKey
+from sqlalchemy.dialects.mysql import BIGINT
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database.base import Base
