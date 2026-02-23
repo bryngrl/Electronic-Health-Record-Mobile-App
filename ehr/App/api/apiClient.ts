@@ -3,8 +3,8 @@ import axios from 'axios';
 const BACKEND_PORT = 8000; // Changed from 8000 to avoid socket conflicts
 
 // Update this to your USB Tethering IP from ipconfig
-// const PHYSICAL_DEVICE_HOST = '192.168.1.36';
-const PHYSICAL_DEVICE_HOST = '10.248.106.213';
+// WiFi IP (for USB tethering): 192.168.47.251
+const PHYSICAL_DEVICE_HOST = '192.168.100.157';
 
 // Use the physical device host directly for USB testing
 const host = PHYSICAL_DEVICE_HOST;

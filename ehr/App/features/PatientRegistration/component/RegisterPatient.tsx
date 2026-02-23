@@ -139,7 +139,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
       }
     } catch (error) {
       // Catch matches the Network Error in your logs
-      Alert.alert('Connection Error', 'Check USB Tethering IP: 10.248.106.213');
+      Alert.alert('Connection Error', 'Check USB Tethering IP: 192.168.47.251');
     }
   };
 
