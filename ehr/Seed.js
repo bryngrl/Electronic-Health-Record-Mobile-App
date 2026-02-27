@@ -26,8 +26,9 @@ const patients = [
 ];
 
 // 2. Your Backend Configuration
-// Use the IP address from your code
-const API_URL = 'http://10.248.106.213:8000/patients/';
+// Use localhost for seeding (backend is on same machine)
+// USB tethering IP is only for the physical device connecting remotely
+const API_URL = 'http://localhost:8000/patients/';
 
 async function runSeed() {
     console.log(`🚀 Starting seed process for ${patients.length} patients...`);

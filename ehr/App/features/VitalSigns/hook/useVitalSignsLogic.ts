@@ -44,6 +44,9 @@ export const useVitalSignsLogic = () => {
   
   // Storage for alerts returned by the backend
   const [backendAlert, setBackendAlert] = useState<{ title: string, message: string, type: 'success' | 'error' } | null>(null);
+  
+  // Storage for existing records
+  const [existingRecords, setExistingRecords] = useState<any[]>([]);
 
   // Load patient list on mount
   useEffect(() => {
@@ -142,6 +145,32 @@ export const useVitalSignsLogic = () => {
     setPatientName(p.fullName);
     setSelectedPatientId(p.id);
     setShowDropdown(false);
+    
+    // Fetch existing records and pre-populate input fields
+    loadPatientData(p.id);
+  };
+
+  const loadPatientData = async (patientId: string) => {
+    try {
+      const response = await apiClient.get(`/vital-signs/patient/${patientId}`);
+      const records = response.data || [];
+      setExistingRecords(records);
+      
+      // Pre-populate with most recent record if available
+      if (records.length > 0) {
+        const mostRecent = records[0]; // Already sorted by created_at desc from backend
+        setCurrentVitals({
+          temperature: mostRecent.temperature || '',
+          hr: mostRecent.hr || '',
+          rr: mostRecent.rr || '',
+          bp: mostRecent.bp || '',
+          spo2: mostRecent.spo2 || '',
+        });
+      }
+    } catch (e) {
+      console.error('Failed to load patient data:', e);
+      setExistingRecords([]);
+    }
   };
 
   const selectTime = (index: number) => {
@@ -158,6 +187,7 @@ export const useVitalSignsLogic = () => {
     setCurrentVitals(initialVitals);
     setCurrentTimeIndex(0);
     setBackendAlert(null);
+    setExistingRecords([]);
   };
 
   const updateDPIE = async (recordId: number, stepKey: string, text: string) => {
@@ -196,5 +226,6 @@ export const useVitalSignsLogic = () => {
     getChartData,
     currentAlert: backendAlert,
     vitalKeys: Object.keys(initialVitals) as (keyof Vitals)[],
+    existingRecords,
   };
 };
