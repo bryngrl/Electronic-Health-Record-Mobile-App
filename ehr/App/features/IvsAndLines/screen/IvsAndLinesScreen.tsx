@@ -9,69 +9,14 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import useIvsAndLinesData from '../hook/useIvsAndLinesData.js'; // Assuming same directory for simplicity
+import useIvsAndLinesData from '../hook/useIvsAndLinesData'; // Assuming same directory for simplicity
 import DataCard from '../components/DataCard';
 
-// Prop types for the BottomNavBar (internal to this file for now)
-type BottomNavProps = {
-  activeIndex: number;
-  onNavPress: (index: number) => void;
-};
+interface IvsAndLinesScreenProps {
+  onBack: () => void;
+}
 
-// Bottom Navigation component (inline and simplified)
-const BottomNavBar: React.FC<BottomNavProps> = ({
-  activeIndex,
-  onNavPress,
-}) => {
-  const icons = [
-    { name: 'home-outline', label: 'Home' },
-    { name: 'search-outline', label: 'Search' },
-    { name: 'add-person', label: 'Add' }, // Special central icon
-    { name: 'apps-outline', label: 'Apps' },
-    { name: 'calendar-outline', label: 'Calendar' },
-  ];
-
-  const renderIcon = (index: number, iconName: string) => {
-    // In a real app, use a proper icon library like expo/vector-icons or react-native-vector-icons
-    // Let's use placeholder Views that look correct.
-    if (iconName === 'add-person') {
-      return (
-        <View
-          style={[
-            styles.centralIcon,
-            activeIndex === index && styles.activeCentralIcon,
-          ]}
-        >
-          <Text style={[styles.iconText, styles.centralIconText]}>+</Text>
-          <Text style={[styles.iconText, styles.centralIconSubText]}>👤</Text>
-        </View>
-      );
-    }
-    return (
-      <Text
-        style={[styles.iconText, activeIndex === index && styles.activeIcon]}
-      >
-        Icon
-      </Text>
-    );
-  };
-
-  return (
-    <View style={styles.navBar}>
-      {icons.map((icon, index) => (
-        <TouchableOpacity
-          key={index}
-          style={styles.navItem}
-          onPress={() => onNavPress(index)}
-        >
-          {renderIcon(index, icon.name)}
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-};
-
-const IvsAndLinesScreen: React.FC = () => {
+const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
   // Use the custom hook
   const { patientName, setPatientName, handleSubmit } = useIvsAndLinesData();
 
@@ -89,6 +34,9 @@ const IvsAndLinesScreen: React.FC = () => {
       >
         {/* Header and Date */}
         <View style={styles.headerContainer}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Text style={styles.backButtonText}>←</Text>
+          </TouchableOpacity>
           <Text style={styles.titleText}>IVs and Lines</Text>
           <Text style={styles.dateText}>Monday, January 26</Text>
         </View>
@@ -116,9 +64,6 @@ const IvsAndLinesScreen: React.FC = () => {
           <Text style={styles.submitButtonText}>SUBMIT</Text>
         </TouchableOpacity>
       </ScrollView>
-
-      {/* Bottom Navigation Bar */}
-      <BottomNavBar activeIndex={2} onNavPress={handleNavPress} />
     </View>
   );
 };
@@ -138,6 +83,14 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     marginBottom: 20,
+  },
+  backButton: {
+    marginBottom: 10,
+  },
+  backButtonText: {
+    fontSize: 24,
+    color: '#227145',
+    fontWeight: 'bold',
   },
   titleText: {
     color: '#227145', // Main green
@@ -182,61 +135,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
     letterSpacing: 1, // Matching the text's character spacing
-  },
-  navBar: {
-    flexDirection: 'row',
-    height: 70, // Fixed height for navbar
-    backgroundColor: 'white',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderTopColor: '#E0E0E0',
-    borderTopWidth: 1,
-    paddingHorizontal: 10,
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    elevation: 8, // Light shadow on top of navbar
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconText: {
-    color: '#A0A0A0', // De-emphasized gray icon
-    fontSize: 14,
-  },
-  activeIcon: {
-    color: '#227145', // Green color for active icon
-  },
-  centralIcon: {
-    backgroundColor: 'white',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: '#E0E0E0', // Light gray border for central icon
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'absolute', // This helps center it over the items
-    bottom: 10, // Moves it slightly above the bar
-    zIndex: 10,
-    // Add visual elements from the image
-    flexDirection: 'row',
-  },
-  activeCentralIcon: {
-    borderColor: '#227145', // Dark green active central icon
-  },
-  centralIconText: {
-    color: '#227145', // Main green
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginRight: -2, // Hack to pull together
-  },
-  centralIconSubText: {
-    fontSize: 20, // Emoji for a quick person icon
-    marginTop: 2,
   },
 });
 
