@@ -1,3 +1,4 @@
 ehr/android/local.properties
 ehr/.env
-ehr/api/apiClient.ts
+ehr/App/api/apiClient.ts
+ehr/Seed.js
