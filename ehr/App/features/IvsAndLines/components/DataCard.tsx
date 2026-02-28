@@ -37,6 +37,13 @@ const DataCard: React.FC<DataCardProps> = ({
           }
         }}
       >
+        {/* Visual guide lines moved behind the text for better alignment */}
+        <View style={styles.linesContainer}>
+          <View style={styles.guideLine} />
+          <View style={styles.guideLine} />
+          <View style={styles.guideLine} />
+        </View>
+
         <TextInput
           style={styles.input}
           value={value}
@@ -48,10 +55,6 @@ const DataCard: React.FC<DataCardProps> = ({
           editable={!disabled}
           pointerEvents={disabled ? 'none' : 'auto'}
         />
-        {/* Visual guide lines to match the UI in the image */}
-        <View style={styles.guideLine} />
-        <View style={styles.guideLine} />
-        <View style={styles.guideLine} />
       </Pressable>
     </View>
   );
@@ -59,7 +62,7 @@ const DataCard: React.FC<DataCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFF9F0', // Light cream background
+    backgroundColor: '#FFFAED',
     borderRadius: 18,
     padding: 16,
     marginBottom: 15,
@@ -76,14 +79,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   badge: {
-    backgroundColor: '#FCE69B', // Soft yellow badge
+    backgroundColor: '#FFEEC2',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 10,
     marginRight: 10,
   },
   badgeText: {
-    color: '#CC9D00', // Dark gold/mustard text
+    color: '#EDB62C',
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -91,24 +94,31 @@ const styles = StyleSheet.create({
   headerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#F2E8D5', // Very faint line next to badge
+    backgroundColor: '#F2E8D5',
   },
   inputContainer: {
-    marginTop: 5,
-    minHeight: 80,
+    marginTop: 0,
+    marginBottom: 10,
+
+    minHeight: 90,
+    position: 'relative',
+  },
+  linesContainer: {
+    ...StyleSheet.absoluteFillObject,
   },
   input: {
     fontSize: 15,
     color: '#444',
     paddingVertical: 0,
+    paddingTop: 0,
     textAlignVertical: 'top',
-    lineHeight: 24, // Matches the spacing of guide lines
+    lineHeight: 30,
     zIndex: 1,
   },
   guideLine: {
-    height: 1,
-    backgroundColor: '#F2E8D5',
-    marginTop: 20, // Creates the "ruled paper" look from your image
+    height: 30,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2E8D5',
   },
 });
 

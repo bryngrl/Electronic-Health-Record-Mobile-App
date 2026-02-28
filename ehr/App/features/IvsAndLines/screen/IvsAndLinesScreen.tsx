@@ -171,7 +171,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="#227145" />
+            <ActivityIndicator color="#E5FFE8" />
           ) : (
             <Text style={styles.submitButtonText}>SUBMIT</Text>
           )}
@@ -206,9 +206,10 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     marginTop: 20,
-    marginBottom: 20,
+    marginBottom: 40,
   },
   titleText: {
+    marginBottom: -10,
     fontSize: 35,
     color: '#035022',
     fontFamily: 'MinionPro-SemiboldItalic',
@@ -220,7 +221,7 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     backgroundColor: '#EAF8EF',
-    borderColor: '#227145',
+    borderColor: '#29A539',
     borderWidth: 1.5,
     borderRadius: 24,
     paddingVertical: 15,
@@ -231,7 +232,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
   },
   submitButtonText: {
-    color: '#227145',
+    color: '#035022',
     fontWeight: '700',
     fontSize: 16,
     letterSpacing: 1,
