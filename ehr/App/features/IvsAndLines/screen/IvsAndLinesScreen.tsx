@@ -93,9 +93,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   titleText: {
-    color: '#227145', // Main green
-    fontWeight: 'bold',
-    fontSize: 28, // Matches the title's visual weight
+    fontSize: 35,
+    color: '#035022',
+    fontFamily: 'MinionPro-SemiboldItalic',
   },
   dateText: {
     color: '#9B9B9B', // Gray color
