@@ -5,12 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="64dac766-4f9e-47dc-9efd-004b84659307" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ehr/App/api/apiClient.ts" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/api/apiClient.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ehr/App/components/SweetAlert.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/components/SweetAlert.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ehr/App/features/Dashboard/screen/HomeScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/Dashboard/screen/HomeScreen.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ehr/App/features/VitalSigns/hook/useVitalSignsLogic.ts" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/VitalSigns/hook/useVitalSignsLogic.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ehr/App/features/VitalSigns/screen/VitalSignsScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/VitalSigns/screen/VitalSignsScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/Seed.js" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/Seed.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/package-lock.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -38,22 +37,22 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.cidr.known.project.marker": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.readMode.enableVisualFormatting": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "cf.first.check.clang-format": "false",
-    "cidr.known.project.marker": "true",
-    "git-widget-placeholder": "vital",
-    "kotlin-language-version-configured": "true",
-    "settings.editor.selected.configurable": "device.mirroring"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
+    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;medication-administration&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;device.mirroring&quot;
   }
-}]]></component>
+}</component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="64dac766-4f9e-47dc-9efd-004b84659307" name="Changes" comment="" />
