@@ -5,12 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="64dac766-4f9e-47dc-9efd-004b84659307" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ehr/App/api/apiClient.ts" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/api/apiClient.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ehr/App/components/SweetAlert.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/components/SweetAlert.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ehr/App/features/Dashboard/screen/HomeScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/Dashboard/screen/HomeScreen.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ehr/App/features/VitalSigns/hook/useVitalSignsLogic.ts" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/VitalSigns/hook/useVitalSignsLogic.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ehr/App/features/VitalSigns/screen/VitalSignsScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/VitalSigns/screen/VitalSignsScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ehr/App/features/IvsAndLines/screen/IvsAndLinesScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ehr/App/features/IvsAndLines/screen/IvsAndLinesScreen.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,7 +44,7 @@
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
-    "git-widget-placeholder": "vital",
+    "git-widget-placeholder": "iv-and-lines",
     "kotlin-language-version-configured": "true",
     "settings.editor.selected.configurable": "device.mirroring"
   }
