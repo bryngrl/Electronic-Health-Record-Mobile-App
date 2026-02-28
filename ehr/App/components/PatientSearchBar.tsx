@@ -16,7 +16,7 @@ import {
 import apiClient from '../api/apiClient';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const THEME_GREEN = '#035022';
+const THEME_GREEN = '#0A8219';
 
 interface Patient {
   id: number;
@@ -70,7 +70,7 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
       try {
         console.log('PatientSearchBar: Fetching patients from /patients/');
         const response = await apiClient.get('/patients/');
-        
+
         let raw = [];
         if (Array.isArray(response.data)) {
           raw = response.data;
@@ -80,11 +80,13 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
           raw = [response.data];
         }
 
-        const normalized = raw.map((p: any) => ({
-          ...p,
-          id: p.patient_id ?? p.id ?? null,
-          fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-        })).filter((p: any) => p.id !== null);
+        const normalized = raw
+          .map((p: any) => ({
+            ...p,
+            id: p.patient_id ?? p.id ?? null,
+            fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+          }))
+          .filter((p: any) => p.id !== null);
 
         console.log(`PatientSearchBar: Loaded ${normalized.length} patients`);
         setPatients(normalized);
@@ -124,21 +126,23 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
   const handleFocus = () => {
     console.log('PatientSearchBar: Input Focused');
     setShowDropdown(true);
-    // Show all patients when focusing, regardless of current text, 
+    // Show all patients when focusing, regardless of current text,
     // so the user can see the list to select from.
     setFilteredPatients(patients);
   };
 
   return (
     <View style={[styles.section, containerStyle]}>
-      {label ? <Text style={[styles.sectionLabel, labelStyle]}>{label}</Text> : null}
+      {label ? (
+        <Text style={[styles.sectionLabel, labelStyle]}>{label}</Text>
+      ) : null}
       <View style={styles.searchWrap}>
-        <Pressable 
+        <Pressable
           style={[styles.searchBar, inputBarStyle]}
           onPress={() => {
-              console.log('PatientSearchBar: Bar Pressed');
-              setShowDropdown(true);
-              inputRef.current?.focus();
+            console.log('PatientSearchBar: Bar Pressed');
+            setShowDropdown(true);
+            inputRef.current?.focus();
           }}
         >
           <TextInput
@@ -153,22 +157,28 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
             underlineColorAndroid="transparent"
           />
           {loading && (
-            <ActivityIndicator size="small" color={THEME_GREEN} style={styles.loader} />
+            <ActivityIndicator
+              size="small"
+              color={THEME_GREEN}
+              style={styles.loader}
+            />
           )}
         </Pressable>
 
         {showDropdown && (
           <View style={styles.dropdown}>
-            <ScrollView 
-              style={styles.dropdownScroll} 
+            <ScrollView
+              style={styles.dropdownScroll}
               nestedScrollEnabled={true}
               keyboardShouldPersistTaps="always"
-              contentContainerStyle={filteredPatients.length === 0 ? { flexGrow: 1 } : null}
+              contentContainerStyle={
+                filteredPatients.length === 0 ? { flexGrow: 1 } : null
+              }
             >
               {loading && patients.length === 0 ? (
                 <View style={styles.infoContainer}>
-                   <ActivityIndicator size="small" color={THEME_GREEN} />
-                   <Text style={styles.infoText}>Loading patients...</Text>
+                  <ActivityIndicator size="small" color={THEME_GREEN} />
+                  <Text style={styles.infoText}>Loading patients...</Text>
                 </View>
               ) : filteredPatients.length > 0 ? (
                 filteredPatients.map((item, index) => (
@@ -191,11 +201,11 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
                 </View>
               )}
             </ScrollView>
-            <Pressable 
-                style={styles.closeDropdown}
-                onPress={() => setShowDropdown(false)}
+            <Pressable
+              style={styles.closeDropdown}
+              onPress={() => setShowDropdown(false)}
             >
-                <Text style={styles.closeText}>CLOSE DROPDOWN</Text>
+              <Text style={styles.closeText}>CLOSE DROPDOWN</Text>
             </Pressable>
           </View>
         )}
@@ -205,18 +215,18 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
 };
 
 const styles = StyleSheet.create({
-  section: { 
-    marginBottom: 15, 
+  section: {
+    marginBottom: 15,
     zIndex: 1000,
     elevation: Platform.OS === 'android' ? 10 : undefined,
   },
-  searchWrap: { 
-    position: 'relative', 
+  searchWrap: {
+    position: 'relative',
     zIndex: 1001,
     elevation: Platform.OS === 'android' ? 11 : undefined,
   },
   sectionLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
     color: THEME_GREEN,
     marginBottom: 8,
@@ -263,21 +273,26 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   dropdownText: { fontSize: 14, color: '#333' },
-  infoContainer: { padding: 20, alignItems: 'center', justifyContent: 'center', flex: 1 },
+  infoContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
   infoText: { color: '#666', fontSize: 13, textAlign: 'center' },
   closeDropdown: {
-      padding: 12,
-      backgroundColor: '#f8f8f8',
-      alignItems: 'center',
-      borderTopWidth: 1,
-      borderTopColor: '#eee',
+    padding: 12,
+    backgroundColor: '#f8f8f8',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
   },
   closeText: {
-      color: '#d32f2f', // Red for close
-      fontWeight: 'bold',
-      fontSize: 11,
-      letterSpacing: 1,
-  }
+    color: '#d32f2f', // Red for close
+    fontWeight: 'bold',
+    fontSize: 11,
+    letterSpacing: 1,
+  },
 });
 
 export default PatientSearchBar;
