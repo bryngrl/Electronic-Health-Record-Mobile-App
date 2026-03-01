@@ -1,33 +1,27 @@
 import axios from 'axios';
 
-const BACKEND_PORT = 8000; // Changed from 8000 to avoid socket conflicts
+const BACKEND_PORT = 8000;
 
-// Update this to your USB Tethering IP from ipconfig
-// WiFi IP (for USB tethering): 192.168.47.251
-const PHYSICAL_DEVICE_HOST = '192.168.100.157';
+const PHYSICAL_DEVICE_HOST = '192.168.1.12';
 
-// Use the physical device host directly for USB testing
 const host = PHYSICAL_DEVICE_HOST;
 
 export const BASE_URL = `http://${host}:${BACKEND_PORT}`;
 
 const apiClient = axios.create({
-  // Adding /api if your FastAPI routes are prefixed with /api
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
-  timeout: 15000, // 15 second timeout for slower connections
+  timeout: 15000,
 });
 
-// Request interceptor - logs requests for debugging
 apiClient.interceptors.request.use(request => {
   console.log('Starting Request to:', request.baseURL, request.url);
   return request;
 });
 
-// Response interceptor - handles connection errors gracefully
 apiClient.interceptors.response.use(
   response => {
     console.log('Response received:', response.status);

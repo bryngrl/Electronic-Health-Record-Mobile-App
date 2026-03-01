@@ -167,6 +167,13 @@ const DashboardSummary = ({
               <Icon name="monitor-heart" size={28} color={THEME_GREEN} />
               <Text style={styles.cardText}>Vital Signs</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.recentCard}
+              onPress={() => onNavigate('IvsAndLines')}
+            >
+              <Icon name="medication" size={28} color={THEME_GREEN} />
+              <Text style={styles.cardText}>IVs and Lines</Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
 

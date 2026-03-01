@@ -28,7 +28,7 @@ const dashboardItems = [
   { id: 'Activities', title: 'Activities of Daily Living', icon: 'extension' },
   { id: 'LabValues', title: 'Lab Values', icon: 'science' },
   { id: 'Diagnostics', title: 'Diagnostics', icon: 'biotech' },
-  { id: 'IVs & Lines', title: 'IVs and Lines', icon: 'medication' },
+  { id: 'IvsAndLines', title: 'IVs and Lines', icon: 'medication' },
   {
     id: 'Medication Administration',
     title: 'Medication Administration',

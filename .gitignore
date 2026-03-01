@@ -1,3 +1,15 @@
+# Local configuration
 ehr/android/local.properties
 ehr/.env
-ehr/api/apiClient.ts
+ehr/App/api/apiClient.ts
+ehr/Seed.js
+
+# IDE settings
+.idea/workspace.xml
+
+# Python
+*.pyc
+__pycache__/
+ehr_backend/.venv/
+ehr_backend/ven/
+ehr_backend/venv/
