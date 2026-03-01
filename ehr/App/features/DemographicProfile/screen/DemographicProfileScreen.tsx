@@ -28,6 +28,7 @@ interface Patient {
 interface ProfileProps {
   onBack: () => void;
   onSelectionChange: (isSelecting: boolean) => void;
+  onPatientClick: (patientId: number) => void;
 }
 
 const activeIcon = require('../../../../assets/icons/active_icon.png');
@@ -37,6 +38,7 @@ const selectImage = require('../../../../assets/icons/select_icon.png');
 
 const DemographicProfileScreen: React.FC<ProfileProps> = ({
   onSelectionChange,
+  onPatientClick,
 }) => {
   const isDarkMode = useColorScheme() === 'dark';
   const [showSelectMenu, setShowSelectMenu] = useState(false);
@@ -133,7 +135,9 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
                   isSelected={selectedIds.has(item.patient_id)}
                   isSelectionMode={isSelectionMode}
                   onPress={() =>
-                    isSelectionMode && toggleSelection(item.patient_id)
+                    isSelectionMode
+                      ? toggleSelection(item.patient_id)
+                      : onPatientClick(item.patient_id)
                   }
                   onLongPress={() => toggleSelection(item.patient_id)}
                 />
