@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator, FlatList, Modal, TextInput, Pressable } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import MedicalReconCard from '../components/MedicalReconCard';
+import MedicalReconCard from '../component/MedicalReconCard';
 import { useMedicalReconLogic } from '../hook/useMedicalReconLogic';
 import SweetAlert from '../../../components/SweetAlert';
 

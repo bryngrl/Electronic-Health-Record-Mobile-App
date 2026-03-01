@@ -92,6 +92,66 @@ export const useMedicalReconLogic = () => {
     setShowDropdown(false);
   };
 
+  // Fetch existing medications for selected patient
+  const fetchPatientMedications = useCallback(async (id: number) => {
+    setIsLoading(true);
+    try {
+      const [homeRes, currentRes, changesRes] = await Promise.all([
+        apiClient.get(`/medication-reconciliation/home-medication/patient/${id}/`),
+        apiClient.get(`/medication-reconciliation/current-medication/patient/${id}/`),
+        apiClient.get(`/medication-reconciliation/changes-in-medication/patient/${id}/`),
+      ]);
+
+      const home = homeRes.data[0] || {};
+      const current = currentRes.data[0] || {};
+      const changes = changesRes.data[0] || {};
+
+      setReconData({
+        0: {
+          med: current.current_med || '',
+          dose: current.current_dose || '',
+          route: current.current_route || '',
+          freq: current.current_frequency || '',
+          indication: current.current_indication || '',
+          extra: current.current_text || ''
+        },
+        1: {
+          med: home.home_med || '',
+          dose: home.home_dose || '',
+          route: home.home_route || '',
+          freq: home.home_frequency || '',
+          indication: home.home_indication || '',
+          extra: home.home_text || ''
+        },
+        2: {
+          med: changes.change_med || '',
+          dose: changes.change_dose || '',
+          route: changes.change_route || '',
+          freq: changes.change_frequency || '',
+          indication: '',
+          extra: changes.change_text || ''
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching patient medications:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Fetch data when patientId changes
+  useMemo(() => {
+    if (patientId) {
+      fetchPatientMedications(patientId);
+    } else {
+      setReconData({
+        0: { ...initialEntry },
+        1: { ...initialEntry },
+        2: { ...initialEntry }
+      });
+    }
+  }, [patientId, fetchPatientMedications]);
+
   // VALIDATION: Hindi makaka-next kung walang maski isang input
   const isDataEntered = useMemo(() => {
     return Object.values(values).some(v => v.trim() !== '');
