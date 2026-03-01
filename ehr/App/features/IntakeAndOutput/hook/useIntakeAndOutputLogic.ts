@@ -111,8 +111,47 @@ export const useIntakeAndOutputLogic = () => {
 
   const handleUpdateField = (key: keyof IntakeOutput, value: string) => {
     setIntakeOutput(prev => ({ ...prev, [key]: value }));
+    // Clear alerts when user modifies data to avoid showing stale info
+    setAssessmentAlert(null);
     if (backendAlert) setBackendAlert(null);
   };
+
+  // REAL-TIME CDSS Check (Debounced)
+  useEffect(() => {
+    if (!selectedPatientId) return;
+
+    const timer = setTimeout(async () => {
+      if (isDataEntered) {
+        try {
+          const payload = {
+            oral_intake: parseInt(intakeOutput.oral_intake || '0', 10),
+            iv_fluids: parseInt(intakeOutput.iv_fluids || '0', 10),
+            urine_output: parseInt(intakeOutput.urine_output || '0', 10),
+          };
+
+          let response;
+          if (recordId) {
+            // AssessmentUpdate schema forbids extra fields like patient_id
+            response = await apiClient.put(`/intake-output/${recordId}/assessment`, payload);
+          } else {
+            // AssessmentCreate schema requires patient_id
+            response = await apiClient.post('/intake-output/', {
+              patient_id: parseInt(selectedPatientId, 10),
+              ...payload
+            });
+          }
+          
+          const data = response.data;
+          if (data.id) setRecordId(data.id);
+          if (data.assessment_alert) setAssessmentAlert(data.assessment_alert);
+        } catch (e) {
+          console.error('Real-time CDSS Error:', e);
+        }
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [intakeOutput, selectedPatientId, recordId]);
 
   const saveAssessment = async () => {
     if (!selectedPatientId) {
@@ -123,7 +162,6 @@ export const useIntakeAndOutputLogic = () => {
     setLoading(true);
 
     const payload = {
-      patient_id: parseInt(selectedPatientId, 10),
       oral_intake: parseInt(intakeOutput.oral_intake || '0', 10),
       iv_fluids: parseInt(intakeOutput.iv_fluids || '0', 10),
       urine_output: parseInt(intakeOutput.urine_output || '0', 10),
@@ -132,11 +170,14 @@ export const useIntakeAndOutputLogic = () => {
     try {
       let response;
       if (recordId) {
-        // Update existing assessment
+        // AssessmentUpdate schema forbids patient_id
         response = await apiClient.put(`/intake-output/${recordId}/assessment`, payload);
       } else {
-        // Create new assessment
-        response = await apiClient.post('/intake-output/', payload);
+        // AssessmentCreate schema requires patient_id
+        response = await apiClient.post('/intake-output/', {
+          patient_id: parseInt(selectedPatientId, 10),
+          ...payload
+        });
       }
       
       const data = response.data;
