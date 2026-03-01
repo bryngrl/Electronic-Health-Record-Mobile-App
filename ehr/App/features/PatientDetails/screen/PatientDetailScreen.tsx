@@ -118,7 +118,7 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
           <View style={styles.row}>
             <DetailItem
               label="Birth Place"
-              value={patient?.birth_place}
+              value={patient?.birthplace}
               halfWidth
             />
             <DetailItem label="Religion" value={patient?.religion} halfWidth />
@@ -132,7 +132,7 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
             />
             <DetailItem
               label="Chief of Complaints"
-              value={patient?.chief_complaint}
+              value={patient?.chief_complaints}
               halfWidth
             />
           </View>
@@ -140,14 +140,10 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
           <View style={styles.row}>
             <DetailItem
               label="Room Number"
-              value={patient?.room_number}
+              value={patient?.room_no}
               halfWidth
             />
-            <DetailItem
-              label="Bed Number"
-              value={patient?.bed_number}
-              halfWidth
-            />
+            <DetailItem label="Bed Number" value={patient?.bed_no} halfWidth />
           </View>
         </View>
 
@@ -156,21 +152,14 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
 
         <View style={styles.gridContainer}>
           <View style={styles.row}>
-            <DetailItem
-              label="Name"
-              value={patient?.emergency_name}
-              halfWidth
-            />
+            <DetailItem label="Name" value={patient?.contact_name} halfWidth />
             <DetailItem
               label="Relationship"
-              value={patient?.emergency_relationship}
+              value={patient?.contact_relationship}
               halfWidth
             />
           </View>
-          <DetailItem
-            label="Contact Number"
-            value={patient?.emergency_contact}
-          />
+          <DetailItem label="Contact Number" value={patient?.contact_number} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -180,7 +169,6 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
 const styles = StyleSheet.create({
   mainContainer: {
     marginTop: 40,
-
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
@@ -233,7 +221,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-start',
     marginTop: 20,
-    marginBottom: 50,
+    marginBottom: 40,
   },
   backButton: {
     marginRight: 15,
