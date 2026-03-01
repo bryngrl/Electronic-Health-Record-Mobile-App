@@ -15,6 +15,7 @@ import ADLMainScreen from '../../ADL/screen/ADLMainScreen';
 import LabValuesScreen from '../../LaboratoryValues/screen/LabValuesScreen';
 import DiagnosticsScreen from '../../Diagnostics/screen/DiagnosticsScreen';
 import MedAdministrationScreen from '../../MedAdministration/screen/MedAdministrationScreen';
+import IvsAndLinesScreen from '../../IvsAndLines/screen/IvsAndLinesScreen';
 
 export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('Home');
@@ -64,6 +65,8 @@ export default function HomeScreen() {
         return <DiagnosticsScreen onBack={() => setActiveTab('Grid')} />;
       case 'Medication Administration':
         return <MedAdministrationScreen onBack={() => setActiveTab('Grid')} />;
+      case 'IvsAndLines':
+        return <IvsAndLinesScreen onBack={() => setActiveTab('Grid')} />;
 
       default:
         return <DashboardSummary onNavigate={handleNavigation} />;

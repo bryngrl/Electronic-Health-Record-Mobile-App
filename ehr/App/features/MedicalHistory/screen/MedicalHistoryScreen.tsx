@@ -1,20 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
-  Pressable,
   ScrollView,
-  TextInput,
   SafeAreaView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import HistoryInputCard from '../components/HistoryInputCard';
 import Button from '../../../components/button';
-import apiClient from '../../../api/apiClient';
 import { useMedicalHistory } from '../hook/useMedicalHistory';
 import SweetAlert from '../../../components/SweetAlert';
+import PatientSearchBar from '../../../components/PatientSearchBar';
 
 const THEME_GREEN = '#035022';
 const LIGHT_GREEN_BG = '#E8F5E9';
@@ -26,10 +24,6 @@ interface MedicalHistoryProps {
 const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
   const { saveMedicalHistory } = useMedicalHistory();
   const [step, setStep] = useState(0);
-  const [searchText, setSearchText] = useState('');
-  const [patients, setPatients] = useState<any[]>([]);
-  const [filteredPatients, setFilteredPatients] = useState<any[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(
     null,
   );
@@ -101,44 +95,6 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
     { title: 'DEVELOPMENTAL HISTORY', key: 'developmental' },
   ];
 
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const response = await apiClient.get('/patients/');
-        const raw = response.data || [];
-        const normalized = raw.map((p: any) => ({
-          ...p,
-          id: p.patient_id ?? p.id ?? null,
-          fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-        }));
-        setPatients(normalized);
-      } catch (error) {
-        console.error('Fetch Error:', error);
-      }
-    };
-    fetchPatients();
-  }, []);
-
-  const handleSearch = (text: string) => {
-    setSearchText(text);
-    if (text.length > 0) {
-      const filtered = patients.filter(p =>
-        p.fullName.toLowerCase().includes(text.toLowerCase()),
-      );
-      setFilteredPatients(filtered);
-      setShowDropdown(true);
-    } else {
-      setShowDropdown(false);
-      setSelectedPatientId(null);
-    }
-  };
-
-  const onSelectPatient = (patient: any) => {
-    setSearchText(patient.fullName);
-    setSelectedPatientId(patient.id);
-    setShowDropdown(false);
-  };
-
   const handleNext = async () => {
     if (!selectedPatientId) {
       return showAlert('Patient Required', 'Please select a patient first in the search bar.');
@@ -194,43 +150,9 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>PATIENT NAME :</Text>
-          <View style={styles.searchWrap}>
-            <View style={styles.searchBar}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Select Patient name"
-                placeholderTextColor="#BDBDBD"
-                value={searchText}
-                onChangeText={handleSearch}
-                onFocus={() => {
-                  if (patients.length > 0) {
-                    setFilteredPatients(patients);
-                    setShowDropdown(true);
-                  }
-                }}
-              />
-            </View>
-
-            {showDropdown && filteredPatients.length > 0 && (
-              <View style={styles.dropdown}>
-                {filteredPatients.map((item, index) => (
-                  <Pressable
-                    key={item.id ? item.id.toString() : `p-${index}`}
-                    style={({ pressed }) => [
-                      styles.dropdownItem,
-                      pressed && { opacity: 0.6 },
-                    ]}
-                    onPress={() => onSelectPatient(item)}
-                  >
-                    <Text style={styles.dropdownText}>{item.fullName}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-          </View>
-        </View>
+        <PatientSearchBar
+          onPatientSelect={(id) => setSelectedPatientId(id)}
+        />
 
         <View style={styles.stepHeader}>
           <Text style={styles.stepHeaderText}>{steps[step].title}</Text>
@@ -292,45 +214,6 @@ const styles = StyleSheet.create({
     fontFamily: 'MinionPro-SemiboldItalic',
   },
   dateText: { fontSize: 13, color: '#999' },
-  section: { marginBottom: 15, zIndex: 10 },
-  searchWrap: { position: 'relative', zIndex: 999 },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: THEME_GREEN,
-    marginBottom: 8,
-  },
-  searchBar: {
-    borderRadius: 25,
-    paddingHorizontal: 20,
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#F2F2F2',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  searchInput: { fontSize: 14, color: '#333' },
-  dropdown: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 56,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginTop: 5,
-    borderWidth: 1,
-    borderColor: '#eee',
-    elevation: 8,
-    zIndex: 9999,
-    maxHeight: 220,
-  },
-  dropdownItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f9f9f9',
-  },
-  dropdownText: { fontSize: 14, color: '#333' },
-  selectedIndicator: { fontSize: 12, color: '#666', marginTop: 6 },
   stepHeader: {
     backgroundColor: LIGHT_GREEN_BG,
     paddingVertical: 10,
