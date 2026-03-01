@@ -34,9 +34,8 @@ const dashboardItems = [
     title: 'Medication Administration',
     icon: 'medical-services',
   },
-  {
-    id: 'Medication Reconciliation',
-    title: 'Medication Reconciliation',
+  { id: 'Medical Reconciliation',
+    title: 'Medical Reconciliation',
     icon: 'fact-check',
   },
 ];

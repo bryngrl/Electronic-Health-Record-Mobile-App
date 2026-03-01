@@ -25,7 +25,7 @@ const navItems = [
   { name: "Diagnostics", icon: "biotech" },
   { name: "IV's & Lines", icon: "medication" },
   { name: "Medication Administration", icon: "medical-services" },
-  { name: "Medication Reconciliation", icon: "fact-check" },
+  { name: "Medical Reconciliation", icon: "fact-check" },
 ];
 
 export const Sidebar = ({ activeRoute, onNavigate, onLogout }: SidebarProps) => {

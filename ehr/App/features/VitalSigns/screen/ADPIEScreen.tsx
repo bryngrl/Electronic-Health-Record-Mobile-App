@@ -6,9 +6,10 @@ import {
   TouchableOpacity,
   TextInput,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useVitalSignsLogic } from '../hook/useVitalSignsLogic';
+import apiClient from '../../../api/apiClient';
 import LinearGradient from 'react-native-linear-gradient';
 import CDSSGuidanceModal from '../../../components/CDSSGuidanceModal';
 import SweetAlert from '../../../components/SweetAlert';
@@ -25,14 +26,23 @@ interface ADPIEScreenProps {
   onBack: () => void;
   recordId: number;
   patientName: string;
+  feature?: 'vital-signs' | 'intake-output';
 }
 
-const ADPIEScreen: React.FC<ADPIEScreenProps> = ({ onBack, recordId, patientName }) => {
-  const { updateDPIE } = useVitalSignsLogic();
+const ADPIEScreen: React.FC<ADPIEScreenProps> = ({ 
+  onBack, 
+  recordId, 
+  patientName,
+  feature = 'vital-signs'
+}) => {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [text, setText] = useState('');
   const [alert, setAlert] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const endpointPrefix = feature === 'vital-signs' ? '/vital-signs' : '/intake-output';
+  const displayTitle = feature === 'vital-signs' ? 'Vital Signs' : 'Intake and Output';
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -57,14 +67,26 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({ onBack, recordId, patientName
     setAlertConfig({ visible: true, title, message, type, onConfirm });
   };
 
+  const updateADPIE = async (id: number, step: string, value: string) => {
+    try {
+      const response = await apiClient.put(`${endpointPrefix}/${id}/${step}`, {
+        [step]: value,
+      });
+      return response.data;
+    } catch (e) {
+      console.error(`Error updating ${step}:`, e);
+      throw e;
+    }
+  };
+
   // REAL-TIME CDSS: Debounced polling
   useEffect(() => {
     if (text.trim().length < 3) return;
     const timer = setTimeout(async () => {
       try {
         const step = STEPS[currentIdx];
-        const res = await updateDPIE(recordId, step.key, text);
-        if (res) setAlert((res as any)[`${step.key}_alert`]);
+        const res = await updateADPIE(recordId, step.key, text);
+        if (res) setAlert(res[`${step.key}_alert`]);
       } catch (e) {
         console.error('Real-time Error:', e);
       }
@@ -73,27 +95,35 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({ onBack, recordId, patientName
   }, [text, currentIdx, recordId]);
 
   const handleNext = async () => {
+    if (!text.trim()) {
+      showAlert('Input Required', `Please enter the ${STEPS[currentIdx].label} text.`);
+      return;
+    }
+
+    setLoading(true);
     try {
       const step = STEPS[currentIdx];
-      await updateDPIE(recordId, step.key, text);
+      await updateADPIE(recordId, step.key, text);
       if (currentIdx < 3) {
         setCurrentIdx(currentIdx + 1);
         setText('');
         setAlert(null);
       } else {
-        showAlert('Complete', 'Vital Signs ADPIE Workflow Finished.', 'success', () => {
+        showAlert('Complete', `${displayTitle} ADPIE Workflow Finished.`, 'success', () => {
           onBack();
         });
       }
     } catch (e: any) {
       showAlert('Error', 'Workflow update failed.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Vital Signs</Text>
+        <Text style={styles.title}>{displayTitle}</Text>
         <Text style={styles.subtitle}>CLINICAL DECISION SUPPORT SYSTEM</Text>
       </View>
 
@@ -199,13 +229,17 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({ onBack, recordId, patientName
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.backBtn} onPress={onBack}>
+        <TouchableOpacity style={styles.backBtn} onPress={onBack} disabled={loading}>
           <Icon name="arrow-back" size={24} color="#666" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
-          <Text style={styles.nextText}>
-            {currentIdx === 3 ? 'SUBMIT' : 'NEXT'}
-          </Text>
+        <TouchableOpacity style={[styles.nextBtn, loading && { opacity: 0.7 }]} onPress={handleNext} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator size="small" color={THEME_GREEN} />
+          ) : (
+            <Text style={styles.nextText}>
+              {currentIdx === 3 ? 'SUBMIT' : 'NEXT'}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
 
