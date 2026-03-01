@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Time, Date, DateTime, ForeignKey
+from sqlalchemy import Column, String, DateTime, ForeignKey, BigInteger
 from sqlalchemy.dialects.mysql import BIGINT
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -21,13 +21,14 @@ class MedicationAdministration(Base):
         nullable=False,
         index=True
     )
+
     medication = Column(String(255), nullable=True)
     dose = Column(String(255), nullable=True)
     route = Column(String(255), nullable=True)  # e.g., oral, IV, IM, SC, topical
     frequency = Column(String(255), nullable=True)  # e.g., once daily, twice daily, as needed
     comments = Column(String(255), nullable=True)
-    time = Column(Time, nullable=True)
-    date = Column(Date, nullable=True)
+    time = Column(String(255), nullable=True)  # HH:MM:SS format
+    date = Column(String(255), nullable=True)  # YYYY-MM-DD format
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
