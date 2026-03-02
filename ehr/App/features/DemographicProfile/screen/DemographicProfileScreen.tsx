@@ -17,6 +17,7 @@ import PatientRow from '../component/PatientRow';
 import Button from '../../../components/button';
 import SweetAlert from '../../../components/SweetAlert';
 import { useDemographicLogic } from '../hook/useDemographicLogic';
+import PatientDetailsScreen from '../../PatientDetails/screen/PatientDetailScreen';
 
 interface Patient {
   patient_id: number;
@@ -28,18 +29,25 @@ interface Patient {
 interface ProfileProps {
   onBack: () => void;
   onSelectionChange: (isSelecting: boolean) => void;
+  onPatientClick?: (patientId: number) => void;
 }
 
 const activeIcon = require('../../../../assets/icons/active_icon.png');
 const inactiveIcon = require('../../../../assets/icons/inactive_icon.png');
 const dotsIcon = require('../../../../assets/icons/dots_icon.png');
 const selectImage = require('../../../../assets/icons/select_icon.png');
+const backArrow = require('../../../../assets/icons/back_arrow.png');
 
 const DemographicProfileScreen: React.FC<ProfileProps> = ({
+  onBack,
   onSelectionChange,
+  onPatientClick,
 }) => {
   const isDarkMode = useColorScheme() === 'dark';
   const [showSelectMenu, setShowSelectMenu] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(
+    null,
+  );
 
   const {
     patients,
@@ -67,6 +75,20 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
       toggleSelection(typedPatients[0].patient_id);
     }
   };
+
+  const handlePatientClick = (patientId: number) => {
+    if (onPatientClick) {
+      onPatientClick(patientId);
+    } else {
+      setSelectedPatientId(patientId);
+    }
+  };
+
+  if (selectedPatientId) {
+    return (
+      <PatientDetailsScreen patientId={selectedPatientId} onBack={onBack} />
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -133,7 +155,9 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
                   isSelected={selectedIds.has(item.patient_id)}
                   isSelectionMode={isSelectionMode}
                   onPress={() =>
-                    isSelectionMode && toggleSelection(item.patient_id)
+                    isSelectionMode
+                      ? toggleSelection(item.patient_id)
+                      : handlePatientClick(item.patient_id)
                   }
                   onLongPress={() => toggleSelection(item.patient_id)}
                 />
@@ -224,7 +248,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
+    marginTop: 10,
     marginBottom: 50,
     paddingHorizontal: 20,
   },
