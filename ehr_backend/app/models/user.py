@@ -1,8 +1,16 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, Enum
 from app.database.base import Base
+import enum
 
 
-# A table for nurse and doctors
+class UserRole(str, enum.Enum):
+    """User account types"""
+    NURSE = "nurse"
+    DOCTOR = "doctor"
+    ADMIN = "admin"
+
+
+# A table for users with three account types: nurse, doctor, admin
 class User(Base):
     __tablename__ = "users"
 
@@ -12,6 +20,7 @@ class User(Base):
     email = Column(String(150), unique=True, index=True, nullable=False)
     password = Column(String(255), nullable=False)
 
-    role = Column(String(20), nullable=False)  # nurse or doctor
+    # Role: nurse, doctor, or admin
+    role = Column(Enum(UserRole), nullable=False, default=UserRole.NURSE)
 
     is_active = Column(Boolean, default=True)
