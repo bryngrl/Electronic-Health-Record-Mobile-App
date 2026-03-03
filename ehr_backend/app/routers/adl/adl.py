@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 from datetime import datetime
@@ -32,7 +33,7 @@ class AssessmentCreate(BaseModel):
     sleep_pattern: Optional[str] = None
     pain_level: Optional[str] = None
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class AssessmentUpdate(BaseModel):
@@ -45,42 +46,42 @@ class AssessmentUpdate(BaseModel):
     sleep_pattern: Optional[str] = None
     pain_level: Optional[str] = None
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class DiagnosisUpdate(BaseModel):
     """Step 2: Add Diagnosis"""
     diagnosis: str
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class PlanningUpdate(BaseModel):
     """Step 3: Add Planning"""
     planning: str
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class InterventionUpdate(BaseModel):
     """Step 4: Add Intervention"""
     intervention: str
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class EvaluationUpdate(BaseModel):
     """Step 5: Add Evaluation"""
     evaluation: str
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class ADLRead(BaseModel):
     """Complete ADL ADPIE record"""
     id: int
     patient_id: int
-    # Assessment (7 ADL domains + individual alerts)
+    # Assessment
     mobility: Optional[str] = None
     mobility_alert: Optional[str] = None
     hygiene: Optional[str] = None
@@ -118,8 +119,6 @@ class ADLRead(BaseModel):
 
 def _run_assessment_cdss(data: dict) -> dict:
     """Run CDSS on each assessment field and return individual alerts."""
-    alerts = {}
-    
     assessment_fields = {
         "mobility": data.get("mobility"),
         "hygiene": data.get("hygiene"),
@@ -129,18 +128,14 @@ def _run_assessment_cdss(data: dict) -> dict:
         "sleep_pattern": data.get("sleep_pattern"),
         "pain_level": data.get("pain_level"),
     }
-    
-    # Run CDSS engine on all fields and get alerts
-    cdss_alerts = assessment_engine.evaluate(assessment_fields)
-    
-    return cdss_alerts
+    return assessment_engine.evaluate(assessment_fields)
 
 
 # ──────────────── STEP 1: ASSESSMENT ────────────────
 
 @router.post("/", response_model=ADLRead)
 def create_adl(payload: AssessmentCreate, db: Session = Depends(get_db)):
-    """Step 1: Create ADL Assessment. CDSS alerts are auto-generated for each domain."""
+    """Step 1: Create or Update ADL Assessment. CDSS alerts are auto-generated."""
     # Verify patient exists
     patient = db.query(Patient).filter(Patient.patient_id == payload.patient_id).first()
     if not patient:
@@ -151,19 +146,44 @@ def create_adl(payload: AssessmentCreate, db: Session = Depends(get_db)):
     # Run CDSS to generate alerts
     alerts = _run_assessment_cdss(data)
 
-    # Build the record
     now = datetime.utcnow()
-    record = ADL(
-        **data,
-        **alerts,
-        created_at=now,
-        updated_at=now,
-    )
+    # Check for existing record for this patient from today
+    today = now.date()
+    existing_record = db.query(ADL).filter(
+        ADL.patient_id == payload.patient_id,
+        func.date(ADL.created_at) == today
+    ).first()
 
-    db.add(record)
+    if existing_record:
+        # Update existing
+        for key, value in data.items():
+            if key != "patient_id":
+                setattr(existing_record, key, value)
+        for key, value in alerts.items():
+            setattr(existing_record, key, value)
+        existing_record.updated_at = now
+        record = existing_record
+    else:
+        # Create new
+        record = ADL(
+            **data,
+            **alerts,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(record)
+
     db.commit()
     db.refresh(record)
     return record
+
+
+@router.post("/check-alerts")
+def check_adl_alerts(payload: AssessmentCreate):
+    """Simulate CDSS alerts for ADL without saving to DB (for real-time UI)."""
+    data = payload.model_dump()
+    alerts = _run_assessment_cdss(data)
+    return alerts
 
 
 @router.put("/{record_id}/assessment", response_model=ADLRead)
@@ -203,7 +223,7 @@ def update_assessment(record_id: int, payload: AssessmentUpdate, db: Session = D
 
 @router.put("/{record_id}/diagnosis", response_model=ADLRead)
 def add_diagnosis(record_id: int, payload: DiagnosisUpdate, db: Session = Depends(get_db)):
-    """Step 2: Add Diagnosis. CDSS alert is auto-generated."""
+    """Step 2: Add Diagnosis."""
     record = db.query(ADL).filter(ADL.id == record_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="ADL record not found")
@@ -221,7 +241,7 @@ def add_diagnosis(record_id: int, payload: DiagnosisUpdate, db: Session = Depend
 
 @router.put("/{record_id}/planning", response_model=ADLRead)
 def add_planning(record_id: int, payload: PlanningUpdate, db: Session = Depends(get_db)):
-    """Step 3: Add Planning. CDSS alert is auto-generated."""
+    """Step 3: Add Planning."""
     record = db.query(ADL).filter(ADL.id == record_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="ADL record not found")
@@ -239,7 +259,7 @@ def add_planning(record_id: int, payload: PlanningUpdate, db: Session = Depends(
 
 @router.put("/{record_id}/intervention", response_model=ADLRead)
 def add_intervention(record_id: int, payload: InterventionUpdate, db: Session = Depends(get_db)):
-    """Step 4: Add Intervention. CDSS alert is auto-generated."""
+    """Step 4: Add Intervention."""
     record = db.query(ADL).filter(ADL.id == record_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="ADL record not found")
@@ -257,7 +277,7 @@ def add_intervention(record_id: int, payload: InterventionUpdate, db: Session = 
 
 @router.put("/{record_id}/evaluation", response_model=ADLRead)
 def add_evaluation(record_id: int, payload: EvaluationUpdate, db: Session = Depends(get_db)):
-    """Step 5: Add Evaluation. CDSS alert is auto-generated."""
+    """Step 5: Add Evaluation."""
     record = db.query(ADL).filter(ADL.id == record_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="ADL record not found")
@@ -287,71 +307,11 @@ def list_by_patient(patient_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{record_id}", response_model=ADLRead)
 def get_record(record_id: int, db: Session = Depends(get_db)):
-    """Get a single ADL record (complete ADPIE) by ID."""
+    """Get a single ADL record by ID."""
     record = db.query(ADL).filter(ADL.id == record_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="ADL record not found")
     return record
-
-
-@router.get("/{record_id}/extract-adpie")
-def extract_adpie(record_id: int, db: Session = Depends(get_db)):
-    """
-    Extract complete ADPIE record and return formatted output.
-    Nurse can use this to view/print the full ADL workflow.
-    """
-    record = db.query(ADL).filter(ADL.id == record_id).first()
-    if not record:
-        raise HTTPException(status_code=404, detail="ADL record not found")
-
-    # Get patient info
-    patient = db.query(Patient).filter(Patient.patient_id == record.patient_id).first()
-
-    return {
-        "patient": {
-            "id": patient.patient_id,
-            "name": f"{patient.first_name} {patient.last_name}",
-            "age": patient.age,
-            "admission_date": patient.admission_date,
-        },
-        "record_id": record.id,
-        "adpie": {
-            "assessment": {
-                "mobility": record.mobility,
-                "mobility_alert": record.mobility_alert,
-                "hygiene": record.hygiene,
-                "hygiene_alert": record.hygiene_alert,
-                "toileting": record.toileting,
-                "toileting_alert": record.toileting_alert,
-                "feeding": record.feeding,
-                "feeding_alert": record.feeding_alert,
-                "hydration": record.hydration,
-                "hydration_alert": record.hydration_alert,
-                "sleep_pattern": record.sleep_pattern,
-                "sleep_pattern_alert": record.sleep_pattern_alert,
-                "pain_level": record.pain_level,
-                "pain_level_alert": record.pain_level_alert,
-            },
-            "diagnosis": {
-                "input": record.diagnosis,
-                "alert": record.diagnosis_alert,
-            },
-            "planning": {
-                "input": record.planning,
-                "alert": record.planning_alert,
-            },
-            "intervention": {
-                "input": record.intervention,
-                "alert": record.intervention_alert,
-            },
-            "evaluation": {
-                "input": record.evaluation,
-                "alert": record.evaluation_alert,
-            },
-        },
-        "created_at": record.created_at,
-        "updated_at": record.updated_at,
-    }
 
 
 @router.delete("/{record_id}")
