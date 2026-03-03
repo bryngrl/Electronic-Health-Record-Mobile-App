@@ -7,7 +7,11 @@ interface IntakeOutputCardProps {
   onChangeText: (text: string) => void;
 }
 
-const IntakeOutputCard: React.FC<IntakeOutputCardProps> = ({ label, value, onChangeText }) => (
+const IntakeOutputCard: React.FC<IntakeOutputCardProps> = ({
+  label,
+  value,
+  onChangeText,
+}) => (
   <View style={styles.cardContainer}>
     {/* Outer Box / Label Header Area */}
     <View style={styles.labelWrapper}>
@@ -15,8 +19,10 @@ const IntakeOutputCard: React.FC<IntakeOutputCardProps> = ({ label, value, onCha
     </View>
     {/* Inner Box / Input Field Area */}
     <View style={styles.inputWrapper}>
-      <TextInput 
-        style={styles.innerInput} 
+      {/* Spacer to balance the unitBadge on the right for true centering */}
+      <View style={{ width: 95 }} />
+      <TextInput
+        style={styles.innerInput}
         value={value}
         onChangeText={onChangeText}
         keyboardType="numeric"
@@ -60,7 +66,7 @@ const styles = StyleSheet.create({
   innerInput: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 20,
+    fontSize: 14,
     color: '#333',
     fontWeight: '600',
   },

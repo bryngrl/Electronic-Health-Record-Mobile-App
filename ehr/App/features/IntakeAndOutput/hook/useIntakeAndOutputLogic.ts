@@ -22,12 +22,8 @@ const initialData: IntakeOutput = {
 };
 
 export const useIntakeAndOutputLogic = () => {
-  const [searchText, setSearchText] = useState('');
   const [patientName, setPatientName] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const [patients, setPatients] = useState<any[]>([]);
-  const [filteredPatients, setFilteredPatients] = useState<any[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
   const [recordId, setRecordId] = useState<number | null>(null);
 
   const [intakeOutput, setIntakeOutput] = useState<IntakeOutput>(initialData);
@@ -39,48 +35,22 @@ export const useIntakeAndOutputLogic = () => {
   } | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Load patient list on mount
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const response = await apiClient.get('/patients/');
-        const normalized = (response.data || []).map((p: any) => ({
-          id: (p.patient_id ?? p.id).toString(),
-          fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-        }));
-        setPatients(normalized);
-      } catch (e) {
-        console.error('Failed to load patients');
-      }
-    };
-    fetchPatients();
-  }, []);
-
   const isDataEntered = useMemo(() => {
     return Object.values(intakeOutput).some(value => value.trim() !== '');
   }, [intakeOutput]);
 
-  const handleSearchPatient = (text: string) => {
-    setSearchText(text);
-    if (text.length > 0) {
-      const filtered = patients.filter(p =>
-        p.fullName.toLowerCase().includes(text.toLowerCase()),
-      );
-      setFilteredPatients(filtered);
-      setShowDropdown(true);
-    } else {
-      setShowDropdown(false);
-      setSelectedPatientId(null);
+  const handleSelectPatient = (id: number | null, name: string) => {
+    if (!id) {
       setPatientName('');
+      setSelectedPatientId(null);
+      setRecordId(null);
+      setAssessmentAlert(null);
+      setIntakeOutput(initialData);
+      return;
     }
-  };
-
-  const selectPatient = (p: any) => {
-    setSearchText(p.fullName);
-    setPatientName(p.fullName);
-    setSelectedPatientId(p.id);
-    setShowDropdown(false);
-    loadPatientData(p.id);
+    setPatientName(name);
+    setSelectedPatientId(id.toString());
+    loadPatientData(id.toString());
   };
 
   const loadPatientData = async (patientId: string) => {
@@ -213,7 +183,6 @@ export const useIntakeAndOutputLogic = () => {
   }, []);
 
   const reset = () => {
-    setSearchText('');
     setPatientName('');
     setSelectedPatientId(null);
     setRecordId(null);
@@ -223,14 +192,9 @@ export const useIntakeAndOutputLogic = () => {
   };
 
   return {
-    searchText,
     patientName,
     selectedPatientId,
-    filteredPatients,
-    showDropdown,
-    setShowDropdown,
-    handleSearchPatient,
-    selectPatient,
+    handleSelectPatient,
     intakeOutput,
     handleUpdateField,
     isDataEntered,
