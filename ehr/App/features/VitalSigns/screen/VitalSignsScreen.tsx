@@ -8,6 +8,7 @@ import PreciseVitalChart from '../component/VitalSignsChart';
 import { useVitalSignsLogic } from '../hook/useVitalSignsLogic';
 import SweetAlert from '../../../components/SweetAlert';
 import ADPIEScreen from './ADPIEScreen';
+import PatientSearchBar from '../../../components/PatientSearchBar';
 
 const { width } = Dimensions.get('window');
 const ITEM_WIDTH = width * 0.72; 
@@ -24,7 +25,7 @@ interface VitalSignsScreenProps {
 const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
   const { 
     vitals, handleUpdateVital, patientName, selectedPatientId, 
-    filteredPatients, showDropdown, setShowDropdown, handleSearchPatient, selectPatient,
+    setSelectedPatient,
     currentTime, currentTimeIndex, vitalKeys, getChartData, handleNextTime, selectTime, TIME_SLOTS,
     isDataEntered, currentAlert, saveAssessment, isMenuVisible, setIsMenuVisible, reset
   } = useVitalSignsLogic();
@@ -33,9 +34,22 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
   const chartListRef = useRef<FlatList>(null);
   const [alertVisible, setAlertVisible] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [selectedPatient, setSelectedPatientFull] = useState<any | null>(null);
   
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [recordId, setRecordId] = useState<number | null>(null);
+
+  const calculateDayNumber = () => {
+    if (!selectedPatient?.admission_date) return '';
+    const admission = new Date(selectedPatient.admission_date);
+    const today = new Date();
+    admission.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    const diffTime = today.getTime() - admission.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays > 0 ? diffDays.toString() : '1';
+  };
 
   const scrollChart = (direction: 'next' | 'prev') => {
     const nextIdx = direction === 'next' ? chartIndex + 1 : chartIndex - 1;
@@ -110,7 +124,12 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
   return (
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        keyboardShouldPersistTaps="handled" 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={styles.scrollContent}
+        scrollEnabled={scrollEnabled}
+      >
         
         {/* Header Section */}
         <View style={styles.header}>
@@ -124,28 +143,14 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
         </View>
 
         {/* Info Section / Search Bar */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.fieldLabel}>PATIENT NAME :</Text>
-          <TextInput 
-            style={styles.pillInput} 
-            placeholder="Select Patient" 
-            value={patientName} 
-            onChangeText={handleSearchPatient} 
-          />
-          {showDropdown && filteredPatients.length > 0 && (
-            <View style={styles.dropdown}>
-              {filteredPatients.map(p => (
-                <Pressable
-                  key={p.id}
-                  onPress={() => selectPatient(p)}
-                  style={styles.dropItem}
-                >
-                  <Text>{p.fullName}</Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
-        </View>
+        <PatientSearchBar
+          onPatientSelect={(id, name, patientObj) => {
+            setSelectedPatient(id ? id.toString() : null, name);
+            setSelectedPatientFull(patientObj);
+          }}
+          onToggleDropdown={(isOpen) => setScrollEnabled(!isOpen)}
+          initialPatientName={patientName}
+        />
 
         <View style={styles.row}>
           <View style={{ flex: 1.2, marginRight: 10 }}>
@@ -157,6 +162,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
           <View style={{ flex: 1 }}>
             <Text style={styles.fieldLabel}>DAY NO. :</Text>
             <View style={[styles.pillInput, styles.dropdownRow]}>
+               <Text style={styles.dateVal}>{calculateDayNumber()}</Text>
                <Image source={arrowIcon} style={styles.arrowIconImage} />
             </View>
           </View>
@@ -276,6 +282,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
           setSuccessVisible(false);
           setRecordId(null);
           reset(); // Returns to 6:00 AM and clears patient
+          setSelectedPatientFull(null);
         }}
         confirmText="OK"
       />
@@ -344,7 +351,7 @@ const styles = StyleSheet.create({
   },
   dropItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#f9f9f9' },
   row: { flexDirection: 'row' },
-  dropdownRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 15 },
+  dropdownRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 15 },
   arrowIconImage: { width: 14, height: 8, resizeMode: 'contain', tintColor: '#29A539' },
   chartCarousel: { height: 210, marginVertical: 20, position: 'relative' },
   navArrow: { position: 'absolute', top: '38%', zIndex: 10 },

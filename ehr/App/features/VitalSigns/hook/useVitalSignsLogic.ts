@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import apiClient from '../../../api/apiClient';
 
 const TIME_SLOTS = ['6:00 AM', '8:00 AM', '12:00 PM', '2:00 PM', '6:00 PM', '8:00 PM', '12:00 AM'];
@@ -43,9 +43,6 @@ const formatTo12h = (time24: string) => {
 export const useVitalSignsLogic = () => {
   const [patientName, setPatientName] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const [patients, setPatients] = useState<any[]>([]);
-  const [filteredPatients, setFilteredPatients] = useState<any[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
 
   const [vitalsHistory, setVitalsHistory] = useState<Record<string, Vitals>>({});
   const [currentVitals, setCurrentVitals] = useState<Vitals>(initialVitals);
@@ -57,23 +54,6 @@ export const useVitalSignsLogic = () => {
   
   // Storage for existing records
   const [existingRecords, setExistingRecords] = useState<any[]>([]);
-
-  // Load patient list on mount
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const response = await apiClient.get('/patients/');
-        const normalized = (response.data || []).map((p: any) => ({
-          id: (p.patient_id ?? p.id).toString(),
-          fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-        }));
-        setPatients(normalized);
-      } catch (e) {
-        console.error('Failed to load patients');
-      }
-    };
-    fetchPatients();
-  }, []);
 
   const currentTime = useMemo(() => TIME_SLOTS[currentTimeIndex], [currentTimeIndex]);
 
@@ -139,23 +119,6 @@ export const useVitalSignsLogic = () => {
     return historicalData;
   };
 
-  const handleSearchPatient = (text: string) => {
-    setPatientName(text);
-    setFilteredPatients(
-      patients.filter(p =>
-        p.fullName.toLowerCase().includes(text.toLowerCase()),
-      ),
-    );
-    setShowDropdown(true);
-  };
-
-  const selectPatient = (p: any) => {
-    setPatientName(p.fullName);
-    setSelectedPatientId(p.id);
-    setShowDropdown(false);
-    loadPatientData(p.id);
-  };
-
   const loadPatientData = async (patientId: string) => {
     try {
       const response = await apiClient.get(`/vital-signs/patient/${patientId}`);
@@ -196,6 +159,18 @@ export const useVitalSignsLogic = () => {
     }
   };
 
+  const setSelectedPatient = (id: string | null, name: string) => {
+    setSelectedPatientId(id);
+    setPatientName(name);
+    if (id) {
+      loadPatientData(id);
+    } else {
+      setVitalsHistory({});
+      setCurrentVitals(initialVitals);
+      setExistingRecords([]);
+    }
+  };
+
   const selectTime = (index: number) => {
     const oldTime = TIME_SLOTS[currentTimeIndex];
     setVitalsHistory(prev => ({ ...prev, [oldTime]: currentVitals }));
@@ -231,11 +206,7 @@ export const useVitalSignsLogic = () => {
   return {
     patientName,
     selectedPatientId,
-    filteredPatients,
-    showDropdown,
-    setShowDropdown,
-    handleSearchPatient,
-    selectPatient,
+    setSelectedPatient,
     vitals: currentVitals,
     handleUpdateVital,
     isDataEntered,
