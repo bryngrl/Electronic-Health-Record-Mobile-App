@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
     borderWidth: 1,
     borderColor: '#ddd',
-    maxHeight: SCREEN_HEIGHT * 0.3,
+    maxHeight: SCREEN_HEIGHT * 0.24,
     zIndex: 10000,
     elevation: 1000,
     overflow: 'hidden',
