@@ -82,10 +82,26 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
 
   const triggerShake = () => {
     Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, {
+        toValue: 10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: -10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnim, {
+        toValue: 0,
+        duration: 50,
+        useNativeDriver: true,
+      }),
     ]).start();
   };
 
@@ -318,11 +334,18 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
               style={[
                 styles.alertIcon,
                 {
-                  backgroundColor: (currentAlert || isDataComplete)
-                    ? '#FFECBD'
-                    : isDataEntered
-                    ? '#E5FFE8'
-                    : '#EBEBEB',
+                  backgroundColor:
+                    currentAlert || isDataComplete
+                      ? '#FFECBD'
+                      : isDataEntered
+                      ? '#E5FFE8'
+                      : '#EBEBEB',
+                  borderColor:
+                    currentAlert || isDataComplete
+                      ? '#EDB62C'
+                      : isDataEntered
+                      ? '#29A539'
+                      : '#F0F0F0',
                 },
               ]}
               disabled={!isDataEntered}
@@ -332,7 +355,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
                 source={alertIcon}
                 style={[
                   styles.fullImg,
-                  (currentAlert || isDataComplete)
+                  currentAlert || isDataComplete
                     ? { tintColor: '#EDB62C', opacity: 1 }
                     : isDataEntered
                     ? { tintColor: '#29A539', opacity: 0.8 }
@@ -425,7 +448,10 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
         visible={cdssVisible}
         onClose={() => setCdssVisible(false)}
         category="VITAL SIGNS ASSESSMENT"
-        alertText={currentAlert?.message || 'Analyzing vital signs for potential risks...'}
+        alertText={
+          currentAlert?.message ||
+          'Analyzing vital signs for potential risks...'
+        }
       />
 
       {/* Time Selection Menu */}
@@ -570,13 +596,13 @@ const styles = StyleSheet.create({
   alertIcon: {
     width: 45,
     height: 45,
-    borderRadius: 22.5,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 22.5,
     borderWidth: 1,
     borderColor: '#F0F0F0',
   },
-  fullImg: { width: '80%', height: '80%', resizeMode: 'contain' },
+  fullImg: { width: '70%', height: '70%', resizeMode: 'contain' },
   buttonGroup: { flex: 1, flexDirection: 'row', marginLeft: 15 },
   cdssButton: {
     flex: 1,
