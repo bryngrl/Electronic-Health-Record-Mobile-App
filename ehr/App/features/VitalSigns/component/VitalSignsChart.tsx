@@ -79,7 +79,16 @@ const PreciseVitalChart = ({ label, data }: { label: string; data: any[] }) => {
             height={svgHeight}
             style={{ marginLeft: -PADDING, marginTop: -PADDING }}
           >
-            {/* Grid line */}
+            {/* Y-Axis vertical line */}
+            <Line
+              x1={getX(TIME_LABELS[0])}
+              y1={getY(range.max)}
+              x2={getX(TIME_LABELS[0])}
+              y2={getY(range.min)}
+              stroke="#626262"
+              strokeWidth="1"
+            />
+            {/* Grid line (Horizontal) */}
             <Line
               x1={getX(TIME_LABELS[0])}
               y1={getY(range.min)}
@@ -100,8 +109,6 @@ const PreciseVitalChart = ({ label, data }: { label: string; data: any[] }) => {
                 cy={getY(p.value)}
                 r="4.5"
                 fill="#EDB62C"
-                stroke="#FFF"
-                strokeWidth="1.5"
               />
             ))}
           </Svg>
@@ -109,7 +116,7 @@ const PreciseVitalChart = ({ label, data }: { label: string; data: any[] }) => {
       </View>
       {/* X-Axis Time Labels */}
       <View style={styles.xAxis}>
-        {['6a', '12p', '6p', '12a'].map(t => (
+        {['6:00 AM', '12:00 PM', '6:00 PM', '12:00 AM'].map(t => (
           <Text key={t} style={styles.timeLabel}>
             {t}
           </Text>

@@ -28,6 +28,8 @@ const SNAP_INTERVAL = ITEM_WIDTH + ITEM_SPACING;
 
 const alertIcon = require('../../../../assets/icons/alert.png');
 const arrowIcon = require('../../../../assets/icons/ARROW.png');
+const backArrow = require('../../../../assets/icons/back_arrow.png');
+const nextArrow = require('../../../../assets/icons/next_arrow.png');
 
 interface VitalSignsScreenProps {
   onBack: () => void;
@@ -206,7 +208,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
               onPress={() => scrollChart('prev')}
             >
               <View style={styles.arrowCircle}>
-                <Text style={styles.arrowLabelText}>←</Text>
+                <Image source={backArrow} style={styles.arrowImg} />
               </View>
             </TouchableOpacity>
           )}
@@ -237,7 +239,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
               onPress={() => scrollChart('next')}
             >
               <View style={styles.arrowCircle}>
-                <Text style={styles.arrowLabelText}>→</Text>
+                <Image source={nextArrow} style={styles.arrowImg} />
               </View>
             </TouchableOpacity>
           )}
@@ -485,22 +487,32 @@ const styles = StyleSheet.create({
     width: 14,
     height: 8,
     resizeMode: 'contain',
-    tintColor: '#29A539',
+    tintColor: '#606060',
   },
   chartCarousel: { height: 210, marginVertical: 20, position: 'relative' },
-  navArrow: { position: 'absolute', top: '38%', zIndex: 10 },
+  navArrow: {
+    position: 'absolute',
+    top: '38%',
+    zIndex: 10,
+  },
   arrowCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#A5D6A7',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(78, 139, 66, 0.28)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#29A539',
-    elevation: 5,
+    borderColor: '#138221',
   },
-  arrowLabelText: { fontSize: 18, fontWeight: 'bold', color: '#035022' },
+  arrowImg: {
+    width: 25,
+    height: 25,
+    resizeMode: 'contain',
+    tintColor: '#035022',
+    backgroundColor: 'transparent',
+  },
+
   timeBanner: {
     backgroundColor: '#E5FFE8',
     paddingVertical: 10,

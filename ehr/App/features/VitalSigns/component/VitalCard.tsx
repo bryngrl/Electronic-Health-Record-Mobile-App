@@ -33,7 +33,7 @@ const VitalCard: React.FC<VitalCardProps> = ({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: '#FFEDC1', // FFEDC1 bg of the text
+    backgroundColor: '#FFEDC1',
     borderRadius: 25,
     marginBottom: 15,
     height: 75,
@@ -44,16 +44,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   labelText: {
-    color: '#EDB62C', // EDB62C for text label
+    color: '#EDB62C',
     fontWeight: 'bold',
     fontSize: 12,
   },
   inputWrapper: {
     flex: 1,
-    backgroundColor: '#FFFAED', // FFFAED color of the input box
-    borderRadius: 20, // Border radius for the inner box
+    backgroundColor: '#FFFAED',
+    borderRadius: 20,
     justifyContent: 'center',
-    marginHorizontal: 0, // Same width with FFEDC1 box
+    marginHorizontal: 0,
   },
   innerInput: {
     textAlign: 'center',
