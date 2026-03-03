@@ -20,6 +20,7 @@ import VitalCard from '../component/VitalCard';
 import PreciseVitalChart from '../component/VitalSignsChart';
 import { useVitalSignsLogic } from '../hook/useVitalSignsLogic';
 import SweetAlert from '../../../components/SweetAlert';
+import CDSSModal from '../../../components/CDSSModal';
 import ADPIEScreen from './ADPIEScreen';
 import PatientSearchBar from '../../../components/PatientSearchBar';
 
@@ -62,6 +63,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
 
   const [chartIndex, setChartIndex] = useState(0);
   const chartListRef = useRef<FlatList>(null);
+  const [cdssVisible, setCdssVisible] = useState(false);
   const [alertVisible, setAlertVisible] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(true);
@@ -115,7 +117,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
     }
     const res = await saveAssessment();
     if (res && res.id) setRecordId(res.id);
-    setAlertVisible(true);
+    setCdssVisible(true);
   };
 
   const handleSelectTimeSlot = (index: number) => {
@@ -416,6 +418,14 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
           setSelectedPatientFull(null);
         }}
         confirmText="OK"
+      />
+
+      {/* Clinical Guidance Modal */}
+      <CDSSModal
+        visible={cdssVisible}
+        onClose={() => setCdssVisible(false)}
+        category="VITAL SIGNS ASSESSMENT"
+        alertText={currentAlert?.message || 'Analyzing vital signs for potential risks...'}
       />
 
       {/* Time Selection Menu */}
