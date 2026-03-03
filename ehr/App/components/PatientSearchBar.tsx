@@ -147,7 +147,15 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
 
   const handleFocus = () => {
     setShowDropdown(true);
-    setFilteredPatients(patients);
+
+    if (searchText.length > 0) {
+      const filtered = patients.filter(p =>
+        p.fullName.toLowerCase().includes(searchText.toLowerCase()),
+      );
+      setFilteredPatients(filtered);
+    } else {
+      setFilteredPatients(patients);
+    }
   };
 
   return (
@@ -155,8 +163,6 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
       style={[
         styles.section,
         containerStyle,
-        // CRITICAL FIX: Dynamically apply negative margin when open.
-        // This pulls the rest of your screen layout up underneath the dropdown!
         showDropdown && { marginBottom: -dropdownHeight + 15 },
       ]}
     >
@@ -194,15 +200,16 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
         {showDropdown && (
           <View
             style={styles.dropdown}
-            // CRITICAL FIX: Measure the dropdown's true height so we know how much to pull the screen up
-            onLayout={event =>
-              setDropdownHeight(event.nativeEvent.layout.height)
-            }
+            onLayout={e => setDropdownHeight(e.nativeEvent.layout.height)}
+            onTouchStart={e => e.stopPropagation()}
+            onTouchMove={e => e.stopPropagation()}
+            onTouchEnd={e => e.stopPropagation()}
           >
             <ScrollView
               style={styles.dropdownScroll}
-              nestedScrollEnabled={true}
               keyboardShouldPersistTaps="handled"
+              overScrollMode="never"
+              bounces={false}
             >
               {loading && patients.length === 0 ? (
                 <View style={styles.infoContainer}>
@@ -278,7 +285,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
     borderWidth: 1,
     borderColor: '#ddd',
-    maxHeight: SCREEN_HEIGHT * 0.4,
+    maxHeight: SCREEN_HEIGHT * 0.3,
     zIndex: 10000,
     elevation: 1000,
     overflow: 'hidden',
