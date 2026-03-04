@@ -15,7 +15,7 @@ import SweetAlert from '../../../components/SweetAlert';
 import PatientSearchBar from '../../../components/PatientSearchBar';
 
 const THEME_GREEN = '#035022';
-const LIGHT_GREEN_BG = '#E8F5E9';
+const LIGHT_GREEN_BG = '#E5FFE8';
 
 interface MedicalHistoryProps {
   onBack: () => void;
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  stepHeaderText: { color: THEME_GREEN, fontWeight: 'semibold', fontSize: 12 },
+  stepHeaderText: { color: '#29A539', fontWeight: 'bold', fontSize: 12 },
   btnContainer: { marginTop: 10 },
 });
 
