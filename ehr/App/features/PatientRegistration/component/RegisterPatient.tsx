@@ -21,40 +21,11 @@ const REQUIRED_RED = '#FF0000';
 const PLACEHOLDER_COLOR = '#999';
 
 // Dropdown Data
-const months = [
-  { label: 'January', value: '01' },
-  { label: 'February', value: '02' },
-  { label: 'March', value: '03' },
-  { label: 'April', value: '04' },
-  { label: 'May', value: '05' },
-  { label: 'June', value: '06' },
-  { label: 'July', value: '07' },
-  { label: 'August', value: '08' },
-  { label: 'September', value: '09' },
-  { label: 'October', value: '10' },
-  { label: 'November', value: '11' },
-  { label: 'December', value: '12' },
-];
-
-const days = Array.from({ length: 31 }, (_, i) => ({
-  label: (i + 1).toString(),
-  value: (i + 1).toString().padStart(2, '0'),
-}));
-
-const years = Array.from({ length: 100 }, (_, i) => ({
-  label: (new Date().getFullYear() - i).toString(),
-  value: (new Date().getFullYear() - i).toString(),
-}));
-
-const sexData = [
-  { label: 'Male', value: 'Male' },
-  { label: 'Female', value: 'Female' },
-];
 const religionData = [
   { label: 'Roman Catholic', value: 'Roman Catholic' },
   { label: 'Islam', value: 'Islam' },
   { label: 'Born Again', value: 'Born Again' },
-  { label: 'Iglesia ni Chrisbrown', value: 'Iglesia ni Chrisbrown' },
+  { label: 'Iglesia ni Cristo', value: 'Iglesia ni Cristo' },
   { label: 'Other', value: 'Other' },
 ];
 const ethnicityData = [
@@ -71,6 +42,33 @@ const bedData = [
   { label: 'Bed A', value: 'A' },
   { label: 'Bed B', value: 'B' },
   { label: 'Bed C', value: 'C' },
+];
+
+const months = [
+  { label: 'January', value: '01' },
+  { label: 'February', value: '02' },
+  { label: 'March', value: '03' },
+  { label: 'April', value: '04' },
+  { label: 'May', value: '05' },
+  { label: 'June', value: '06' },
+  { label: 'July', value: '07' },
+  { label: 'August', value: '08' },
+  { label: 'September', value: '09' },
+  { label: 'October', value: '10' },
+  { label: 'November', value: '11' },
+  { label: 'December', value: '12' },
+];
+const days = Array.from({ length: 31 }, (_, i) => ({
+  label: (i + 1).toString(),
+  value: (i + 1).toString().padStart(2, '0'),
+}));
+const years = Array.from({ length: 100 }, (_, i) => ({
+  label: (new Date().getFullYear() - i).toString(),
+  value: (new Date().getFullYear() - i).toString(),
+}));
+const sexData = [
+  { label: 'Male', value: 'Male' },
+  { label: 'Female', value: 'Female' },
 ];
 
 interface Props {
@@ -106,14 +104,12 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
   const [contacts, setContacts] = useState([
     { name: '', relationship: '', number: '' },
   ]);
+  const [contactErrors, setContactErrors] = useState<string[]>([]);
 
-  // Keyboard Refs
+  // Refs for Keyboard Navigation
   const middleNameRef = useRef<TextInput>(null);
   const lastNameRef = useRef<TextInput>(null);
   const birthPlaceRef = useRef<TextInput>(null);
-  const otherReligionRef = useRef<TextInput>(null);
-  const otherEthnicityRef = useRef<TextInput>(null);
-  const complaintsRef = useRef<TextInput>(null);
   const contactRelRef = useRef<TextInput>(null);
   const contactNumRef = useRef<TextInput>(null);
 
@@ -128,6 +124,39 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
     const updated = [...contacts];
     updated[index].name = capitalize(updated[index].name);
     setContacts(updated);
+  };
+
+  // CONTACT NUMBER LOGIC
+  const handleNumberChange = (index: number, val: string) => {
+    const numericValue = val.replace(/[^0-9]/g, ''); // Only allow numbers
+    const updated = [...contacts];
+    updated[index].number = numericValue;
+    setContacts(updated);
+
+    // Clear error while typing
+    const errors = [...contactErrors];
+    errors[index] = '';
+    setContactErrors(errors);
+  };
+
+  const validateNumberOnBlur = (index: number) => {
+    const updated = [...contacts];
+    let num = updated[index].number;
+
+    // Logic: If user typed 10 digits starting with 9, add the 0
+    if (num.length === 10 && num.startsWith('9')) {
+      num = '0' + num;
+      updated[index].number = num;
+      setContacts(updated);
+    }
+
+    const errors = [...contactErrors];
+    if (num.length !== 11) {
+      errors[index] = 'Number must be exactly 11 digits (e.g. 0919...)';
+    } else {
+      errors[index] = '';
+    }
+    setContactErrors(errors);
   };
 
   useEffect(() => {
@@ -152,6 +181,10 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
   }, [birthParts]);
 
   const handleFinalRegister = async () => {
+    if (contactErrors.some(e => e !== '')) {
+      Alert.alert('Invalid Input', 'Please correct the contact number errors.');
+      return;
+    }
     try {
       const payload = {
         ...form,
@@ -213,7 +246,6 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
 
           {step === 1 ? (
             <View>
-              {/* Names sequence */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>
                   Name <Text style={styles.required}>*</Text>
@@ -251,7 +283,6 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 />
               </View>
 
-              {/* Birthday and Demographics */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>
                   Birthday <Text style={styles.required}>*</Text>
@@ -320,7 +351,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     data={sexData}
                     labelField="label"
                     valueField="value"
-                    placeholder="Select Sex"
+                    placeholder="Select"
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
                     itemTextStyle={styles.itemTextStyle}
@@ -330,7 +361,6 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 </View>
               </View>
 
-              {/* Location sequence */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>
                   Address <Text style={styles.required}>*</Text>
@@ -360,7 +390,6 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 />
               </View>
 
-              {/* Religion and Ethnicity */}
               <View style={[styles.row, styles.inputGroup]}>
                 <View style={{ flex: 1, marginRight: 10 }}>
                   <Text style={styles.inputLabel}>
@@ -400,54 +429,6 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 </View>
               </View>
 
-              {/* Conditional Specify with focus logic */}
-              {(form.religion === 'Other' || form.ethnicity === 'Other') && (
-                <View style={[styles.row, styles.inputGroup]}>
-                  {form.religion === 'Other' && (
-                    <View style={{ flex: 1, marginRight: 10 }}>
-                      <Text style={styles.inputLabel}>
-                        Specify Religion <Text style={styles.required}>*</Text>
-                      </Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Specify"
-                        placeholderTextColor={PLACEHOLDER_COLOR}
-                        value={form.other_religion}
-                        onChangeText={v =>
-                          setForm({ ...form, other_religion: v })
-                        }
-                        returnKeyType={
-                          form.ethnicity === 'Other' ? 'next' : 'done'
-                        }
-                        onSubmitEditing={() =>
-                          form.ethnicity === 'Other'
-                            ? otherEthnicityRef.current?.focus()
-                            : null
-                        }
-                      />
-                    </View>
-                  )}
-                  {form.ethnicity === 'Other' && (
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.inputLabel}>
-                        Specify Ethnicity <Text style={styles.required}>*</Text>
-                      </Text>
-                      <TextInput
-                        ref={otherEthnicityRef}
-                        style={styles.input}
-                        placeholder="Specify"
-                        placeholderTextColor={PLACEHOLDER_COLOR}
-                        value={form.other_ethnicity}
-                        onChangeText={v =>
-                          setForm({ ...form, other_ethnicity: v })
-                        }
-                        returnKeyType="done"
-                      />
-                    </View>
-                  )}
-                </View>
-              )}
-
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Chief of Complaints</Text>
                 <TextInput
@@ -456,7 +437,6 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   placeholderTextColor={PLACEHOLDER_COLOR}
                   value={form.chief_complaints}
                   onChangeText={v => setForm({ ...form, chief_complaints: v })}
-                  returnKeyType="done"
                 />
               </View>
 
@@ -564,24 +544,39 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                       onSubmitEditing={() => contactNumRef.current?.focus()}
                     />
                   </View>
+
+                  {/* CONTACT NUMBER WITH +63 PREFIX */}
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>
                       Contact Number <Text style={styles.required}>*</Text>
                     </Text>
-                    <TextInput
-                      ref={contactNumRef}
-                      style={styles.input}
-                      placeholder="Enter Contact Number"
-                      placeholderTextColor={PLACEHOLDER_COLOR}
-                      keyboardType="phone-pad"
-                      value={contact.number}
-                      onChangeText={v => {
-                        const updated = [...contacts];
-                        updated[index].number = v;
-                        setContacts(updated);
-                      }}
-                      returnKeyType="done"
-                    />
+                    <View
+                      style={[
+                        styles.phoneInputRow,
+                        contactErrors[index] ? styles.inputError : null,
+                      ]}
+                    >
+                      <View style={styles.prefixContainer}>
+                        <Text style={styles.prefixText}>+63</Text>
+                      </View>
+                      <TextInput
+                        ref={contactNumRef}
+                        style={styles.flexInput}
+                        placeholder="9193420569"
+                        placeholderTextColor={PLACEHOLDER_COLOR}
+                        keyboardType="number-pad"
+                        maxLength={11} // Limits user input to 11 digits
+                        value={contact.number}
+                        onChangeText={v => handleNumberChange(index, v)}
+                        onBlur={() => validateNumberOnBlur(index)}
+                        returnKeyType="done"
+                      />
+                    </View>
+                    {contactErrors[index] ? (
+                      <Text style={styles.errorText}>
+                        {contactErrors[index]}
+                      </Text>
+                    ) : null}
                   </View>
                 </View>
               ))}
@@ -655,6 +650,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     backgroundColor: '#fff',
+    fontFamily: 'AlteHaasGrotesk',
+  },
+  phoneInputRow: {
+    flexDirection: 'row',
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+  },
+  prefixContainer: {
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    borderRightWidth: 1.5,
+    borderRightColor: '#E0E0E0',
+  },
+  prefixText: {
+    color: THEME_GREEN,
+    fontFamily: 'AlteHaasGroteskBold',
+    fontSize: 14,
+  },
+  flexInput: {
+    flex: 1,
+    padding: 14,
+    fontSize: 14,
+    color: '#333',
+    fontFamily: 'AlteHaasGrotesk',
+  },
+  inputError: { borderColor: REQUIRED_RED },
+  errorText: {
+    color: REQUIRED_RED,
+    fontSize: 12,
+    marginTop: 5,
     fontFamily: 'AlteHaasGrotesk',
   },
   placeholderStyle: {
