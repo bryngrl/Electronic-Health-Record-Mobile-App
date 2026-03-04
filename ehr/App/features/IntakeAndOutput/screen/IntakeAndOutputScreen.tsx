@@ -17,7 +17,7 @@ import IntakeOutputCard from '../component/IntakeOutputCard';
 import SweetAlert from '../../../components/SweetAlert';
 import PatientSearchBar from '../../../components/PatientSearchBar';
 import { useIntakeAndOutputLogic } from '../hook/useIntakeAndOutputLogic';
-import ADPIEScreen from '../../VitalSigns/screen/ADPIEScreen'; 
+import ADPIEScreen from '../../VitalSigns/screen/ADPIEScreen';
 import CDSSModal from '../../../components/CDSSModal';
 
 const alertIcon = require('../../../../assets/icons/alert.png');
@@ -61,9 +61,32 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
 
   useEffect(() => {
     const now = new Date();
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    setCurrentDate(`${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}`);
+    const days = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    setCurrentDate(
+      `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}`,
+    );
   }, []);
 
   // REAL-TIME CDSS: Debounced polling
@@ -165,14 +188,15 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
 
   // Frontend-only cleaning of the alert string
   const getCleanedAlertText = () => {
-    if (!assessmentAlert) return 'Continue documenting to receive real-time support.';
-    
+    if (!assessmentAlert)
+      return 'Continue documenting to receive real-time support.';
+
     // 1. Remove emojis
     let cleaned = assessmentAlert.replace(/[🔴🟠✓⚠️❌]/g, '').trim();
-    
+
     // 2. Remove square brackets from status prefixes (e.g., [CRITICAL] -> CRITICAL)
     cleaned = cleaned.replace(/\[(CRITICAL|WARNING|INFO)\]/gi, '$1');
-    
+
     return cleaned;
   };
 
@@ -320,7 +344,9 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
       <SweetAlert
         visible={alertVisible}
         title={
-          !selectedPatientId ? 'Patient Required' : currentAlert?.title || 'ALERT'
+          !selectedPatientId
+            ? 'Patient Required'
+            : currentAlert?.title || 'ALERT'
         }
         message={
           !selectedPatientId
@@ -371,7 +397,7 @@ const styles = StyleSheet.create({
     fontFamily: 'MinionPro-SemiboldItalic',
     lineHeight: 38,
   },
-  subDate: { color: '#999', fontSize: 13 },
+  subDate: { color: '#999', fontFamily: 'AlteHaasGroteskBold', fontSize: 13 },
   footerAction: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
   alertIcon: {
     width: 45,

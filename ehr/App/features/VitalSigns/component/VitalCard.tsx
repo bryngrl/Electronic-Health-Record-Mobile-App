@@ -45,8 +45,8 @@ const styles = StyleSheet.create({
   },
   labelText: {
     color: '#EDB62C',
-    fontWeight: 'bold',
-    fontSize: 12,
+    fontFamily: 'AlteHaasGroteskBold',
+    fontSize: 13,
   },
   inputWrapper: {
     flex: 1,

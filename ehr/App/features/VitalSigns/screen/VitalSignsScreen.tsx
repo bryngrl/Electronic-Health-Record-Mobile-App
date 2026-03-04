@@ -251,7 +251,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
             </View>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.fieldLabel}>DAY NO. :</Text>
+            <Text style={styles.fieldLabel}>DAY NO :</Text>
             <View style={[styles.pillInput, styles.dropdownRow]}>
               <Text style={styles.dateVal}>{calculateDayNumber()}</Text>
               <Image source={arrowIcon} style={styles.arrowIconImage} />
@@ -542,12 +542,12 @@ const styles = StyleSheet.create({
     color: '#035022',
     fontFamily: 'MinionPro-SemiboldItalic',
   },
-  subDate: { color: '#999', fontSize: 13 },
+  subDate: { color: '#999', fontSize: 13, fontFamily: 'AlteHaasGroteskBold' },
   menuDots: { fontSize: 28, color: '#035022' },
   inputGroup: { marginBottom: 15, zIndex: 100 },
   fieldLabel: {
     color: '#0A8219',
-    fontWeight: 'bold',
+    fontFamily: 'AlteHaasGroteskBold',
     fontSize: 14,
     marginBottom: 8,
   },
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     justifyContent: 'center',
   },
-  dateVal: { color: '#333' },
+  dateVal: { color: '#333', fontFamily: 'AlteHaasGrotesk' },
   dropdown: {
     backgroundColor: '#fff',
     borderRadius: 10,
@@ -617,7 +617,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  timeText: { color: '#29A539', fontWeight: 'bold', fontSize: 14 },
+  timeText: {
+    color: '#29A539',
+    fontFamily: 'AlteHaasGroteskBold',
+    fontSize: 14,
+  },
   footerAction: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
   alertIcon: {
     width: 45,
