@@ -1,30 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   SafeAreaView,
-  Pressable,
+  BackHandler,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import ADLInputCard from '../components/ADLInputCard';
 import ADLCDSSStepper from './ADPIEScreen';
-import apiClient from '../../../api/apiClient';
 import { useADL } from '../hook/useADL';
 import SweetAlert from '../../../components/SweetAlert';
+import PatientSearchBar from '../../../components/PatientSearchBar';
 
 const THEME_GREEN = '#035022';
 
+const initialFormData = {
+  mobility: '',
+  hygiene: '',
+  toileting: '',
+  feeding: '',
+  hydration: '',
+  sleep_pattern: '',
+  pain_level: '',
+};
+
 const ADLScreen = ({ onBack }: any) => {
-  const { alerts, checkADLAlerts, saveADLAssessment } = useADL();
+  const {
+    alerts,
+    setAlerts,
+    checkADLAlerts,
+    saveADLAssessment,
+    fetchLatestADL,
+  } = useADL();
 
   const [searchText, setSearchText] = useState('');
-  const [patients, setPatients] = useState<any[]>([]);
-  const [filteredPatients, setFilteredPatients] = useState<any[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+  const prevPatientIdRef = useRef<number | null>(null);
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -39,49 +53,84 @@ const ADLScreen = ({ onBack }: any) => {
     type: 'error',
   });
 
-  const showAlert = (title: string, message: string, type: 'success' | 'error' = 'error') => {
+  const showAlert = (
+    title: string,
+    message: string,
+    type: 'success' | 'error' = 'error',
+  ) => {
     setAlertConfig({ visible: true, title, message, type });
   };
 
-  // UPDATED: Store full patient object to access admission_date
   const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
-
   const [adlId, setAdlId] = useState<number | null>(null);
   const [isAdpieActive, setIsAdpieActive] = useState(false);
+  const [formData, setFormData] = useState(initialFormData);
 
-  const [formData, setFormData] = useState({
-    mobility: '',
-    hygiene: '',
-    toileting: '',
-    feeding: '',
-    hydration: '',
-    sleep_pattern: '',
-    pain_level: '',
-  });
-
-  // Load patient list on mount
   useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const response = await apiClient.get('/patients/');
-        const normalized = (response.data || []).map((p: any) => ({
-          id: (p.patient_id ?? p.id).toString(),
-          fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-          admissionDate: p.admission_date, // Backend must provide this
-        }));
-        setPatients(normalized);
-      } catch (e) {
-        console.error('Failed to load patients');
-      }
+    const backAction = () => {
+      onBack();
+      return true;
     };
-    fetchPatients();
-  }, []);
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction,
+    );
+
+    return () => backHandler.remove();
+  }, [onBack]);
+
+  const loadPatientData = useCallback(
+// ... (rest of methods)
+
+    async (patientId: number) => {
+      const data = await fetchLatestADL(patientId);
+      if (data) {
+        setAdlId(data.id);
+        setFormData({
+          mobility: data.mobility || '',
+          hygiene: data.hygiene || '',
+          toileting: data.toileting || '',
+          feeding: data.feeding || '',
+          hydration: data.hydration || '',
+          sleep_pattern: data.sleep_pattern || '',
+          pain_level: data.pain_level || '',
+        });
+        // Set initial alerts if they exist
+        setAlerts({
+          mobility_alert: data.mobility_alert,
+          hygiene_alert: data.hygiene_alert,
+          toileting_alert: data.toileting_alert,
+          feeding_alert: data.feeding_alert,
+          hydration_alert: data.hydration_alert,
+          sleep_pattern_alert: data.sleep_pattern_alert,
+          pain_level_alert: data.pain_level_alert,
+        });
+      } else {
+        setAdlId(null);
+        setFormData(initialFormData);
+        setAlerts({});
+      }
+    },
+    [fetchLatestADL, setAlerts],
+  );
+
+  useEffect(() => {
+    if (selectedPatient?.id !== prevPatientIdRef.current) {
+      prevPatientIdRef.current = selectedPatient?.id || null;
+      if (selectedPatient?.id) {
+        loadPatientData(selectedPatient.id);
+      } else {
+        setAdlId(null);
+        setFormData(initialFormData);
+        setAlerts({});
+      }
+    }
+  }, [selectedPatient, loadPatientData, setAlerts]);
 
   // CALCULATIONS: Admission Date & Day Number
-  const getFormattedAdmissionDate = () => {
-    if (!selectedPatient?.admissionDate) return '';
-    const date = new Date(selectedPatient.admissionDate);
-    return date.toLocaleDateString('en-US', {
+  const getCurrentDateFormatted = () => {
+    return new Date().toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
@@ -89,33 +138,43 @@ const ADLScreen = ({ onBack }: any) => {
   };
 
   const calculateDayNumber = () => {
-    if (!selectedPatient?.admissionDate) return '';
-    const admission = new Date(selectedPatient.admissionDate);
+    if (!selectedPatient?.admission_date) return '';
+    const admission = new Date(selectedPatient.admission_date);
     const today = new Date();
-    const diffTime = Math.abs(today.getTime() - admission.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // MS to Days
-    return diffDays.toString();
+    admission.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    const diffTime = today.getTime() - admission.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays > 0 ? diffDays.toString() : '1';
   };
 
   // REAL-TIME CDSS
   useEffect(() => {
-    if (!selectedPatient?.id || !adlId) return;
+    if (!selectedPatient?.id) return;
     const timer = setTimeout(async () => {
-      const hasContent = Object.values(formData).some(v => v.trim().length > 0);
+      const hasContent = Object.values(formData).some(
+        v => v && v.trim().length > 0,
+      );
       if (hasContent) {
         try {
-          await checkADLAlerts(adlId, { ...formData });
+          await checkADLAlerts({
+            patient_id: selectedPatient.id,
+            ...formData,
+          });
         } catch (e) {
           console.error('CDSS Real-time Error:', e);
         }
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [formData, selectedPatient, adlId]);
+  }, [formData, selectedPatient, checkADLAlerts]);
 
   const handleCDSSPress = async () => {
     if (!selectedPatient) {
-      return showAlert('Patient Required', 'Please select a patient first in the search bar.');
+      return showAlert(
+        'Patient Required',
+        'Please select a patient first in the search bar.',
+      );
     }
     try {
       const result = await saveADLAssessment({
@@ -134,15 +193,31 @@ const ADLScreen = ({ onBack }: any) => {
 
   const handleSave = async () => {
     if (!selectedPatient) {
-      return showAlert('Patient Required', 'Please select a patient first in the search bar.');
+      return showAlert(
+        'Patient Required',
+        'Please select a patient first in the search bar.',
+      );
     }
     try {
       const result = await saveADLAssessment({
         patient_id: selectedPatient.id,
         ...formData,
       });
-      if (result.id) setAdlId(result.id);
-      showAlert('Success', 'ADL Assessment Saved!', 'success');
+
+      const newId = result.id || result.adl_id;
+      const isUpdate = !!adlId || result.updated_at !== result.created_at;
+
+      if (newId) setAdlId(newId);
+
+      showAlert(
+        isUpdate ? 'Successfully Updated' : 'Successfully Submitted',
+        `ADL Assessment has been ${
+          isUpdate ? 'updated' : 'submitted'
+        } successfully.`,
+        'success',
+      );
+
+      loadPatientData(selectedPatient.id);
     } catch (e) {
       showAlert('Error', 'Submission failed.');
     }
@@ -165,9 +240,10 @@ const ADLScreen = ({ onBack }: any) => {
         keyboardShouldPersistTaps="handled"
         style={styles.container}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={scrollEnabled}
       >
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.title}>Activities of Daily Living</Text>
             <Text style={styles.dateText}>
               {new Date().toLocaleDateString('en-US', {
@@ -179,47 +255,22 @@ const ADLScreen = ({ onBack }: any) => {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>PATIENT NAME :</Text>
-          <TextInput
-            style={styles.searchBar}
-            placeholder="Select or type Patient name"
-            value={searchText}
-            onChangeText={(text: string) => {
-              setSearchText(text);
-              setFilteredPatients(
-                patients.filter(p =>
-                  p.fullName.toLowerCase().includes(text.toLowerCase()),
-                ),
-              );
-              setShowDropdown(true);
-            }}
-          />
-          {showDropdown && filteredPatients.length > 0 && (
-            <View style={styles.dropdown}>
-              {filteredPatients.map(p => (
-                <Pressable
-                  key={p.id}
-                  onPress={() => {
-                    setSearchText(p.fullName);
-                    setSelectedPatient(p); // Capture full object
-                    setShowDropdown(false);
-                  }}
-                  style={styles.dropItem}
-                >
-                  <Text>{p.fullName}</Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
+        <PatientSearchBar
+          onPatientSelect={(id, name, patientObj) => {
+            setSearchText(name);
+            setSelectedPatient(patientObj);
+          }}
+          onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+          initialPatientName={searchText}
+        />
 
-          {/* DYNAMIC ADMISSION ROW */}
+        <View style={styles.section}>
           <View style={styles.row}>
             <View style={{ flex: 1, marginRight: 10 }}>
               <Text style={styles.sectionLabel}>DATE :</Text>
               <View style={styles.inputBox}>
                 <Text style={styles.inputText}>
-                  {getFormattedAdmissionDate()}
+                  {getCurrentDateFormatted()}
                 </Text>
               </View>
             </View>
@@ -238,7 +289,6 @@ const ADLScreen = ({ onBack }: any) => {
           </View>
         </View>
 
-        {/* ADL Notepad Cards - Disabled until patient is selected */}
         <ADLInputCard
           label="MOBILITY"
           value={formData.mobility}
@@ -290,8 +340,24 @@ const ADLScreen = ({ onBack }: any) => {
         />
 
         <View style={styles.footerRow}>
-          <TouchableOpacity style={styles.cdssBtn} onPress={handleCDSSPress}>
-            <Text style={styles.cdssText}>CDSS</Text>
+          <TouchableOpacity
+            style={[
+              styles.cdssBtn,
+              Object.values(formData).some(v => v) && {
+                backgroundColor: '#DCFCE7',
+                borderColor: THEME_GREEN,
+              },
+            ]}
+            onPress={handleCDSSPress}
+          >
+            <Text
+              style={[
+                styles.cdssText,
+                Object.values(formData).some(v => v) && { color: THEME_GREEN },
+              ]}
+            >
+              CDSS
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.submitBtn} onPress={handleSave}>
             <Text style={styles.submitText}>SUBMIT</Text>
@@ -313,20 +379,18 @@ const ADLScreen = ({ onBack }: any) => {
 };
 
 const styles = StyleSheet.create({
-  // ... Keep existing styles ...
   inputBox: {
     height: 48,
     borderRadius: 25,
-    borderWidth: 1,
-    borderColor: '#F2F2F2',
+    borderWidth: 1.5,
+    borderColor: '#EBEBEB',
     paddingHorizontal: 20,
     justifyContent: 'center',
     backgroundColor: '#fff',
     marginBottom: 15,
   },
-  inputText: { fontSize: 13, color: '#333' },
+  inputText: { fontSize: 14, color: '#333', fontFamily: 'AlteHaasGrotesk' },
   row: { flexDirection: 'row', marginTop: 5 },
-  // ... other styles
   safeArea: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1, paddingHorizontal: 25 },
   header: {
@@ -340,35 +404,14 @@ const styles = StyleSheet.create({
     color: THEME_GREEN,
     fontFamily: 'MinionPro-SemiboldItalic',
   },
-  dateText: { fontSize: 13, color: '#999' },
+  dateText: { fontSize: 13, fontFamily: 'AlteHaasGroteskBold', color: '#999' },
   section: { marginBottom: 15, zIndex: 10 },
   sectionLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: THEME_GREEN,
+    fontSize: 14,
+    fontFamily: 'AlteHaasGroteskBold',
+    color: '#0A8219',
     marginBottom: 8,
   },
-  searchBar: {
-    borderRadius: 25,
-    paddingHorizontal: 20,
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#F2F2F2',
-    marginBottom: 15,
-  },
-  dropdown: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#eee',
-    elevation: 3,
-    position: 'absolute',
-    top: 75,
-    left: 0,
-    right: 0,
-    zIndex: 99,
-  },
-  dropItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#f9f9f9' },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

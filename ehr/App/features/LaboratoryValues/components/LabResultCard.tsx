@@ -4,25 +4,25 @@ import { StyleSheet, View, Text, TextInput, Pressable } from 'react-native';
 // Synchronize these names with the screen
 interface LabInputProps {
   testLabel: string;
-  resultValue: string;      // Changed from 'result'
-  rangeValue: string;       // Changed from 'range'
+  resultValue: string; // Changed from 'result'
+  rangeValue: string; // Changed from 'range'
   onResultChange: (text: string) => void;
   onRangeChange: (text: string) => void;
   disabled?: boolean;
   onDisabledPress?: () => void;
 }
 
-const LabResultCard: React.FC<LabInputProps> = ({ 
-  testLabel, 
-  resultValue, 
-  rangeValue, 
-  onResultChange, 
+const LabResultCard: React.FC<LabInputProps> = ({
+  testLabel,
+  resultValue,
+  rangeValue,
+  onResultChange,
   onRangeChange,
   disabled = false,
-  onDisabledPress
+  onDisabledPress,
 }) => {
   return (
-    <Pressable 
+    <Pressable
       onPress={() => {
         if (disabled && onDisabledPress) {
           onDisabledPress();
@@ -36,12 +36,17 @@ const LabResultCard: React.FC<LabInputProps> = ({
       </View>
 
       {/* Result Section */}
-      <View style={styles.inputGroup} pointerEvents={disabled ? 'none' : 'auto'}>
-        <View style={styles.boxHeader}><Text style={styles.boxHeaderText}>Result</Text></View>
+      <View
+        style={styles.inputGroup}
+        pointerEvents={disabled ? 'none' : 'auto'}
+      >
+        <View style={styles.boxHeader}>
+          <Text style={styles.boxHeaderText}>Result</Text>
+        </View>
         <View style={styles.boxBody}>
-          <TextInput 
-            style={styles.input} 
-            value={resultValue} 
+          <TextInput
+            style={styles.input}
+            value={resultValue}
             onChangeText={onResultChange}
             editable={!disabled}
           />
@@ -49,12 +54,17 @@ const LabResultCard: React.FC<LabInputProps> = ({
       </View>
 
       {/* Normal Range Section */}
-      <View style={styles.inputGroup} pointerEvents={disabled ? 'none' : 'auto'}>
-        <View style={styles.boxHeader}><Text style={styles.boxHeaderText}>Normal Range</Text></View>
+      <View
+        style={styles.inputGroup}
+        pointerEvents={disabled ? 'none' : 'auto'}
+      >
+        <View style={styles.boxHeader}>
+          <Text style={styles.boxHeaderText}>Normal Range</Text>
+        </View>
         <View style={styles.boxBody}>
-          <TextInput 
-            style={styles.input} 
-            value={rangeValue} 
+          <TextInput
+            style={styles.input}
+            value={rangeValue}
             onChangeText={onRangeChange}
             editable={!disabled}
           />
@@ -66,13 +76,39 @@ const LabResultCard: React.FC<LabInputProps> = ({
 
 const styles = StyleSheet.create({
   container: { marginBottom: 20 },
-  testHeader: { backgroundColor: '#E8F5E9', paddingVertical: 12, borderRadius: 25, alignItems: 'center', marginBottom: 15 },
-  testHeaderText: { color: '#1B5E20', fontWeight: 'bold', fontSize: 13 },
-  inputGroup: { backgroundColor: '#FFFBEB', borderRadius: 25, marginBottom: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#FEF3C7' },
-  boxHeader: { backgroundColor: '#FEF3C7', paddingVertical: 6, alignItems: 'center' },
-  boxHeaderText: { color: '#D97706', fontWeight: 'bold', fontSize: 11 },
+  testHeader: {
+    backgroundColor: '#E5FFE8',
+    paddingVertical: 12,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  testHeaderText: {
+    color: '#29A539',
+    fontWeight: 'bold',
+    fontFamily: 'AlteHaasGroteskBold',
+    fontSize: 13,
+  },
+  inputGroup: {
+    backgroundColor: '#FFFAED',
+    borderRadius: 25,
+    marginBottom: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+  },
+  boxHeader: {
+    backgroundColor: '#FFEDC1',
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  boxHeaderText: {
+    color: '#EDB62C',
+    fontFamily: 'AlteHaasGroteskBold',
+    fontSize: 14,
+  },
   boxBody: { height: 60, justifyContent: 'center', paddingHorizontal: 20 },
-  input: { fontSize: 16, color: '#333', textAlign: 'center' }
+  input: { fontSize: 16, color: '#333', textAlign: 'center' },
 });
 
 export default LabResultCard;

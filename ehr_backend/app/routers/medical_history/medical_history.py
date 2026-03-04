@@ -1,7 +1,7 @@
 """
 Medical History Router
 Handles 5 sub-components: PresentIllness, PastMedicalSurgical, Allergies, Vaccination, DevelopmentalHistory
-All components are pure data entry/retrieval
+All components are pure data entry/retrieval with Upsert logic (Update or Create)
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -31,7 +31,7 @@ class PresentIllnessCreate(BaseModel):
     side_effect: Optional[str] = None
     comment: Optional[str] = None
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class PresentIllnessUpdate(BaseModel):
@@ -43,7 +43,7 @@ class PresentIllnessUpdate(BaseModel):
     side_effect: Optional[str] = None
     comment: Optional[str] = None
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class PresentIllnessRead(BaseModel):
@@ -64,24 +64,30 @@ class PresentIllnessRead(BaseModel):
 
 @router.post("/present-illness", response_model=PresentIllnessRead)
 def create_present_illness(payload: PresentIllnessCreate, db: Session = Depends(get_db)):
-    """Create a Present Illness record for a patient"""
+    """Create or Update a Present Illness record for a patient"""
     patient = db.query(Patient).filter(Patient.patient_id == payload.patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
     now = datetime.utcnow()
-    record = PresentIllness(
-        patient_id=payload.patient_id,
-        condition_name=payload.condition_name,
-        description=payload.description,
-        medication=payload.medication,
-        dosage=payload.dosage,
-        side_effect=payload.side_effect,
-        comment=payload.comment,
-        created_at=now,
-        updated_at=now,
-    )
-    db.add(record)
+    existing_record = db.query(PresentIllness).filter(PresentIllness.patient_id == payload.patient_id).first()
+
+    if existing_record:
+        # Update
+        update_data = payload.model_dump(exclude={"patient_id"})
+        for key, value in update_data.items():
+            setattr(existing_record, key, value)
+        existing_record.updated_at = now
+        record = existing_record
+    else:
+        # Create
+        record = PresentIllness(
+            **payload.model_dump(),
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(record)
+    
     db.commit()
     db.refresh(record)
     return record
@@ -89,7 +95,7 @@ def create_present_illness(payload: PresentIllnessCreate, db: Session = Depends(
 
 @router.put("/present-illness/{medical_id}", response_model=PresentIllnessRead)
 def update_present_illness(medical_id: int, payload: PresentIllnessUpdate, db: Session = Depends(get_db)):
-    """Update Present Illness record"""
+    """Update Present Illness record by ID"""
     record = db.query(PresentIllness).filter(PresentIllness.medical_id == medical_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Present Illness record not found")
@@ -143,7 +149,7 @@ class PastMedicalSurgicalCreate(BaseModel):
     side_effect: Optional[str] = None
     comment: Optional[str] = None
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class PastMedicalSurgicalUpdate(BaseModel):
@@ -155,7 +161,7 @@ class PastMedicalSurgicalUpdate(BaseModel):
     side_effect: Optional[str] = None
     comment: Optional[str] = None
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class PastMedicalSurgicalRead(BaseModel):
@@ -176,24 +182,30 @@ class PastMedicalSurgicalRead(BaseModel):
 
 @router.post("/past-medical-surgical", response_model=PastMedicalSurgicalRead)
 def create_past_medical_surgical(payload: PastMedicalSurgicalCreate, db: Session = Depends(get_db)):
-    """Create a Past Medical/Surgical record for a patient"""
+    """Create or Update a Past Medical/Surgical record for a patient"""
     patient = db.query(Patient).filter(Patient.patient_id == payload.patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
     now = datetime.utcnow()
-    record = PastMedicalSurgical(
-        patient_id=payload.patient_id,
-        condition_name=payload.condition_name,
-        description=payload.description,
-        medication=payload.medication,
-        dosage=payload.dosage,
-        side_effect=payload.side_effect,
-        comment=payload.comment,
-        created_at=now,
-        updated_at=now,
-    )
-    db.add(record)
+    existing_record = db.query(PastMedicalSurgical).filter(PastMedicalSurgical.patient_id == payload.patient_id).first()
+
+    if existing_record:
+        # Update
+        update_data = payload.model_dump(exclude={"patient_id"})
+        for key, value in update_data.items():
+            setattr(existing_record, key, value)
+        existing_record.updated_at = now
+        record = existing_record
+    else:
+        # Create
+        record = PastMedicalSurgical(
+            **payload.model_dump(),
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(record)
+    
     db.commit()
     db.refresh(record)
     return record
@@ -201,7 +213,7 @@ def create_past_medical_surgical(payload: PastMedicalSurgicalCreate, db: Session
 
 @router.put("/past-medical-surgical/{medical_id}", response_model=PastMedicalSurgicalRead)
 def update_past_medical_surgical(medical_id: int, payload: PastMedicalSurgicalUpdate, db: Session = Depends(get_db)):
-    """Update Past Medical/Surgical record"""
+    """Update Past Medical/Surgical record by ID"""
     record = db.query(PastMedicalSurgical).filter(PastMedicalSurgical.medical_id == medical_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Past Medical/Surgical record not found")
@@ -255,7 +267,7 @@ class AllergiesCreate(BaseModel):
     side_effect: Optional[str] = None      # Allergic reaction type
     comment: Optional[str] = None
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class AllergiesUpdate(BaseModel):
@@ -267,7 +279,7 @@ class AllergiesUpdate(BaseModel):
     side_effect: Optional[str] = None
     comment: Optional[str] = None
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class AllergiesRead(BaseModel):
@@ -288,24 +300,30 @@ class AllergiesRead(BaseModel):
 
 @router.post("/allergies", response_model=AllergiesRead)
 def create_allergies(payload: AllergiesCreate, db: Session = Depends(get_db)):
-    """Create an Allergies record for a patient"""
+    """Create or Update an Allergies record for a patient"""
     patient = db.query(Patient).filter(Patient.patient_id == payload.patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
     now = datetime.utcnow()
-    record = Allergies(
-        patient_id=payload.patient_id,
-        condition_name=payload.condition_name,
-        description=payload.description,
-        medication=payload.medication,
-        dosage=payload.dosage,
-        side_effect=payload.side_effect,
-        comment=payload.comment,
-        created_at=now,
-        updated_at=now,
-    )
-    db.add(record)
+    existing_record = db.query(Allergies).filter(Allergies.patient_id == payload.patient_id).first()
+
+    if existing_record:
+        # Update
+        update_data = payload.model_dump(exclude={"patient_id"})
+        for key, value in update_data.items():
+            setattr(existing_record, key, value)
+        existing_record.updated_at = now
+        record = existing_record
+    else:
+        # Create
+        record = Allergies(
+            **payload.model_dump(),
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(record)
+    
     db.commit()
     db.refresh(record)
     return record
@@ -313,7 +331,7 @@ def create_allergies(payload: AllergiesCreate, db: Session = Depends(get_db)):
 
 @router.put("/allergies/{medical_id}", response_model=AllergiesRead)
 def update_allergies(medical_id: int, payload: AllergiesUpdate, db: Session = Depends(get_db)):
-    """Update Allergies record"""
+    """Update Allergies record by ID"""
     record = db.query(Allergies).filter(Allergies.medical_id == medical_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Allergies record not found")
@@ -367,7 +385,7 @@ class VaccinationCreate(BaseModel):
     side_effect: Optional[str] = None
     comment: Optional[str] = None
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class VaccinationUpdate(BaseModel):
@@ -379,7 +397,7 @@ class VaccinationUpdate(BaseModel):
     side_effect: Optional[str] = None
     comment: Optional[str] = None
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class VaccinationRead(BaseModel):
@@ -400,24 +418,30 @@ class VaccinationRead(BaseModel):
 
 @router.post("/vaccination", response_model=VaccinationRead)
 def create_vaccination(payload: VaccinationCreate, db: Session = Depends(get_db)):
-    """Create a Vaccination record for a patient"""
+    """Create or Update a Vaccination record for a patient"""
     patient = db.query(Patient).filter(Patient.patient_id == payload.patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
     now = datetime.utcnow()
-    record = Vaccination(
-        patient_id=payload.patient_id,
-        condition_name=payload.condition_name,
-        description=payload.description,
-        medication=payload.medication,
-        dosage=payload.dosage,
-        side_effect=payload.side_effect,
-        comment=payload.comment,
-        created_at=now,
-        updated_at=now,
-    )
-    db.add(record)
+    existing_record = db.query(Vaccination).filter(Vaccination.patient_id == payload.patient_id).first()
+
+    if existing_record:
+        # Update
+        update_data = payload.model_dump(exclude={"patient_id"})
+        for key, value in update_data.items():
+            setattr(existing_record, key, value)
+        existing_record.updated_at = now
+        record = existing_record
+    else:
+        # Create
+        record = Vaccination(
+            **payload.model_dump(),
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(record)
+    
     db.commit()
     db.refresh(record)
     return record
@@ -425,7 +449,7 @@ def create_vaccination(payload: VaccinationCreate, db: Session = Depends(get_db)
 
 @router.put("/vaccination/{medical_id}", response_model=VaccinationRead)
 def update_vaccination(medical_id: int, payload: VaccinationUpdate, db: Session = Depends(get_db)):
-    """Update Vaccination record"""
+    """Update Vaccination record by ID"""
     record = db.query(Vaccination).filter(Vaccination.medical_id == medical_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Vaccination record not found")
@@ -478,7 +502,7 @@ class DevelopmentalHistoryCreate(BaseModel):
     cognitive: Optional[str] = None
     social: Optional[str] = None
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class DevelopmentalHistoryUpdate(BaseModel):
@@ -489,7 +513,7 @@ class DevelopmentalHistoryUpdate(BaseModel):
     cognitive: Optional[str] = None
     social: Optional[str] = None
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class DevelopmentalHistoryRead(BaseModel):
@@ -509,23 +533,30 @@ class DevelopmentalHistoryRead(BaseModel):
 
 @router.post("/developmental-history", response_model=DevelopmentalHistoryRead)
 def create_developmental_history(payload: DevelopmentalHistoryCreate, db: Session = Depends(get_db)):
-    """Create a Developmental History record for a patient"""
+    """Create or Update a Developmental History record for a patient"""
     patient = db.query(Patient).filter(Patient.patient_id == payload.patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
     now = datetime.utcnow()
-    record = DevelopmentalHistory(
-        patient_id=payload.patient_id,
-        gross_motor=payload.gross_motor,
-        fine_motor=payload.fine_motor,
-        language=payload.language,
-        cognitive=payload.cognitive,
-        social=payload.social,
-        created_at=now,
-        updated_at=now,
-    )
-    db.add(record)
+    existing_record = db.query(DevelopmentalHistory).filter(DevelopmentalHistory.patient_id == payload.patient_id).first()
+
+    if existing_record:
+        # Update
+        update_data = payload.model_dump(exclude={"patient_id"})
+        for key, value in update_data.items():
+            setattr(existing_record, key, value)
+        existing_record.updated_at = now
+        record = existing_record
+    else:
+        # Create
+        record = DevelopmentalHistory(
+            **payload.model_dump(),
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(record)
+    
     db.commit()
     db.refresh(record)
     return record
@@ -533,7 +564,7 @@ def create_developmental_history(payload: DevelopmentalHistoryCreate, db: Sessio
 
 @router.put("/developmental-history/{development_id}", response_model=DevelopmentalHistoryRead)
 def update_developmental_history(development_id: int, payload: DevelopmentalHistoryUpdate, db: Session = Depends(get_db)):
-    """Update Developmental History record"""
+    """Update Developmental History record by ID"""
     record = db.query(DevelopmentalHistory).filter(DevelopmentalHistory.development_id == development_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Developmental History record not found")
@@ -580,11 +611,11 @@ def delete_developmental_history(development_id: int, db: Session = Depends(get_
 class MedicalHistorySummary(BaseModel):
     """Unified view of all medical history components for a patient"""
     patient_id: int
-    present_illness: List[PresentIllnessRead] = []
-    past_medical_surgical: List[PastMedicalSurgicalRead] = []
-    allergies: List[AllergiesRead] = []
-    vaccinations: List[VaccinationRead] = []
-    developmental_histories: List[DevelopmentalHistoryRead] = []
+    present_illness: Optional[PresentIllnessRead] = None
+    past_medical_surgical: Optional[PastMedicalSurgicalRead] = None
+    allergies: Optional[AllergiesRead] = None
+    vaccination: Optional[VaccinationRead] = None
+    developmental_history: Optional[DevelopmentalHistoryRead] = None
 
 
 @router.get("/patient/{patient_id}/summary", response_model=MedicalHistorySummary)
@@ -596,9 +627,9 @@ def get_medical_history_summary(patient_id: int, db: Session = Depends(get_db)):
 
     return {
         "patient_id": patient_id,
-        "present_illness": db.query(PresentIllness).filter(PresentIllness.patient_id == patient_id).all(),
-        "past_medical_surgical": db.query(PastMedicalSurgical).filter(PastMedicalSurgical.patient_id == patient_id).all(),
-        "allergies": db.query(Allergies).filter(Allergies.patient_id == patient_id).all(),
-        "vaccinations": db.query(Vaccination).filter(Vaccination.patient_id == patient_id).all(),
-        "developmental_histories": db.query(DevelopmentalHistory).filter(DevelopmentalHistory.patient_id == patient_id).all(),
+        "present_illness": db.query(PresentIllness).filter(PresentIllness.patient_id == patient_id).first(),
+        "past_medical_surgical": db.query(PastMedicalSurgical).filter(PastMedicalSurgical.patient_id == patient_id).first(),
+        "allergies": db.query(Allergies).filter(Allergies.patient_id == patient_id).first(),
+        "vaccination": db.query(Vaccination).filter(Vaccination.patient_id == patient_id).first(),
+        "developmental_history": db.query(DevelopmentalHistory).filter(DevelopmentalHistory.patient_id == patient_id).first(),
     }

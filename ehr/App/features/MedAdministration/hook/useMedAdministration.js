@@ -2,6 +2,26 @@
 import { useState, useCallback } from 'react';
 import apiClient from '../../../api/apiClient';
 
+const getTodayFormatted = () => new Date().toLocaleDateString('en-US', {
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+const toRawDate = (displayDate) => {
+  const d = new Date(displayDate);
+  if (isNaN(d.getTime())) {
+    // Fallback to today in raw format if invalid
+    return new Date().toISOString().split('T')[0];
+  }
+  // toISOString gives UTC, which might shift the date. 
+  // For local YYYY-MM-DD:
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const useMedAdministration = () => {
   const [step, setStep] = useState(0); // 0: 10AM, 1: 2PM, 2: 6PM
   const rawTimeSlots = ['10:00:00', '14:00:00', '18:00:00'];
@@ -10,7 +30,7 @@ export const useMedAdministration = () => {
   const [formData, setFormData] = useState({
     patient_id: null,
     patientName: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getTodayFormatted(),
     medications: [
       {
         id: null,
@@ -51,12 +71,13 @@ export const useMedAdministration = () => {
 
   const fetchPatientData = useCallback(async (patientId, dateStr) => {
     try {
+      const rawDate = toRawDate(dateStr);
       const response = await apiClient.get(
         `/medication-administration/patient/${patientId}`,
       );
       const records = response.data || [];
 
-      const todayRecords = records.filter(r => r.date === dateStr);
+      const todayRecords = records.filter(r => r.date === rawDate);
 
       const newMeds = [
         {
@@ -122,6 +143,7 @@ export const useMedAdministration = () => {
       throw new Error('No medication data to submit');
     }
 
+    const rawDate = toRawDate(formData.date);
     const errors = [];
     for (const item of medsToSubmit) {
       const payload = {
@@ -132,7 +154,7 @@ export const useMedAdministration = () => {
         frequency: item.med.frequency.trim() || null,
         comments: item.med.comments.trim() || null,
         time: rawTimeSlots[item.index],
-        date: formData.date,
+        date: rawDate,
       };
 
       try {

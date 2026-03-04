@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func, String
 from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 from datetime import datetime, date, time
@@ -234,7 +235,7 @@ def _run_assessment_cdss(data: dict) -> dict:
 
 @router.post("/", response_model=VitalSignsRead)
 def create_vital_signs(payload: AssessmentCreate, db: Session = Depends(get_db)):
-    """Step 1: Create Vital Signs (Assessment). CDSS alerts are auto-generated."""
+    """Step 1: Create or Update Vital Signs (Assessment). CDSS alerts are auto-generated."""
     # Verify patient exists
     patient = db.query(Patient).filter(Patient.patient_id == payload.patient_id).first()
     if not patient:
@@ -245,16 +246,36 @@ def create_vital_signs(payload: AssessmentCreate, db: Session = Depends(get_db))
     # Run CDSS to generate alerts
     alerts = _run_assessment_cdss(data)
 
-    # Build the record
+    # Check for existing record based on patient_id, date, and time (hour/minute)
+    # This ensures that entering data for the same slot on the same day updates the record.
     now = datetime.utcnow()
-    record = VitalSigns(
-        **data,
-        **alerts,
-        created_at=now,
-        updated_at=now,
-    )
 
-    db.add(record)
+    existing_record = db.query(VitalSigns).filter(
+        VitalSigns.patient_id == payload.patient_id,
+        func.date(VitalSigns.date) == payload.date,
+        func.hour(VitalSigns.time) == payload.time.hour,
+        func.minute(VitalSigns.time) == payload.time.minute
+    ).first()
+
+    if existing_record:
+        # Update the existing record
+        for key, value in data.items():
+            if key != "patient_id": # Don't update patient_id
+                setattr(existing_record, key, value)
+        for key, value in alerts.items():
+            setattr(existing_record, key, value)
+        existing_record.updated_at = now
+        record = existing_record
+    else:
+        # Build the record
+        record = VitalSigns(
+            **data,
+            **alerts,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(record)
+
     db.commit()
     db.refresh(record)
     return record

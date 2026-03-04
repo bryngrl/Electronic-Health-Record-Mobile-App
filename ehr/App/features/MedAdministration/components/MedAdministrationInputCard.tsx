@@ -29,8 +29,8 @@ const MedAdministrationInputCard: React.FC<MedAdministrationInputCardProps> = ({
       </View>
 
       {/* Input Body */}
-      <Pressable 
-        style={styles.inputBody} 
+      <Pressable
+        style={styles.inputBody}
         onPress={() => !editable && onDisabledPress && onDisabledPress()}
       >
         <TextInput
@@ -52,20 +52,20 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 15,
     borderRadius: 25,
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#FFFAED',
     borderWidth: 1,
-    borderColor: '#FEF3C7',
+    borderColor: '#FFFAED',
     overflow: 'hidden',
   },
   labelBanner: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#FFEDC1',
     paddingVertical: 8,
     alignItems: 'center',
   },
   labelText: {
-    color: '#D97706',
-    fontWeight: 'bold',
-    fontSize: 13,
+    color: '#EDB62C',
+    fontFamily: 'AlteHaasGroteskBold',
+    fontSize: 14,
   },
   inputBody: {
     minHeight: 50,

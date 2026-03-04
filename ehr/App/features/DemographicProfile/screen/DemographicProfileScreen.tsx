@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Image,
   ActivityIndicator,
   TouchableOpacity,
+  BackHandler,
 } from 'react-native';
 
 import PatientRow from '../component/PatientRow';
@@ -69,6 +70,31 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
     loadPatients();
   }, [loadPatients]);
 
+  const handleBackPress = useCallback(() => {
+    if (selectedPatientId) {
+      setSelectedPatientId(null);
+      return true;
+    }
+    if (isSelectionMode) {
+      clearSelection();
+      return true;
+    }
+    if (showSelectMenu) {
+      setShowSelectMenu(false);
+      return true;
+    }
+    onBack();
+    return true;
+  }, [selectedPatientId, isSelectionMode, showSelectMenu, clearSelection, onBack]);
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      handleBackPress,
+    );
+    return () => backHandler.remove();
+  }, [handleBackPress]);
+
   const enterSelectionMode = () => {
     setShowSelectMenu(false);
     if (typedPatients.length > 0) {
@@ -77,18 +103,22 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
   };
 
   const handlePatientClick = (patientId: number) => {
-    if (onPatientClick) {
-      onPatientClick(patientId);
-    } else {
-      setSelectedPatientId(patientId);
-    }
+    setSelectedPatientId(patientId);
   };
 
   if (selectedPatientId) {
     return (
-      <PatientDetailsScreen patientId={selectedPatientId} onBack={onBack} />
+      <PatientDetailsScreen 
+        patientId={selectedPatientId} 
+        onBack={() => setSelectedPatientId(null)} 
+        onEdit={(id) => {
+          setSelectedPatientId(null);
+          onPatientClick && onPatientClick(id);
+        }}
+      />
     );
   }
+
 
   return (
     <View style={styles.root}>
@@ -160,39 +190,42 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
                       : handlePatientClick(item.patient_id)
                   }
                   onLongPress={() => toggleSelection(item.patient_id)}
+                  onEdit={(id) => onPatientClick && onPatientClick(id)}
                 />
               )}
             />
           )}
 
-          {/* Action Footer */}
-          {isSelectionMode && (
-            <View style={styles.actionFooter}>
-              <TouchableOpacity
-                style={styles.footerItem}
-                onPress={() => updateStatus(true)}
+          {/* Persistent Action Footer */}
+          <View
+            style={[styles.actionFooter, !isSelectionMode && { opacity: 0.5 }]}
+          >
+            <TouchableOpacity
+              style={styles.footerItem}
+              onPress={() => isSelectionMode && updateStatus(true)}
+              disabled={!isSelectionMode}
+            >
+              <View
+                style={[styles.statusCircle, { backgroundColor: '#E8F5E9' }]}
               >
-                <View
-                  style={[styles.statusCircle, { backgroundColor: '#E8F5E9' }]}
-                >
-                  <Image source={activeIcon} style={styles.footerIcon} />
-                </View>
-                <Text style={styles.footerText}>Active</Text>
-              </TouchableOpacity>
+                <Image source={activeIcon} style={styles.footerIcon} />
+              </View>
+              <Text style={styles.footerText}>Active</Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.footerItem}
-                onPress={() => updateStatus(false)}
+            <TouchableOpacity
+              style={styles.footerItem}
+              onPress={() => isSelectionMode && updateStatus(false)}
+              disabled={!isSelectionMode}
+            >
+              <View
+                style={[styles.statusCircle, { backgroundColor: '#FFEBEE' }]}
               >
-                <View
-                  style={[styles.statusCircle, { backgroundColor: '#FFEBEE' }]}
-                >
-                  <Image source={inactiveIcon} style={styles.footerIcon} />
-                </View>
-                <Text style={styles.footerText}>Inactive</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+                <Image source={inactiveIcon} style={styles.footerIcon} />
+              </View>
+              <Text style={styles.footerText}>Inactive</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
 
@@ -253,6 +286,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+
+  backBtn: {
+    marginTop: 12,
+    marginRight: 10,
+  },
+
+  backIcon: {
+    width: 25,
+    height: 25,
+    resizeMode: 'contain',
+  },
+
   headerActions: {
     alignItems: 'flex-end',
     marginTop: 10,
@@ -292,7 +341,7 @@ const styles = StyleSheet.create({
 
   headerText: {
     color: '#29A539',
-    fontWeight: 'bold',
+    fontFamily: 'AlteHaasGroteskBold',
     fontSize: 14,
     paddingRight: 10,
   },

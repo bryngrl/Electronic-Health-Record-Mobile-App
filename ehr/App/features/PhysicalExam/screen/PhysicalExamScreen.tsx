@@ -1,36 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   SafeAreaView,
-  Pressable,
+  BackHandler,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import ExamInputCard from '../components/PhysicalInputCard';
 import ADPIEScreen from './ADPIEScreen'; // Integrated Stepper
-import apiClient from '../../../api/apiClient';
 import { usePhysicalExam } from '../hook/usePhysicalExam';
 import SweetAlert from '../../../components/SweetAlert';
+import PatientSearchBar from '../../../components/PatientSearchBar';
 
 const THEME_GREEN = '#035022';
+// ... (rest of the component)
 
 interface PhysicalExamProps {
   onBack: () => void;
 }
 
+const initialFormData = {
+  general_appearance: '',
+  skin_condition: '',
+  eye_condition: '',
+  oral_condition: '',
+  cardiovascular: '',
+  abdomen_condition: '',
+  extremities: '',
+  neurological: '',
+};
+
 const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
-  const { saveAssessment, checkAssessmentAlerts } = usePhysicalExam();
+  const { saveAssessment, checkAssessmentAlerts, fetchLatestPhysicalExam } =
+    usePhysicalExam();
   const [searchText, setSearchText] = useState('');
-  const [patients, setPatients] = useState<any[]>([]);
-  const [filteredPatients, setFilteredPatients] = useState<any[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
     null,
   );
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+  const prevPatientIdRef = useRef<string | null>(null);
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -45,7 +56,11 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
     type: 'error',
   });
 
-  const showAlert = (title: string, message: string, type: 'success' | 'error' = 'error') => {
+  const showAlert = (
+    title: string,
+    message: string,
+    type: 'success' | 'error' = 'error',
+  ) => {
     setAlertConfig({ visible: true, title, message, type });
   };
 
@@ -55,23 +70,80 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
   // Controls the view switch from Assessment to ADPIE Stepper
   const [isAdpieActive, setIsAdpieActive] = useState(false);
 
-  const [formData, setFormData] = useState({
-    general_appearance: '',
-    skin_condition: '',
-    eye_condition: '',
-    oral_condition: '',
-    cardiovascular: '',
-    abdomen_condition: '',
-    extremities: '',
-    neurological: '',
-  });
+  const [formData, setFormData] = useState(initialFormData);
+
+  useEffect(() => {
+    const backAction = () => {
+      onBack();
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction,
+    );
+
+    return () => backHandler.remove();
+  }, [onBack]);
+
+  const loadPatientData = useCallback(
+// ... (rest of methods)
+
+    async (patientId: number) => {
+      const data = await fetchLatestPhysicalExam(patientId);
+      if (data) {
+        setExamId(data.id);
+        setFormData({
+          general_appearance: data.general_appearance || '',
+          skin_condition: data.skin_condition || '',
+          eye_condition: data.eye_condition || '',
+          oral_condition: data.oral_condition || '',
+          cardiovascular: data.cardiovascular || '',
+          abdomen_condition: data.abdomen_condition || '',
+          extremities: data.extremities || '',
+          neurological: data.neurological || '',
+        });
+        // Also update alerts if they exist in the loaded data
+        setBackendAlerts({
+          general_appearance_alert: data.general_appearance_alert,
+          skin_alert: data.skin_alert,
+          eye_alert: data.eye_alert,
+          oral_alert: data.oral_alert,
+          cardiovascular_alert: data.cardiovascular_alert,
+          abdomen_alert: data.abdomen_alert,
+          extremities_alert: data.extremities_alert,
+          neurological_alert: data.neurological_alert,
+        });
+      } else {
+        setExamId(null);
+        setFormData(initialFormData);
+        setBackendAlerts({});
+      }
+    },
+    [fetchLatestPhysicalExam],
+  );
+
+  useEffect(() => {
+    if (selectedPatientId !== prevPatientIdRef.current) {
+      prevPatientIdRef.current = selectedPatientId;
+      if (selectedPatientId) {
+        loadPatientData(parseInt(selectedPatientId, 10));
+      } else {
+        setExamId(null);
+        setFormData(initialFormData);
+        setBackendAlerts({});
+      }
+    }
+  }, [selectedPatientId, loadPatientData]);
 
   // REAL-TIME CDSS: Debounced polling to update bells as you type
   useEffect(() => {
     if (!selectedPatientId) return;
 
     const timer = setTimeout(async () => {
-      const hasContent = Object.values(formData).some(v => v.trim().length > 0);
+      const hasContent = Object.values(formData).some(
+        v => v && v.trim().length > 0,
+      );
       if (hasContent) {
         try {
           const result = await checkAssessmentAlerts({
@@ -86,33 +158,19 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [formData, selectedPatientId]);
-
-  // Load patient list on mount
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const response = await apiClient.get('/patients/');
-        const normalized = (response.data || []).map((p: any) => ({
-          id: (p.patient_id ?? p.id).toString(),
-          fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-        }));
-        setPatients(normalized);
-      } catch (e) {
-        console.error('Failed to load patients');
-      }
-    };
-    fetchPatients();
-  }, []);
+  }, [formData, selectedPatientId, checkAssessmentAlerts]);
 
   // NEW: CDSS Button Handler to trigger ADPIE Workflow
   const handleCDSSPress = async () => {
     if (!selectedPatientId) {
-      return showAlert('Patient Required', 'Please select a patient first in the search bar.');
+      return showAlert(
+        'Patient Required',
+        'Please select a patient first in the search bar.',
+      );
     }
 
     try {
-      // Step 1: POST to /physical-exam/ to create the record
+      // Step 1: POST to /physical-exam/ to create or update the record
       const result = await saveAssessment({
         patient_id: selectedPatientId,
         ...formData,
@@ -124,26 +182,43 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
         setIsAdpieActive(true); // Switch to ADPIE Stepper View
       }
     } catch (e) {
-      // Backend error check for 405 Method Not Allowed
       showAlert('Error', 'Could not initiate clinical support.');
     }
   };
 
   const handleSave = async () => {
     if (!selectedPatientId) {
-      return showAlert('Patient Required', 'Please select a patient first in the search bar.');
+      return showAlert(
+        'Patient Required',
+        'Please select a patient first in the search bar.',
+      );
     }
     try {
       const result = await saveAssessment({
         patient_id: selectedPatientId,
         ...formData,
       });
-      if (result.id || result.physical_exam_id) {
-        setExamId(result.id || result.physical_exam_id);
+
+      const newId = result.id || result.physical_exam_id;
+      // Check if it was an update or a new submission
+      const isUpdate = !!examId || result.updated_at !== result.created_at;
+
+      if (newId) {
+        setExamId(newId);
       }
-      showAlert('Success', 'Assessment Saved!', 'success');
+
+      showAlert(
+        isUpdate ? 'SUCCESSFULLY UPDATED' : 'SUCCESSFULLY SUBMITTED',
+        `Physical Exam has been ${
+          isUpdate ? 'updated' : 'submitted'
+        } successfully.`,
+        'success',
+      );
+
+      // Refresh to get latest state
+      loadPatientData(parseInt(selectedPatientId, 10));
     } catch (e) {
-      showAlert('Error', 'Submission failed. Check backend (405 error).');
+      showAlert('Error', 'Submission failed. Please check your connection.');
     }
   };
 
@@ -155,6 +230,14 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
     });
   };
 
+  const updateField = (field: string, val: string) => {
+    setFormData(prev => ({ ...prev, [field]: val }));
+  };
+
+  const isDataEntered = Object.values(formData).some(
+    v => v && v.trim().length > 0,
+  );
+
   // Switch to ADPIE Screen if active
   if (isAdpieActive && examId && selectedPatientId) {
     return (
@@ -162,6 +245,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
         examId={examId}
         patientId={selectedPatientId}
         patientName={searchText}
+        assessmentAlerts={backendAlerts}
         onBack={() => setIsAdpieActive(false)}
       />
     );
@@ -173,51 +257,23 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
         keyboardShouldPersistTaps="handled"
         style={styles.container}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={scrollEnabled}
       >
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.title}>Physical Exam</Text>
             <Text style={styles.dateText}>{formatDate()}</Text>
           </View>
-          <TouchableOpacity onPress={onBack}>
-            <Icon name="more-vert" size={35} color={THEME_GREEN} />
-          </TouchableOpacity>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>PATIENT NAME :</Text>
-          <TextInput
-            style={styles.searchBar}
-            placeholder="Select or type Patient name"
-            value={searchText}
-            onChangeText={(text: string) => {
-              setSearchText(text);
-              setFilteredPatients(
-                patients.filter(p =>
-                  p.fullName.toLowerCase().includes(text.toLowerCase()),
-                ),
-              );
-              setShowDropdown(true);
-            }}
-          />
-          {showDropdown && filteredPatients.length > 0 && (
-            <View style={styles.dropdown}>
-              {filteredPatients.map(p => (
-                <Pressable
-                  key={p.id}
-                  onPress={() => {
-                    setSearchText(p.fullName);
-                    setSelectedPatientId(p.id);
-                    setShowDropdown(false);
-                  }}
-                  style={styles.dropItem}
-                >
-                  <Text>{p.fullName}</Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
-        </View>
+        <PatientSearchBar
+          onPatientSelect={(id, name) => {
+            setSelectedPatientId(id ? id.toString() : null);
+            setSearchText(name);
+          }}
+          initialPatientName={searchText}
+          onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+        />
 
         <View style={styles.banner}>
           <Text style={styles.bannerText}>PHYSICAL EXAMINATION</Text>
@@ -229,64 +285,75 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
           value={formData.general_appearance}
           disabled={!selectedPatientId}
           alertText={backendAlerts.general_appearance_alert}
-          onChangeText={t =>
-            setFormData({ ...formData, general_appearance: t })
-          }
+          onChangeText={t => updateField('general_appearance', t)}
         />
         <ExamInputCard
           label="SKIN"
           value={formData.skin_condition}
           disabled={!selectedPatientId}
           alertText={backendAlerts.skin_alert}
-          onChangeText={t => setFormData({ ...formData, skin_condition: t })}
+          onChangeText={t => updateField('skin_condition', t)}
         />
         <ExamInputCard
           label="EYES"
           value={formData.eye_condition}
           disabled={!selectedPatientId}
           alertText={backendAlerts.eye_alert}
-          onChangeText={t => setFormData({ ...formData, eye_condition: t })}
+          onChangeText={t => updateField('eye_condition', t)}
         />
         <ExamInputCard
           label="ORAL CAVITY"
           value={formData.oral_condition}
           disabled={!selectedPatientId}
           alertText={backendAlerts.oral_alert}
-          onChangeText={t => setFormData({ ...formData, oral_condition: t })}
+          onChangeText={t => updateField('oral_condition', t)}
         />
         <ExamInputCard
           label="CARDIOVASCULAR"
           value={formData.cardiovascular}
           disabled={!selectedPatientId}
           alertText={backendAlerts.cardiovascular_alert}
-          onChangeText={t => setFormData({ ...formData, cardiovascular: t })}
+          onChangeText={t => updateField('cardiovascular', t)}
         />
         <ExamInputCard
           label="ABDOMEN"
           value={formData.abdomen_condition}
           disabled={!selectedPatientId}
           alertText={backendAlerts.abdomen_alert}
-          onChangeText={t => setFormData({ ...formData, abdomen_condition: t })}
+          onChangeText={t => updateField('abdomen_condition', t)}
         />
         <ExamInputCard
           label="EXTREMITIES"
           value={formData.extremities}
           disabled={!selectedPatientId}
           alertText={backendAlerts.extremities_alert}
-          onChangeText={t => setFormData({ ...formData, extremities: t })}
+          onChangeText={t => updateField('extremities', t)}
         />
         <ExamInputCard
           label="NEUROLOGICAL"
           value={formData.neurological}
           disabled={!selectedPatientId}
           alertText={backendAlerts.neurological_alert}
-          onChangeText={t => setFormData({ ...formData, neurological: t })}
+          onChangeText={t => updateField('neurological', t)}
         />
 
         <View style={styles.footerRow}>
           {/* CDSS Button: Triggers Nursing Process Stepper */}
-          <TouchableOpacity style={styles.cdssBtn} onPress={handleCDSSPress}>
-            <Text style={styles.cdssText}>CDSS</Text>
+          <TouchableOpacity
+            style={[
+              styles.cdssBtn,
+              isDataEntered && {
+                backgroundColor: '#DCFCE7',
+                borderColor: THEME_GREEN,
+              },
+            ]}
+            onPress={handleCDSSPress}
+          >
+            <Text
+              style={[styles.cdssText, isDataEntered && { color: THEME_GREEN }]}
+            >
+              CDSS
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.submitBtn} onPress={handleSave}>
             <Text style={styles.submitText}>SUBMIT</Text>
@@ -322,42 +389,25 @@ const styles = StyleSheet.create({
     color: THEME_GREEN,
     fontFamily: 'MinionPro-SemiboldItalic',
   },
-  dateText: { fontSize: 13, color: '#999' },
-  section: { marginBottom: 15, zIndex: 10 },
+  dateText: { fontSize: 13, fontFamily: 'AlteHaasGroteskBold', color: '#999' },
   sectionLabel: {
     fontSize: 12,
     fontWeight: 'bold',
     color: THEME_GREEN,
     marginBottom: 8,
   },
-  searchBar: {
-    borderRadius: 25,
-    paddingHorizontal: 20,
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#F2F2F2',
-  },
-  dropdown: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#eee',
-    elevation: 3,
-    position: 'absolute',
-    top: 70,
-    left: 0,
-    right: 0,
-    zIndex: 99,
-  },
-  dropItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#f9f9f9' },
   banner: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#E5FFE8',
     paddingVertical: 10,
     borderRadius: 25,
     alignItems: 'center',
     marginBottom: 20,
   },
-  bannerText: { color: THEME_GREEN, fontWeight: 'bold', fontSize: 12 },
+  bannerText: {
+    color: '#29A539',
+    fontFamily: 'AlteHaasGroteskBold',
+    fontSize: 14,
+  },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

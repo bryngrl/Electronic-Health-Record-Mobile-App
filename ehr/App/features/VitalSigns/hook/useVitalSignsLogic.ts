@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import apiClient from '../../../api/apiClient';
 
 const TIME_SLOTS = ['6:00 AM', '8:00 AM', '12:00 PM', '2:00 PM', '6:00 PM', '8:00 PM', '12:00 AM'];
@@ -43,37 +43,14 @@ const formatTo12h = (time24: string) => {
 export const useVitalSignsLogic = () => {
   const [patientName, setPatientName] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const [patients, setPatients] = useState<any[]>([]);
-  const [filteredPatients, setFilteredPatients] = useState<any[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
 
   const [vitalsHistory, setVitalsHistory] = useState<Record<string, Vitals>>({});
   const [currentVitals, setCurrentVitals] = useState<Vitals>(initialVitals);
   const [currentTimeIndex, setCurrentTimeIndex] = useState(0);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   
-  // Storage for alerts returned by the backend
   const [backendAlert, setBackendAlert] = useState<{ title: string, message: string, type: 'success' | 'error' } | null>(null);
-  
-  // Storage for existing records
   const [existingRecords, setExistingRecords] = useState<any[]>([]);
-
-  // Load patient list on mount
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const response = await apiClient.get('/patients/');
-        const normalized = (response.data || []).map((p: any) => ({
-          id: (p.patient_id ?? p.id).toString(),
-          fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-        }));
-        setPatients(normalized);
-      } catch (e) {
-        console.error('Failed to load patients');
-      }
-    };
-    fetchPatients();
-  }, []);
 
   const currentTime = useMemo(() => TIME_SLOTS[currentTimeIndex], [currentTimeIndex]);
 
@@ -81,15 +58,18 @@ export const useVitalSignsLogic = () => {
     return Object.values(currentVitals).some(value => value.trim() !== '');
   }, [currentVitals]);
 
-  // Submit to Backend
-  const saveAssessment = async () => {
+  const isDataComplete = useMemo(() => {
+    return Object.values(currentVitals).every(value => value.trim() !== '');
+  }, [currentVitals]);
+
+  const saveAssessment = async (dayNo?: number) => {
     if (!selectedPatientId) return null;
 
     const payload = {
       patient_id: parseInt(selectedPatientId, 10),
-      date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+      date: new Date().toLocaleDateString('en-CA'),
       time: convertTo24h(currentTime),
-      day_no: 1, // Optional: logic could be added to calculate day_no
+      day_no: dayNo || 1,
       ...currentVitals
     };
 
@@ -115,7 +95,6 @@ export const useVitalSignsLogic = () => {
 
   const handleUpdateVital = (key: keyof Vitals, value: string) => {
     setCurrentVitals(prev => ({ ...prev, [key]: value }));
-    // Reset alert when user starts typing again
     if (backendAlert) setBackendAlert(null);
   };
 
@@ -131,30 +110,29 @@ export const useVitalSignsLogic = () => {
     }
   };
 
-  const getChartData = (vitalKey: keyof Vitals) => {
-    const historicalData = Object.entries(vitalsHistory).map(([time, vitalsRecord]) => ({
-      time,
-      value: parseFloat(vitalsRecord[vitalKey]) || 0,
-    }));
-    return historicalData;
-  };
+  const chartData = useMemo(() => {
+    const keys: (keyof Vitals)[] = ['temperature', 'hr', 'rr', 'bp', 'spo2'];
+    const result: Record<string, any[]> = {};
 
-  const handleSearchPatient = (text: string) => {
-    setPatientName(text);
-    setFilteredPatients(
-      patients.filter(p =>
-        p.fullName.toLowerCase().includes(text.toLowerCase()),
-      ),
-    );
-    setShowDropdown(true);
-  };
-
-  const selectPatient = (p: any) => {
-    setPatientName(p.fullName);
-    setSelectedPatientId(p.id);
-    setShowDropdown(false);
-    loadPatientData(p.id);
-  };
+    keys.forEach(key => {
+      result[key] = TIME_SLOTS.map(slot => {
+        let valueStr = '';
+        if (slot === currentTime) {
+          valueStr = currentVitals[key];
+        } else if (vitalsHistory[slot]) {
+          valueStr = vitalsHistory[slot][key];
+        }
+        
+        const numericValue = parseFloat(valueStr.split('/')[0]) || 0;
+        
+        return {
+          time: slot,
+          value: numericValue,
+        };
+      });
+    });
+    return result;
+  }, [currentVitals, vitalsHistory, currentTime]);
 
   const loadPatientData = async (patientId: string) => {
     try {
@@ -162,7 +140,7 @@ export const useVitalSignsLogic = () => {
       const records = response.data || [];
       setExistingRecords(records);
       
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toLocaleDateString('en-CA');
       const history: Record<string, Vitals> = {};
       
       records.forEach((rec: any) => {
@@ -193,6 +171,18 @@ export const useVitalSignsLogic = () => {
       setExistingRecords([]);
       setVitalsHistory({});
       setCurrentVitals(initialVitals);
+    }
+  };
+
+  const setSelectedPatient = (id: string | null, name: string) => {
+    setSelectedPatientId(id);
+    setPatientName(name);
+    if (id) {
+      loadPatientData(id);
+    } else {
+      setVitalsHistory({});
+      setCurrentVitals(initialVitals);
+      setExistingRecords([]);
     }
   };
 
@@ -231,14 +221,11 @@ export const useVitalSignsLogic = () => {
   return {
     patientName,
     selectedPatientId,
-    filteredPatients,
-    showDropdown,
-    setShowDropdown,
-    handleSearchPatient,
-    selectPatient,
+    setSelectedPatient,
     vitals: currentVitals,
     handleUpdateVital,
     isDataEntered,
+    isDataComplete,
     currentTime,
     currentTimeIndex,
     handleNextTime,
@@ -249,7 +236,7 @@ export const useVitalSignsLogic = () => {
     selectTime,
     reset,
     TIME_SLOTS,
-    getChartData,
+    chartData,
     currentAlert: backendAlert,
     vitalKeys: Object.keys(initialVitals) as (keyof Vitals)[],
     existingRecords,

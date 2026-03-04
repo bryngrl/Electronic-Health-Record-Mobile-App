@@ -1,83 +1,141 @@
-import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 
 interface Props {
   label: string;
   value: string;
   onChangeText: (v: string) => void;
+  disabled?: boolean;
+  onDisabledPress?: () => void;
 }
 
-const MedicalReconCard = ({ label, value, onChangeText }: Props) => (
-  <View style={styles.cardContainer}>
-    <View style={styles.labelPill}>
-      <Text style={styles.labelText}>{label}</Text>
-    </View>
-    
-    {/* Binago natin ito para maging multiline at may lines sa background */}
-    <View style={styles.inputWrapper}>
-       {/* Background Lines (Static) */}
-      <View style={styles.lineOverlay}>
-        <View style={styles.line} />
-        <View style={styles.line} />
-        <View style={styles.line} />
+const LINE_HEIGHT = 28;
+const INPUT_PADDING_BOTTOM = 20;
+
+const MedicalReconCard = ({
+  label,
+  value,
+  onChangeText,
+  disabled = false,
+  onDisabledPress,
+}: Props) => {
+  // Initialized to exactly 4 visible lines (4 * 28) plus the padding
+  const [inputHeight, setInputHeight] = useState(
+    4 * LINE_HEIGHT + INPUT_PADDING_BOTTOM,
+  );
+
+  // Subtract the padding so numLines accurately reflects the visual typing area
+  const visibleTypingHeight = Math.max(0, inputHeight - INPUT_PADDING_BOTTOM);
+  const numLines = Math.max(4, Math.ceil(visibleTypingHeight / LINE_HEIGHT));
+
+  const renderLines = () => {
+    const lines = [];
+    for (let i = 0; i < numLines; i++) {
+      const topPosition = (i + 1) * LINE_HEIGHT;
+
+      lines.push(
+        <View
+          key={i}
+          style={[
+            styles.line,
+            {
+              top: topPosition,
+              left: 10,
+              right: 10, // Full width padding on both sides
+            },
+          ]}
+        />,
+      );
+    }
+    return lines;
+  };
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.headerText}>{label}</Text>
       </View>
 
-      <TextInput 
-        style={styles.multilineInput}
-        value={value}
-        onChangeText={onChangeText}
-        multiline={true}
-        numberOfLines={3}
-        textAlignVertical="top" // Para magsimula ang text sa taas (Android)
-        placeholder="Type here..."
-        placeholderTextColor="#DDD"
-      />
+      <View style={styles.content}>
+        <Pressable
+          style={styles.inputArea}
+          onPress={() => {
+            if (disabled && onDisabledPress) {
+              onDisabledPress();
+            }
+          }}
+        >
+          <View style={styles.linesContainer} pointerEvents="none">
+            {renderLines()}
+          </View>
+
+          <TextInput
+            style={styles.input}
+            value={value}
+            onChangeText={onChangeText}
+            multiline
+            editable={!disabled}
+            placeholder="Type here..."
+            placeholderTextColor="#D1D1D1"
+            pointerEvents={disabled ? 'none' : 'auto'}
+            onContentSizeChange={e => {
+              setInputHeight(e.nativeEvent.contentSize.height);
+            }}
+          />
+        </Pressable>
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
-  cardContainer: { 
-    backgroundColor: '#FFFAED', 
-    borderRadius: 20, 
-    padding: 15, 
-    marginBottom: 12,
-    minHeight: 140 // Sinisiguro na malaki ang card
+  card: {
+    backgroundColor: '#FFFAED',
+    borderRadius: 25,
+    marginBottom: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
   },
-  labelPill: { 
-    backgroundColor: '#FFEDC1', 
-    alignSelf: 'flex-start', 
-    paddingHorizontal: 12, 
-    paddingVertical: 4, 
-    borderRadius: 15, 
-    marginBottom: 10,
-    zIndex: 2 // Para hindi matakpan ng lines
+  cardHeader: {
+    backgroundColor: '#FFEDC1',
+    paddingVertical: 6,
+    alignItems: 'center',
   },
-  labelText: { color: '#EDB62C', fontWeight: 'bold', fontSize: 11 },
-  
-  inputWrapper: {
+  headerText: {
+    color: '#EDB62C',
+    fontFamily: 'AlteHaasGroteskBold',
+    fontSize: 14,
+  },
+  content: {
+    padding: 15,
     position: 'relative',
-    marginTop: 5,
   },
-  multilineInput: { 
-    color: '#333', 
-    fontSize: 14, 
-    lineHeight: 25, // Importante: dapat match ito sa spacing ng lines sa ibaba
+  inputArea: {
+    minHeight: 112,
+    position: 'relative',
+  },
+  input: {
+    fontSize: 14,
+    color: '#333',
+    textAlignVertical: 'top',
+    zIndex: 2,
+    padding: 10,
     paddingTop: 0,
+    paddingBottom: INPUT_PADDING_BOTTOM,
+    lineHeight: LINE_HEIGHT,
+    minHeight: 112,
+    includeFontPadding: false,
+  },
+  linesContainer: {
+    ...StyleSheet.absoluteFillObject,
     zIndex: 1,
   },
-  lineOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
   line: {
-    height: 25, // Match sa lineHeight ng TextInput
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0E0B0', // Kulay ng lines (light gold/yellow)
-  }
+    height: 1,
+    backgroundColor: '#D9D9D9',
+    position: 'absolute',
+  },
 });
 
 export default MedicalReconCard;

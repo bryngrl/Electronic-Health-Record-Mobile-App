@@ -9,15 +9,17 @@ import {
   TouchableOpacity,
   TextInput,
   Pressable,
+  BackHandler,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MedAdministrationInputCard from '../components/MedAdministrationInputCard';
 import { useMedAdministration } from '../hook/useMedAdministration';
 import apiClient from '../../../api/apiClient';
 import SweetAlert from '../../../components/SweetAlert';
+import PatientSearchBar from '../../../components/PatientSearchBar';
 
 const THEME_GREEN = '#035022';
-const LIGHT_GREEN_BG = '#DCFCE7';
+const LIGHT_GREEN_BG = '#E5FFE8';
 
 const MedAdministrationScreen = ({ onBack }: any) => {
   const {
@@ -31,11 +33,11 @@ const MedAdministrationScreen = ({ onBack }: any) => {
     fetchPatientData,
   } = useMedAdministration();
 
-  const [patients, setPatients] = useState<any[]>([]);
-  const [filteredPatients, setFilteredPatients] = useState<any[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const lastFetched = useRef<{ id: number | null, date: string }>({ id: null, date: '' });
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+  const lastFetched = useRef<{ id: number | null; date: string }>({
+    id: null,
+    date: '',
+  });
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -50,6 +52,20 @@ const MedAdministrationScreen = ({ onBack }: any) => {
     type: 'error',
   });
 
+  useEffect(() => {
+    const backAction = () => {
+      onBack();
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction,
+    );
+
+    return () => backHandler.remove();
+  }, [onBack]);
+
   const showAlert = (
     title: string,
     message: string,
@@ -58,53 +74,66 @@ const MedAdministrationScreen = ({ onBack }: any) => {
     setAlertConfig({ visible: true, title, message, type });
   };
 
-  useEffect(() => {
-    apiClient.get('/patients/').then(res => {
-      const normalized = (res.data || []).map((p: any) => ({
-        id: (p.patient_id ?? p.id).toString(),
-        fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-      }));
-      setPatients(normalized);
-    });
-  }, []);
-
   // Fetch patient data when patient or date changes
+// ... (rest of the file)
   useEffect(() => {
-    if (formData.patient_id && (formData.patient_id !== lastFetched.current.id || formData.date !== lastFetched.current.date)) {
+    if (
+      formData.patient_id &&
+      (formData.patient_id !== lastFetched.current.id ||
+        formData.date !== lastFetched.current.date)
+    ) {
       lastFetched.current = { id: formData.patient_id, date: formData.date };
       fetchPatientData(formData.patient_id, formData.date);
     }
   }, [formData.patient_id, formData.date, fetchPatientData]);
 
-  const handleSearch = (text: string) => {
-    setSearchText(text);
-    if (text.length > 0) {
-      const filtered = patients.filter(p =>
-        p.fullName.toLowerCase().includes(text.toLowerCase()),
-      );
-      setFilteredPatients(filtered);
-      setShowDropdown(true);
+  const handlePatientSelect = (id: number | null, name: string) => {
+    if (id) {
+      setFormData(prev => ({
+        ...prev,
+        patient_id: id,
+        patientName: name,
+      }));
     } else {
-      setShowDropdown(false);
-      setFormData({ ...formData, patient_id: null, patientName: '', medications: [
-        { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
-        { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
-        { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
-      ] });
+      setFormData(prev => ({
+        ...prev,
+        patient_id: null,
+        patientName: '',
+        medications: [
+          {
+            id: null,
+            medication: '',
+            dose: '',
+            route: '',
+            frequency: '',
+            comments: '',
+          },
+          {
+            id: null,
+            medication: '',
+            dose: '',
+            route: '',
+            frequency: '',
+            comments: '',
+          },
+          {
+            id: null,
+            medication: '',
+            dose: '',
+            route: '',
+            frequency: '',
+            comments: '',
+          },
+        ],
+      }));
     }
   };
 
-  const onSelectPatient = (patient: any) => {
-    setSearchText(patient.fullName);
-    setFormData(prev => ({
-      ...prev,
-      patient_id: parseInt(patient.id, 10),
-      patientName: patient.fullName,
-    }));
-    setShowDropdown(false);
-  };
-
   const currentMed = formData.medications[step];
+  const isFormValid =
+    formData.patient_id &&
+    currentMed.medication &&
+    currentMed.medication.trim() !== '';
 
   const handleAction = async () => {
     if (!formData.patient_id) {
@@ -130,9 +159,6 @@ const MedAdministrationScreen = ({ onBack }: any) => {
           'Medication Administration records saved successfully.',
           'success',
         );
-        setTimeout(() => {
-          onBack();
-        }, 1500);
       } catch (error: any) {
         showAlert(
           'Error',
@@ -154,7 +180,10 @@ const MedAdministrationScreen = ({ onBack }: any) => {
   };
 
   const onDisabledPress = () => {
-    showAlert('Patient Required', 'Please select a patient first in the search bar.');
+    showAlert(
+      'Patient Required',
+      'Please select a patient first in the search bar.',
+    );
   };
 
   return (
@@ -164,72 +193,27 @@ const MedAdministrationScreen = ({ onBack }: any) => {
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        scrollEnabled={scrollEnabled}
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.title}>Medication {'\n'}Administration</Text>
             <Text style={styles.dateText}>{formatDate()}</Text>
           </View>
-          <TouchableOpacity onPress={onBack}>
-            <Icon name="more-vert" size={35} color={THEME_GREEN} />
-          </TouchableOpacity>
         </View>
 
-        {/* Patient Selection & Date */}
-        <View style={[styles.section, showDropdown && { zIndex: 9999 }]}>
-          <Text style={styles.sectionLabel}>PATIENT NAME :</Text>
-          <View style={styles.searchWrap}>
-            <View style={styles.searchBar}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Select Patient name"
-                placeholderTextColor="#BDBDBD"
-                value={searchText}
-                onChangeText={handleSearch}
-                onFocus={() => {
-                  if (patients.length > 0) {
-                    setFilteredPatients(
-                      searchText.length > 0
-                        ? patients.filter(p =>
-                            p.fullName
-                              .toLowerCase()
-                              .includes(searchText.toLowerCase()),
-                          )
-                        : patients,
-                    );
-                    setShowDropdown(true);
-                  }
-                }}
-              />
-            </View>
+        <PatientSearchBar
+          initialPatientName={formData.patientName}
+          onPatientSelect={handlePatientSelect}
+          onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+        />
 
-            {showDropdown && filteredPatients.length > 0 && (
-              <View style={styles.dropdown}>
-                {filteredPatients.map((item, index) => (
-                  <Pressable
-                    key={item.id ? item.id.toString() : `p-${index}`}
-                    style={({ pressed }) => [
-                      styles.dropdownItem,
-                      pressed && { opacity: 0.6 },
-                    ]}
-                    onPress={() => onSelectPatient(item)}
-                  >
-                    <Text style={styles.dropdownText}>{item.fullName}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-          </View>
-        </View>
-
-        <View style={[styles.section, { zIndex: 1 }]}>
+        <View style={styles.section}>
           <Text style={styles.sectionLabel}>DATE :</Text>
-          <TextInput
-            style={styles.inputField}
-            value={formData.date}
-            onChangeText={t => setFormData({ ...formData, date: t })}
-          />
+          <View style={styles.pillInput}>
+            <Text style={styles.dateVal}>{formData.date}</Text>
+          </View>
         </View>
 
         {/* Time Progress Banner */}
@@ -276,12 +260,26 @@ const MedAdministrationScreen = ({ onBack }: any) => {
         />
 
         {/* Footer Navigation Button */}
-        <TouchableOpacity style={styles.actionBtn} onPress={handleAction}>
-          <Text style={styles.actionBtnText}>
+        <TouchableOpacity
+          style={[styles.actionBtn, !isFormValid && styles.disabledButton]}
+          onPress={handleAction}
+          disabled={
+            !isFormValid &&
+            !!formData.patient_id &&
+            currentMed.medication !== ''
+          } // Allow press if patient not selected to show alert
+        >
+          <Text
+            style={[styles.actionBtnText, !isFormValid && { color: '#9E9E9E' }]}
+          >
             {step === 2 ? 'SUBMIT' : 'NEXT'}
           </Text>
           {step < 2 && (
-            <Icon name="chevron-right" size={24} color={THEME_GREEN} />
+            <Icon
+              name="chevron-right"
+              size={24}
+              color={isFormValid ? THEME_GREEN : '#9E9E9E'}
+            />
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -323,51 +321,37 @@ const styles = StyleSheet.create({
     color: '#035022',
     fontFamily: 'MinionPro-SemiboldItalic',
   },
-  dateText: { fontSize: 14, color: '#999', marginTop: 5 },
+  dateText: {
+    fontSize: 13,
+    fontFamily: 'AlteHaasGroteskBold',
+    color: '#999',
+  },
   section: { marginBottom: 15, zIndex: 10 },
-  searchWrap: { position: 'relative', zIndex: 999 },
   sectionLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: THEME_GREEN,
+    fontSize: 14,
+    fontFamily: 'AlteHaasGroteskBold',
+    color: '#0A8219',
     marginBottom: 8,
   },
-  searchBar: {
-    borderRadius: 25,
-    paddingHorizontal: 20,
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#F2F2F2',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  searchInput: { fontSize: 14, color: '#333' },
-  dropdown: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 56,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginTop: 5,
-    borderWidth: 1,
-    borderColor: '#eee',
-    elevation: 8,
-    zIndex: 9999,
-    maxHeight: 220,
-  },
-  dropdownItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f9f9f9',
-  },
-  dropdownText: { fontSize: 14, color: '#333' },
   inputField: {
     borderRadius: 25,
     paddingHorizontal: 20,
     height: 45,
     borderWidth: 1,
     borderColor: '#F2F2F2',
+    fontSize: 14,
+  },
+  pillInput: {
+    borderWidth: 1.5,
+    borderColor: '#EBEBEB',
+    borderRadius: 25,
+    height: 45,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+  },
+  dateVal: {
+    color: '#333',
+    fontFamily: 'AlteHaasGrotesk',
     fontSize: 14,
   },
   timeBanner: {
@@ -378,8 +362,9 @@ const styles = StyleSheet.create({
     marginVertical: 15,
   },
   timeText: {
-    color: THEME_GREEN,
-    fontWeight: 'bold',
+    color: '#29A539',
+    fontFamily: 'AlteHaasGroteskBold',
+
     fontSize: 14,
   },
   actionBtn: {
@@ -390,8 +375,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: THEME_GREEN,
+    borderColor: '#29A539',
     marginTop: 10,
+  },
+  disabledButton: {
+    backgroundColor: '#F0F0F0',
+    borderColor: '#E0E0E0',
+    opacity: 0.6,
   },
   actionBtnText: {
     color: THEME_GREEN,

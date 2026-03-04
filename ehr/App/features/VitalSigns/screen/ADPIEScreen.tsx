@@ -7,6 +7,9 @@ import {
   TextInput,
   SafeAreaView,
   ActivityIndicator,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import apiClient from '../../../api/apiClient';
@@ -120,133 +123,163 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
     }
   };
 
+  const handleBack = () => {
+    if (currentIdx > 0) {
+      setCurrentIdx(currentIdx - 1);
+      setAlert(null);
+      setText('');
+    } else {
+      onBack();
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{displayTitle}</Text>
-        <Text style={styles.subtitle}>CLINICAL DECISION SUPPORT SYSTEM</Text>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView 
+          style={styles.container} 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>{displayTitle}</Text>
+            <Text style={styles.subtitle}>CLINICAL DECISION SUPPORT SYSTEM</Text>
+          </View>
 
-      <View style={styles.patientSection}>
-        <Text style={styles.patientLabel}>PATIENT NAME :</Text>
-        <View style={styles.patientDisplay}>
-          <Text style={styles.patientNameText}>
-            {patientName || 'Patient Name'}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.stepperContainer}>
-        <View style={styles.progressLine} />
-        <View
-          style={[
-            styles.progressLineActive,
-            { width: `${(currentIdx / (STEPS.length - 1)) * 100}%` },
-          ]}
-        />
-        <View style={styles.stepperRow}>
-          {STEPS.map((s, idx) => (
-            <View key={s.id} style={styles.stepGroup}>
-              <View
-                style={[
-                  styles.circle,
-                  idx <= currentIdx
-                    ? styles.activeCircle
-                    : styles.inactiveCircle,
-                ]}
-              >
-                <Text
-                  style={
-                    idx <= currentIdx
-                      ? styles.activeCircleText
-                      : styles.inactiveCircleText
-                  }
-                >
-                  {s.id}
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.stepLabel,
-                  idx === currentIdx && styles.activeStepLabel,
-                ]}
-              >
-                {s.label}
+          <View style={styles.patientSection}>
+            <Text style={styles.patientLabel}>PATIENT NAME :</Text>
+            <View style={styles.patientDisplay}>
+              <Text style={styles.patientNameText}>
+                {patientName || 'Patient Name'}
               </Text>
             </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Clinical Support Banner */}
-      <LinearGradient
-        colors={['#0A8219', '#6CCA77', '#C8FFCF']}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={styles.clinicalBanner}
-      >
-        <View style={styles.bannerLeft}>
-          <View style={styles.iconCircle}>
-            <Icon name="info-outline" size={22} color="#fff" />
           </View>
-          <View style={styles.bannerTextContent}>
-            <Text style={styles.bannerTitle}>Clinical Support</Text>
-            <Text style={styles.bannerSubText}>
-              {alert ? 'Recommendation ready' : 'Analyzing inputs...'}
-            </Text>
+
+          <View style={styles.stepperContainer}>
+            <View style={styles.progressLineTrack}>
+              <View style={styles.progressLineGray} />
+              <View
+                style={[
+                  styles.progressLineActive,
+                  { 
+                    width: currentIdx === STEPS.length - 1 
+                      ? '100%' 
+                      : `${((currentIdx + 0.5) / (STEPS.length - 1)) * 100}%` 
+                  },
+                ]}
+              />
+            </View>
+            
+            <View style={styles.stepperRow}>
+              {STEPS.map((s, idx) => (
+                <View key={s.id} style={styles.stepGroup}>
+                  <View
+                    style={[
+                      styles.circle,
+                      idx <= currentIdx
+                        ? styles.activeCircle
+                        : styles.inactiveCircle,
+                    ]}
+                  >
+                    <Text
+                      style={
+                        idx <= currentIdx
+                          ? styles.activeCircleText
+                          : styles.inactiveCircleText
+                      }
+                    >
+                      {s.id}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.stepLabel,
+                      idx === currentIdx && styles.activeStepLabel,
+                    ]}
+                  >
+                    {s.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
 
-        <TouchableOpacity
-          style={styles.viewBtn}
-          onPress={() => setModalVisible(true)}
-        >
-          <Text style={styles.viewBtnText}>VIEW</Text>
-          <Icon name="play-arrow" size={14} color="#10B981" />
-        </TouchableOpacity>
-      </LinearGradient>
+          <LinearGradient
+            colors={['#0A8219', '#6CCA77', '#C8FFCF']}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.clinicalBanner}
+          >
+            <View style={styles.bannerLeft}>
+              <View style={styles.iconCircle}>
+                <Icon name="info-outline" size={22} color="#fff" />
+              </View>
+              <View style={styles.bannerTextContent}>
+                <Text style={styles.bannerTitle}>Clinical Support</Text>
+                <Text style={styles.bannerSubText}>
+                  {alert ? 'Recommendation ready' : 'Analyzing findings...'}
+                </Text>
+              </View>
+            </View>
 
-      <View style={styles.notepad}>
-        <View style={styles.notepadHeader}>
-          <Text style={styles.headerText}>
-            {STEPS[currentIdx].label.toUpperCase()}
-          </Text>
-        </View>
-        <View style={styles.inputArea}>
-          <View style={styles.linesContainer}>
-            {[...Array(10)].map((_, i) => (
-              <View key={i} style={styles.line} />
-            ))}
+            <TouchableOpacity
+              style={styles.viewBtn}
+              onPress={() => setModalVisible(true)}
+            >
+              <Text style={styles.viewBtnText}>VIEW</Text>
+              <Icon name="play-arrow" size={14} color="#10B981" />
+            </TouchableOpacity>
+          </LinearGradient>
+
+          <View style={styles.notepad}>
+            <View style={styles.notepadHeader}>
+              <Text style={styles.headerText}>
+                {STEPS[currentIdx].label.toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.inputArea}>
+              <View style={styles.linesContainer}>
+                {[...Array(10)].map((_, i) => (
+                  <View key={i} style={styles.line} />
+                ))}
+              </View>
+              <TextInput
+                multiline
+                style={styles.input}
+                value={text}
+                onChangeText={setText}
+                scrollEnabled={false}
+                placeholder={`Enter ${STEPS[currentIdx].label}...`}
+              />
+            </View>
           </View>
-          <TextInput
-            multiline
-            style={styles.input}
-            value={text}
-            onChangeText={setText}
-            placeholder={`Enter ${STEPS[currentIdx].label}...`}
-          />
-        </View>
-      </View>
 
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.backBtn} onPress={onBack} disabled={loading}>
-          <Icon name="arrow-back" size={24} color="#666" />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.nextBtn, loading && { opacity: 0.7 }]} onPress={handleNext} disabled={loading}>
-          {loading ? (
-            <ActivityIndicator size="small" color={THEME_GREEN} />
-          ) : (
-            <Text style={styles.nextText}>
-              {currentIdx === 3 ? 'SUBMIT' : 'NEXT'}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.backBtn} onPress={handleBack} disabled={loading}>
+              <Icon name="arrow-back" size={24} color="#666" />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.nextBtn, loading && { opacity: 0.7 }]} onPress={handleNext} disabled={loading}>
+              {loading ? (
+                <ActivityIndicator size="small" color={THEME_GREEN} />
+              ) : (
+                <Text style={styles.nextText}>
+                  {currentIdx === 3 ? 'SUBMIT' : 'NEXT'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <CDSSGuidanceModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        alertText={alert}
+        category={STEPS[currentIdx].label}
+        alertText={alert || 'Continue documenting to receive real-time support.'}
       />
 
       <SweetAlert
@@ -265,10 +298,14 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#fff' },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
     paddingHorizontal: 25,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
   header: { marginTop: 40, marginBottom: 25 },
   title: {
@@ -279,9 +316,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 10, color: '#999', letterSpacing: 0.5 },
   patientSection: { marginBottom: 20 },
   patientLabel: {
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: 'bold',
-    color: THEME_GREEN,
+    color: '#0A8219',
     marginBottom: 8,
   },
   patientDisplay: {
@@ -298,20 +335,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     position: 'relative',
   },
-  progressLine: {
+  progressLineTrack: {
     position: 'absolute',
     top: 18,
     left: 40,
     right: 40,
     height: 2,
-    backgroundColor: '#F3F4F6',
     zIndex: 0,
+  },
+  progressLineGray: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#F3F4F6',
   },
   progressLineActive: {
     position: 'absolute',
-    top: 18,
-    left: 40,
-    height: 2,
+    left: 0,
+    top: 0,
+    bottom: 0,
     backgroundColor: '#FDE68A',
     zIndex: 1,
   },
@@ -390,7 +434,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   notepad: {
-    flex: 1,
+    minHeight: 250,
     backgroundColor: '#FFFBEB',
     borderRadius: 25,
     borderWidth: 1,
@@ -412,13 +456,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#333',
     zIndex: 2,
+    minHeight: 200,
   },
   linesContainer: { ...StyleSheet.absoluteFillObject, paddingTop: 40 },
   line: { height: 1, backgroundColor: '#FEF3C7', marginBottom: 30 },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingBottom: 30,
+    paddingBottom: 20,
     alignItems: 'center',
   },
   backBtn: {

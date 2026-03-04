@@ -7,7 +7,11 @@ interface VitalCardProps {
   onChangeText: (text: string) => void;
 }
 
-const VitalCard: React.FC<VitalCardProps> = ({ label, value, onChangeText }) => (
+const VitalCard: React.FC<VitalCardProps> = ({
+  label,
+  value,
+  onChangeText,
+}) => (
   <View style={styles.cardContainer}>
     {/* Outer Box / Label Header Area */}
     <View style={styles.labelWrapper}>
@@ -15,8 +19,8 @@ const VitalCard: React.FC<VitalCardProps> = ({ label, value, onChangeText }) => 
     </View>
     {/* Inner Box / Input Field Area */}
     <View style={styles.inputWrapper}>
-      <TextInput 
-        style={styles.innerInput} 
+      <TextInput
+        style={styles.innerInput}
         value={value}
         onChangeText={onChangeText}
         keyboardType="numeric"
@@ -29,7 +33,7 @@ const VitalCard: React.FC<VitalCardProps> = ({ label, value, onChangeText }) => 
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: '#FFEDC1', // FFEDC1 bg of the text
+    backgroundColor: '#FFEDC1',
     borderRadius: 25,
     marginBottom: 15,
     height: 75,
@@ -40,20 +44,20 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   labelText: {
-    color: '#EDB62C', // EDB62C for text label
-    fontWeight: 'bold',
-    fontSize: 12,
+    color: '#EDB62C',
+    fontFamily: 'AlteHaasGroteskBold',
+    fontSize: 13,
   },
   inputWrapper: {
     flex: 1,
-    backgroundColor: '#FFFAED', // FFFAED color of the input box
-    borderRadius: 20, // Border radius for the inner box
+    backgroundColor: '#FFFAED',
+    borderRadius: 20,
     justifyContent: 'center',
-    marginHorizontal: 0, // Same width with FFEDC1 box
+    marginHorizontal: 0,
   },
   innerInput: {
     textAlign: 'center',
-    fontSize: 20,
+    fontSize: 14,
     color: '#333',
     fontWeight: '600',
   },

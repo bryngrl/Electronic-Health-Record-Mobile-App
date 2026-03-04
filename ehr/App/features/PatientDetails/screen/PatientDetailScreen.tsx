@@ -15,12 +15,14 @@ import DetailItem from '../components/DetailItem';
 
 const { width } = Dimensions.get('window');
 const backArrow = require('../../../../assets/icons/back_arrow.png');
+const editIcon = require('../../../../assets/icons/edit_icon.png');
 
 interface PatientDetailsScreenProps {
   route?: any;
   navigation?: any;
   patientId?: number;
   onBack?: () => void;
+  onEdit?: (patientId: number) => void;
 }
 
 const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
@@ -28,6 +30,7 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
   navigation,
   patientId: propPatientId,
   onBack,
+  onEdit,
 }) => {
   const patientId = propPatientId || route?.params?.patientId || 1;
   const { getPatientById } = usePatients();
@@ -51,6 +54,17 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
     fetchDetails();
   }, [patientId, getPatientById]);
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loaderContainer}>
@@ -61,29 +75,40 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.mainContainer}>
-      {/* Decorative Background Circles from Image */}
-      <View style={[styles.circle1, styles.topCircle1]} />
-      <View style={[styles.circle2, styles.topCircle2]} />
-      <View style={[styles.circle1, styles.bottomCircle1]} />
-      <View style={[styles.circle2, styles.bottomCircle2]} />
+      {/* Decorative Background Circles - Z-INDEX 0 */}
+      <View pointerEvents="none" style={[styles.circle1, styles.topCircle1]} />
+      <View pointerEvents="none" style={[styles.circle2, styles.topCircle2]} />
+      <View
+        pointerEvents="none"
+        style={[styles.circle1, styles.bottomCircle1]}
+      />
+      <View
+        pointerEvents="none"
+        style={[styles.circle2, styles.bottomCircle2]}
+      />
 
+      {/* Main Content - Z-INDEX 1 */}
       <ScrollView
+        style={styles.scrollViewLayer}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Header Section */}
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => (onBack ? onBack() : navigation?.goBack())}
-            style={styles.backButton}
-          >
-            <Image source={backArrow} style={styles.backIcon} />
-          </TouchableOpacity>
-          <View>
-            <Text style={styles.titleText}>Patient Details</Text>
-            <Text style={styles.admittedDate}>
-              Date admitted : {patient?.date_admitted || 'January 12, 2026'}
-            </Text>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity
+              onPress={() => (onBack ? onBack() : navigation?.goBack())}
+              style={styles.backButton}
+            >
+              <Image source={backArrow} style={styles.backIcon} />
+            </TouchableOpacity>
+            <View>
+              <Text style={styles.titleText}>Patient Details</Text>
+              <Text style={styles.admittedDate}>
+                Date admitted :{' '}
+                {formatDate(patient?.admission_date) || 'January 12, 2026'}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -95,9 +120,19 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
             </Text>
           </View>
           <View style={styles.nameContainer}>
-            <Text style={styles.fullName}>
-              {patient?.first_name} {patient?.last_name}
-            </Text>
+            <View style={styles.nameEditRow}>
+              <Text style={styles.fullName}>
+                {patient?.first_name} {patient?.last_name}
+              </Text>
+              <TouchableOpacity
+                onPress={() => onEdit && onEdit(patientId)}
+                style={styles.editButton}
+              >
+                <View style={styles.iconCircleWrapperSmall}>
+                  <Image source={editIcon} style={styles.editIconStyle} />
+                </View>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.ageText}>{patient?.age || '67'} years old</Text>
           </View>
         </View>
@@ -107,7 +142,7 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
           <View style={styles.row}>
             <DetailItem
               label="Birthdate"
-              value={patient?.birthdate}
+              value={formatDate(patient?.birthdate)}
               halfWidth
             />
             <DetailItem label="Sex" value={patient?.sex} halfWidth />
@@ -177,20 +212,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  // Ensure the ScrollView is on top of absolute background elements
+  scrollViewLayer: {
+    zIndex: 1,
+  },
   scrollContent: {
     paddingHorizontal: 40,
     paddingTop: 0,
     paddingBottom: 50,
   },
-  // Decorative Circles Styling
   circle1: {
     position: 'absolute',
     width: width * 0.7,
     height: width * 0.7,
     borderRadius: (width * 0.7) / 2,
     backgroundColor: 'rgba(73, 214, 91, 1)',
-
     opacity: 0.5,
+    zIndex: 0, // Lowered
   },
   circle2: {
     position: 'absolute',
@@ -199,6 +237,7 @@ const styles = StyleSheet.create({
     borderRadius: (width * 0.7) / 2,
     backgroundColor: 'rgba(200, 255, 207, 1)',
     opacity: 0.5,
+    zIndex: 0, // Lowered
   },
   topCircle1: {
     top: -270,
@@ -207,7 +246,7 @@ const styles = StyleSheet.create({
   topCircle2: {
     top: -150,
     right: -200,
-    zIndex: 100,
+    // Removed zIndex: 100 as it was blocking content
   },
   bottomCircle1: {
     bottom: -170,
@@ -219,13 +258,20 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 20,
     marginBottom: 40,
+    zIndex: 10,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
   backButton: {
     marginRight: 15,
     marginTop: 10,
+    zIndex: 20,
   },
   backIcon: {
     width: 24,
@@ -247,6 +293,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 35,
+    zIndex: 10,
   },
   avatar: {
     width: 85,
@@ -263,6 +310,32 @@ const styles = StyleSheet.create({
   },
   nameContainer: {
     marginLeft: 20,
+    flex: 1,
+  },
+  nameEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  editButton: {
+    padding: 5,
+    zIndex: 50,
+  },
+  editIconStyle: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  iconCircleWrapperSmall: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: '#FFD54F',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    overflow: 'hidden',
   },
   fullName: {
     fontSize: 18,

@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, View, Text, TextInput, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 
 interface DataCardProps {
   badgeText: string;
@@ -10,6 +10,9 @@ interface DataCardProps {
   onDisabledPress?: () => void;
 }
 
+const LINE_HEIGHT = 28;
+const INPUT_PADDING_BOTTOM = 20;
+
 const DataCard: React.FC<DataCardProps> = ({
   badgeText,
   value,
@@ -18,44 +21,71 @@ const DataCard: React.FC<DataCardProps> = ({
   disabled = false,
   onDisabledPress,
 }) => {
+  // Initialized to exactly 4 visible lines (4 * 28) plus the padding
+  const [inputHeight, setInputHeight] = useState(
+    4 * LINE_HEIGHT + INPUT_PADDING_BOTTOM,
+  );
+
+  // Subtract the padding so numLines accurately reflects the visual typing area
+  const visibleTypingHeight = Math.max(0, inputHeight - INPUT_PADDING_BOTTOM);
+  const numLines = Math.max(4, Math.ceil(visibleTypingHeight / LINE_HEIGHT));
+
+  const renderLines = () => {
+    const lines = [];
+    for (let i = 0; i < numLines; i++) {
+      const topPosition = (i + 1) * LINE_HEIGHT;
+
+      lines.push(
+        <View
+          key={i}
+          style={[
+            styles.line,
+            {
+              top: topPosition,
+              left: 10,
+              right: 10, // Full width on both sides
+            },
+          ]}
+        />,
+      );
+    }
+    return lines;
+  };
+
   return (
-    <View style={styles.card}>
-      {/* Top Header Section: Badge + Line */}
-      <View style={styles.headerRow}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{badgeText}</Text>
-        </View>
-        <View style={styles.headerLine} />
+    <View style={[styles.card, disabled && {}]}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.headerText}>{badgeText}</Text>
       </View>
 
-      {/* Input Section: Simulating the horizontal lines from the image */}
-      <Pressable
-        style={styles.inputContainer}
-        onPress={() => {
-          if (disabled && onDisabledPress) {
-            onDisabledPress();
-          }
-        }}
-      >
-        {/* Visual guide lines moved behind the text for better alignment */}
-        <View style={styles.linesContainer}>
-          <View style={styles.guideLine} />
-          <View style={styles.guideLine} />
-          <View style={styles.guideLine} />
-        </View>
+      <View style={styles.content}>
+        <Pressable
+          style={styles.inputArea}
+          onPress={() => {
+            if (disabled && onDisabledPress) {
+              onDisabledPress();
+            }
+          }}
+        >
+          <View style={styles.linesContainer} pointerEvents="none">
+            {renderLines()}
+          </View>
 
-        <TextInput
-          style={styles.input}
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor="#D1D1D1"
-          multiline={true}
-          blurOnSubmit={true}
-          editable={!disabled}
-          pointerEvents={disabled ? 'none' : 'auto'}
-        />
-      </Pressable>
+          <TextInput
+            style={styles.input}
+            value={value}
+            onChangeText={onChangeText}
+            multiline
+            editable={!disabled}
+            placeholder={placeholder}
+            placeholderTextColor="#D1D1D1"
+            pointerEvents={disabled ? 'none' : 'auto'}
+            onContentSizeChange={e => {
+              setInputHeight(e.nativeEvent.contentSize.height);
+            }}
+          />
+        </Pressable>
+      </View>
     </View>
   );
 };
@@ -63,62 +93,50 @@ const DataCard: React.FC<DataCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFAED',
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 15,
-    // Subtle shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    borderRadius: 25,
+    marginBottom: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
   },
-  headerRow: {
-    flexDirection: 'row',
+  cardHeader: {
+    backgroundColor: '#FFEDC1',
+    paddingVertical: 6,
     alignItems: 'center',
-    marginBottom: 10,
   },
-  badge: {
-    backgroundColor: '#FFEEC2',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 10,
-    marginRight: 10,
-  },
-  badgeText: {
+  headerText: {
     color: '#EDB62C',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontFamily: 'AlteHaasGroteskBold',
+    fontSize: 14,
   },
-  headerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#F2E8D5',
-  },
-  inputContainer: {
-    marginTop: 0,
-    marginBottom: 10,
-
-    minHeight: 90,
+  content: {
+    padding: 15,
     position: 'relative',
+  },
+  inputArea: {
+    minHeight: 112,
+    position: 'relative',
+  },
+  input: {
+    fontSize: 14,
+    color: '#333',
+    textAlignVertical: 'top',
+    zIndex: 2,
+    padding: 10,
+    paddingTop: 0,
+    paddingBottom: INPUT_PADDING_BOTTOM,
+    lineHeight: LINE_HEIGHT,
+    minHeight: 112,
+    includeFontPadding: false,
   },
   linesContainer: {
     ...StyleSheet.absoluteFillObject,
-  },
-  input: {
-    fontSize: 15,
-    color: '#444',
-    paddingVertical: 0,
-    paddingTop: 0,
-    textAlignVertical: 'top',
-    lineHeight: 30,
     zIndex: 1,
   },
-  guideLine: {
-    height: 30,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F2E8D5',
+  line: {
+    height: 1,
+    backgroundColor: '#D9D9D9',
+    position: 'absolute',
   },
 });
 

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 from datetime import datetime
@@ -28,7 +29,7 @@ class AssessmentCreate(BaseModel):
     iv_fluids: Optional[int] = None        # IV fluids in mL
     urine_output: Optional[int] = None     # urine output in mL
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class AssessmentUpdate(BaseModel):
@@ -37,42 +38,42 @@ class AssessmentUpdate(BaseModel):
     iv_fluids: Optional[int] = None        # IV fluids in mL
     urine_output: Optional[int] = None     # urine output in mL
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class DiagnosisUpdate(BaseModel):
     """Step 2: Add Diagnosis"""
     diagnosis: str
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class PlanningUpdate(BaseModel):
     """Step 3: Add Planning"""
     planning: str
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class InterventionUpdate(BaseModel):
     """Step 4: Add Intervention"""
     intervention: str
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class EvaluationUpdate(BaseModel):
     """Step 5: Add Evaluation"""
     evaluation: str
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class IntakeAndOutputRead(BaseModel):
     """Complete ADPIE record"""
     id: int
     patient_id: int
-    # Assessment (combined inputs + combined alert)
+    # Assessment
     oral_intake: Optional[int] = None
     iv_fluids: Optional[int] = None
     urine_output: Optional[int] = None
@@ -100,7 +101,7 @@ class IntakeAndOutputRead(BaseModel):
 
 def _run_assessment_cdss(data: dict) -> dict:
     """
-    Run CDSS on all 3 assessment inputs using NUMERICAL COMPARISON.
+    Run CDSS on assessment inputs using NUMERICAL COMPARISON.
     Evaluates combined fluid intake vs output to determine hydration status.
     """
     oral = data.get("oral_intake") or 0
@@ -115,49 +116,31 @@ def _run_assessment_cdss(data: dict) -> dict:
     # CRITICAL: Oliguria (urine output <400 mL in 24hr, <200 mL in 8hr)
     if 0 < urine < 400:
         alerts.append(f"🔴 OLIGURIA ALERT: Urine output {urine}mL (<400mL). Risk of acute kidney injury (AKI).")
-        alerts.append("Monitor vital signs, assess fluid status, check BUN/Cr levels, consider catheterization for accurate I&O.")
         severity = "critical"
     
     # CRITICAL: Anuria (urine output near zero)
-    elif urine == 0:
-        alerts.append(f"🔴 ANURIA ALERT: No urine output detected. Risk of acute renal failure.")
-        alerts.append("Assess for urinary retention, check catheter patency, notify provider immediately.")
+    elif urine == 0 and (oral > 0 or iv > 0):
+        alerts.append(f"🔴 ANURIA ALERT: No urine output detected despite intake. Risk of acute renal failure.")
         severity = "critical"
     
     # CRITICAL: Severe dehydration (very low intake + very low output)
-    elif total_intake < 500 and urine < 500:
+    elif total_intake < 500 and urine < 500 and (total_intake > 0 or urine > 0):
         alerts.append(f"🔴 SEVERE DEHYDRATION: Intake {total_intake}mL is critically low, output {urine}mL also decreased.")
-        alerts.append("Risk of hypovolemic shock. Increase IV fluid rate, monitor vital signs continuously, assess mucous membranes/skin turgor.")
         severity = "critical"
-    
-    # WARNING: Moderate dehydration (low intake + low output)
-    elif total_intake < 800 and urine < 800:
-        alerts.append(f"🟠 DEHYDRATION WARNING: Low intake {total_intake}mL and low output {urine}mL.")
-        alerts.append("Monitor for dizziness, weakness. Increase fluid intake gradually, reassess in 2-4 hours.")
-        if severity != "critical": severity = "warning"
     
     # WARNING: Fluid overload (high intake + inadequate output)
     elif total_intake > 2500 and urine < 1500:
         alerts.append(f"🟠 FLUID OVERLOAD WARNING: High intake {total_intake}mL vs output {urine}mL.")
-        alerts.append("Monitor for edema, dyspnea, weight gain, pulmonary crackles. Consider fluid restriction, diuretics if indicated.")
-        if severity != "critical": severity = "warning"
+        severity = "warning"
     
     # WARNING: Output significantly exceeds intake (potential dehydration or excessive losses)
     elif total_intake > 0 and urine > (total_intake * 1.5):
         alerts.append(f"🟠 OUTPUT EXCEEDS INTAKE: Output {urine}mL >> Intake {total_intake}mL.")
-        alerts.append("Fluid losses exceed replacement. Increase intake, assess for diuretics/laxatives, monitor for dehydration signs.")
-        if severity != "critical": severity = "warning"
+        severity = "warning"
     
     # INFO: Adequate hydration (balanced intake/output)
     elif 1200 <= total_intake <= 2500 and 800 <= urine <= 1500:
         alerts.append(f"✓ Hydration ADEQUATE: Intake {total_intake}mL, Output {urine}mL (balanced).")
-        alerts.append("Continue current fluid regimen. Maintain monitoring of I&O q4-8h.")
-        severity = "info"
-    
-    # INFO: Acceptable range (slightly low but within acceptable limits)
-    elif 800 <= total_intake <= 1200 and 500 <= urine <= 1000:
-        alerts.append(f"✓ Hydration ACCEPTABLE: Intake {total_intake}mL, Output {urine}mL (low-normal).")
-        alerts.append("Monitor closely. Encourage oral intake if patient is alert and able to drink.")
         severity = "info"
     
     # INFO: No data yet
@@ -178,7 +161,7 @@ def _run_assessment_cdss(data: dict) -> dict:
 
 @router.post("/", response_model=IntakeAndOutputRead)
 def create_intake_and_output(payload: AssessmentCreate, db: Session = Depends(get_db)):
-    """Step 1: Create Intake and Output (Assessment). CDSS alerts are auto-generated."""
+    """Step 1: Create or Update Intake and Output (Assessment). CDSS alerts are auto-generated."""
     # Verify patient exists
     patient = db.query(Patient).filter(Patient.patient_id == payload.patient_id).first()
     if not patient:
@@ -189,19 +172,44 @@ def create_intake_and_output(payload: AssessmentCreate, db: Session = Depends(ge
     # Run CDSS to generate alerts
     alerts = _run_assessment_cdss(data)
 
-    # Build the record
     now = datetime.utcnow()
-    record = IntakeAndOutput(
-        **data,
-        **alerts,
-        created_at=now,
-        updated_at=now,
-    )
+    # Check for existing record for this patient from today
+    today = now.date()
+    existing_record = db.query(IntakeAndOutput).filter(
+        IntakeAndOutput.patient_id == payload.patient_id,
+        func.date(IntakeAndOutput.created_at) == today
+    ).first()
 
-    db.add(record)
+    if existing_record:
+        # Update
+        for key, value in data.items():
+            if key != "patient_id":
+                setattr(existing_record, key, value)
+        for key, value in alerts.items():
+            setattr(existing_record, key, value)
+        existing_record.updated_at = now
+        record = existing_record
+    else:
+        # Create
+        record = IntakeAndOutput(
+            **data,
+            **alerts,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(record)
+
     db.commit()
     db.refresh(record)
     return record
+
+
+@router.post("/check-alerts")
+def check_io_alerts(payload: AssessmentCreate):
+    """Simulate CDSS alerts for I&O without saving to DB (for real-time UI)."""
+    data = payload.model_dump()
+    alerts = _run_assessment_cdss(data)
+    return alerts
 
 
 @router.put("/{record_id}/assessment", response_model=IntakeAndOutputRead)
@@ -321,66 +329,16 @@ def list_by_patient(patient_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{record_id}", response_model=IntakeAndOutputRead)
 def get_record(record_id: int, db: Session = Depends(get_db)):
-    """Get a single intake and output record (complete ADPIE) by ID."""
+    """Get a single record (complete ADPIE) by ID."""
     record = db.query(IntakeAndOutput).filter(IntakeAndOutput.id == record_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Intake and output record not found")
     return record
 
 
-@router.get("/{record_id}/extract-adpie")
-def extract_adpie(record_id: int, db: Session = Depends(get_db)):
-    """
-    Extract complete ADPIE record and return formatted output.
-    Nurse can use this to view/print the full intake and output workflow.
-    """
-    record = db.query(IntakeAndOutput).filter(IntakeAndOutput.id == record_id).first()
-    if not record:
-        raise HTTPException(status_code=404, detail="Intake and output record not found")
-
-    # Get patient info
-    patient = db.query(Patient).filter(Patient.patient_id == record.patient_id).first()
-
-    return {
-        "patient": {
-            "id": patient.patient_id,
-            "name": f"{patient.first_name} {patient.last_name}",
-            "age": patient.age,
-            "admission_date": patient.admission_date,
-        },
-        "record_id": record.id,
-        "adpie": {
-            "assessment": {
-                "oral_intake": record.oral_intake,
-                "iv_fluids": record.iv_fluids,
-                "urine_output": record.urine_output,
-                "assessment_alert": record.assessment_alert,
-            },
-            "diagnosis": {
-                "input": record.diagnosis,
-                "alert": record.diagnosis_alert,
-            },
-            "planning": {
-                "input": record.planning,
-                "alert": record.planning_alert,
-            },
-            "intervention": {
-                "input": record.intervention,
-                "alert": record.intervention_alert,
-            },
-            "evaluation": {
-                "input": record.evaluation,
-                "alert": record.evaluation_alert,
-            },
-        },
-        "created_at": record.created_at,
-        "updated_at": record.updated_at,
-    }
-
-
 @router.delete("/{record_id}")
 def delete_record(record_id: int, db: Session = Depends(get_db)):
-    """Delete an intake and output record."""
+    """Delete a record."""
     record = db.query(IntakeAndOutput).filter(IntakeAndOutput.id == record_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Intake and output record not found")

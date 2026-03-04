@@ -1,6 +1,4 @@
-// seed.js
 const axios = require('axios');
-
 const patients = [
   {
     first_name: 'Juan',
@@ -17,7 +15,7 @@ const patients = [
     room_no: '402',
     bed_no: 'A',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-01-04',
     contact_name: 'Maria Dela Cruz',
     contact_relationship: 'Spouse',
     contact_number: '09171234567',
@@ -37,7 +35,7 @@ const patients = [
     room_no: 'ICU-1',
     bed_no: '01',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-02-14',
     contact_name: 'Ricardo Guevarra',
     contact_relationship: 'Son',
     contact_number: '09189876543',
@@ -57,7 +55,7 @@ const patients = [
     room_no: 'Pedia-10',
     bed_no: '04',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-02-20',
     contact_name: 'Angela Mercado',
     contact_relationship: 'Mother',
     contact_number: '09225550011',
@@ -77,7 +75,7 @@ const patients = [
     room_no: 'OB-2',
     bed_no: 'B',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-01-15',
     contact_name: 'Nasser Usman',
     contact_relationship: 'Brother',
     contact_number: '09991112233',
@@ -97,7 +95,7 @@ const patients = [
     room_no: '205',
     bed_no: '02',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-02-28',
     contact_name: 'Sarah Wilson',
     contact_relationship: 'Sister',
     contact_number: '09154443322',
@@ -117,7 +115,7 @@ const patients = [
     room_no: '301',
     bed_no: '15',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-01-22',
     contact_name: 'Lin Chen',
     contact_relationship: 'Father',
     contact_number: '09162223344',
@@ -137,7 +135,7 @@ const patients = [
     room_no: '112',
     bed_no: 'A1',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-03-01',
     contact_name: 'Ibrahim Musa',
     contact_relationship: 'Husband',
     contact_number: '09278889900',
@@ -157,7 +155,7 @@ const patients = [
     room_no: 'Pedia-05',
     bed_no: '12',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-02-08',
     contact_name: 'Liza Salvador',
     contact_relationship: 'Mother',
     contact_number: '09451114477',
@@ -177,7 +175,7 @@ const patients = [
     room_no: '505',
     bed_no: '05',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-01-30',
     contact_name: 'Henry Tan',
     contact_relationship: 'Spouse',
     contact_number: '09192228833',
@@ -197,7 +195,7 @@ const patients = [
     room_no: 'ER-04',
     bed_no: '01',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-02-11',
     contact_name: 'Amit Sharma',
     contact_relationship: 'Husband',
     contact_number: '09556667788',
@@ -217,7 +215,7 @@ const patients = [
     room_no: 'Geriatric-1',
     bed_no: '03',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-01-10',
     contact_name: 'Teresa Bautista',
     contact_relationship: 'Daughter',
     contact_number: '09173332211',
@@ -237,7 +235,7 @@ const patients = [
     room_no: 'Surgical-3',
     bed_no: '09',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-03-02',
     contact_name: 'Mark Rivera',
     contact_relationship: 'Father',
     contact_number: '09087776655',
@@ -257,7 +255,7 @@ const patients = [
     room_no: '202',
     bed_no: '10',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-02-05',
     contact_name: 'Sita Maling',
     contact_relationship: 'Wife',
     contact_number: '09664445566',
@@ -277,7 +275,7 @@ const patients = [
     room_no: 'Pedia-ICU',
     bed_no: '02',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-01-25',
     contact_name: 'John Smith',
     contact_relationship: 'Father',
     contact_number: '09152221111',
@@ -297,7 +295,7 @@ const patients = [
     room_no: '108',
     bed_no: 'B2',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-02-19',
     contact_name: 'Yumi Tanaka',
     contact_relationship: 'Sister',
     contact_number: '09328884455',
@@ -317,7 +315,7 @@ const patients = [
     room_no: '310',
     bed_no: '01',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-01-08',
     contact_name: 'Paul Reyes',
     contact_relationship: 'Grandson',
     contact_number: '09475551234',
@@ -337,7 +335,7 @@ const patients = [
     room_no: 'Isolation-1',
     bed_no: '01',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-02-22',
     contact_name: 'Gina Castro',
     contact_relationship: 'Aunt',
     contact_number: '09051119988',
@@ -357,7 +355,7 @@ const patients = [
     room_no: '415',
     bed_no: '04',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-01-18',
     contact_name: 'Zaid Khan',
     contact_relationship: 'Brother',
     contact_number: '09164448822',
@@ -377,7 +375,7 @@ const patients = [
     room_no: 'Dental-01',
     bed_no: 'N/A',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-02-12',
     contact_name: 'Luz Cruz',
     contact_relationship: 'Mother',
     contact_number: '09283334411',
@@ -397,37 +395,37 @@ const patients = [
     room_no: 'OB-Wait',
     bed_no: '05',
     user_id: 1,
-    admission_date: '2026-02-18',
+    admission_date: '2026-03-01',
     contact_name: 'Crisostomo Ibarra',
     contact_relationship: 'Fiancé',
     contact_number: '09170001111',
   },
 ];
 
-// 2. Your Backend Configuration
-const API_URL = 'http://192.168.125.219:8000/patients/';
+const YOUR_IP = '192.168.1.13'; //change this to match your current ip (ipconfig in cmd prompt)
+const API_URL = 'http://' + YOUR_IP + ':8000/patients/';
 
 async function runSeed() {
-  console.log(`🚀 Starting seed process for ${patients.length} patients...`);
+  console.log(`Starting seed process for ${patients.length} patients...`);
 
   for (let i = 0; i < patients.length; i++) {
     try {
       const response = await axios.post(API_URL, patients[i]);
       console.log(
-        `✅ [${i + 1}/${patients.length}] Success: ${patients[i].first_name} ${
+        ` --[${i + 1}/${patients.length}] Success: ${patients[i].first_name} ${
           patients[i].last_name
         }`,
       );
     } catch (error) {
       console.error(
-        `❌ [${i + 1}/${patients.length}] Failed: ${
+        ` --[${i + 1}/${patients.length}] Failed: ${
           patients[i].first_name
         }. Error: ${error.message}`,
       );
     }
   }
 
-  console.log('🏁 Seeding complete!');
+  console.log('Seeding complete!');
 }
 
 runSeed();

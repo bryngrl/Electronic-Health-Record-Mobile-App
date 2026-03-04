@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 from datetime import datetime
@@ -33,7 +34,7 @@ class AssessmentCreate(BaseModel):
     extremities: Optional[str] = None
     neurological: Optional[str] = None
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class AssessmentUpdate(BaseModel):
@@ -47,35 +48,35 @@ class AssessmentUpdate(BaseModel):
     extremities: Optional[str] = None
     neurological: Optional[str] = None
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class DiagnosisUpdate(BaseModel):
     """Step 2: Add Diagnosis"""
     diagnosis: str
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class PlanningUpdate(BaseModel):
     """Step 3: Add Planning"""
     planning: str
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class InterventionUpdate(BaseModel):
     """Step 4: Add Intervention"""
     intervention: str
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class EvaluationUpdate(BaseModel):
     """Step 5: Add Evaluation"""
     evaluation: str
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class PhysicalExamRead(BaseModel):
@@ -139,7 +140,7 @@ def _run_assessment_cdss(data: dict) -> dict:
 
 @router.post("/", response_model=PhysicalExamRead)
 def create_physical_exam(payload: AssessmentCreate, db: Session = Depends(get_db)):
-    """Step 1: Create Physical Exam (Assessment). CDSS alerts are auto-generated."""
+    """Step 1: Create or Update Physical Exam (Assessment). CDSS alerts are auto-generated."""
     # Verify patient exists
     patient = db.query(Patient).filter(Patient.patient_id == payload.patient_id).first()
     if not patient:
@@ -150,16 +151,33 @@ def create_physical_exam(payload: AssessmentCreate, db: Session = Depends(get_db
     # Run CDSS to generate alerts
     alerts = _run_assessment_cdss(data)
 
-    # Build the record
     now = datetime.utcnow()
-    record = PhysicalExam(
-        **data,
-        **alerts,
-        created_at=now,
-        updated_at=now,
-    )
+    # Check for existing record for this patient on this day (today)
+    today = now.date()
+    existing_record = db.query(PhysicalExam).filter(
+        PhysicalExam.patient_id == payload.patient_id,
+        func.date(PhysicalExam.created_at) == today
+    ).first()
 
-    db.add(record)
+    if existing_record:
+        # Update
+        for key, value in data.items():
+            if key != "patient_id":
+                setattr(existing_record, key, value)
+        for key, value in alerts.items():
+            setattr(existing_record, key, value)
+        existing_record.updated_at = now
+        record = existing_record
+    else:
+        # Create
+        record = PhysicalExam(
+            **data,
+            **alerts,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(record)
+
     db.commit()
     db.refresh(record)
     return record

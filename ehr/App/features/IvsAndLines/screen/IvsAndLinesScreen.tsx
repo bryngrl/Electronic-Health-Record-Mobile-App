@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,7 +7,11 @@ import {
   SafeAreaView,
   ActivityIndicator,
   TouchableOpacity,
+  BackHandler,
+  Image,
 } from 'react-native';
+
+const backArrow = require('../../../../assets/icons/back_arrow.png');
 import useIvsAndLinesData from '../hook/useIvsAndLinesData';
 import DataCard from '../components/DataCard';
 import PatientSearchBar from '../../../components/PatientSearchBar';
@@ -48,6 +52,19 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
     message: '',
     type: 'info',
   });
+
+  const handleBackPress = useCallback(() => {
+    onBack();
+    return true;
+  }, [onBack]);
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      handleBackPress,
+    );
+    return () => backHandler.remove();
+  }, [handleBackPress]);
 
   const formatDate = () => {
     const date = new Date();
@@ -208,6 +225,19 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 40,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  backBtn: {
+    marginTop: 12,
+    marginRight: 10,
+  },
+  backIcon: {
+    width: 25,
+    height: 25,
+    resizeMode: 'contain',
+  },
   titleText: {
     marginBottom: -10,
     fontSize: 35,
@@ -216,7 +246,8 @@ const styles = StyleSheet.create({
   },
   dateText: {
     color: '#9B9B9B',
-    fontSize: 16,
+    fontSize: 13,
+    fontFamily: 'AlteHaasGroteskBold',
     marginTop: 5,
   },
   submitButton: {
