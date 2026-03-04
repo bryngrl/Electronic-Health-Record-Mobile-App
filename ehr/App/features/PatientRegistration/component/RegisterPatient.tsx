@@ -15,13 +15,12 @@ import { Dropdown } from 'react-native-element-dropdown';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import apiClient from '../../../api/apiClient';
 
-// Constants for Theme
 const THEME_GREEN = '#035022';
 const BANNER_GREEN = '#E5FFE8';
 const REQUIRED_RED = '#FF0000';
 const PLACEHOLDER_COLOR = '#999';
 
-// Dropdown Helper Data
+// Dropdown Data
 const months = [
   { label: 'January', value: '01' },
   { label: 'February', value: '02' },
@@ -42,15 +41,37 @@ const days = Array.from({ length: 31 }, (_, i) => ({
   value: (i + 1).toString().padStart(2, '0'),
 }));
 
-const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 100 }, (_, i) => ({
-  label: (currentYear - i).toString(),
-  value: (currentYear - i).toString(),
+  label: (new Date().getFullYear() - i).toString(),
+  value: (new Date().getFullYear() - i).toString(),
 }));
 
 const sexData = [
   { label: 'Male', value: 'Male' },
   { label: 'Female', value: 'Female' },
+];
+
+const religionData = [
+  { label: 'Roman Catholic', value: 'Roman Catholic' },
+  { label: 'Islam', value: 'Islam' },
+  { label: 'Iglesia ni Cristo', value: 'Iglesia ni Cristo' },
+  { label: 'Other', value: 'Other' },
+];
+
+const ethnicityData = [
+  { label: 'Tagalog', value: 'Tagalog' },
+  { label: 'Cebuano', value: 'Cebuano' },
+  { label: 'Ilocano', value: 'Ilocano' },
+  { label: 'Other', value: 'Other' },
+];
+
+const roomData = [
+  { label: 'Room 101', value: '101' },
+  { label: 'Room 102', value: '102' },
+];
+const bedData = [
+  { label: 'Bed A', value: 'A' },
+  { label: 'Bed B', value: 'B' },
 ];
 
 interface Props {
@@ -64,7 +85,6 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
     day: '',
     year: '',
   });
-
   const [form, setForm] = useState({
     first_name: '',
     middle_name: '',
@@ -76,6 +96,8 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
     birth_place: '',
     religion: '',
     ethnicity: '',
+    other_religion: '',
+    other_ethnicity: '',
     chief_complaints: '',
     room_no: '',
     bed_no: '',
@@ -93,8 +115,12 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
       );
       const today = new Date();
       let age = today.getFullYear() - bDate.getFullYear();
-      const m = today.getMonth() - bDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < bDate.getDate())) age--;
+      if (
+        today.getMonth() < bDate.getMonth() ||
+        (today.getMonth() === bDate.getMonth() &&
+          today.getDate() < bDate.getDate())
+      )
+        age--;
       setForm(prev => ({
         ...prev,
         age: age >= 0 ? age.toString() : '0',
@@ -113,6 +139,10 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
     try {
       const payload = {
         ...form,
+        religion:
+          form.religion === 'Other' ? form.other_religion : form.religion,
+        ethnicity:
+          form.ethnicity === 'Other' ? form.other_ethnicity : form.ethnicity,
         contact_name: contacts[0].name,
         contact_relationship: contacts[0].relationship,
         contact_number: contacts[0].number,
@@ -123,7 +153,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
         onBack();
       }
     } catch (error) {
-      Alert.alert('Error', 'Registration failed. Please try again.');
+      Alert.alert('Error', 'Registration failed.');
     }
   };
 
@@ -138,7 +168,6 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
           style={styles.container}
           showsVerticalScrollIndicator={false}
         >
-          {/* Header Section - Restructured for Middle Alignment */}
           <View style={styles.header}>
             <View style={styles.headerRow}>
               <View style={styles.titleContainer}>
@@ -150,7 +179,6 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   ).toUpperCase()}
                 </Text>
               </View>
-
               {step === 2 && (
                 <TouchableOpacity
                   onPress={() =>
@@ -168,8 +196,8 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
           </View>
 
           {step === 1 ? (
-            /* STEP 1: PATIENT DETAILS */
             <View>
+              {/* Name and Basic Details */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>
                   Name <Text style={styles.required}>*</Text>
@@ -210,6 +238,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     placeholder="Select Month"
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
+                    itemTextStyle={styles.itemTextStyle}
                     value={birthParts.month}
                     onChange={item =>
                       setBirthParts({ ...birthParts, month: item.value })
@@ -223,6 +252,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     placeholder="Day"
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
+                    itemTextStyle={styles.itemTextStyle}
                     value={birthParts.day}
                     onChange={item =>
                       setBirthParts({ ...birthParts, day: item.value })
@@ -236,6 +266,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     placeholder="Year"
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
+                    itemTextStyle={styles.itemTextStyle}
                     value={birthParts.year}
                     onChange={item =>
                       setBirthParts({ ...birthParts, year: item.value })
@@ -265,12 +296,14 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     placeholder="Select Sex"
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
+                    itemTextStyle={styles.itemTextStyle}
                     value={form.sex}
                     onChange={item => setForm({ ...form, sex: item.value })}
                   />
                 </View>
               </View>
 
+              {/* Address and Birthplace */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>
                   Address <Text style={styles.required}>*</Text>
@@ -283,7 +316,6 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   onChangeText={v => setForm({ ...form, address: v })}
                 />
               </View>
-
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>
                   Birth Place <Text style={styles.required}>*</Text>
@@ -297,6 +329,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 />
               </View>
 
+              {/* Religion and Ethnicity */}
               <View style={[styles.row, styles.inputGroup]}>
                 <View style={{ flex: 1, marginRight: 10 }}>
                   <Text style={styles.inputLabel}>
@@ -304,12 +337,13 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   </Text>
                   <Dropdown
                     style={styles.dropdown}
-                    data={[]}
+                    data={religionData}
                     labelField="label"
                     valueField="value"
                     placeholder="Select Religion"
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
+                    itemTextStyle={styles.itemTextStyle}
                     value={form.religion}
                     onChange={item =>
                       setForm({ ...form, religion: item.value })
@@ -320,12 +354,13 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   <Text style={styles.inputLabel}>Ethnicity</Text>
                   <Dropdown
                     style={styles.dropdown}
-                    data={[]}
+                    data={ethnicityData}
                     labelField="label"
                     valueField="value"
                     placeholder="Select Ethnicity"
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
+                    itemTextStyle={styles.itemTextStyle}
                     value={form.ethnicity}
                     onChange={item =>
                       setForm({ ...form, ethnicity: item.value })
@@ -333,6 +368,44 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   />
                 </View>
               </View>
+
+              {/* "Other" inputs for Religion/Ethnicity */}
+              {(form.religion === 'Other' || form.ethnicity === 'Other') && (
+                <View style={[styles.row, styles.inputGroup]}>
+                  {form.religion === 'Other' && (
+                    <View style={{ flex: 1, marginRight: 10 }}>
+                      <Text style={styles.inputLabel}>
+                        Specify Religion <Text style={styles.required}>*</Text>
+                      </Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Specify"
+                        placeholderTextColor={PLACEHOLDER_COLOR}
+                        value={form.other_religion}
+                        onChangeText={v =>
+                          setForm({ ...form, other_religion: v })
+                        }
+                      />
+                    </View>
+                  )}
+                  {form.ethnicity === 'Other' && (
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.inputLabel}>
+                        Specify Ethnicity <Text style={styles.required}>*</Text>
+                      </Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Specify"
+                        placeholderTextColor={PLACEHOLDER_COLOR}
+                        value={form.other_ethnicity}
+                        onChangeText={v =>
+                          setForm({ ...form, other_ethnicity: v })
+                        }
+                      />
+                    </View>
+                  )}
+                </View>
+              )}
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Chief of Complaints</Text>
@@ -345,6 +418,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 />
               </View>
 
+              {/* Room and Bed */}
               <View
                 style={[styles.row, styles.inputGroup, { marginBottom: 30 }]}
               >
@@ -354,12 +428,13 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   </Text>
                   <Dropdown
                     style={styles.dropdown}
-                    data={[]}
+                    data={roomData}
                     labelField="label"
                     valueField="value"
                     placeholder="Select Room"
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
+                    itemTextStyle={styles.itemTextStyle}
                     value={form.room_no}
                     onChange={item => setForm({ ...form, room_no: item.value })}
                   />
@@ -370,12 +445,13 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   </Text>
                   <Dropdown
                     style={styles.dropdown}
-                    data={[]}
+                    data={bedData}
                     labelField="label"
                     valueField="value"
                     placeholder="Select Bed"
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
+                    itemTextStyle={styles.itemTextStyle}
                     value={form.bed_no}
                     onChange={item => setForm({ ...form, bed_no: item.value })}
                   />
@@ -391,8 +467,8 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
               </TouchableOpacity>
             </View>
           ) : (
-            /* STEP 2: EMERGENCY CONTACT */
             <View>
+              {/* Emergency Contact fields (unchanged) */}
               {contacts.map((contact, index) => (
                 <View key={index} style={styles.contactBlock}>
                   {contacts.length > 1 && (
@@ -409,7 +485,6 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                       />
                     </TouchableOpacity>
                   )}
-
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>
                       Name <Text style={styles.required}>*</Text>
@@ -422,7 +497,6 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                       onChangeText={v => updateContact(index, 'name', v)}
                     />
                   </View>
-
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>
                       Relationship <Text style={styles.required}>*</Text>
@@ -437,7 +511,6 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                       }
                     />
                   </View>
-
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>
                       Contact Number <Text style={styles.required}>*</Text>
@@ -453,14 +526,12 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   </View>
                 </View>
               ))}
-
               <TouchableOpacity
                 style={styles.submitBtn}
                 onPress={handleFinalRegister}
               >
                 <Text style={styles.submitText}>REGISTER</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={styles.backLink}
                 onPress={() => setStep(1)}
@@ -469,7 +540,6 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
               </TouchableOpacity>
             </View>
           )}
-
           <View style={{ height: 100 }} />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -480,18 +550,13 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1, paddingHorizontal: 40 },
-  header: {
-    marginTop: Platform.OS === 'ios' ? 20 : 40,
-    marginBottom: 35,
-  },
+  header: { marginTop: Platform.OS === 'ios' ? 20 : 40, marginBottom: 35 },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center', // This centers the (+) button vertically against Title + Subtitle
+    alignItems: 'center',
   },
-  titleContainer: {
-    flex: 1,
-  },
+  titleContainer: { flex: 1 },
   title: {
     fontSize: 35,
     color: THEME_GREEN,
@@ -543,6 +608,7 @@ const styles = StyleSheet.create({
     color: '#333',
     fontFamily: 'AlteHaasGroteskBold',
   },
+  itemTextStyle: { fontSize: 14, color: '#333', fontFamily: 'AlteHaasGrotesk' },
   readOnlyInput: { backgroundColor: '#F5F5F5', color: '#777' },
   dropdown: {
     borderWidth: 1.5,
@@ -553,7 +619,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   row: { flexDirection: 'row', alignItems: 'center' },
-  contactBlock: { marginBottom: 10, position: 'relative' },
+  contactBlock: { marginBottom: 10 },
   removeBtn: { alignSelf: 'flex-end', marginBottom: 5 },
   submitBtn: {
     backgroundColor: BANNER_GREEN,
