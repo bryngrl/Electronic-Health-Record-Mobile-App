@@ -6,10 +6,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   Pressable,
+  Image,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import CDSSModal from '../../../components/CDSSModal';
 import SweetAlert from '../../../components/SweetAlert';
+
+const alert1 = require('../../../../assets/icons/alert_bell_icon.png');
 
 interface ExamInputProps {
   label: string;
@@ -20,6 +22,7 @@ interface ExamInputProps {
 }
 
 const LINE_HEIGHT = 28;
+const INPUT_PADDING_BOTTOM = 65;
 
 const ExamInputCard = ({
   label,
@@ -30,24 +33,24 @@ const ExamInputCard = ({
 }: ExamInputProps) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
-  const [inputHeight, setInputHeight] = useState(112); // Tracks text height, initialized to 4 lines
+  const [inputHeight, setInputHeight] = useState(
+    4 * LINE_HEIGHT + INPUT_PADDING_BOTTOM,
+  );
 
-  // LOGIC: The bell is only active if the input is not empty
-  const isBellActive = value.trim().length > 0;
-  // Keyword match: Backend found a specific clinical risk
+  const isAlertActive = value.trim().length > 0;
   const hasBackendAlert = !!alertText && alertText.trim().length > 0;
 
-  // Calculate the number of lines needed based on the current text height (minimum 4 lines)
-  const numLines = Math.max(4, Math.ceil(inputHeight / LINE_HEIGHT));
+  const visibleTypingHeight = Math.max(0, inputHeight - INPUT_PADDING_BOTTOM);
+  const numLines = Math.max(
+    4,
+    Math.ceil(visibleTypingHeight / LINE_HEIGHT) + 2,
+  );
 
-  // Dynamically generate the notepad lines
   const renderLines = () => {
     const lines = [];
     for (let i = 0; i < numLines; i++) {
       const topPosition = (i + 1) * LINE_HEIGHT;
-      const isFirstLine = i === 0;
-      // Since the bell is always at the bottom, we cut the right side of the last two lines
-      const isNearBell = i >= numLines - 2;
+      const isNearAlert = i >= numLines - 2;
 
       lines.push(
         <View
@@ -56,8 +59,8 @@ const ExamInputCard = ({
             styles.line,
             {
               top: topPosition,
-              left: isFirstLine ? 0 : -90,
-              right: isNearBell ? 55 : 0,
+              left: 0, // All lines now span the full width from the left
+              right: isNearAlert ? 55 : 0,
             },
           ]}
         />,
@@ -73,6 +76,7 @@ const ExamInputCard = ({
       </View>
 
       <View style={styles.content}>
+        {/* Badge is now stacked above the input to allow full-width text below */}
         <View style={styles.badge}>
           <Text style={styles.badgeText}>Findings</Text>
         </View>
@@ -85,7 +89,6 @@ const ExamInputCard = ({
             }
           }}
         >
-          {/* Dynamic Note Pad Lines */}
           <View style={styles.linesContainer} pointerEvents="none">
             {renderLines()}
           </View>
@@ -99,29 +102,21 @@ const ExamInputCard = ({
             placeholder="Type findings..."
             pointerEvents={disabled ? 'none' : 'auto'}
             onContentSizeChange={e => {
-              // Updates the height state whenever the user types a new line
               setInputHeight(e.nativeEvent.contentSize.height);
             }}
           />
         </Pressable>
 
-        {/* The Bell */}
         <TouchableOpacity
           style={[
-            styles.bellBtn,
-            !isBellActive && { opacity: 0.3 },
-            hasBackendAlert && styles.activeBell,
+            styles.alertIcon,
+            { opacity: isAlertActive ? 1.0 : 0.3 },
+            hasBackendAlert && styles.activeAlert,
           ]}
-          onPress={() => isBellActive && setModalVisible(true)}
-          disabled={!isBellActive}
+          onPress={() => isAlertActive && setModalVisible(true)}
+          disabled={!isAlertActive}
         >
-          <Icon
-            name={isBellActive ? 'notifications-active' : 'notifications'}
-            size={22}
-            color={
-              hasBackendAlert ? '#B45309' : isBellActive ? '#B45309' : '#E5E7EB'
-            }
-          />
+          <Image source={alert1} style={styles.alertImage} />
         </TouchableOpacity>
       </View>
 
@@ -161,53 +156,46 @@ const styles = StyleSheet.create({
   headerText: { color: '#EDB62C', fontWeight: 'bold', fontSize: 12 },
   content: {
     padding: 15,
-    flexDirection: 'row',
-    position: 'relative',
+    position: 'relative', // Removed flexDirection: 'row' so elements stack vertically
   },
   badge: {
     backgroundColor: '#FEF3C7',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 15,
-    marginRight: 10,
     alignSelf: 'flex-start',
     width: 80,
     alignItems: 'center',
-    marginTop: 2,
+    marginBottom: 8, // Adds breathing room before the lines start
   },
   badgeText: { color: '#EDB62C', fontSize: 12, fontWeight: 'bold' },
   inputArea: {
-    flex: 1,
-    minHeight: 112, //  4 lines (4 * 28)
+    minHeight: 112,
     position: 'relative',
   },
   input: {
     fontSize: 14,
     color: '#333',
     textAlignVertical: 'top',
-    flex: 1,
     zIndex: 2,
     padding: 0,
     paddingTop: 0,
-    paddingBottom: 65,
+    paddingBottom: INPUT_PADDING_BOTTOM,
     lineHeight: LINE_HEIGHT,
     minHeight: 112,
-    marginLeft: 10,
-    marginTop: 2,
+    // Removed marginLeft so text starts flush with the left side
     includeFontPadding: false,
   },
   linesContainer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1,
-    marginLeft: 10,
-    marginRight: 10,
   },
   line: {
     height: 1,
     backgroundColor: '#D9D9D9',
     position: 'absolute',
   },
-  bellBtn: {
+  alertIcon: {
     position: 'absolute',
     bottom: 10,
     right: 15,
@@ -219,10 +207,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
-  activeBell: {
+  alertImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 22,
+    resizeMode: 'cover',
+  },
+  activeAlert: {
     backgroundColor: '#FDE68A',
-    borderWidth: 1,
-    borderColor: '#B45309',
   },
 });
 
