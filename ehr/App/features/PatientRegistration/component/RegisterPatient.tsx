@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -50,28 +50,27 @@ const sexData = [
   { label: 'Male', value: 'Male' },
   { label: 'Female', value: 'Female' },
 ];
-
 const religionData = [
   { label: 'Roman Catholic', value: 'Roman Catholic' },
   { label: 'Islam', value: 'Islam' },
-  { label: 'Iglesia ni Cristo', value: 'Iglesia ni Cristo' },
+  { label: 'Born Again', value: 'Born Again' },
+  { label: 'Iglesia ni Chrisbrown', value: 'Iglesia ni Chrisbrown' },
   { label: 'Other', value: 'Other' },
 ];
-
 const ethnicityData = [
   { label: 'Tagalog', value: 'Tagalog' },
   { label: 'Cebuano', value: 'Cebuano' },
-  { label: 'Ilocano', value: 'Ilocano' },
   { label: 'Other', value: 'Other' },
 ];
-
 const roomData = [
   { label: 'Room 101', value: '101' },
   { label: 'Room 102', value: '102' },
+  { label: 'Room 103', value: '103' },
 ];
 const bedData = [
   { label: 'Bed A', value: 'A' },
   { label: 'Bed B', value: 'B' },
+  { label: 'Bed C', value: 'C' },
 ];
 
 interface Props {
@@ -108,6 +107,29 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
     { name: '', relationship: '', number: '' },
   ]);
 
+  // Keyboard Refs
+  const middleNameRef = useRef<TextInput>(null);
+  const lastNameRef = useRef<TextInput>(null);
+  const birthPlaceRef = useRef<TextInput>(null);
+  const otherReligionRef = useRef<TextInput>(null);
+  const otherEthnicityRef = useRef<TextInput>(null);
+  const complaintsRef = useRef<TextInput>(null);
+  const contactRelRef = useRef<TextInput>(null);
+  const contactNumRef = useRef<TextInput>(null);
+
+  const capitalize = (str: string) =>
+    str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+
+  const formatNameOnBlur = (field: keyof typeof form) => {
+    setForm(prev => ({ ...prev, [field]: capitalize(prev[field] as string) }));
+  };
+
+  const formatContactNameOnBlur = (index: number) => {
+    const updated = [...contacts];
+    updated[index].name = capitalize(updated[index].name);
+    setContacts(updated);
+  };
+
   useEffect(() => {
     if (birthParts.month && birthParts.day && birthParts.year) {
       const bDate = new Date(
@@ -128,12 +150,6 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
       }));
     }
   }, [birthParts]);
-
-  const updateContact = (index: number, key: string, value: string) => {
-    const updated = [...contacts];
-    (updated[index] as any)[key] = value;
-    setContacts(updated);
-  };
 
   const handleFinalRegister = async () => {
     try {
@@ -197,7 +213,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
 
           {step === 1 ? (
             <View>
-              {/* Name and Basic Details */}
+              {/* Names sequence */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>
                   Name <Text style={styles.required}>*</Text>
@@ -208,23 +224,34 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   placeholderTextColor={PLACEHOLDER_COLOR}
                   value={form.first_name}
                   onChangeText={v => setForm({ ...form, first_name: v })}
+                  onBlur={() => formatNameOnBlur('first_name')}
+                  returnKeyType="next"
+                  onSubmitEditing={() => middleNameRef.current?.focus()}
                 />
                 <TextInput
+                  ref={middleNameRef}
                   style={[styles.input, { marginTop: 12 }]}
                   placeholder="Enter Middle Name"
                   placeholderTextColor={PLACEHOLDER_COLOR}
                   value={form.middle_name}
                   onChangeText={v => setForm({ ...form, middle_name: v })}
+                  onBlur={() => formatNameOnBlur('middle_name')}
+                  returnKeyType="next"
+                  onSubmitEditing={() => lastNameRef.current?.focus()}
                 />
                 <TextInput
+                  ref={lastNameRef}
                   style={[styles.input, { marginTop: 12 }]}
                   placeholder="Enter Last Name"
                   placeholderTextColor={PLACEHOLDER_COLOR}
                   value={form.last_name}
                   onChangeText={v => setForm({ ...form, last_name: v })}
+                  onBlur={() => formatNameOnBlur('last_name')}
+                  returnKeyType="done"
                 />
               </View>
 
+              {/* Birthday and Demographics */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>
                   Birthday <Text style={styles.required}>*</Text>
@@ -303,7 +330,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 </View>
               </View>
 
-              {/* Address and Birthplace */}
+              {/* Location sequence */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>
                   Address <Text style={styles.required}>*</Text>
@@ -314,6 +341,8 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   placeholderTextColor={PLACEHOLDER_COLOR}
                   value={form.address}
                   onChangeText={v => setForm({ ...form, address: v })}
+                  returnKeyType="next"
+                  onSubmitEditing={() => birthPlaceRef.current?.focus()}
                 />
               </View>
               <View style={styles.inputGroup}>
@@ -321,11 +350,13 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   Birth Place <Text style={styles.required}>*</Text>
                 </Text>
                 <TextInput
+                  ref={birthPlaceRef}
                   style={styles.input}
                   placeholder="Enter Birth Place"
                   placeholderTextColor={PLACEHOLDER_COLOR}
                   value={form.birth_place}
                   onChangeText={v => setForm({ ...form, birth_place: v })}
+                  returnKeyType="done"
                 />
               </View>
 
@@ -340,7 +371,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     data={religionData}
                     labelField="label"
                     valueField="value"
-                    placeholder="Select Religion"
+                    placeholder="Select"
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
                     itemTextStyle={styles.itemTextStyle}
@@ -357,7 +388,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     data={ethnicityData}
                     labelField="label"
                     valueField="value"
-                    placeholder="Select Ethnicity"
+                    placeholder="Select"
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
                     itemTextStyle={styles.itemTextStyle}
@@ -369,7 +400,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 </View>
               </View>
 
-              {/* "Other" inputs for Religion/Ethnicity */}
+              {/* Conditional Specify with focus logic */}
               {(form.religion === 'Other' || form.ethnicity === 'Other') && (
                 <View style={[styles.row, styles.inputGroup]}>
                   {form.religion === 'Other' && (
@@ -385,6 +416,14 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                         onChangeText={v =>
                           setForm({ ...form, other_religion: v })
                         }
+                        returnKeyType={
+                          form.ethnicity === 'Other' ? 'next' : 'done'
+                        }
+                        onSubmitEditing={() =>
+                          form.ethnicity === 'Other'
+                            ? otherEthnicityRef.current?.focus()
+                            : null
+                        }
                       />
                     </View>
                   )}
@@ -394,6 +433,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                         Specify Ethnicity <Text style={styles.required}>*</Text>
                       </Text>
                       <TextInput
+                        ref={otherEthnicityRef}
                         style={styles.input}
                         placeholder="Specify"
                         placeholderTextColor={PLACEHOLDER_COLOR}
@@ -401,6 +441,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                         onChangeText={v =>
                           setForm({ ...form, other_ethnicity: v })
                         }
+                        returnKeyType="done"
                       />
                     </View>
                   )}
@@ -415,10 +456,10 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   placeholderTextColor={PLACEHOLDER_COLOR}
                   value={form.chief_complaints}
                   onChangeText={v => setForm({ ...form, chief_complaints: v })}
+                  returnKeyType="done"
                 />
               </View>
 
-              {/* Room and Bed */}
               <View
                 style={[styles.row, styles.inputGroup, { marginBottom: 30 }]}
               >
@@ -431,7 +472,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     data={roomData}
                     labelField="label"
                     valueField="value"
-                    placeholder="Select Room"
+                    placeholder="Select"
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
                     itemTextStyle={styles.itemTextStyle}
@@ -448,7 +489,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     data={bedData}
                     labelField="label"
                     valueField="value"
-                    placeholder="Select Bed"
+                    placeholder="Select"
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
                     itemTextStyle={styles.itemTextStyle}
@@ -467,8 +508,8 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
               </TouchableOpacity>
             </View>
           ) : (
+            /* STEP 2: EMERGENCY CONTACT */
             <View>
-              {/* Emergency Contact fields (unchanged) */}
               {contacts.map((contact, index) => (
                 <View key={index} style={styles.contactBlock}>
                   {contacts.length > 1 && (
@@ -494,7 +535,14 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                       placeholder="Enter Full Name"
                       placeholderTextColor={PLACEHOLDER_COLOR}
                       value={contact.name}
-                      onChangeText={v => updateContact(index, 'name', v)}
+                      onChangeText={v => {
+                        const updated = [...contacts];
+                        updated[index].name = v;
+                        setContacts(updated);
+                      }}
+                      onBlur={() => formatContactNameOnBlur(index)}
+                      returnKeyType="next"
+                      onSubmitEditing={() => contactRelRef.current?.focus()}
                     />
                   </View>
                   <View style={styles.inputGroup}>
@@ -502,13 +550,18 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                       Relationship <Text style={styles.required}>*</Text>
                     </Text>
                     <TextInput
+                      ref={contactRelRef}
                       style={styles.input}
                       placeholder="Enter Relationship"
                       placeholderTextColor={PLACEHOLDER_COLOR}
                       value={contact.relationship}
-                      onChangeText={v =>
-                        updateContact(index, 'relationship', v)
-                      }
+                      onChangeText={v => {
+                        const updated = [...contacts];
+                        updated[index].relationship = v;
+                        setContacts(updated);
+                      }}
+                      returnKeyType="next"
+                      onSubmitEditing={() => contactNumRef.current?.focus()}
                     />
                   </View>
                   <View style={styles.inputGroup}>
@@ -516,12 +569,18 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                       Contact Number <Text style={styles.required}>*</Text>
                     </Text>
                     <TextInput
+                      ref={contactNumRef}
                       style={styles.input}
                       placeholder="Enter Contact Number"
                       placeholderTextColor={PLACEHOLDER_COLOR}
                       keyboardType="phone-pad"
                       value={contact.number}
-                      onChangeText={v => updateContact(index, 'number', v)}
+                      onChangeText={v => {
+                        const updated = [...contacts];
+                        updated[index].number = v;
+                        setContacts(updated);
+                      }}
+                      returnKeyType="done"
                     />
                   </View>
                 </View>
@@ -608,8 +667,16 @@ const styles = StyleSheet.create({
     color: '#333',
     fontFamily: 'AlteHaasGroteskBold',
   },
-  itemTextStyle: { fontSize: 14, color: '#333', fontFamily: 'AlteHaasGrotesk' },
-  readOnlyInput: { backgroundColor: '#F5F5F5', color: '#777' },
+  itemTextStyle: {
+    fontSize: 14,
+    color: '#555555',
+    fontFamily: 'AlteHaasGrotesk',
+  },
+  readOnlyInput: {
+    backgroundColor: '#F5F5F5',
+    color: '#555',
+    fontFamily: 'AlteHaasGroteskBold',
+  },
   dropdown: {
     borderWidth: 1.5,
     borderColor: '#E0E0E0',
