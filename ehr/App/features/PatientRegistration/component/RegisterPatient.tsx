@@ -6,7 +6,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -14,6 +13,7 @@ import {
 import { Dropdown } from 'react-native-element-dropdown';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useRegistration } from '../hook/useRegistration';
+import SweetAlert from '../../../components/SweetAlert';
 
 const THEME_GREEN = '#035022';
 const BANNER_GREEN = '#E5FFE8';
@@ -97,6 +97,20 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
     year: '',
   });
 
+  // SweetAlert state
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'warning' | 'info' | 'delete';
+    onConfirm?: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
+
   // Refs for Keyboard Navigation
   const middleNameRef = useRef<TextInput>(null);
   const lastNameRef = useRef<TextInput>(null);
@@ -135,16 +149,33 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
     try {
       const response = await registerPatient();
       if (response.status === 200 || response.status === 201) {
-        Alert.alert('Success', 'Patient registered successfully!');
-        onBack();
+        setAlertConfig({
+          visible: true,
+          title: 'Success',
+          message: 'Patient registered successfully!',
+          type: 'success',
+          onConfirm: () => {
+            setAlertConfig(prev => ({ ...prev, visible: false }));
+            onBack();
+          },
+        });
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail 
-        ? (Array.isArray(error.response.data.detail) 
-            ? error.response.data.detail.map((d: any) => `${d.loc.join('.')}: ${d.msg}`).join('\n') 
-            : JSON.stringify(error.response.data.detail))
-        : (error.message || 'Registration failed.');
-      Alert.alert('Error', errorMessage);
+      const errorMessage = error.response?.data?.detail
+        ? Array.isArray(error.response.data.detail)
+          ? error.response.data.detail
+              .map((d: any) => `${d.loc.join('.')}: ${d.msg}`)
+              .join('\n')
+          : JSON.stringify(error.response.data.detail)
+        : error.message || 'Registration failed.';
+
+      setAlertConfig({
+        visible: true,
+        title: 'Error',
+        message: errorMessage,
+        type: 'error',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+      });
     }
   };
 
@@ -159,6 +190,16 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
           style={styles.container}
           showsVerticalScrollIndicator={false}
         >
+          {/* SweetAlert Component */}
+          <SweetAlert
+            visible={alertConfig.visible}
+            title={alertConfig.title}
+            message={alertConfig.message}
+            type={alertConfig.type}
+            onConfirm={alertConfig.onConfirm}
+            confirmText="OK"
+          />
+
           <View style={styles.header}>
             <View style={styles.headerRow}>
               <View style={styles.titleContainer}>
