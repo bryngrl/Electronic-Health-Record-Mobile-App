@@ -242,7 +242,11 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
             <Text style={styles.fieldLabel}>DATE :</Text>
             <View style={styles.pillInput}>
               <Text style={styles.dateVal}>
-                {new Date().toLocaleDateString()}
+                {new Date().toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
               </Text>
             </View>
           </View>
@@ -538,7 +542,7 @@ const styles = StyleSheet.create({
     color: '#035022',
     fontFamily: 'MinionPro-SemiboldItalic',
   },
-  subDate: { color: '#999', fontSize: 16 },
+  subDate: { color: '#999', fontSize: 13 },
   menuDots: { fontSize: 28, color: '#035022' },
   inputGroup: { marginBottom: 15, zIndex: 100 },
   fieldLabel: {
