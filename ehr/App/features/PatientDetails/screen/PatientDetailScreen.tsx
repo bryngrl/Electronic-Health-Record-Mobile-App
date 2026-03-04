@@ -51,6 +51,17 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
     fetchDetails();
   }, [patientId, getPatientById]);
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loaderContainer}>
@@ -82,7 +93,7 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
           <View>
             <Text style={styles.titleText}>Patient Details</Text>
             <Text style={styles.admittedDate}>
-              Date admitted : {patient?.date_admitted || 'January 12, 2026'}
+              Date admitted : {formatDate(patient?.admission_date) || 'January 12, 2026'}
             </Text>
           </View>
         </View>
@@ -107,7 +118,7 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
           <View style={styles.row}>
             <DetailItem
               label="Birthdate"
-              value={patient?.birthdate}
+              value={formatDate(patient?.birthdate)}
               halfWidth
             />
             <DetailItem label="Sex" value={patient?.sex} halfWidth />
