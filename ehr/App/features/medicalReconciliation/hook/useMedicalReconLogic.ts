@@ -28,13 +28,16 @@ export const useMedicalReconLogic = () => {
   const [stageIndex, setStageIndex] = useState(0);
   const [patientId, setPatientId] = useState<number | null>(null);
   const [patientName, setPatientName] = useState('');
-  const [searchText, setSearchText] = useState('');
-  const [patients, setPatients] = useState<any[]>([]);
-  const [filteredPatients, setFilteredPatients] = useState<any[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
   
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [existingIds, setExistingIds] = useState<{
+    current: number | null;
+    home: number | null;
+    changes: number | null;
+  }>({ current: null, home: null, changes: null });
+
   const [reconData, setReconData] = useState<Record<number, ReconEntry>>({
     0: { ...initialEntry },
     1: { ...initialEntry },
@@ -48,49 +51,14 @@ export const useMedicalReconLogic = () => {
     type: 'success' | 'error' | 'warning' | 'info';
   }>({ visible: false, title: '', message: '', type: 'info' });
 
+  const [successMessage, setSuccessMessage] = useState({
+    title: '',
+    message: '',
+  });
+  const [successVisible, setSuccessVisible] = useState(false);
+
   const currentStage = RECON_STAGES[stageIndex];
   const values = reconData[stageIndex];
-
-  // Fetch patients for selection
-  const fetchPatients = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const response = await apiClient.get('/patients/');
-      const raw = response.data || [];
-      const normalized = raw.map((p: any) => ({
-        ...p,
-        id: p.patient_id ?? p.id ?? null,
-        fullName: `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-      }));
-      setPatients(normalized);
-    } catch (error) {
-      console.error('Error fetching patients:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const handleSearch = (text: string) => {
-    setSearchText(text);
-    if (text.length > 0) {
-      const filtered = patients.filter(p =>
-        p.fullName.toLowerCase().includes(text.toLowerCase()),
-      );
-      setFilteredPatients(filtered);
-      setShowDropdown(true);
-    } else {
-      setShowDropdown(false);
-      setPatientId(null);
-      setPatientName('');
-    }
-  };
-
-  const selectPatient = (patient: any) => {
-    setSearchText(patient.fullName);
-    setPatientName(patient.fullName);
-    setPatientId(patient.id);
-    setShowDropdown(false);
-  };
 
   // Fetch existing medications for selected patient
   const fetchPatientMedications = useCallback(async (id: number) => {
@@ -105,6 +73,12 @@ export const useMedicalReconLogic = () => {
       const home = homeRes.data[0] || {};
       const current = currentRes.data[0] || {};
       const changes = changesRes.data[0] || {};
+
+      setExistingIds({
+        current: current.id || null,
+        home: home.id || null,
+        changes: changes.id || null
+      });
 
       setReconData({
         0: {
@@ -144,6 +118,7 @@ export const useMedicalReconLogic = () => {
     if (patientId) {
       fetchPatientMedications(patientId);
     } else {
+      setExistingIds({ current: null, home: null, changes: null });
       setReconData({
         0: { ...initialEntry },
         1: { ...initialEntry },
@@ -176,11 +151,15 @@ export const useMedicalReconLogic = () => {
     }
 
     setIsSubmitting(true);
+    const isUpdate = !!(existingIds.current || existingIds.home || existingIds.changes);
+
     try {
+      const newIds = { ...existingIds };
+
       // Stage 0: Current Medication
       const currentMed = reconData[0];
       if (Object.values(currentMed).some(v => v.trim() !== '')) {
-        await apiClient.post('/medication-reconciliation/current-medication/', {
+        const payload = {
           patient_id: patientId,
           current_med: currentMed.med,
           current_dose: currentMed.dose,
@@ -188,13 +167,20 @@ export const useMedicalReconLogic = () => {
           current_frequency: currentMed.freq,
           current_indication: currentMed.indication,
           current_text: currentMed.extra
-        });
+        };
+
+        if (existingIds.current) {
+          await apiClient.put(`/medication-reconciliation/current-medication/${existingIds.current}/`, payload);
+        } else {
+          const res = await apiClient.post('/medication-reconciliation/current-medication/', payload);
+          if (res.data?.id) newIds.current = res.data.id;
+        }
       }
 
       // Stage 1: Home Medication
       const homeMed = reconData[1];
       if (Object.values(homeMed).some(v => v.trim() !== '')) {
-        await apiClient.post('/medication-reconciliation/home-medication/', {
+        const payload = {
           patient_id: patientId,
           home_med: homeMed.med,
           home_dose: homeMed.dose,
@@ -202,34 +188,50 @@ export const useMedicalReconLogic = () => {
           home_frequency: homeMed.freq,
           home_indication: homeMed.indication,
           home_text: homeMed.extra
-        });
+        };
+
+        if (existingIds.home) {
+          await apiClient.put(`/medication-reconciliation/home-medication/${existingIds.home}/`, payload);
+        } else {
+          const res = await apiClient.post('/medication-reconciliation/home-medication/', payload);
+          if (res.data?.id) newIds.home = res.data.id;
+        }
       }
 
       // Stage 2: Changes in Medication
       const changeMed = reconData[2];
       if (Object.values(changeMed).some(v => v.trim() !== '')) {
-        await apiClient.post('/medication-reconciliation/changes-in-medication/', {
+        const payload = {
           patient_id: patientId,
           change_med: changeMed.med,
           change_dose: changeMed.dose,
           change_route: changeMed.route,
           change_frequency: changeMed.freq,
           change_text: changeMed.extra
-        });
+        };
+
+        if (existingIds.changes) {
+          await apiClient.put(`/medication-reconciliation/changes-in-medication/${existingIds.changes}/`, payload);
+        } else {
+          const res = await apiClient.post('/medication-reconciliation/changes-in-medication/', payload);
+          if (res.data?.id) newIds.changes = res.data.id;
+        }
       }
 
-      setAlertConfig({
-        visible: true,
-        title: 'Success',
-        message: 'Medication Reconciliation submitted successfully!',
-        type: 'success'
+      setExistingIds(newIds);
+
+      setSuccessMessage({
+        title: isUpdate ? 'Successully Updated' : 'Successfully Submitted',
+        message: `Medication Reconciliation ${isUpdate ? 'updated' : 'submitted'} successfully!`,
       });
+      setSuccessVisible(true);
+
     } catch (error) {
       console.error('Error submitting reconciliation:', error);
       setAlertConfig({
         visible: true,
         title: 'Error',
-        message: 'Failed to submit medication reconciliation',
+        message: `Failed to ${isUpdate ? 'update' : 'submit'} medication reconciliation`,
         type: 'error'
       });
     } finally {
@@ -264,6 +266,7 @@ export const useMedicalReconLogic = () => {
     setStageIndex(0);
     setPatientId(null);
     setPatientName('');
+    setExistingIds({ current: null, home: null, changes: null });
     setReconData({
       0: { ...initialEntry },
       1: { ...initialEntry },
@@ -279,8 +282,6 @@ export const useMedicalReconLogic = () => {
     setPatientName,
     patientId,
     setPatientId,
-    patients,
-    fetchPatients,
     isLoading,
     isSubmitting,
     handleUpdate,
@@ -293,11 +294,8 @@ export const useMedicalReconLogic = () => {
     resetForm,
     setStageIndex,
     RECON_STAGES,
-    searchText,
-    handleSearch,
-    filteredPatients,
-    showDropdown,
-    setShowDropdown,
-    selectPatient
+    successMessage,
+    successVisible,
+    setSuccessVisible
   };
 };
