@@ -9,11 +9,49 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { Dropdown } from 'react-native-element-dropdown';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import apiClient from '../../../api/apiClient';
-import Button from '../../../components/button';
-import SweetAlert from '../../../components/SweetAlert';
+
+// Constants for Theme
+const THEME_GREEN = '#035022';
+const BANNER_GREEN = '#E5FFE8';
+const REQUIRED_RED = '#FF0000';
+const PLACEHOLDER_COLOR = '#999';
+
+// Dropdown Helper Data
+const months = [
+  { label: 'January', value: '01' },
+  { label: 'February', value: '02' },
+  { label: 'March', value: '03' },
+  { label: 'April', value: '04' },
+  { label: 'May', value: '05' },
+  { label: 'June', value: '06' },
+  { label: 'July', value: '07' },
+  { label: 'August', value: '08' },
+  { label: 'September', value: '09' },
+  { label: 'October', value: '10' },
+  { label: 'November', value: '11' },
+  { label: 'December', value: '12' },
+];
+
+const days = Array.from({ length: 31 }, (_, i) => ({
+  label: (i + 1).toString(),
+  value: (i + 1).toString().padStart(2, '0'),
+}));
+
+const currentYear = new Date().getFullYear();
+const years = Array.from({ length: 100 }, (_, i) => ({
+  label: (currentYear - i).toString(),
+  value: (currentYear - i).toString(),
+}));
+
+const sexData = [
+  { label: 'Male', value: 'Male' },
+  { label: 'Female', value: 'Female' },
+];
 
 interface Props {
   onBack: () => void;
@@ -21,13 +59,11 @@ interface Props {
 
 const RegisterPatient: React.FC<Props> = ({ onBack }) => {
   const [step, setStep] = useState(1);
-  const [displayDate, setDisplayDate] = useState('');
-  const [calculatedAge, setCalculatedAge] = useState('');
-  const [alertVisible, setAlertVisible] = useState(false);
-  const [indexToDelete, setIndexToDelete] = useState<number | null>(null);
-
-  const [showPicker, setShowPicker] = useState(false);
-  const [dateValue, setDateValue] = useState(new Date());
+  const [birthParts, setBirthParts] = useState({
+    month: '',
+    day: '',
+    year: '',
+  });
 
   const [form, setForm] = useState({
     first_name: '',
@@ -37,82 +73,35 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
     age: '',
     sex: '',
     address: '',
+    birth_place: '',
     religion: '',
     ethnicity: '',
     chief_complaints: '',
     room_no: '',
     bed_no: '',
-
     user_id: 1,
   });
 
-  // Initialization as an array fixes the "contacts.map is not a function" error
   const [contacts, setContacts] = useState([
     { name: '', relationship: '', number: '' },
   ]);
 
   useEffect(() => {
-    const today = new Date();
-    setDisplayDate(
-      today.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-    );
-  }, []);
-
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowPicker(false);
-    if (selectedDate) {
-      setDateValue(selectedDate);
-      const formattedDate = selectedDate.toISOString().split('T')[0];
-
+    if (birthParts.month && birthParts.day && birthParts.year) {
+      const bDate = new Date(
+        `${birthParts.year}-${birthParts.month}-${birthParts.day}`,
+      );
       const today = new Date();
-      let age = today.getFullYear() - selectedDate.getFullYear();
-      const m = today.getMonth() - selectedDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < selectedDate.getDate())) {
-        age--;
-      }
-
-      const finalAge = age >= 0 ? age.toString() : '0';
-      setCalculatedAge(finalAge);
-      setForm({ ...form, birthdate: formattedDate, age: finalAge });
+      let age = today.getFullYear() - bDate.getFullYear();
+      const m = today.getMonth() - bDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < bDate.getDate())) age--;
+      setForm(prev => ({
+        ...prev,
+        age: age >= 0 ? age.toString() : '0',
+        birthdate: `${birthParts.year}-${birthParts.month}-${birthParts.day}`,
+      }));
     }
-  };
-
-  const isFormValid = () => {
-    const {
-      first_name,
-      last_name,
-      birthdate,
-      age,
-      sex,
-      address,
-      religion,
-      ethnicity,
-      chief_complaints,
-      room_no,
-      bed_no,
-    } = form;
-    if (
-      !first_name ||
-      !last_name ||
-      !birthdate ||
-      !age ||
-      !sex ||
-      !address ||
-      !religion ||
-      !ethnicity ||
-      !chief_complaints ||
-      !room_no ||
-      !bed_no
-    ) {
-      Alert.alert('Error', 'All fields are required.');
-      return false;
-    }
-    return true;
-  };
+  }, [birthParts]);
 
   const updateContact = (index: number, key: string, value: string) => {
     const updated = [...contacts];
@@ -120,403 +109,472 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
     setContacts(updated);
   };
 
-  const handleRegister = async () => {
-    if (!isFormValid()) return;
+  const handleFinalRegister = async () => {
     try {
       const payload = {
         ...form,
-        age: parseInt(form.age) || 0,
-        admission_date: new Date().toISOString().split('T')[0],
         contact_name: contacts[0].name,
         contact_relationship: contacts[0].relationship,
         contact_number: contacts[0].number,
       };
-      // Endpoint call to your backend
       const response = await apiClient.post('/patients/', payload);
       if (response.status === 200 || response.status === 201) {
-        Alert.alert('Success', 'Patient record saved successfully.');
+        Alert.alert('Success', 'Patient registered successfully!');
         onBack();
       }
     } catch (error) {
-      // Catch matches the Network Error in your logs
-      Alert.alert('Connection Error', 'Check USB Tethering IP: 192.168.47.251');
+      Alert.alert('Error', 'Registration failed. Please try again.');
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
-    >
-      <SweetAlert
-        visible={alertVisible}
-        title="Delete Contact?"
-        message="Are you sure you want to delete this contact? All information entered will be deleted."
-        onCancel={() => setAlertVisible(false)}
-        onConfirm={() => {
-          setContacts(contacts.filter((_, i) => i !== indexToDelete));
-          setAlertVisible(false);
-        }}
-      />
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.headerTitle}>Register Patient</Text>
-
-        {step === 1 ? (
-          <View>
-            <Text style={styles.sectionLabel}>PATIENT & ADMISSION DETAILS</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>First Name *</Text>
-              <TextInput
-                style={styles.input}
-                placeholderTextColor="#EBEBEB"
-                placeholder="Enter First Name"
-                value={form.first_name}
-                onChangeText={v => setForm({ ...form, first_name: v })}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Middle Name *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter Middle Name"
-                placeholderTextColor="#EBEBEB"
-                value={form.middle_name}
-                onChangeText={v => setForm({ ...form, middle_name: v })}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Last Name *</Text>
-              <TextInput
-                style={styles.input}
-                placeholderTextColor="#EBEBEB"
-                placeholder="Enter Last Name"
-                value={form.last_name}
-                onChangeText={v => setForm({ ...form, last_name: v })}
-              />
-            </View>
-
-            <View style={styles.row}>
-              <View style={{ width: '48%' }}>
-                <Text style={styles.inputLabel}>Birthdate *</Text>
-                <TouchableOpacity
-                  style={styles.input}
-                  onPress={() => setShowPicker(true)}
-                >
-                  <Text style={{ color: form.birthdate ? '#333' : '#EBEBEB' }}>
-                    {form.birthdate || 'Select Date'}
-                  </Text>
-                </TouchableOpacity>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          style={styles.container}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header Section - Restructured for Middle Alignment */}
+          <View style={styles.header}>
+            <View style={styles.headerRow}>
+              <View style={styles.titleContainer}>
+                <Text style={styles.title}>Register Patient</Text>
+                <Text style={styles.sectionTitle}>
+                  {(step === 1
+                    ? 'Patient Details'
+                    : 'Patient Emergency Contact'
+                  ).toUpperCase()}
+                </Text>
               </View>
-              <View style={{ width: '48%' }}>
-                <Text style={styles.inputLabel}>Age*</Text>
-                <View style={styles.readOnlyBox}>
-                  <Text style={styles.readOnlyText}>
-                    {calculatedAge || '--'}
-                  </Text>
+
+              {step === 2 && (
+                <TouchableOpacity
+                  onPress={() =>
+                    setContacts([
+                      ...contacts,
+                      { name: '', relationship: '', number: '' },
+                    ])
+                  }
+                  style={styles.addIconCircle}
+                >
+                  <Icon name="add" size={24} color={THEME_GREEN} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {step === 1 ? (
+            /* STEP 1: PATIENT DETAILS */
+            <View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Name <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter First Name"
+                  placeholderTextColor={PLACEHOLDER_COLOR}
+                  value={form.first_name}
+                  onChangeText={v => setForm({ ...form, first_name: v })}
+                />
+                <TextInput
+                  style={[styles.input, { marginTop: 12 }]}
+                  placeholder="Enter Middle Name"
+                  placeholderTextColor={PLACEHOLDER_COLOR}
+                  value={form.middle_name}
+                  onChangeText={v => setForm({ ...form, middle_name: v })}
+                />
+                <TextInput
+                  style={[styles.input, { marginTop: 12 }]}
+                  placeholder="Enter Last Name"
+                  placeholderTextColor={PLACEHOLDER_COLOR}
+                  value={form.last_name}
+                  onChangeText={v => setForm({ ...form, last_name: v })}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Birthday <Text style={styles.required}>*</Text>
+                </Text>
+                <View style={styles.row}>
+                  <Dropdown
+                    style={[styles.dropdown, { flex: 2 }]}
+                    data={months}
+                    labelField="label"
+                    valueField="value"
+                    placeholder="Select Month"
+                    placeholderStyle={styles.placeholderStyle}
+                    selectedTextStyle={styles.selectedTextStyle}
+                    value={birthParts.month}
+                    onChange={item =>
+                      setBirthParts({ ...birthParts, month: item.value })
+                    }
+                  />
+                  <Dropdown
+                    style={[styles.dropdown, { flex: 1, marginHorizontal: 8 }]}
+                    data={days}
+                    labelField="label"
+                    valueField="value"
+                    placeholder="Day"
+                    placeholderStyle={styles.placeholderStyle}
+                    selectedTextStyle={styles.selectedTextStyle}
+                    value={birthParts.day}
+                    onChange={item =>
+                      setBirthParts({ ...birthParts, day: item.value })
+                    }
+                  />
+                  <Dropdown
+                    style={[styles.dropdown, { flex: 1.5 }]}
+                    data={years}
+                    labelField="label"
+                    valueField="value"
+                    placeholder="Year"
+                    placeholderStyle={styles.placeholderStyle}
+                    selectedTextStyle={styles.selectedTextStyle}
+                    value={birthParts.year}
+                    onChange={item =>
+                      setBirthParts({ ...birthParts, year: item.value })
+                    }
+                  />
                 </View>
               </View>
-            </View>
 
-            {showPicker && (
-              <DateTimePicker
-                value={dateValue}
-                mode="date"
-                display="default"
-                maximumDate={new Date()}
-                onChange={handleDateChange}
-              />
-            )}
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Sex *</Text>
-              <View style={styles.genderContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.genderBtn,
-                    form.sex === 'Male' && styles.genderBtnActive,
-                  ]}
-                  onPress={() => setForm({ ...form, sex: 'Male' })}
-                >
-                  <Text
-                    style={
-                      form.sex === 'Male'
-                        ? styles.genderTextActive
-                        : styles.genderText
-                    }
-                  >
-                    Male
+              <View style={[styles.row, styles.inputGroup]}>
+                <View style={{ flex: 1, marginRight: 10 }}>
+                  <Text style={styles.inputLabel}>Age</Text>
+                  <TextInput
+                    style={[styles.input, styles.readOnlyInput]}
+                    value={form.age}
+                    editable={false}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>
+                    Sex <Text style={styles.required}>*</Text>
                   </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.genderBtn,
-                    form.sex === 'Female' && styles.genderBtnActive,
-                  ]}
-                  onPress={() => setForm({ ...form, sex: 'Female' })}
-                >
-                  <Text
-                    style={
-                      form.sex === 'Female'
-                        ? styles.genderTextActive
-                        : styles.genderText
-                    }
-                  >
-                    Female
+                  <Dropdown
+                    style={styles.dropdown}
+                    data={sexData}
+                    labelField="label"
+                    valueField="value"
+                    placeholder="Select Sex"
+                    placeholderStyle={styles.placeholderStyle}
+                    selectedTextStyle={styles.selectedTextStyle}
+                    value={form.sex}
+                    onChange={item => setForm({ ...form, sex: item.value })}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Address <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter Address"
+                  placeholderTextColor={PLACEHOLDER_COLOR}
+                  value={form.address}
+                  onChangeText={v => setForm({ ...form, address: v })}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Birth Place <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter Birth Place"
+                  placeholderTextColor={PLACEHOLDER_COLOR}
+                  value={form.birth_place}
+                  onChangeText={v => setForm({ ...form, birth_place: v })}
+                />
+              </View>
+
+              <View style={[styles.row, styles.inputGroup]}>
+                <View style={{ flex: 1, marginRight: 10 }}>
+                  <Text style={styles.inputLabel}>
+                    Religion <Text style={styles.required}>*</Text>
                   </Text>
-                </TouchableOpacity>
+                  <Dropdown
+                    style={styles.dropdown}
+                    data={[]}
+                    labelField="label"
+                    valueField="value"
+                    placeholder="Select Religion"
+                    placeholderStyle={styles.placeholderStyle}
+                    selectedTextStyle={styles.selectedTextStyle}
+                    value={form.religion}
+                    onChange={item =>
+                      setForm({ ...form, religion: item.value })
+                    }
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>Ethnicity</Text>
+                  <Dropdown
+                    style={styles.dropdown}
+                    data={[]}
+                    labelField="label"
+                    valueField="value"
+                    placeholder="Select Ethnicity"
+                    placeholderStyle={styles.placeholderStyle}
+                    selectedTextStyle={styles.selectedTextStyle}
+                    value={form.ethnicity}
+                    onChange={item =>
+                      setForm({ ...form, ethnicity: item.value })
+                    }
+                  />
+                </View>
               </View>
-            </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Address *</Text>
-              <TextInput
-                style={styles.input}
-                placeholderTextColor="#EBEBEB"
-                placeholder="Enter address"
-                value={form.address}
-                onChangeText={v => setForm({ ...form, address: v })}
-              />
-            </View>
-
-            <View style={styles.row}>
-              <View style={{ width: '48%' }}>
-                <Text style={styles.inputLabel}>Religion *</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Chief of Complaints</Text>
                 <TextInput
                   style={styles.input}
-                  placeholderTextColor="#EBEBEB"
-                  placeholder="Religion"
-                  value={form.religion}
-                  onChangeText={v => setForm({ ...form, religion: v })}
+                  placeholder="Enter Chief of Complaints"
+                  placeholderTextColor={PLACEHOLDER_COLOR}
+                  value={form.chief_complaints}
+                  onChangeText={v => setForm({ ...form, chief_complaints: v })}
                 />
               </View>
-              <View style={{ width: '48%' }}>
-                <Text style={styles.inputLabel}>Ethnicity *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholderTextColor="#EBEBEB"
-                  placeholder="Ethnicity"
-                  value={form.ethnicity}
-                  onChangeText={v => setForm({ ...form, ethnicity: v })}
-                />
-              </View>
-            </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Chief of Complaints *</Text>
-              <TextInput
-                style={styles.input}
-                placeholderTextColor="#EBEBEB"
-                placeholder="Enter symptoms"
-                value={form.chief_complaints}
-                onChangeText={v => setForm({ ...form, chief_complaints: v })}
-              />
-            </View>
-
-            <View style={styles.row}>
-              <View style={{ width: '48%' }}>
-                <Text style={styles.inputLabel}>Room No. *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholderTextColor="#EBEBEB"
-                  placeholder="Room #"
-                  value={form.room_no}
-                  onChangeText={v => setForm({ ...form, room_no: v })}
-                />
-              </View>
-              <View style={{ width: '48%' }}>
-                <Text style={styles.inputLabel}>Bed No. *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholderTextColor="#EBEBEB"
-                  placeholder="Bed #"
-                  value={form.bed_no}
-                  onChangeText={v => setForm({ ...form, bed_no: v })}
-                />
-              </View>
-            </View>
-
-            <View style={styles.dateDisplayContainer}>
-              <Text style={styles.dateDisplayLabel}>Admission Date :</Text>
-              <Text style={styles.dateDisplayText}>{displayDate}</Text>
-            </View>
-
-            <Button title="NEXT" onPress={() => setStep(2)} />
-          </View>
-        ) : (
-          <View>
-            <View style={styles.rowBetween}>
-              <Text style={styles.sectionLabel}>PATIENT EMERGENCY CONTACT</Text>
-              <TouchableOpacity
-                onPress={() =>
-                  setContacts([
-                    ...contacts,
-                    { name: '', relationship: '', number: '' },
-                  ])
-                }
-                style={styles.addIconCircle}
+              <View
+                style={[styles.row, styles.inputGroup, { marginBottom: 30 }]}
               >
-                <Text style={styles.addPlusText}>+</Text>
+                <View style={{ flex: 1, marginRight: 10 }}>
+                  <Text style={styles.inputLabel}>
+                    Room No. <Text style={styles.required}>*</Text>
+                  </Text>
+                  <Dropdown
+                    style={styles.dropdown}
+                    data={[]}
+                    labelField="label"
+                    valueField="value"
+                    placeholder="Select Room"
+                    placeholderStyle={styles.placeholderStyle}
+                    selectedTextStyle={styles.selectedTextStyle}
+                    value={form.room_no}
+                    onChange={item => setForm({ ...form, room_no: item.value })}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>
+                    Bed No. <Text style={styles.required}>*</Text>
+                  </Text>
+                  <Dropdown
+                    style={styles.dropdown}
+                    data={[]}
+                    labelField="label"
+                    valueField="value"
+                    placeholder="Select Bed"
+                    placeholderStyle={styles.placeholderStyle}
+                    selectedTextStyle={styles.selectedTextStyle}
+                    value={form.bed_no}
+                    onChange={item => setForm({ ...form, bed_no: item.value })}
+                  />
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.submitBtn}
+                onPress={() => setStep(2)}
+              >
+                <Text style={styles.submitText}>NEXT</Text>
+                <Icon name="chevron-right" size={22} color={THEME_GREEN} />
               </TouchableOpacity>
             </View>
-
-            {contacts.map((contact, index) => (
-              <View key={index} style={styles.contactWrapper}>
-                <View style={styles.rowBetween}>
-                  <Text style={styles.contactHeader}>Contact #{index + 1}</Text>
+          ) : (
+            /* STEP 2: EMERGENCY CONTACT */
+            <View>
+              {contacts.map((contact, index) => (
+                <View key={index} style={styles.contactBlock}>
                   {contacts.length > 1 && (
                     <TouchableOpacity
-                      onPress={() => {
-                        setIndexToDelete(index);
-                        setAlertVisible(true);
-                      }}
-                      style={styles.removeCircle}
+                      style={styles.removeBtn}
+                      onPress={() =>
+                        setContacts(contacts.filter((_, i) => i !== index))
+                      }
                     >
-                      <Text style={styles.removeText}>✕</Text>
+                      <Icon
+                        name="remove-circle"
+                        size={20}
+                        color={REQUIRED_RED}
+                      />
                     </TouchableOpacity>
                   )}
-                </View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Name *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholderTextColor="#EBEBEB"
-                    placeholder="Enter Name"
-                    value={contact.name}
-                    onChangeText={v => updateContact(index, 'name', v)}
-                  />
-                </View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Relationship *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholderTextColor="#EBEBEB"
-                    placeholder="Enter Relationship"
-                    value={contact.relationship}
-                    onChangeText={v => updateContact(index, 'relationship', v)}
-                  />
-                </View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Contact Number *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholderTextColor="#EBEBEB"
-                    placeholder="Enter Number"
-                    value={contact.number}
-                    keyboardType="phone-pad"
-                    onChangeText={v => updateContact(index, 'number', v)}
-                  />
-                </View>
-              </View>
-            ))}
 
-            <Button title="REGISTER" onPress={handleRegister} />
-            <TouchableOpacity onPress={() => setStep(1)} style={styles.backBtn}>
-              <Text style={styles.backBtnText}>Back to Details</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>
+                      Name <Text style={styles.required}>*</Text>
+                    </Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter Full Name"
+                      placeholderTextColor={PLACEHOLDER_COLOR}
+                      value={contact.name}
+                      onChangeText={v => updateContact(index, 'name', v)}
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>
+                      Relationship <Text style={styles.required}>*</Text>
+                    </Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter Relationship"
+                      placeholderTextColor={PLACEHOLDER_COLOR}
+                      value={contact.relationship}
+                      onChangeText={v =>
+                        updateContact(index, 'relationship', v)
+                      }
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>
+                      Contact Number <Text style={styles.required}>*</Text>
+                    </Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter Contact Number"
+                      placeholderTextColor={PLACEHOLDER_COLOR}
+                      keyboardType="phone-pad"
+                      value={contact.number}
+                      onChangeText={v => updateContact(index, 'number', v)}
+                    />
+                  </View>
+                </View>
+              ))}
+
+              <TouchableOpacity
+                style={styles.submitBtn}
+                onPress={handleFinalRegister}
+              >
+                <Text style={styles.submitText}>REGISTER</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.backLink}
+                onPress={() => setStep(1)}
+              >
+                <Text style={styles.backLinkText}>Back to Patient Details</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={{ height: 100 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  scrollContent: { padding: 25, paddingBottom: 120, backgroundColor: '#fff' },
-  headerTitle: {
+  safeArea: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, paddingHorizontal: 40 },
+  header: {
+    marginTop: Platform.OS === 'ios' ? 20 : 40,
+    marginBottom: 35,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center', // This centers the (+) button vertically against Title + Subtitle
+  },
+  titleContainer: {
+    flex: 1,
+  },
+  title: {
     fontSize: 35,
-    color: '#035022',
+    color: THEME_GREEN,
     fontFamily: 'MinionPro-SemiboldItalic',
-    marginBottom: 5,
-    marginTop: 20,
+    marginBottom: 2,
   },
-  placeholder: { color: '#EBEBEB', fontSize: 14, marginBottom: 15 },
-  sectionLabel: {
+  sectionTitle: {
     fontSize: 16,
+    fontFamily: 'AlteHaasGroteskBold',
+    color: THEME_GREEN,
     fontWeight: 'bold',
-    color: '#1a521e',
-    marginBottom: 20,
-  },
-  inputGroup: { marginBottom: 15 },
-  inputLabel: { fontSize: 13, color: '#1a521e', marginBottom: 8 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#EBEBEB',
-    borderRadius: 10,
-    padding: 12,
-    backgroundColor: '#fff',
-    color: '#333',
-    justifyContent: 'center',
-    minHeight: 48,
-  },
-  readOnlyBox: {
-    borderWidth: 1,
-    borderColor: '#EBEBEB',
-    borderRadius: 10,
-    padding: 12,
-    backgroundColor: '#EBEBEB',
-    height: 48,
-    justifyContent: 'center',
-  },
-  readOnlyText: { color: '#1B5E20', fontWeight: 'bold', fontSize: 16 },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 5,
-  },
-  rowBetween: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  genderContainer: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: '#EBEBEB',
-    borderRadius: 10,
-    height: 45,
-    overflow: 'hidden',
-  },
-  genderBtn: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  genderBtnActive: { backgroundColor: '#E5FFE8' },
-  genderText: { color: '#999', fontWeight: 'bold' },
-  genderTextActive: { color: '#2d6a4f', fontWeight: 'bold' },
-  dateDisplayContainer: { marginTop: 10, marginBottom: 25 },
-  dateDisplayLabel: { fontSize: 14, color: '#2d6a4f', marginBottom: 2 },
-  dateDisplayText: { fontSize: 16, fontWeight: 'bold', color: '#1b4332' },
-  contactWrapper: { marginBottom: 20 },
-  contactHeader: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#1b4332',
-    marginBottom: 10,
+    marginTop: 2,
   },
   addIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#2d6a4f',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: THEME_GREEN,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 15,
   },
-  addPlusText: { color: '#2d6a4f', fontSize: 22 },
-  removeCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ff4d4d',
+  inputGroup: { marginBottom: 20 },
+  inputLabel: {
+    fontSize: 14,
+    fontFamily: 'AlteHaasGroteskBold',
+    color: THEME_GREEN,
+    marginBottom: 8,
+  },
+  required: { color: REQUIRED_RED },
+  input: {
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 14,
+    color: '#333',
+    backgroundColor: '#fff',
+    fontFamily: 'AlteHaasGrotesk',
+  },
+  placeholderStyle: {
+    fontSize: 14,
+    color: '#999',
+    fontFamily: 'AlteHaasGrotesk',
+  },
+  selectedTextStyle: {
+    fontSize: 14,
+    color: '#333',
+    fontFamily: 'AlteHaasGroteskBold',
+  },
+  readOnlyInput: { backgroundColor: '#F5F5F5', color: '#777' },
+  dropdown: {
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 52,
+    backgroundColor: '#fff',
+  },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  contactBlock: { marginBottom: 10, position: 'relative' },
+  removeBtn: { alignSelf: 'flex-end', marginBottom: 5 },
+  submitBtn: {
+    backgroundColor: BANNER_GREEN,
+    height: 55,
+    borderRadius: 30,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: THEME_GREEN,
+    marginTop: 10,
   },
-  removeText: { color: '#ff4d4d', fontSize: 12 },
-  backBtn: { marginTop: 20 },
-  backBtnText: {
+  submitText: {
+    color: THEME_GREEN,
+    fontFamily: 'AlteHaasGroteskBold',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 5,
+  },
+  backLink: { marginTop: 20 },
+  backLinkText: {
     textAlign: 'center',
     color: '#666',
     textDecorationLine: 'underline',
