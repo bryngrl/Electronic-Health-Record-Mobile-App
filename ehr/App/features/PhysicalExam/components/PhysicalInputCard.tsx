@@ -60,8 +60,7 @@ const ExamInputCard = ({
             {
               top: topPosition,
               left: 10,
-              // Add the 20px padding to the right side (55 + 20 = 75 for the alert cut)
-              right: isNearAlert ? 75 : 10,
+              right: isNearAlert ? 60 : 10,
             },
           ]}
         />,
@@ -164,7 +163,7 @@ const styles = StyleSheet.create({
     position: 'relative', // Removed flexDirection: 'row' so elements stack vertically
   },
   badge: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#FFEEC2',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 15,

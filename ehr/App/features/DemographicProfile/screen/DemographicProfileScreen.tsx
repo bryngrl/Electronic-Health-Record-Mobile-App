@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
 
   headerText: {
     color: '#29A539',
-    fontWeight: 'bold',
+    fontFamily: 'AlteHaasGroteskBold',
     fontSize: 14,
     paddingRight: 10,
   },

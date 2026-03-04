@@ -335,15 +335,20 @@ const styles = StyleSheet.create({
     color: THEME_GREEN,
     fontFamily: 'MinionPro-SemiboldItalic',
   },
-  dateText: { fontSize: 13, color: '#999' },
+  dateText: { fontSize: 13, fontFamily: 'AlteHaasGroteskBold', color: '#999' },
   stepHeader: {
     backgroundColor: LIGHT_GREEN_BG,
     paddingVertical: 10,
     borderRadius: 25,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
+    marginTop: 20,
   },
-  stepHeaderText: { color: '#29A539', fontWeight: 'bold', fontSize: 12 },
+  stepHeaderText: {
+    color: '#29A539',
+    fontFamily: 'AlteHaasGroteskBold',
+    fontSize: 14,
+  },
   btnContainer: { marginTop: 10 },
 });
 

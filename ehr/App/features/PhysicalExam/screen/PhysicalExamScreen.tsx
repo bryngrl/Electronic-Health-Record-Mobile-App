@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     color: THEME_GREEN,
     fontFamily: 'MinionPro-SemiboldItalic',
   },
-  dateText: { fontSize: 13, color: '#999' },
+  dateText: { fontSize: 13, fontFamily: 'AlteHaasGroteskBold', color: '#999' },
   sectionLabel: {
     fontSize: 12,
     fontWeight: 'bold',

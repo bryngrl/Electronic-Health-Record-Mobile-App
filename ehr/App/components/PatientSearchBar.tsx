@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: 'AlteHaasGroteskBold',
     color: THEME_GREEN,
     marginBottom: 8,
   },
@@ -272,7 +272,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
   },
-  searchInput: { flex: 1, fontSize: 14, color: '#333', height: '100%' },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    height: '100%',
+    fontFamily: 'AlteHaasGrotesk',
+  },
   loader: { marginLeft: 10 },
   dropdown: {
     backgroundColor: '#fff',
@@ -293,7 +299,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  dropdownText: { fontSize: 14, color: '#333' },
+  dropdownText: {
+    fontSize: 14,
+    color: '#333',
+    fontFamily: 'AlteHaasGrotesk',
+  },
   infoContainer: {
     padding: 20,
     alignItems: 'center',
@@ -309,7 +319,7 @@ const styles = StyleSheet.create({
   },
   closeText: {
     color: '#d32f2f',
-    fontWeight: 'bold',
+    fontFamily: 'AlteHaasGroteskBold',
     fontSize: 11,
     letterSpacing: 1,
   },

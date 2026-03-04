@@ -10,18 +10,18 @@ interface LinedInputProps {
   onDisabledPress?: () => void;
 }
 
-const LinedInputCard = ({ 
-  label, 
-  value, 
-  onChangeText, 
+const LinedInputCard = ({
+  label,
+  value,
+  onChangeText,
   numberOfLines = 4,
   disabled = false,
-  onDisabledPress
+  onDisabledPress,
 }: LinedInputProps) => {
   const LINE_HEIGHT = 30;
 
   return (
-    <Pressable 
+    <Pressable
       onPress={() => {
         if (disabled && onDisabledPress) {
           onDisabledPress();
@@ -35,21 +35,27 @@ const LinedInputCard = ({
         </View>
         <View style={styles.sideLine} />
       </View>
-      
-      <View style={styles.inputWrapper} pointerEvents={disabled ? 'none' : 'auto'}>
+
+      <View
+        style={styles.inputWrapper}
+        pointerEvents={disabled ? 'none' : 'auto'}
+      >
         {/* Background Lines */}
         <View style={StyleSheet.absoluteFill}>
           {[...Array(numberOfLines)].map((_, i) => (
-            <View 
-              key={i} 
-              style={[styles.line, { top: (i + 1) * LINE_HEIGHT }]} 
+            <View
+              key={i}
+              style={[styles.line, { top: (i + 1) * LINE_HEIGHT }]}
             />
           ))}
         </View>
 
         {/* TextInput aligned to lines */}
         <TextInput
-          style={[styles.input, { lineHeight: LINE_HEIGHT, minHeight: LINE_HEIGHT * numberOfLines }]}
+          style={[
+            styles.input,
+            { lineHeight: LINE_HEIGHT, minHeight: LINE_HEIGHT * numberOfLines },
+          ]}
           value={value}
           onChangeText={onChangeText}
           multiline

@@ -139,7 +139,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
   },
-  nameText: { color: '#035022', fontSize: 15 },
+  nameText: {
+    color: '#035022',
+    fontSize: 14,
+    fontFamily: 'AlteHaasGrotesk',
+  },
   actionBtn: { padding: 0 },
   iconCircle: {
     width: 34,
