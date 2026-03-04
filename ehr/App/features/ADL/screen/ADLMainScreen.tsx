@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginBottom: 15,
   },
-  inputText: { fontSize: 13, color: '#333' },
+  inputText: { fontSize: 14, color: '#333' },
   row: { flexDirection: 'row', marginTop: 5 },
   safeArea: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1, paddingHorizontal: 25 },
@@ -390,9 +390,9 @@ const styles = StyleSheet.create({
   dateText: { fontSize: 13, color: '#999' },
   section: { marginBottom: 15, zIndex: 10 },
   sectionLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
-    color: THEME_GREEN,
+    color: '#0A8219',
     marginBottom: 8,
   },
   footerRow: {
