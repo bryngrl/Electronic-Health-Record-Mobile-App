@@ -338,7 +338,12 @@ const styles = StyleSheet.create({
     color: '#035022',
     fontFamily: 'MinionPro-SemiboldItalic',
   },
-  dateText: { fontSize: 16, color: '#A1A1A1', marginTop: -5 },
+  dateText: {
+    fontSize: 13,
+    fontFamily: 'AlteHaasGroteskBold',
+    color: '#A1A1A1',
+    marginTop: 0,
+  },
   toggleContainer: {
     flexDirection: 'row',
     backgroundColor: '#F2F2F2',

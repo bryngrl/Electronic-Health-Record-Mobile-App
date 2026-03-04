@@ -89,7 +89,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  pillText: { color: '#14532d', fontWeight: 'bold', fontSize: 12 },
+  pillText: {
+    color: '#14532d',
+    fontFamily: 'AlteHaasGroteskBold',
+    fontSize: 14,
+  },
   box: {
     height: 250, // Grid (Tablet) mode height
     borderRadius: 20,
