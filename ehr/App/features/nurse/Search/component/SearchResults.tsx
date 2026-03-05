@@ -6,20 +6,24 @@ import {
   FlatList,
   TouchableOpacity,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
-import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const THEME_GREEN = '#1B4332';
 
-export const SearchResults = ({ data }: { data: any[] }) => {
+interface SearchResultsProps {
+  data: any[];
+  onItemPress: (item: any) => void;
+}
+
+export const SearchResults = ({ data, onItemPress }: SearchResultsProps) => {
   const renderItem = ({ item }: any) => (
-    <TouchableOpacity style={styles.resultItem}>
+    <TouchableOpacity style={styles.resultItem} onPress={() => onItemPress(item)}>
       <View style={styles.iconContainer}>
-        {item.isSpecial ? (
-          <MaterialIcon name="show-chart" size={24} color={THEME_GREEN} />
-        ) : (
-          <Icon name={item.icon} size={24} color={THEME_GREEN} />
-        )}
+        <Icon 
+          name={item.icon || 'person'} 
+          size={24} 
+          color={THEME_GREEN} 
+        />
       </View>
       <View style={styles.textContainer}>
         <Text style={styles.resultName}>{item.name}</Text>
@@ -32,9 +36,10 @@ export const SearchResults = ({ data }: { data: any[] }) => {
     <FlatList
       data={data}
       renderItem={renderItem}
-      keyExtractor={item => item.id}
+      keyExtractor={item => item.id.toString()}
       contentContainerStyle={styles.list}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     />
   );
 };
@@ -61,6 +66,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 2, height: 2 },
   },
   textContainer: { marginLeft: 15 },
-  resultName: { fontSize: 16, fontWeight: 'bold', color: THEME_GREEN },
-  resultType: { fontSize: 12, color: '#BBB', marginTop: 2 },
+  resultName: { fontSize: 16, fontWeight: 'bold', color: THEME_GREEN, fontFamily: 'AlteHaasGroteskBold' },
+  resultType: { fontSize: 12, color: '#BBB', marginTop: 2, fontFamily: 'AlteHaasGrotesk' },
 });

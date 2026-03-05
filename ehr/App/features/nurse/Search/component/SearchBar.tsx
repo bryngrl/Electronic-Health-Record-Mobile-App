@@ -37,7 +37,6 @@ export const SearchBar = ({
         placeholderTextColor="#CCC"
       />
     </View>
-    ``
     <TouchableOpacity style={styles.filterBtn} onPress={onFilterPress}>
       <Image
         source={

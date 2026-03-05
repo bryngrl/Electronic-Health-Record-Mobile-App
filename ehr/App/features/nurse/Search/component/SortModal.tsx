@@ -18,6 +18,7 @@ interface SortModalProps {
   onClose: () => void;
   selectedOption: string;
   onSelect: (option: string) => void;
+  options: string[];
 }
 
 export const SortModal = ({
@@ -25,8 +26,8 @@ export const SortModal = ({
   onClose,
   selectedOption,
   onSelect,
+  options,
 }: SortModalProps) => {
-  const options = ['Best matches', 'Newest', 'Oldest'];
 
   return (
     <Modal

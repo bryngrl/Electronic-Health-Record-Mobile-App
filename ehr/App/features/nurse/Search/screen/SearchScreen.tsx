@@ -1,16 +1,197 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { SearchBar } from '@nurse/Search/component/SearchBar';
 import { SearchResults } from '@nurse/Search/component/SearchResults';
 import { SortModal } from '@nurse/Search/component/SortModal';
 import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
+import apiClient from '@api/apiClient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const RECENT_SEARCHES_KEY = '@recent_searches';
+
+const dashboardItems = [
+  { id: 'Register', title: 'Register Patient', icon: 'person-add' },
+  {
+    id: 'Demographic Profile',
+    title: 'Demographic Profile',
+    icon: 'account-box',
+  },
+  { id: 'MedicalHistory', title: 'Medical History', icon: 'history' },
+  { id: 'PhysicalExam', title: 'Physical Exam', icon: 'person-search' },
+  { id: 'Vital Signs', title: 'Vital Signs', icon: 'monitor-heart' },
+  { id: 'Intake and Output', title: 'Intake and Output', icon: 'water-drop' },
+  { id: 'Activities', title: 'Activities of Daily Living', icon: 'extension' },
+  { id: 'LabValues', title: 'Lab Values', icon: 'science' },
+  { id: 'Diagnostics', title: 'Diagnostics', icon: 'biotech' },
+  { id: 'IvsAndLines', title: 'IVs and Lines', icon: 'medication' },
+  {
+    id: 'Medication Administration',
+    title: 'Medication Administration',
+    icon: 'medical-services',
+  },
+  {
+    id: 'Medical Reconciliation',
+    title: 'Medical Reconciliation',
+    icon: 'fact-check',
+  },
+];
 
 export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [sortModalVisible, setSortModalVisible] = useState(false);
-  const [sortBy, setSortBy] = useState('Best matches');
+  const [sortBy, setSortBy] = useState('Name (A-Z)');
+  const [patients, setPatients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [filteredResults, setFilteredResults] = useState<any[]>([]);
+  const [recentSearches, setRecentSearches] = useState<any[]>([]);
+
+  const isPatientMode = ['Patients', 'Newest', 'Oldest'].includes(sortBy);
+  const sortOptions = isPatientMode
+    ? ['Newest', 'Oldest', 'Show All']
+    : ['Name (A-Z)', 'Name (Z-A)', 'Features', 'Patients'];
+
+  const handleSortSelect = (option: string) => {
+    if (option === 'Show All') {
+      setSortBy('Name (A-Z)');
+    } else {
+      setSortBy(option);
+    }
+  };
+
+  useEffect(() => {
+    loadRecentSearches();
+    fetchPatients();
+  }, []);
+
+  const loadRecentSearches = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(RECENT_SEARCHES_KEY);
+      if (saved) {
+        setRecentSearches(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error('Failed to load recent searches', e);
+    }
+  };
+
+  const saveRecentSearches = async (searches: any[]) => {
+    try {
+      await AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
+    } catch (e) {
+      console.error('Failed to save recent searches', e);
+    }
+  };
+
+  const fetchPatients = async () => {
+    setLoading(true);
+    try {
+      const response = await apiClient.get('/patients/');
+      let raw = [];
+      if (Array.isArray(response.data)) {
+        raw = response.data;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        raw = response.data.data;
+      }
+
+      const normalized = raw
+        .map((p: any) => ({
+          id: `p-${p.patient_id || p.id}`,
+          name: `${p.last_name || ''}, ${p.first_name || ''}${
+            p.middle_name ? ' ' + p.middle_name.charAt(0) + '.' : ''
+          }`.trim(),
+          type: 'Patient',
+          icon: 'person',
+          isPatient: true,
+          createdAt: p.admission_date ? new Date(p.admission_date).getTime() : 0,
+        }))
+        .filter((p: any) => p.id !== null);
+
+      setPatients(normalized);
+    } catch (err) {
+      console.error('SearchScreen Error fetching patients:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const normalizedFeatures = dashboardItems.map(item => ({
+      id: `f-${item.id}`,
+      name: item.title,
+      type: 'Feature',
+      icon: item.icon,
+      isPatient: false,
+      createdAt: 0,
+    }));
+
+    const combined = [...normalizedFeatures, ...patients];
+    let results = [];
+
+    if (query.trim().length > 0) {
+      const q = query.toLowerCase();
+      const startsWith = combined.filter(item =>
+        item.name.toLowerCase().startsWith(q),
+      );
+      const contains = combined.filter(
+        item =>
+          item.name.toLowerCase().includes(q) &&
+          !item.name.toLowerCase().startsWith(q),
+      );
+
+      results = [...startsWith, ...contains];
+    } else {
+      results = recentSearches;
+    }
+
+    // Apply Filters
+    if (sortBy === 'Features') {
+      results = results.filter(item => item.type === 'Feature');
+    } else if (['Patients', 'Newest', 'Oldest'].includes(sortBy)) {
+      results = results.filter(item => item.type === 'Patient');
+    }
+
+    // Apply Sorts
+    if (sortBy === 'Name (A-Z)') {
+      results = [...results].sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === 'Name (Z-A)') {
+      results = [...results].sort((a, b) => b.name.localeCompare(a.name));
+    } else if (sortBy === 'Newest' || sortBy === 'Patients') {
+      results = [...results].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    } else if (sortBy === 'Oldest') {
+      results = [...results].sort((a, b) => {
+        const timeA = a.createdAt || 0;
+        const timeB = b.createdAt || 0;
+        if (timeA === 0) return 1;
+        if (timeB === 0) return -1;
+        return timeA - timeB;
+      });
+    }
+
+    setFilteredResults(results);
+  }, [query, patients, recentSearches, sortBy]);
+
+  const handleItemPress = (item: any) => {
+    const updatedRecent = [
+      item,
+      ...recentSearches.filter(i => i.id !== item.id),
+    ].slice(0, 5);
+    setRecentSearches(updatedRecent);
+    saveRecentSearches(updatedRecent);
+    console.log('Selected:', item.name);
+  };
+
+  const clearRecent = () => {
+    setRecentSearches([]);
+    saveRecentSearches([]);
+  };
 
   return (
     <View style={styles.container}>
@@ -22,7 +203,6 @@ export default function SearchScreen() {
       />
 
       <View style={styles.content}>
-        {/* Search Results Filter Header */}
         {showFilters && (
           <TouchableOpacity
             style={styles.sortTrigger}
@@ -34,17 +214,30 @@ export default function SearchScreen() {
           </TouchableOpacity>
         )}
 
-        <Text style={styles.resultsTitle}>Results</Text>
+        <View style={styles.resultsHeader}>
+          <Text style={styles.resultsTitle}>
+            {query.length > 0 ? 'Search Results' : 'Recent Searches'}
+          </Text>
+          {query.length === 0 && recentSearches.length > 0 && (
+            <TouchableOpacity onPress={clearRecent}>
+              <Text style={styles.clearText}>Clear all</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
-        <SearchResults data={[]} />
+        {loading && patients.length === 0 ? (
+          <ActivityIndicator size="large" color="#1B4332" />
+        ) : (
+          <SearchResults data={filteredResults} onItemPress={handleItemPress} />
+        )}
       </View>
 
-      {/* The Sort Modal */}
       <SortModal
         visible={sortModalVisible}
         onClose={() => setSortModalVisible(false)}
         selectedOption={sortBy}
-        onSelect={setSortBy}
+        onSelect={handleSortSelect}
+        options={sortOptions}
       />
     </View>
   );
@@ -58,13 +251,23 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   content: { flex: 1 },
+  resultsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 15,
+    paddingTop: 15,
+  },
   resultsTitle: {
     fontSize: 14,
     fontWeight: '700',
     color: '#B2B2B2',
-    paddingBottom: 15,
-    paddingTop: 15,
-    fontFamily: 'AlteHaasGrotesk',
+    fontFamily: 'AlteHaasGroteskBold',
+  },
+  clearText: {
+    fontSize: 12,
+    color: '#1B4332',
+    fontFamily: 'AlteHaasGroteskBold',
   },
   sortTrigger: {
     flexDirection: 'row',
