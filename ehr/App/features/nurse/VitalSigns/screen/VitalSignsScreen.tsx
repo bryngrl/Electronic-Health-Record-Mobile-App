@@ -11,19 +11,20 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
-  TextInput,
   TouchableOpacity,
+  Pressable,
+  StatusBar,
+  ActivityIndicator,
+  Modal,
+  FlatList,
   Image,
   Dimensions,
-  FlatList,
-  StatusBar,
-  Pressable,
-  Modal as RNModal,
-  Animated,
-  Easing,
   BackHandler,
   Platform,
+  Animated,
+  Easing,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import VitalCard from '@nurse/VitalSigns/component/VitalCard';
 import PreciseVitalChart from '@nurse/VitalSigns/component/VitalSignsChart';
 import { useVitalSignsLogic } from '@nurse/VitalSigns/hook/useVitalSignsLogic';
@@ -50,8 +51,8 @@ interface VitalSignsScreenProps {
 const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
-    () => createStyles(theme, commonStyles),
-    [theme, commonStyles],
+    () => createStyles(theme, commonStyles, isDarkMode),
+    [theme, commonStyles, isDarkMode],
   );
 
   const {
@@ -96,26 +97,31 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
   }, [isDataComplete]);
 
   const triggerShake = () => {
+    shakeAnim.setValue(0);
     Animated.sequence([
       Animated.timing(shakeAnim, {
         toValue: 10,
         duration: 50,
         useNativeDriver: true,
+        easing: Easing.linear,
       }),
       Animated.timing(shakeAnim, {
         toValue: -10,
         duration: 50,
         useNativeDriver: true,
+        easing: Easing.linear,
       }),
       Animated.timing(shakeAnim, {
         toValue: 10,
         duration: 50,
         useNativeDriver: true,
+        easing: Easing.linear,
       }),
       Animated.timing(shakeAnim, {
         toValue: 0,
         duration: 50,
         useNativeDriver: true,
+        easing: Easing.linear,
       }),
     ]).start();
   };
@@ -228,6 +234,18 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
 
   const isLastTimeSlot = currentTimeIndex === TIME_SLOTS.length - 1;
 
+  const fadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
+    : [
+        'rgba(255, 255, 255, 0)',
+        'rgba(255, 255, 255, 0.8)',
+        'rgba(255, 255, 255, 1)',
+      ];
+
+  const headerFadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
+    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
+
   if (isAdpieActive && recordId) {
     return (
       <ADPIEScreen
@@ -240,245 +258,267 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
 
   return (
     <SafeAreaView style={styles.root}>
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        scrollEnabled={scrollEnabled}
-      >
-        {/* Header Section */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Vital Signs</Text>
-            <Text style={styles.subDate}>
-              {new Date().toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
-            <Text style={styles.menuDots}>⋮</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Info Section / Search Bar */}
-        <PatientSearchBar
-          onPatientSelect={(id, name, patientObj) => {
-            setSelectedPatient(id ? id.toString() : null, name);
-            setSelectedPatientFull(patientObj);
+      <View style={{ zIndex: 10 }}>
+        <View
+          style={{
+            paddingHorizontal: 40,
+            backgroundColor: theme.background,
+            paddingBottom: 15,
           }}
-          onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-          initialPatientName={patientName}
-        />
-
-        <View style={styles.row}>
-          <View style={{ flex: 1.2, marginRight: 10 }}>
-            <Text style={styles.fieldLabel}>DATE :</Text>
-            <View style={styles.pillInput}>
-              <Text style={styles.dateVal}>
+        >
+          <View style={[styles.header, { marginBottom: 0 }]}>
+            <View>
+              <Text style={styles.title}>Vital Signs</Text>
+              <Text style={styles.subDate}>
                 {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
                   month: 'long',
                   day: 'numeric',
-                  year: 'numeric',
                 })}
               </Text>
             </View>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.fieldLabel}>DAY NO :</Text>
-            <View style={[styles.pillInput, styles.dropdownRow]}>
-              <Text style={styles.dateVal}>{calculateDayNumber()}</Text>
-              <Image
-                source={arrowIcon}
-                style={[styles.arrowIconImage, { tintColor: theme.textMuted }]}
-              />
-            </View>
+            <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
+              <Text style={styles.menuDots}>⋮</Text>
+            </TouchableOpacity>
           </View>
         </View>
+        <LinearGradient
+          colors={headerFadeColors}
+          style={{ height: 20 }}
+          pointerEvents="none"
+        />
+      </View>
 
-        {/* CHART CAROUSEL */}
-        <View style={styles.chartCarousel}>
-          {chartIndex > 0 && (
-            <TouchableOpacity
-              style={[styles.navArrow, { left: -10 }]}
-              onPress={() => scrollChart('prev')}
-            >
-              <View style={styles.arrowCircle}>
-                <Image
-                  source={backArrow}
-                  style={[styles.arrowImg, { tintColor: theme.primary }]}
-                />
-              </View>
-            </TouchableOpacity>
-          )}
-
-          <FlatList
-            ref={chartListRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={SNAP_INTERVAL}
-            decelerationRate="fast"
-            data={vitalKeys}
-            extraData={vitals}
-            keyExtractor={item => item}
-            contentContainerStyle={{ paddingRight: 60 }}
-            onMomentumScrollEnd={ev => {
-              const newIndex = Math.round(
-                ev.nativeEvent.contentOffset.x / SNAP_INTERVAL,
-              );
-              setChartIndex(newIndex);
+      <View style={{ flex: 1, marginTop: -20 }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          scrollEnabled={scrollEnabled}
+        >
+          <View style={{ height: 20 }} />
+          {/* Info Section / Search Bar */}
+          <PatientSearchBar
+            onPatientSelect={(id, name, patientObj) => {
+              setSelectedPatient(id ? id.toString() : null, name);
+              setSelectedPatientFull(patientObj);
             }}
-            renderItem={({ item }) => (
-              <View style={{ width: ITEM_WIDTH, marginRight: ITEM_SPACING }}>
-                <PreciseVitalChart
-                  label={item.toUpperCase()}
-                  data={chartData[item]}
-                />
-              </View>
-            )}
+            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+            initialPatientName={patientName}
           />
 
-          {chartIndex < vitalKeys.length - 1 && (
-            <TouchableOpacity
-              style={[styles.navArrow, { right: 0 }]}
-              onPress={() => scrollChart('next')}
-            >
-              <View style={styles.arrowCircle}>
+          <View style={styles.row}>
+            <View style={{ flex: 1.2, marginRight: 10 }}>
+              <Text style={styles.fieldLabel}>DATE :</Text>
+              <View style={styles.pillInput}>
+                <Text style={styles.dateVal}>
+                  {new Date().toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </Text>
+              </View>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fieldLabel}>DAY NO :</Text>
+              <View style={[styles.pillInput, styles.dropdownRow]}>
+                <Text style={styles.dateVal}>{calculateDayNumber()}</Text>
                 <Image
-                  source={nextArrow}
-                  style={[styles.arrowImg, { tintColor: theme.primary }]}
+                  source={arrowIcon}
+                  style={[styles.arrowIconImage, { tintColor: theme.textMuted }]}
                 />
               </View>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={styles.timeBanner}>
-          <Text style={styles.timeText}>{currentTime}</Text>
-        </View>
-
-        {/* Vital Cards */}
-        <Pressable onPress={() => !selectedPatientId && setAlertVisible(true)}>
-          <View
-            pointerEvents={selectedPatientId ? 'auto' : 'none'}
-            style={{ opacity: selectedPatientId ? 1 : 0.6 }}
-          >
-            <VitalCard
-              label="Temperature"
-              value={vitals.temperature}
-              onChangeText={v => handleUpdateVital('temperature', v)}
-            />
-            <VitalCard
-              label="HR"
-              value={vitals.hr}
-              onChangeText={v => handleUpdateVital('hr', v)}
-            />
-            <VitalCard
-              label="RR"
-              value={vitals.rr}
-              onChangeText={v => handleUpdateVital('rr', v)}
-            />
-            <VitalCard
-              label="BP"
-              value={vitals.bp}
-              onChangeText={v => handleUpdateVital('bp', v)}
-            />
-            <VitalCard
-              label="SP02"
-              value={vitals.spo2}
-              onChangeText={v => handleUpdateVital('spo2', v)}
-            />
+            </View>
           </View>
-        </Pressable>
 
-        {/* Footer Action Area */}
-        <View style={styles.footerAction}>
-          <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
-            <TouchableOpacity
-              style={[
-                styles.alertIcon,
-                {
-                  backgroundColor:
-                    currentAlert || isDataComplete
-                      ? isDarkMode
-                        ? '#78350F'
-                        : '#FFECBD'
-                      : isDataEntered
-                      ? '#FFECBD'
-                      : isDarkMode
-                      ? '#333'
-                      : '#EBEBEB',
-                  borderColor:
-                    currentAlert || isDataComplete
-                      ? '#EDB62C'
-                      : isDataEntered
-                      ? '#EDB62C'
-                      : theme.border,
-                },
-              ]}
-              disabled={!isDataEntered}
-              onPress={handleAlertPress}
-            >
-              <Image
-                source={alertIcon}
-                style={[
-                  styles.fullImg,
-                  currentAlert || isDataComplete
-                    ? { tintColor: '#EDB62C', opacity: 1 }
-                    : isDataEntered
-                    ? { tintColor: '#EDB62C', opacity: 1 }
-                    : { tintColor: theme.textMuted, opacity: 1 },
-                ]}
-              />
-            </TouchableOpacity>
-          </Animated.View>
-
-          {isLastTimeSlot ? (
-            <View style={styles.buttonGroup}>
+          {/* CHART CAROUSEL */}
+          <View style={styles.chartCarousel}>
+            {chartIndex > 0 && (
               <TouchableOpacity
-                style={[
-                  styles.cdssButton,
-                  !isDataEntered && styles.disabledButton,
-                ]}
-                onPress={handleCDSSPress}
-                disabled={!isDataEntered}
+                style={[styles.navArrow, { left: -10 }]}
+                onPress={() => scrollChart('prev')}
               >
-                <Text style={styles.cdssBtnText}>CDSS</Text>
+                <View style={styles.arrowCircle}>
+                  <Image
+                    source={backArrow}
+                    style={[styles.arrowImg, { tintColor: theme.primary }]}
+                  />
+                </View>
               </TouchableOpacity>
+            )}
+
+            <FlatList
+              ref={chartListRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={SNAP_INTERVAL}
+              decelerationRate="fast"
+              data={vitalKeys}
+              extraData={vitals}
+              keyExtractor={item => item}
+              contentContainerStyle={{ paddingRight: 60 }}
+              onMomentumScrollEnd={ev => {
+                const newIndex = Math.round(
+                  ev.nativeEvent.contentOffset.x / SNAP_INTERVAL,
+                );
+                setChartIndex(newIndex);
+              }}
+              renderItem={({ item }) => (
+                <View style={{ width: ITEM_WIDTH, marginRight: ITEM_SPACING }}>
+                  <PreciseVitalChart
+                    label={item.toUpperCase()}
+                    data={chartData[item]}
+                  />
+                </View>
+              )}
+            />
+
+            {chartIndex < vitalKeys.length - 1 && (
+              <TouchableOpacity
+                style={[styles.navArrow, { right: 0 }]}
+                onPress={() => scrollChart('next')}
+              >
+                <View style={styles.arrowCircle}>
+                  <Image
+                    source={nextArrow}
+                    style={[styles.arrowImg, { tintColor: theme.primary }]}
+                  />
+                </View>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.timeBanner}>
+            <Text style={styles.timeText}>{currentTime}</Text>
+          </View>
+
+          {/* Vital Cards */}
+          <Pressable onPress={() => !selectedPatientId && setAlertVisible(true)}>
+            <View
+              pointerEvents={selectedPatientId ? 'auto' : 'none'}
+              style={{ opacity: selectedPatientId ? 1 : 0.6 }}
+            >
+              <VitalCard
+                label="Temperature"
+                value={vitals.temperature}
+                onChangeText={v => handleUpdateVital('temperature', v)}
+              />
+              <VitalCard
+                label="HR"
+                value={vitals.hr}
+                onChangeText={v => handleUpdateVital('hr', v)}
+              />
+              <VitalCard
+                label="RR"
+                value={vitals.rr}
+                onChangeText={v => handleUpdateVital('rr', v)}
+              />
+              <VitalCard
+                label="BP"
+                value={vitals.bp}
+                onChangeText={v => handleUpdateVital('bp', v)}
+              />
+              <VitalCard
+                label="SP02"
+                value={vitals.spo2}
+                onChangeText={v => handleUpdateVital('spo2', v)}
+              />
+            </View>
+          </Pressable>
+
+          {/* Footer Action Area */}
+          <View style={styles.footerAction}>
+            <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
               <TouchableOpacity
                 style={[
-                  styles.submitButton,
-                  !isDataEntered && styles.disabledButton,
+                  styles.alertIcon,
+                  {
+                    backgroundColor:
+                      currentAlert || isDataComplete
+                        ? isDarkMode
+                          ? '#78350F'
+                          : '#FFECBD'
+                        : isDataEntered
+                        ? '#FFECBD'
+                        : isDarkMode
+                        ? '#333'
+                        : '#EBEBEB',
+                    borderColor:
+                      currentAlert || isDataComplete
+                        ? '#EDB62C'
+                        : isDataEntered
+                        ? '#EDB62C'
+                        : theme.border,
+                  },
+                ]}
+                disabled={!isDataEntered}
+                onPress={handleAlertPress}
+              >
+                <Image
+                  source={alertIcon}
+                  style={[
+                    styles.fullImg,
+                    currentAlert || isDataComplete
+                      ? { tintColor: '#EDB62C', opacity: 1 }
+                      : isDataEntered
+                      ? { tintColor: '#EDB62C', opacity: 1 }
+                      : { tintColor: theme.textMuted, opacity: 1 },
+                  ]}
+                />
+              </TouchableOpacity>
+            </Animated.View>
+
+            {isLastTimeSlot ? (
+              <View style={styles.buttonGroup}>
+                <TouchableOpacity
+                  style={[
+                    styles.cdssButton,
+                    !isDataEntered && styles.disabledButton,
+                  ]}
+                  onPress={handleCDSSPress}
+                  disabled={!isDataEntered}
+                >
+                  <Text style={styles.cdssBtnText}>CDSS</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.submitButton,
+                    !isDataEntered && styles.disabledButton,
+                  ]}
+                  onPress={handleNextPress}
+                  disabled={!isDataEntered}
+                >
+                  <Text style={styles.submitBtnText}>SUBMIT</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.nextButton,
+                  !selectedPatientId && styles.disabledButton,
                 ]}
                 onPress={handleNextPress}
-                disabled={!isDataEntered}
+                disabled={!selectedPatientId}
               >
-                <Text style={styles.submitBtnText}>SUBMIT</Text>
+                <Text
+                  style={[
+                    styles.nextBtnText,
+                    !selectedPatientId && { color: theme.textMuted },
+                  ]}
+                >
+                  NEXT ›
+                </Text>
               </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={[
-                styles.nextButton,
-                !selectedPatientId && styles.disabledButton,
-              ]}
-              onPress={handleNextPress}
-              disabled={!selectedPatientId}
-            >
-              <Text
-                style={[
-                  styles.nextBtnText,
-                  !selectedPatientId && { color: theme.textMuted },
-                ]}
-              >
-                NEXT ›
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </ScrollView>
+            )}
+          </View>
+        </ScrollView>
+        <LinearGradient
+          colors={fadeColors}
+          style={styles.fadeBottom}
+          pointerEvents="none"
+        />
+      </View>
 
       {/* Alert Component */}
       <SweetAlert
@@ -530,7 +570,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
       />
 
       {/* Time Selection Menu */}
-      <RNModal transparent visible={isMenuVisible} animationType="fade">
+      <Modal transparent visible={isMenuVisible} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.menuContainer}>
             <Text style={styles.menuTitle}>SELECT TIME SLOT</Text>
@@ -561,12 +601,12 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
             </TouchableOpacity>
           </View>
         </View>
-      </RNModal>
+      </Modal>
     </SafeAreaView>
   );
 };
 
-const createStyles = (theme: any, commonStyles: any) =>
+const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: theme.background },
     scrollContent: { paddingHorizontal: 40, paddingBottom: 20 },
@@ -730,6 +770,13 @@ const createStyles = (theme: any, commonStyles: any) =>
       alignItems: 'center',
     },
     closeMenuText: { color: theme.primary, fontWeight: 'bold' },
+    fadeBottom: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 60,
+    },
   });
 
 export default VitalSignsScreen;

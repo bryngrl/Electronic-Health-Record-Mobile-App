@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import LabResultCard from '../components/LabResultCard';
 import apiClient from '@api/apiClient';
 import { useLabValues } from '../hook/useLabValues';
@@ -183,6 +184,18 @@ const LabValuesScreen = ({ onBack }: any) => {
     setSearchText(name);
   };
 
+  const fadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
+    : [
+        'rgba(255, 255, 255, 0)',
+        'rgba(255, 255, 255, 0.8)',
+        'rgba(255, 255, 255, 1)',
+      ];
+
+  const headerFadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
+    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
+
   if (isAdpieActive && labId && selectedPatientId) {
     return (
       <ADPIEScreen
@@ -206,160 +219,183 @@ const LabValuesScreen = ({ onBack }: any) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={scrollEnabled}
-      >
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Laboratory Values</Text>
-            <Text style={styles.dateText}>
-              {new Date().toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
+      <View style={{ zIndex: 10 }}>
+        <View
+          style={{
+            paddingHorizontal: 40,
+            backgroundColor: theme.background,
+            paddingBottom: 15,
+          }}
+        >
+          <View style={[styles.header, { marginBottom: 0 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>Laboratory Values</Text>
+              <Text style={styles.dateText}>
+                {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowLabList(!showLabList)}>
+              <Icon name="more-vert" size={35} color={theme.primary} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => setShowLabList(!showLabList)}>
-            <Icon name="more-vert" size={35} color={theme.primary} />
-          </TouchableOpacity>
         </View>
-
-        {showLabList && (
-          <View style={styles.dropdownOverlay}>
-            <ScrollView nestedScrollEnabled={true}>
-              {LAB_TESTS.map((test, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.dropdownItem}
-                  onPress={() => {
-                    setSelectedTest(test);
-                    setShowLabList(false);
-                  }}
-                >
-                  <Text style={styles.dropdownItemText}>{test}</Text>
-                  {selectedTest === test && (
-                    <Icon name="check" size={16} color={theme.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        <PatientSearchBar
-          initialPatientName={searchText}
-          onPatientSelect={handlePatientSelect}
-          onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+        <LinearGradient
+          colors={headerFadeColors}
+          style={{ height: 20 }}
+          pointerEvents="none"
         />
+      </View>
 
-        <LabResultCard
-          testLabel={selectedTest}
-          resultValue={result}
-          rangeValue={normalRange}
-          onResultChange={setResult}
-          onRangeChange={setNormalRange}
-          disabled={!selectedPatientId}
-          onDisabledPress={() =>
-            showAlert('Patient Required', 'Please select a patient first.')
-          }
-        />
+      <View style={{ flex: 1, marginTop: -20 }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          style={styles.container}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={scrollEnabled}
+        >
+          <View style={{ height: 20 }} />
+          {showLabList && (
+            <View style={styles.dropdownOverlay}>
+              <ScrollView nestedScrollEnabled={true}>
+                {LAB_TESTS.map((test, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setSelectedTest(test);
+                      setShowLabList(false);
+                    }}
+                  >
+                    <Text style={styles.dropdownItemText}>{test}</Text>
+                    {selectedTest === test && (
+                      <Icon name="check" size={16} color={theme.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
-        <View style={styles.footerRow}>
-          <TouchableOpacity
-            style={[
-              styles.alertIcon,
-              {
-                backgroundColor: isClinicalAlert
-                  ? isDarkMode ? '#78350F' : '#FFECBD'
-                  : hasInputData && selectedPatientId
-                  ? isDarkMode ? '#78350F' : '#FFECBD'
-                  : theme.card,
-                borderColor: isClinicalAlert || (hasInputData && selectedPatientId)
-                  ? '#EDB62C'
-                  : theme.border,
-              },
-            ]}
-            disabled={!hasInputData || !selectedPatientId}
-            onPress={() => setModalVisible(true)}
-          >
-            <Image
-              source={alertIcon}
+          <PatientSearchBar
+            initialPatientName={searchText}
+            onPatientSelect={handlePatientSelect}
+            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+          />
+
+          <LabResultCard
+            testLabel={selectedTest}
+            resultValue={result}
+            rangeValue={normalRange}
+            onResultChange={setResult}
+            onRangeChange={setNormalRange}
+            disabled={!selectedPatientId}
+            onDisabledPress={() =>
+              showAlert('Patient Required', 'Please select a patient first.')
+            }
+          />
+
+          <View style={styles.footerRow}>
+            <TouchableOpacity
               style={[
-                styles.fullImg,
-                isClinicalAlert || (hasInputData && selectedPatientId)
-                  ? { tintColor: '#EDB62C', opacity: 1 }
-                  : { tintColor: theme.textMuted, opacity: 0.5 },
+                styles.alertIcon,
+                {
+                  backgroundColor: isClinicalAlert
+                    ? isDarkMode ? '#78350F' : '#FFECBD'
+                    : hasInputData && selectedPatientId
+                    ? isDarkMode ? '#78350F' : '#FFECBD'
+                    : theme.card,
+                  borderColor: isClinicalAlert || (hasInputData && selectedPatientId)
+                    ? '#EDB62C'
+                    : theme.border,
+                },
               ]}
-            />
-          </TouchableOpacity>
+              disabled={!hasInputData || !selectedPatientId}
+              onPress={() => setModalVisible(true)}
+            >
+              <Image
+                source={alertIcon}
+                style={[
+                  styles.fullImg,
+                  isClinicalAlert || (hasInputData && selectedPatientId)
+                    ? { tintColor: '#EDB62C', opacity: 1 }
+                    : { tintColor: theme.textMuted, opacity: 0.5 },
+                ]}
+              />
+            </TouchableOpacity>
 
-          {selectedTest === 'Basophils (%)' ? (
-            <View style={styles.buttonGroup}>
-              <TouchableOpacity
-                style={[
-                  styles.cdssBtn,
-                  isFormValid && {
-                    backgroundColor: theme.buttonBg,
-                    borderColor: theme.buttonBorder,
-                  },
-                  !isFormValid && styles.disabledButton,
-                ]}
-                onPress={handleCDSSPress}
-                disabled={!isFormValid}
-              >
-                <Text
+            {selectedTest === 'Basophils (%)' ? (
+              <View style={styles.buttonGroup}>
+                <TouchableOpacity
                   style={[
-                    styles.cdssText,
-                    isFormValid && { color: theme.primary },
-                    !isFormValid && { color: theme.textMuted },
+                    styles.cdssBtn,
+                    isFormValid && {
+                      backgroundColor: theme.buttonBg,
+                      borderColor: theme.buttonBorder,
+                    },
+                    !isFormValid && styles.disabledButton,
                   ]}
+                  onPress={handleCDSSPress}
+                  disabled={!isFormValid}
                 >
-                  CDSS
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.cdssText,
+                      isFormValid && { color: theme.primary },
+                      !isFormValid && { color: theme.textMuted },
+                    ]}
+                  >
+                    CDSS
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.submitBtn,
+                    !isFormValid && styles.disabledButton,
+                  ]}
+                  onPress={handleNextOrSave}
+                  disabled={!isFormValid}
+                >
+                  <Text
+                    style={[
+                      styles.submitText,
+                      !isFormValid && { color: theme.textMuted },
+                    ]}
+                  >
+                    SUBMIT
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
               <TouchableOpacity
-                style={[
-                  styles.submitBtn,
-                  !isFormValid && styles.disabledButton,
-                ]}
+                style={[styles.nextBtn, !isFormValid && styles.disabledButton]}
                 onPress={handleNextOrSave}
                 disabled={!isFormValid}
               >
                 <Text
-                  style={[
-                    styles.submitText,
-                    !isFormValid && { color: theme.textMuted },
-                  ]}
+                  style={[styles.nextText, !isFormValid && { color: theme.textMuted }]}
                 >
-                  SUBMIT
+                  NEXT
                 </Text>
+                <Icon
+                  name="chevron-right"
+                  size={20}
+                  color={isFormValid ? theme.primary : theme.textMuted}
+                />
               </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={[styles.nextBtn, !isFormValid && styles.disabledButton]}
-              onPress={handleNextOrSave}
-              disabled={!isFormValid}
-            >
-              <Text
-                style={[styles.nextText, !isFormValid && { color: theme.textMuted }]}
-              >
-                NEXT
-              </Text>
-              <Icon
-                name="chevron-right"
-                size={20}
-                color={isFormValid ? theme.primary : theme.textMuted}
-              />
-            </TouchableOpacity>
-          )}
-        </View>
-      </ScrollView>
+            )}
+          </View>
+        </ScrollView>
+        <LinearGradient
+          colors={fadeColors}
+          style={styles.fadeBottom}
+          pointerEvents="none"
+        />
+      </View>
 
       <CDSSModal
         visible={modalVisible}
@@ -470,6 +506,13 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) => Sty
     fontWeight: 'bold',
     fontSize: 14,
     marginRight: 5,
+  },
+  fadeBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
   },
 });
 

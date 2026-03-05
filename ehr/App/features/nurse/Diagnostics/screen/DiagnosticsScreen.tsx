@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import Ionicon from 'react-native-vector-icons/Ionicons';
+import LinearGradient from 'react-native-linear-gradient';
 
 const CARD_WIDTH = 350;
 const CARD_GAP = 20;
@@ -190,90 +191,145 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
     });
   };
 
+  const fadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
+    : [
+        'rgba(255, 255, 255, 0)',
+        'rgba(255, 255, 255, 0.8)',
+        'rgba(255, 255, 255, 1)',
+      ];
+
+  const headerFadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
+    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
+
   return (
     <View style={styles.container}>
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor={theme.background}
       />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        scrollEnabled={scrollEnabled}
-      >
-        {/* HEADER SECTION */}
-        <View style={styles.headerRow}>
-          <View style={styles.titleContainer}>
-            <Text style={styles.titleText}>Diagnostics</Text>
-            <Text style={styles.dateText}>{formatDate()}</Text>
-          </View>
 
-          <View style={styles.toggleContainer}>
-            <TouchableOpacity
-              onPress={() => setViewMode('list')}
-              style={[
-                styles.toggleBtn,
-                viewMode === 'list' && styles.toggleActive,
-              ]}
-            >
-              <MaterialIcon
-                name="view-agenda"
-                size={22}
-                color={viewMode === 'list' ? '#f1c40f' : theme.textMuted}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setViewMode('grid')}
-              style={[
-                styles.toggleBtn,
-                viewMode === 'grid' && styles.toggleActive,
-              ]}
-            >
-              <MaterialIcon
-                name="grid-view"
-                size={22}
-                color={viewMode === 'grid' ? '#f1c40f' : theme.textMuted}
-              />
-            </TouchableOpacity>
+      <View style={{ zIndex: 10 }}>
+        <View
+          style={{
+            paddingHorizontal: 40,
+            backgroundColor: theme.background,
+            paddingBottom: 15,
+          }}
+        >
+          <View style={[styles.headerRow, { marginBottom: 0 }]}>
+            <View style={styles.titleContainer}>
+              <Text style={styles.titleText}>Diagnostics</Text>
+              <Text style={styles.dateText}>{formatDate()}</Text>
+            </View>
+
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity
+                onPress={() => setViewMode('list')}
+                style={[
+                  styles.toggleBtn,
+                  viewMode === 'list' && styles.toggleActive,
+                ]}
+              >
+                <MaterialIcon
+                  name="view-agenda"
+                  size={22}
+                  color={viewMode === 'list' ? '#f1c40f' : theme.textMuted}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setViewMode('grid')}
+                style={[
+                  styles.toggleBtn,
+                  viewMode === 'grid' && styles.toggleActive,
+                ]}
+              >
+                <MaterialIcon
+                  name="grid-view"
+                  size={22}
+                  color={viewMode === 'grid' ? '#f1c40f' : theme.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-
-        <PatientSearchBar
-          initialPatientName={searchText}
-          onPatientSelect={handlePatientSelect}
-          onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+        <LinearGradient
+          colors={headerFadeColors}
+          style={{ height: 20 }}
+          pointerEvents="none"
         />
+      </View>
 
-        {loading && diagnostics.length === 0 && (
-          <ActivityIndicator
-            size="large"
-            color={theme.primary}
-            style={{ marginVertical: 20 }}
+      <View style={{ flex: 1, marginTop: -20 }}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          scrollEnabled={scrollEnabled}
+        >
+          <View style={{ height: 20 }} />
+          <PatientSearchBar
+            initialPatientName={searchText}
+            onPatientSelect={handlePatientSelect}
+            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
           />
-        )}
 
-        {/* DIAGNOSTIC CARDS GRID/LIST */}
-        {viewMode === 'list' ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[
-              styles.horizontalScroll,
-              { paddingHorizontal: sidePadding },
-            ]}
-            snapToInterval={CARD_WIDTH + CARD_GAP}
-            decelerationRate="fast"
-            snapToAlignment="center"
-          >
-            {diagnosticTypes.map(item => {
-              const diagnostic = getDiagnosticForType(item.id);
-              const imageUrl = diagnostic
-                ? `${BASE_URL}/diagnostics/${diagnostic.diagnostic_id}/file`
-                : null;
+          {loading && diagnostics.length === 0 && (
+            <ActivityIndicator
+              size="large"
+              color={theme.primary}
+              style={{ marginVertical: 20 }}
+            />
+          )}
 
-              return (
-                <View key={item.id} style={{ flexDirection: 'row' }}>
-                  <View style={styles.horizontalCardLarge}>
+          {/* DIAGNOSTIC CARDS GRID/LIST */}
+          {viewMode === 'list' ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[
+                styles.horizontalScroll,
+                { paddingHorizontal: sidePadding },
+              ]}
+              snapToInterval={CARD_WIDTH + CARD_GAP}
+              decelerationRate="fast"
+              snapToAlignment="center"
+            >
+              {diagnosticTypes.map(item => {
+                const diagnostic = getDiagnosticForType(item.id);
+                const imageUrl = diagnostic
+                  ? `${BASE_URL}/diagnostics/${diagnostic.diagnostic_id}/file`
+                  : null;
+
+                return (
+                  <View key={item.id} style={{ flexDirection: 'row' }}>
+                    <View style={styles.horizontalCardLarge}>
+                      <DiagnosticCard
+                        label={item.label}
+                        viewMode={viewMode}
+                        imageUrl={imageUrl}
+                        onImport={() => handleImport(item.id)}
+                        onDelete={() =>
+                          diagnostic && handleDelete(diagnostic.diagnostic_id)
+                        }
+                        disabled={loading}
+                      />
+                    </View>
+                    <View style={{ width: CARD_GAP }} />
+                  </View>
+                );
+              })}
+            </ScrollView>
+          ) : (
+            <View style={styles.gridWrap}>
+              {diagnosticTypes.map(item => {
+                const diagnostic = getDiagnosticForType(item.id);
+                const imageUrl = diagnostic
+                  ? `${BASE_URL}/diagnostics/${diagnostic.diagnostic_id}/file`
+                  : null;
+
+                return (
+                  <View key={item.id} style={styles.gridCard}>
                     <DiagnosticCard
                       label={item.label}
                       viewMode={viewMode}
@@ -285,55 +341,35 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
                       disabled={loading}
                     />
                   </View>
-                  <View style={{ width: CARD_GAP }} />
-                </View>
-              );
-            })}
-          </ScrollView>
-        ) : (
-          <View style={styles.gridWrap}>
-            {diagnosticTypes.map(item => {
-              const diagnostic = getDiagnosticForType(item.id);
-              const imageUrl = diagnostic
-                ? `${BASE_URL}/diagnostics/${diagnostic.diagnostic_id}/file`
-                : null;
-
-              return (
-                <View key={item.id} style={styles.gridCard}>
-                  <DiagnosticCard
-                    label={item.label}
-                    viewMode={viewMode}
-                    imageUrl={imageUrl}
-                    onImport={() => handleImport(item.id)}
-                    onDelete={() =>
-                      diagnostic && handleDelete(diagnostic.diagnostic_id)
-                    }
-                    disabled={loading}
-                  />
-                </View>
-              );
-            })}
-          </View>
-        )}
-        {/* SUBMIT BUTTON */}
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            !selectedPatientId && styles.disabledButton,
-          ]}
-          disabled={!selectedPatientId}
-          onPress={onBack}
-        >
-          <Text
+                );
+              })}
+            </View>
+          )}
+          {/* SUBMIT BUTTON */}
+          <TouchableOpacity
             style={[
-              styles.submitText,
-              !selectedPatientId && { color: theme.textMuted },
+              styles.submitButton,
+              !selectedPatientId && styles.disabledButton,
             ]}
+            disabled={!selectedPatientId}
+            onPress={onBack}
           >
-            DONE
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
+            <Text
+              style={[
+                styles.submitText,
+                !selectedPatientId && { color: theme.textMuted },
+              ]}
+            >
+              DONE
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+        <LinearGradient
+          colors={fadeColors}
+          style={styles.fadeBottom}
+          pointerEvents="none"
+        />
+      </View>
 
       {/* SWEET ALERT */}
       <SweetAlert
@@ -349,10 +385,10 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
   );
 };
 
-const createStyles = (theme: any, commonStyles: any) =>
+const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.background },
-    scrollContent: { padding: 40, paddingBottom: 100 },
+    scrollContent: { paddingHorizontal: 40, paddingBottom: 100 },
     headerRow: {
       ...commonStyles.header,
       alignItems: 'center',
@@ -411,6 +447,13 @@ const createStyles = (theme: any, commonStyles: any) =>
       opacity: 0.6,
     },
     submitText: { color: theme.primary, fontWeight: 'bold', fontSize: 16 },
+    fadeBottom: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 60,
+    },
   });
 
 export default DiagnosticsScreen;

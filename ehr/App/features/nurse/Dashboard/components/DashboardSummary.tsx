@@ -533,6 +533,7 @@ const createStyles = (theme: any, commonStyles: any) =>
       padding: 18,
       flexDirection: 'row',
       justifyContent: 'space-between',
+      marginBottom: 80,
       alignItems: 'center',
     },
     btnContent: { flexDirection: 'row', alignItems: 'center' },
