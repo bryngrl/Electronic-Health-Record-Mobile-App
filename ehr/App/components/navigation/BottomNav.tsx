@@ -1,12 +1,26 @@
 import React from 'react';
-import { 
-  View, 
-  TouchableOpacity, 
-  StyleSheet, 
-  useWindowDimensions, // Use this for responsiveness
-  Platform 
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  useWindowDimensions,
+  Platform,
+  Image,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+
+// Asset Mapping - Static requires for React Native
+const icons: { [key: string]: any } = {
+  home: require('@assets/icons/home.png'),
+  home_active: require('@assets/icons/home_active.png'),
+  search: require('@assets/icons/search.png'),
+  search_active: require('@assets/icons/search_active.png'),
+  dashboard: require('@assets/icons/dashboard.png'),
+  dashboard_active: require('@assets/icons/dashboard_active.png'),
+  calendar: require('@assets/icons/calendar.png'),
+  calendar_active: require('@assets/icons/calendar_active.png'),
+  add_patient: require('@assets/icons/add_patient.png'),
+  add_patient_active: require('@assets/icons/add_patient_active.png'),
+};
 
 interface BottomNavProps {
   onAddPatient?: () => void;
@@ -14,70 +28,69 @@ interface BottomNavProps {
   onNavigate?: (route: string) => void;
 }
 
-const BottomNav = ({ onAddPatient, onNavigate, activeRoute }: BottomNavProps) => {
-  // Dynamically get width and height for orientation changes
+const BottomNav = ({
+  onAddPatient,
+  onNavigate,
+  activeRoute,
+}: BottomNavProps) => {
   const { width } = useWindowDimensions();
+
+  const renderNavIcon = (
+    routeName: string,
+    activeIconKey: string,
+    inactiveIconKey: string,
+  ) => {
+    const isActive = activeRoute === routeName;
+    const iconSource = isActive ? icons[activeIconKey] : icons[inactiveIconKey];
+
+    return (
+      <TouchableOpacity
+        style={styles.iconContainer}
+        onPress={() => onNavigate?.(routeName)}
+      >
+        <Image
+          source={iconSource}
+          style={styles.navIcon}
+          resizeMode="contain"
+        />
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={[styles.container, { width: width }]}>
       {/* Main Navigation Bar */}
       <View style={styles.navBar}>
-        <TouchableOpacity 
-          style={styles.iconContainer} 
-          onPress={() => onNavigate?.('Home')}
-        >
-          <Icon 
-            name="home" 
-            size={26} 
-            color={activeRoute === 'Home' ? '#1B5E20' : '#B0B0B0'} 
-          />
-        </TouchableOpacity>
+        {renderNavIcon('Home', 'home_active', 'home')}
+        {renderNavIcon('Search', 'search_active', 'search')}
 
-        <TouchableOpacity 
-          style={styles.iconContainer} 
-          onPress={() => onNavigate?.('Search')}
-        >
-          <Icon 
-            name="search" 
-            size={26} 
-            color={activeRoute === 'Search' ? '#1B5E20' : '#B0B0B0'} 
-          />
-        </TouchableOpacity>
-
-        {/* Dynamic Center Gap for FAB */}
+        {/* Space for the Floating Center Button */}
         <View style={styles.placeholder} />
 
-        <TouchableOpacity 
-          style={styles.iconContainer}
-          onPress={() => onNavigate?.('Grid')}
-        >
-          <Icon 
-            name="dashboard" 
-            size={26} 
-            color={activeRoute === 'Grid' ? '#1B5E20' : '#B0B0B0'} 
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.iconContainer}
-          onPress={() => onNavigate?.('Calendar')}
-        >
-          <Icon 
-            name="calendar-today" 
-            size={26} 
-            color={activeRoute === 'Calendar' ? '#1B5E20' : '#B0B0B0'} 
-          />
-        </TouchableOpacity>
+        {renderNavIcon('Dashboard', 'dashboard_active', 'dashboard')}
+        {renderNavIcon('Calendar', 'calendar_active', 'calendar')}
       </View>
 
-      {/* Responsive FAB */}
-      <TouchableOpacity 
-        style={styles.fabWrapper} 
-        activeOpacity={0.9}
+      <TouchableOpacity
+        style={[
+          styles.fabWrapper,
+          activeRoute === 'Register'
+            ? styles.fabActiveBorder
+            : styles.fabInactiveBorder,
+        ]}
+        activeOpacity={0.8}
         onPress={onAddPatient}
       >
         <View style={styles.fabInner}>
-          <Icon name="person-add" size={28} color={activeRoute === 'Register' ? '#1B5E20' : '#B0B0B0'}  />
+          <Image
+            source={
+              activeRoute === 'Register'
+                ? icons.add_patient_active
+                : icons.add_patient
+            }
+            style={styles.fabIcon}
+            resizeMode="contain"
+          />
         </View>
       </TouchableOpacity>
     </View>
@@ -88,54 +101,65 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     bottom: 0,
-    height: 90,
-    justifyContent: 'flex-end',
     backgroundColor: 'transparent',
+    height: 100,
+    justifyContent: 'flex-end',
   },
   navBar: {
     flexDirection: 'row',
     height: 70,
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopWidth: 2,
+    borderTopColor: '#F2F2F2',
     alignItems: 'center',
     justifyContent: 'space-around',
+    paddingHorizontal: 10,
     paddingBottom: Platform.OS === 'ios' ? 20 : 0,
-    elevation: 15,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
   },
   iconContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  navIcon: {
+    width: 20,
+    height: 20,
+  },
   placeholder: {
-    width: 80, // Slightly wider to ensure space in landscape
+    width: 70,
   },
   fabWrapper: {
     position: 'absolute',
     alignSelf: 'center',
     top: 0,
-    width: 75,
-    height: 75,
-    borderRadius: 38,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 10,
-    shadowColor: '#000',
+    borderWidth: 2,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  fabInactiveBorder: {
+    borderColor: '#E0E0E0',
+  },
+  fabActiveBorder: {
+    borderColor: '#1B5E20',
+    borderWidth: 2,
   },
   fabInner: {
-  
-    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  fabIcon: {
+    width: 32,
+    height: 32,
   },
 });
 
