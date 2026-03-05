@@ -39,26 +39,41 @@ export const useDemographicLogic = (
   // NEW: Function to handle Active/Inactive status updates
   const updateStatus = useCallback(
     async (status: boolean) => {
+      const targetValue = status ? 1 : 0;
+      
+      // Filter only those who actually need an update
+      const idsToUpdate = Array.from(selectedIds).filter(id => {
+        const p = (patients as any[]).find(ptr => ptr.patient_id === id);
+        if (!p) return false;
+        const currentStatus = typeof p.is_active === 'number' 
+          ? p.is_active 
+          : (p.is_active ? 1 : 0);
+        return currentStatus !== targetValue;
+      });
+
+      if (idsToUpdate.length === 0) {
+        setAlertConfig({
+          visible: true,
+          title: 'No Changes',
+          message: `Selected patients are already ${status ? 'active' : 'inactive'}.`,
+          type: 'success',
+        });
+        setSelectedIds(new Set());
+        return;
+      }
+
       setIsLoading(true);
       try {
-        /**
-         * Iterate through selected IDs and update status on the backend.
-         * Matches PUT /patients/{patient_id} with is_active: 1 or 0.
-         */
-        const updatePromises = Array.from(selectedIds).map(id => {
-          // Find the existing patient data to satisfy full PUT requirements if needed
+        const updatePromises = idsToUpdate.map(id => {
           const existingPatient = (patients as any[]).find(
             p => p.patient_id === id,
           );
 
-          // We send back the full patient object with the updated is_active status
-          // because the backend PUT endpoint uses PatientCreate schema (no partial updates).
           const updatedData = {
             ...existingPatient,
-            is_active: status ? 1 : 0,
+            is_active: targetValue,
           };
 
-          // Remove fields that are not in PatientCreate schema if they exist
           delete updatedData.patient_id;
           delete updatedData.created_at;
           delete updatedData.updated_at;
@@ -68,16 +83,15 @@ export const useDemographicLogic = (
 
         await Promise.all(updatePromises);
 
-        // Show success alert
         const statusText = status ? 'active' : 'inactive';
         let message = '';
-        if (selectedIds.size === 1) {
-          const id = Array.from(selectedIds)[0];
+        if (idsToUpdate.length === 1) {
+          const id = idsToUpdate[0];
           const p = (patients as any[]).find(ptr => ptr.patient_id === id);
           const name = p ? `${p.first_name} ${p.last_name}` : 'Patient';
           message = `${name} set to ${statusText}`;
         } else {
-          message = `${selectedIds.size} patients set to ${statusText}`;
+          message = `${idsToUpdate.length} patients set to ${statusText}`;
         }
 
         setAlertConfig({
@@ -87,7 +101,6 @@ export const useDemographicLogic = (
           type: 'success',
         });
 
-        // Reset selection and refresh list on success
         setSelectedIds(new Set());
         await loadPatients(false);
       } catch (error) {

@@ -1,7 +1,12 @@
 import React from 'react';
-import { 
-  StyleSheet, View, Text, TouchableOpacity, 
-  Modal, TouchableWithoutFeedback, Dimensions 
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  TouchableWithoutFeedback,
+  Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -13,38 +18,56 @@ interface SortModalProps {
   onClose: () => void;
   selectedOption: string;
   onSelect: (option: string) => void;
+  options: string[];
 }
 
-export const SortModal = ({ visible, onClose, selectedOption, onSelect }: SortModalProps) => {
-  const options = ['Best matches', 'Newest', 'Oldest'];
+export const SortModal = ({
+  visible,
+  onClose,
+  selectedOption,
+  onSelect,
+  options,
+}: SortModalProps) => {
 
   return (
-    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
             <View style={styles.modalContainer}>
               <View style={styles.handle} />
               <Text style={styles.titleText}>Sort by</Text>
-              
+
               <View style={styles.optionsCard}>
                 {options.map((option, index) => (
                   <React.Fragment key={option}>
-                    <TouchableOpacity 
-                      style={styles.optionItem} 
-                      onPress={() => { onSelect(option); onClose(); }}
+                    <TouchableOpacity
+                      style={styles.optionItem}
+                      onPress={() => {
+                        onSelect(option);
+                        onClose();
+                      }}
                     >
-                      <Text style={[
-                        styles.optionText, 
-                        selectedOption === option && styles.selectedText
-                      ]}>
+                      <Text
+                        style={[
+                          styles.optionText,
+                          selectedOption === option && styles.selectedText,
+                        ]}
+                      >
                         {option}
                       </Text>
                       {selectedOption === option && (
                         <Icon name="checkmark" size={20} color={THEME_GREEN} />
                       )}
                     </TouchableOpacity>
-                    {index < options.length - 1 && <View style={styles.separator} />}
+                    {index < options.length - 1 && (
+                      <View style={styles.separator} />
+                    )}
                   </React.Fragment>
                 ))}
               </View>
@@ -57,16 +80,47 @@ export const SortModal = ({ visible, onClose, selectedOption, onSelect }: SortMo
 };
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modalContainer: { 
-    backgroundColor: '#F2F2F7', borderTopLeftRadius: 35, borderTopRightRadius: 35, 
-    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 40, minHeight: height * 0.35 
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
   },
-  handle: { width: 45, height: 5, backgroundColor: '#C7C7CC', borderRadius: 3, alignSelf: 'center', marginBottom: 20 },
-  titleText: { fontSize: 18, fontWeight: '700', color: THEME_GREEN, textAlign: 'center', marginBottom: 25 },
-  optionsCard: { backgroundColor: '#FFFFFF', borderRadius: 20, overflow: 'hidden' },
-  optionItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20 },
-  optionText: { fontSize: 16, color: '#333' },
+  modalContainer: {
+    backgroundColor: '#F2F2F7',
+    borderTopLeftRadius: 35,
+    borderTopRightRadius: 35,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 40,
+    minHeight: height * 0.35,
+  },
+  handle: {
+    width: 45,
+    height: 5,
+    backgroundColor: '#C7C7CC',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  titleText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME_GREEN,
+    textAlign: 'center',
+    marginBottom: 25,
+  },
+  optionsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  optionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+  },
+  optionText: { fontSize: 16, color: '#999696' },
   selectedText: { color: THEME_GREEN, fontWeight: '600', fontStyle: 'italic' },
   separator: { height: 1, backgroundColor: '#E5E5EA', marginHorizontal: 20 },
 });

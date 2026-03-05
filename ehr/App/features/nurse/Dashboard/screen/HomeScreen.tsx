@@ -20,6 +20,7 @@ import MedAdministrationScreen from '@nurse/MedAdministration/screen/MedAdminist
 import MedicalReconciliationScreen from '@nurse/MedicalReconciliation/screen/MedicalReconciliationScreen';
 import IvsAndLinesScreen from '@nurse/IvsAndLines/screen/IvsAndLinesScreen';
 import IntakeAndOutputScreen from '@nurse/IntakeAndOutput/screen/IntakeAndOutputScreen';
+import PatientDetailsScreen from '@nurse/PatientDetails/screen/PatientDetailScreen';
 
 export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('Home');
@@ -28,6 +29,9 @@ export default function HomeScreen() {
   ]);
   const [isSelecting, setIsSelecting] = useState(false);
   const [editingPatientId, setEditingPatientId] = useState<number | null>(null);
+  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(
+    null,
+  );
 
   const handleNavigation = useCallback((route: string) => {
     setActiveTab(prevTab => {
@@ -63,10 +67,20 @@ export default function HomeScreen() {
   const getScreenContent = () => {
     switch (activeTab) {
       case 'Home':
-        return <DashboardSummary onNavigate={handleNavigation} />;
+        return (
+          <DashboardSummary
+            onNavigate={handleNavigation}
+            onPatientSelect={setSelectedPatientId}
+          />
+        );
       case 'Search':
-        return <SearchScreen />;
-      case 'Grid':
+        return (
+          <SearchScreen
+            onNavigate={handleNavigation}
+            onPatientSelect={setSelectedPatientId}
+          />
+        );
+      case 'Dashboard':
         return <DashboardGrid onPressItem={handleNavigation} />;
       case 'Calendar':
         return <CalendarScreen />;
@@ -76,6 +90,17 @@ export default function HomeScreen() {
             onBack={handleBack}
             onSelectionChange={setIsSelecting}
             onPatientClick={id => {
+              setSelectedPatientId(id);
+              handleNavigation('PatientDetail');
+            }}
+          />
+        );
+      case 'PatientDetail':
+        return (
+          <PatientDetailsScreen
+            patientId={selectedPatientId || 0}
+            onBack={handleBack}
+            onEdit={id => {
               setEditingPatientId(id);
               handleNavigation('EditPatient');
             }}
@@ -120,7 +145,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.flex1}>{getScreenContent()}</View>
 
-      {activeTab !== 'Demographic Profile' && (
+      {!isSelecting && (
         <BottomNav
           activeRoute={activeTab}
           onNavigate={handleNavigation}

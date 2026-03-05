@@ -171,6 +171,7 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
             <FlatList
               data={typedPatients}
               keyExtractor={item => item.patient_id.toString()}
+              contentContainerStyle={{ paddingBottom: 100 }}
               renderItem={({ item }) => (
                 <PatientRow
                   item={{
@@ -197,35 +198,33 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
           )}
 
           {/* Persistent Action Footer */}
-          <View
-            style={[styles.actionFooter, !isSelectionMode && { opacity: 0.5 }]}
-          >
-            <TouchableOpacity
-              style={styles.footerItem}
-              onPress={() => isSelectionMode && updateStatus(true)}
-              disabled={!isSelectionMode}
-            >
-              <View
-                style={[styles.statusCircle, { backgroundColor: '#E8F5E9' }]}
+          {isSelectionMode && (
+            <View style={styles.actionFooter}>
+              <TouchableOpacity
+                style={styles.footerItem}
+                onPress={() => updateStatus(true)}
               >
-                <Image source={activeIcon} style={styles.footerIcon} />
-              </View>
-              <Text style={styles.footerText}>Active</Text>
-            </TouchableOpacity>
+                <View
+                  style={[styles.statusCircle, { backgroundColor: '#E8F5E9' }]}
+                >
+                  <Image source={activeIcon} style={styles.footerIcon} />
+                </View>
+                <Text style={styles.footerText}>Active</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.footerItem}
-              onPress={() => isSelectionMode && updateStatus(false)}
-              disabled={!isSelectionMode}
-            >
-              <View
-                style={[styles.statusCircle, { backgroundColor: '#FFEBEE' }]}
+              <TouchableOpacity
+                style={styles.footerItem}
+                onPress={() => updateStatus(false)}
               >
-                <Image source={inactiveIcon} style={styles.footerIcon} />
-              </View>
-              <Text style={styles.footerText}>Inactive</Text>
-            </TouchableOpacity>
-          </View>
+                <View
+                  style={[styles.statusCircle, { backgroundColor: '#FFEBEE' }]}
+                >
+                  <Image source={inactiveIcon} style={styles.footerIcon} />
+                </View>
+                <Text style={styles.footerText}>Inactive</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </SafeAreaView>
 

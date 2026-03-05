@@ -16,8 +16,10 @@ const THEME_GREEN = '#1B5E20';
 
 const DashboardSummary = ({
   onNavigate,
+  onPatientSelect,
 }: {
   onNavigate: (route: string) => void;
+  onPatientSelect: (id: number) => void;
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -100,7 +102,10 @@ const DashboardSummary = ({
                 <TouchableOpacity
                   key={index}
                   style={styles.patientItem}
-                  onPress={() => onNavigate('Records')}
+                  onPress={() => {
+                    onPatientSelect(item.patient_id || item.id);
+                    onNavigate('PatientDetail');
+                  }}
                 >
                   <View style={styles.patientLeft}>
                     <Icon
@@ -179,7 +184,7 @@ const DashboardSummary = ({
 
         <TouchableOpacity
           style={styles.actionBtn}
-          onPress={() => onNavigate('Grid')}
+          onPress={() => onNavigate('Dashboard')}
         >
           <View style={styles.btnContent}>
             <View style={styles.btnIconBg}>
