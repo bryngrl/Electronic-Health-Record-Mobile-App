@@ -143,7 +143,9 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.flex1}>{getScreenContent()}</View>
+      <View style={[styles.flex1, !isSelecting && { paddingBottom: 70 }]}>
+        {getScreenContent()}
+      </View>
 
       {!isSelecting && (
         <BottomNav
