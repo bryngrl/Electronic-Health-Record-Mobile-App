@@ -16,6 +16,7 @@ import {
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import ADLInputCard from '../components/ADLInputCard';
 import ADLCDSSStepper from './ADPIEScreen';
 import { useADL } from '../hook/useADL';
@@ -230,6 +231,18 @@ const ADLScreen = ({ onBack }: any) => {
     }
   };
 
+  const fadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
+    : [
+        'rgba(255, 255, 255, 0)',
+        'rgba(255, 255, 255, 0.8)',
+        'rgba(255, 255, 255, 1)',
+      ];
+
+  const headerFadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
+    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
+
   if (isAdpieActive && adlId && selectedPatient) {
     return (
       <ADLCDSSStepper
@@ -243,137 +256,160 @@ const ADLScreen = ({ onBack }: any) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        style={styles.container}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={scrollEnabled}
-      >
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Activities of Daily Living</Text>
-            <Text style={styles.dateText}>
-              {new Date().toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
-          </View>
-        </View>
-
-        <PatientSearchBar
-          onPatientSelect={(id, name, patientObj) => {
-            setSearchText(name);
-            setSelectedPatient(patientObj);
+      <View style={{ zIndex: 10 }}>
+        <View
+          style={{
+            paddingHorizontal: 40,
+            backgroundColor: theme.background,
+            paddingBottom: 15,
           }}
-          onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-          initialPatientName={searchText}
-        />
-
-        <View style={styles.section}>
-          <View style={styles.row}>
-            <View style={{ flex: 1, marginRight: 10 }}>
-              <Text style={styles.sectionLabel}>DATE :</Text>
-              <View style={styles.inputBox}>
-                <Text style={styles.inputText}>
-                  {getCurrentDateFormatted()}
-                </Text>
-              </View>
-            </View>
+        >
+          <View style={[styles.header, { marginBottom: 0 }]}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.sectionLabel}>DAY NO. :</Text>
-              <View style={styles.inputBox}>
-                <Text style={styles.inputText}>{calculateDayNumber()}</Text>
-                <Icon
-                  name="arrow-drop-down"
-                  size={24}
-                  color={theme.primary}
-                  style={{ position: 'absolute', right: 10 }}
-                />
-              </View>
+              <Text style={styles.title}>Activities of Daily Living</Text>
+              <Text style={styles.dateText}>
+                {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </Text>
             </View>
           </View>
         </View>
+        <LinearGradient
+          colors={headerFadeColors}
+          style={{ height: 20 }}
+          pointerEvents="none"
+        />
+      </View>
 
-        <ADLInputCard
-          label="MOBILITY"
-          value={formData.mobility}
-          disabled={!selectedPatient}
-          alertText={alerts.mobility_alert}
-          onChangeText={t => setFormData({ ...formData, mobility: t })}
-        />
-        <ADLInputCard
-          label="HYGIENE"
-          value={formData.hygiene}
-          disabled={!selectedPatient}
-          alertText={alerts.hygiene_alert}
-          onChangeText={t => setFormData({ ...formData, hygiene: t })}
-        />
-        <ADLInputCard
-          label="TOILETING"
-          value={formData.toileting}
-          disabled={!selectedPatient}
-          alertText={alerts.toileting_alert}
-          onChangeText={t => setFormData({ ...formData, toileting: t })}
-        />
-        <ADLInputCard
-          label="FEEDING"
-          value={formData.feeding}
-          disabled={!selectedPatient}
-          alertText={alerts.feeding_alert}
-          onChangeText={t => setFormData({ ...formData, feeding: t })}
-        />
-        <ADLInputCard
-          label="HYDRATION"
-          value={formData.hydration}
-          disabled={!selectedPatient}
-          alertText={alerts.hydration_alert}
-          onChangeText={t => setFormData({ ...formData, hydration: t })}
-        />
-        <ADLInputCard
-          label="SLEEP PATTERN"
-          value={formData.sleep_pattern}
-          disabled={!selectedPatient}
-          alertText={alerts.sleep_pattern_alert}
-          onChangeText={t => setFormData({ ...formData, sleep_pattern: t })}
-        />
-        <ADLInputCard
-          label="PAIN LEVEL"
-          value={formData.pain_level}
-          disabled={!selectedPatient}
-          alertText={alerts.pain_level_alert}
-          onChangeText={t => setFormData({ ...formData, pain_level: t })}
-        />
+      <View style={{ flex: 1, marginTop: -20 }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          style={styles.container}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={scrollEnabled}
+        >
+          <View style={{ height: 20 }} />
+          <PatientSearchBar
+            onPatientSelect={(id, name, patientObj) => {
+              setSearchText(name);
+              setSelectedPatient(patientObj);
+            }}
+            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+            initialPatientName={searchText}
+          />
 
-        <View style={styles.footerRow}>
-          <TouchableOpacity
-            style={[
-              styles.cdssBtn,
-              Object.values(formData).some(v => v) && {
-                backgroundColor: theme.buttonBg,
-                borderColor: theme.buttonBorder,
-              },
-            ]}
-            onPress={handleCDSSPress}
-          >
-            <Text
+          <View style={styles.section}>
+            <View style={styles.row}>
+              <View style={{ flex: 1, marginRight: 10 }}>
+                <Text style={styles.sectionLabel}>DATE :</Text>
+                <View style={styles.inputBox}>
+                  <Text style={styles.inputText}>
+                    {getCurrentDateFormatted()}
+                  </Text>
+                </View>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionLabel}>DAY NO. :</Text>
+                <View style={styles.inputBox}>
+                  <Text style={styles.inputText}>{calculateDayNumber()}</Text>
+                  <Icon
+                    name="arrow-drop-down"
+                    size={24}
+                    color={theme.primary}
+                    style={{ position: 'absolute', right: 10 }}
+                  />
+                </View>
+              </View>
+            </View>
+          </View>
+
+          <ADLInputCard
+            label="MOBILITY"
+            value={formData.mobility}
+            disabled={!selectedPatient}
+            alertText={alerts.mobility_alert}
+            onChangeText={t => setFormData({ ...formData, mobility: t })}
+          />
+          <ADLInputCard
+            label="HYGIENE"
+            value={formData.hygiene}
+            disabled={!selectedPatient}
+            alertText={alerts.hygiene_alert}
+            onChangeText={t => setFormData({ ...formData, hygiene: t })}
+          />
+          <ADLInputCard
+            label="TOILETING"
+            value={formData.toileting}
+            disabled={!selectedPatient}
+            alertText={alerts.toileting_alert}
+            onChangeText={t => setFormData({ ...formData, toileting: t })}
+          />
+          <ADLInputCard
+            label="FEEDING"
+            value={formData.feeding}
+            disabled={!selectedPatient}
+            alertText={alerts.feeding_alert}
+            onChangeText={t => setFormData({ ...formData, feeding: t })}
+          />
+          <ADLInputCard
+            label="HYDRATION"
+            value={formData.hydration}
+            disabled={!selectedPatient}
+            alertText={alerts.hydration_alert}
+            onChangeText={t => setFormData({ ...formData, hydration: t })}
+          />
+          <ADLInputCard
+            label="SLEEP PATTERN"
+            value={formData.sleep_pattern}
+            disabled={!selectedPatient}
+            alertText={alerts.sleep_pattern_alert}
+            onChangeText={t => setFormData({ ...formData, sleep_pattern: t })}
+          />
+          <ADLInputCard
+            label="PAIN LEVEL"
+            value={formData.pain_level}
+            disabled={!selectedPatient}
+            alertText={alerts.pain_level_alert}
+            onChangeText={t => setFormData({ ...formData, pain_level: t })}
+          />
+
+          <View style={styles.footerRow}>
+            <TouchableOpacity
               style={[
-                styles.cdssText,
+                styles.cdssBtn,
                 Object.values(formData).some(v => v) && {
-                  color: theme.primary,
+                  backgroundColor: theme.buttonBg,
+                  borderColor: theme.buttonBorder,
                 },
               ]}
+              onPress={handleCDSSPress}
             >
-              CDSS
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.submitBtn} onPress={handleSave}>
-            <Text style={styles.submitText}>SUBMIT</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={{ height: 100 }} />
-      </ScrollView>
+              <Text
+                style={[
+                  styles.cdssText,
+                  Object.values(formData).some(v => v) && {
+                    color: theme.primary,
+                  },
+                ]}
+              >
+                CDSS
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.submitBtn} onPress={handleSave}>
+              <Text style={styles.submitText}>SUBMIT</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={{ height: 100 }} />
+        </ScrollView>
+        <LinearGradient
+          colors={fadeColors}
+          style={styles.fadeBottom}
+          pointerEvents="none"
+        />
+      </View>
 
       <SweetAlert
         visible={alertConfig.visible}
@@ -449,6 +485,13 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     },
     cdssText: { color: theme.textMuted, fontWeight: 'bold' },
     submitText: { color: theme.primary, fontWeight: 'bold' },
+    fadeBottom: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 60,
+    },
   });
 
 export default ADLScreen;

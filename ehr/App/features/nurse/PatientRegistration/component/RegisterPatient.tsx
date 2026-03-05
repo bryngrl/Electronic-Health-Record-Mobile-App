@@ -12,6 +12,7 @@ import {
   BackHandler,
   useColorScheme,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { Dropdown } from 'react-native-element-dropdown';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useRegistration } from '../hook/useRegistration';
@@ -196,6 +197,18 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
     }
   };
 
+  const fadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
+    : [
+        'rgba(255, 255, 255, 0)',
+        'rgba(255, 255, 255, 0.8)',
+        'rgba(255, 255, 255, 1)',
+      ];
+
+  const headerFadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
+    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
+
   return (
     <View style={styles.mainContainer}>
       <SweetAlert
@@ -207,17 +220,15 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
         confirmText="OK"
       />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+      <View style={{ zIndex: 10 }}>
+        <View
+          style={{
+            paddingHorizontal: 40,
+            backgroundColor: theme.background,
+            paddingBottom: 15,
+          }}
         >
-          <View style={styles.header}>
+          <View style={[styles.header, { marginBottom: 0 }]}>
             <View style={styles.headerRow}>
               <View style={styles.titleContainer}>
                 <Text style={styles.title}>Register Patient</Text>
@@ -243,6 +254,25 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
               )}
             </View>
           </View>
+        </View>
+        <LinearGradient
+          colors={headerFadeColors}
+          style={{ height: 20 }}
+          pointerEvents="none"
+        />
+      </View>
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1, marginTop: -20 }}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={{ height: 20 }} />
 
           {step === 1 ? (
             <View>
@@ -617,120 +647,136 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
           )}
           <View style={{ height: 100 }} />
         </ScrollView>
+        <LinearGradient
+          colors={fadeColors}
+          style={styles.fadeBottom}
+          pointerEvents="none"
+        />
       </KeyboardAvoidingView>
     </View>
   );
 };
 
-const createStyles = (theme: any, commonStyles: any) => StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: theme.background },
-  scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: 40, paddingBottom: 20 },
-  header: { marginTop: LAYOUT.headerMarginTop, marginBottom: LAYOUT.headerMarginBottom },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  titleContainer: { flex: 1 },
-  title: {
-    fontSize: 35,
-    color: theme.primary,
-    fontFamily: 'MinionPro-SemiboldItalic',
-    marginBottom: 2,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: 'AlteHaasGroteskBold',
-    color: theme.primary,
-  },
-  addIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: theme.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 15,
-  },
-  inputGroup: { marginBottom: 20 },
-  inputLabel: commonStyles.label,
-  required: { color: theme.error },
-  input: commonStyles.input,
-  phoneInputRow: {
-    flexDirection: 'row',
-    borderWidth: 1.5,
-    borderColor: theme.border,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: theme.inputBg,
-  },
-  prefixContainer: {
-    backgroundColor: theme.surface,
-    paddingHorizontal: 12,
-    justifyContent: 'center',
-    borderRightWidth: 1.5,
-    borderRightColor: theme.border,
-  },
-  prefixText: {
-    color: theme.primary,
-    fontFamily: 'AlteHaasGroteskBold',
-    fontSize: 14,
-  },
-  flexInput: {
-    flex: 1,
-    padding: 14,
-    fontSize: 14,
-    color: theme.text,
-    fontFamily: 'AlteHaasGrotesk',
-  },
-  inputError: { borderColor: theme.error },
-  errorText: {
-    color: theme.error,
-    fontSize: 12,
-    marginTop: 5,
-    fontFamily: 'AlteHaasGrotesk',
-  },
-  placeholderStyle: {
-    fontSize: 14,
-    color: theme.textMuted,
-    fontFamily: 'AlteHaasGrotesk',
-  },
-  selectedTextStyle: {
-    fontSize: 14,
-    color: theme.text,
-    fontFamily: 'AlteHaasGroteskBold',
-  },
-  itemTextStyle: {
-    fontSize: 14,
-    color: theme.text,
-    fontFamily: 'AlteHaasGrotesk',
-  },
-  readOnlyInput: {
-    backgroundColor: theme.surface,
-    color: theme.text,
-    fontFamily: 'AlteHaasGroteskBold',
-  },
-  dropdown: {
-    borderWidth: 1.5,
-    borderColor: theme.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 52,
-    backgroundColor: theme.inputBg,
-  },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  contactBlock: { marginBottom: 10 },
-  removeBtn: { alignSelf: 'flex-end', marginBottom: 5 },
-  submitBtn: commonStyles.submitBtn,
-  submitText: commonStyles.submitText,
-  backLink: { marginTop: 20 },
-  backLinkText: {
-    textAlign: 'center',
-    color: theme.textMuted,
-    textDecorationLine: 'underline',
-  },
-});
+const createStyles = (theme: any, commonStyles: any) =>
+  StyleSheet.create({
+    mainContainer: { flex: 1, backgroundColor: theme.background },
+    scrollView: { flex: 1 },
+    scrollContent: { paddingHorizontal: 40, paddingBottom: 20 },
+    header: {
+      marginTop: LAYOUT.headerMarginTop,
+      marginBottom: LAYOUT.headerMarginBottom,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    titleContainer: { flex: 1 },
+    title: {
+      fontSize: 35,
+      color: theme.primary,
+      fontFamily: 'MinionPro-SemiboldItalic',
+      marginBottom: 2,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+    },
+    addIconCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      borderWidth: 1.5,
+      borderColor: theme.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 15,
+    },
+    inputGroup: { marginBottom: 20 },
+    inputLabel: commonStyles.label,
+    required: { color: theme.error },
+    input: commonStyles.input,
+    phoneInputRow: {
+      flexDirection: 'row',
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      borderRadius: 10,
+      overflow: 'hidden',
+      backgroundColor: theme.inputBg,
+    },
+    prefixContainer: {
+      backgroundColor: theme.surface,
+      paddingHorizontal: 12,
+      justifyContent: 'center',
+      borderRightWidth: 1.5,
+      borderRightColor: theme.border,
+    },
+    prefixText: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 14,
+    },
+    flexInput: {
+      flex: 1,
+      padding: 14,
+      fontSize: 14,
+      color: theme.text,
+      fontFamily: 'AlteHaasGrotesk',
+    },
+    inputError: { borderColor: theme.error },
+    errorText: {
+      color: theme.error,
+      fontSize: 12,
+      marginTop: 5,
+      fontFamily: 'AlteHaasGrotesk',
+    },
+    placeholderStyle: {
+      fontSize: 14,
+      color: theme.textMuted,
+      fontFamily: 'AlteHaasGrotesk',
+    },
+    selectedTextStyle: {
+      fontSize: 14,
+      color: theme.text,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+    itemTextStyle: {
+      fontSize: 14,
+      color: theme.text,
+      fontFamily: 'AlteHaasGrotesk',
+    },
+    readOnlyInput: {
+      backgroundColor: theme.surface,
+      color: theme.text,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+    dropdown: {
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      height: 52,
+      backgroundColor: theme.inputBg,
+    },
+    row: { flexDirection: 'row', alignItems: 'center' },
+    contactBlock: { marginBottom: 10 },
+    removeBtn: { alignSelf: 'flex-end', marginBottom: 5 },
+    submitBtn: commonStyles.submitBtn,
+    submitText: commonStyles.submitText,
+    backLink: { marginTop: 20 },
+    backLinkText: {
+      textAlign: 'center',
+      color: theme.textMuted,
+      textDecorationLine: 'underline',
+    },
+    fadeBottom: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 60,
+    },
+  });
 
 export default RegisterPatient;

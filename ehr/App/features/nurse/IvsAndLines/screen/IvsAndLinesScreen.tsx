@@ -12,6 +12,7 @@ import {
   Platform,
   useColorScheme,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 
 const backArrow = require('@assets/icons/back_arrow.png');
 import useIvsAndLinesData from '../hook/useIvsAndLinesData';
@@ -130,79 +131,113 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
     }
   };
 
+  const fadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
+    : [
+        'rgba(255, 255, 255, 0)',
+        'rgba(255, 255, 255, 0.8)',
+        'rgba(255, 255, 255, 1)',
+      ];
+
+  const headerFadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
+    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
+
   return (
     <SafeAreaView style={styles.mainContainer}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="always"
-      >
-        {/* Header and Date */}
-        <View style={styles.headerContainer}>
-          <Text style={styles.titleText}>IVs and Lines</Text>
-          <Text style={styles.dateText}>{formatDate()}</Text>
-        </View>
-
-        {/* Patient Name Section */}
-        <PatientSearchBar
-          onPatientSelect={(id, name) => {
-            setSelectedPatientId(id);
-            setPatientName(name);
+      <View style={{ zIndex: 10 }}>
+        <View
+          style={{
+            paddingHorizontal: 40,
+            backgroundColor: theme.background,
+            paddingBottom: 15,
           }}
-          initialPatientName={patientName}
-        />
-
-        {/* Form Sections */}
-        <DataCard
-          badgeText="IV FLUID"
-          value={ivFluid}
-          onChangeText={setIvFluid}
-          placeholder="e.g., D5W, NS, LR"
-          disabled={!selectedPatientId}
-          onDisabledPress={showDisabledAlert}
-        />
-        <DataCard
-          badgeText="RATE"
-          value={rate}
-          onChangeText={setRate}
-          placeholder="e.g., 100 ml/hr"
-          disabled={!selectedPatientId}
-          onDisabledPress={showDisabledAlert}
-        />
-        <DataCard
-          badgeText="SITE"
-          value={site}
-          onChangeText={setSite}
-          placeholder="e.g., Left hand"
-          disabled={!selectedPatientId}
-          onDisabledPress={showDisabledAlert}
-        />
-        <DataCard
-          badgeText="STATUS"
-          value={status}
-          onChangeText={setStatus}
-          placeholder="e.g., Running"
-          disabled={!selectedPatientId}
-          onDisabledPress={showDisabledAlert}
-        />
-
-        {/* Submit Button */}
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (isSubmitting || !selectedPatientId) && { opacity: 0.7 },
-          ]}
-          onPress={handleFormSubmit}
-          disabled={isSubmitting}
         >
-          {isSubmitting ? (
-            <ActivityIndicator color={theme.surface} />
-          ) : (
-            <Text style={styles.submitButtonText}>SUBMIT</Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
+          <View style={[styles.headerContainer, { marginBottom: 0 }]}>
+            <Text style={styles.titleText}>IVs and Lines</Text>
+            <Text style={styles.dateText}>{formatDate()}</Text>
+          </View>
+        </View>
+        <LinearGradient
+          colors={headerFadeColors}
+          style={{ height: 20 }}
+          pointerEvents="none"
+        />
+      </View>
+
+      <View style={{ flex: 1, marginTop: -20 }}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="always"
+        >
+          <View style={{ height: 20 }} />
+          {/* Patient Name Section */}
+          <PatientSearchBar
+            onPatientSelect={(id, name) => {
+              setSelectedPatientId(id);
+              setPatientName(name);
+            }}
+            initialPatientName={patientName}
+          />
+
+          {/* Form Sections */}
+          <DataCard
+            badgeText="IV FLUID"
+            value={ivFluid}
+            onChangeText={setIvFluid}
+            placeholder="e.g., D5W, NS, LR"
+            disabled={!selectedPatientId}
+            onDisabledPress={showDisabledAlert}
+          />
+          <DataCard
+            badgeText="RATE"
+            value={rate}
+            onChangeText={setRate}
+            placeholder="e.g., 100 ml/hr"
+            disabled={!selectedPatientId}
+            onDisabledPress={showDisabledAlert}
+          />
+          <DataCard
+            badgeText="SITE"
+            value={site}
+            onChangeText={setSite}
+            placeholder="e.g., Left hand"
+            disabled={!selectedPatientId}
+            onDisabledPress={showDisabledAlert}
+          />
+          <DataCard
+            badgeText="STATUS"
+            value={status}
+            onChangeText={setStatus}
+            placeholder="e.g., Running"
+            disabled={!selectedPatientId}
+            onDisabledPress={showDisabledAlert}
+          />
+
+          {/* Submit Button */}
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              (isSubmitting || !selectedPatientId) && { opacity: 0.7 },
+            ]}
+            onPress={handleFormSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color={theme.surface} />
+            ) : (
+              <Text style={styles.submitButtonText}>SUBMIT</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+        <LinearGradient
+          colors={fadeColors}
+          style={styles.fadeBottom}
+          pointerEvents="none"
+        />
+      </View>
 
       <SweetAlert
         visible={alertConfig.visible}
@@ -217,7 +252,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
   );
 };
 
-const createStyles = (theme: any, commonStyles: any) =>
+const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
   StyleSheet.create({
     mainContainer: {
       flex: 1,
@@ -259,6 +294,13 @@ const createStyles = (theme: any, commonStyles: any) =>
       fontWeight: '700',
       fontSize: 16,
       letterSpacing: 1,
+    },
+    fadeBottom: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 60,
     },
   });
 

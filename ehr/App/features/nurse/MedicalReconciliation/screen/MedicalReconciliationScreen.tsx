@@ -19,6 +19,7 @@ import {
 
 const backArrow = require('@assets/icons/back_arrow.png');
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import MedicalReconCard from '../component/MedicalReconCard';
 import { useMedicalReconLogic } from '../hook/useMedicalReconLogic';
 import SweetAlert from '@components/SweetAlert';
@@ -133,120 +134,155 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
     setPatientName(name);
   };
 
+  const fadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
+    : [
+        'rgba(255, 255, 255, 0)',
+        'rgba(255, 255, 255, 0.8)',
+        'rgba(255, 255, 255, 1)',
+      ];
+
+  const headerFadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
+    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
+
   return (
     <SafeAreaView style={styles.root}>
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        scrollEnabled={scrollEnabled}
-      >
-        {/* HEADER Section */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Medical{'\n'}Reconciliation</Text>
-            <Text style={styles.subDate}>{currentDate}</Text>
-          </View>
-          <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
-            <Icon name="more-vert" size={35} color={theme.primary} />
-          </TouchableOpacity>
-        </View>
-
-        <PatientSearchBar
-          initialPatientName={patientName}
-          onPatientSelect={handlePatientSelect}
-          onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-        />
-
-        {/* STAGE Indicator */}
-        <View style={styles.stageTab}>
-          <Text style={styles.stageText}>{currentStage}</Text>
-        </View>
-
-        {/* INPUT Cards Flow - Wrapped in Pressable for validation */}
-        <Pressable onPress={() => !patientId && triggerPatientAlert()}>
-          <View
-            pointerEvents={patientId ? 'auto' : 'none'}
-            style={{ opacity: patientId ? 1 : 0.6 }}
-          >
-            <MedicalReconCard
-              label="Medication"
-              value={values.med}
-              onChangeText={(v: string) => handleUpdate('med', v)}
-            />
-            <MedicalReconCard
-              label="Dose"
-              value={values.dose}
-              onChangeText={(v: string) => handleUpdate('dose', v)}
-            />
-            <MedicalReconCard
-              label="Route"
-              value={values.route}
-              onChangeText={(v: string) => handleUpdate('route', v)}
-            />
-            <MedicalReconCard
-              label="Frequency"
-              value={values.freq}
-              onChangeText={(v: string) => handleUpdate('freq', v)}
-            />
-
-            {/* Indication is hidden in Stage 3 */}
-            {stageIndex !== 2 && (
-              <MedicalReconCard
-                label="Indication"
-                value={values.indication}
-                onChangeText={(v: string) => handleUpdate('indication', v)}
-              />
-            )}
-
-            <MedicalReconCard
-              label={getExtraLabel()}
-              value={values.extra}
-              onChangeText={(v: string) => handleUpdate('extra', v)}
-            />
-          </View>
-        </Pressable>
-
-        {/* FOOTER: Disabled until data is entered or while submitting */}
-        <TouchableOpacity
-          style={[
-            styles.actionBtn,
-            (!isDataEntered || isSubmitting || !patientId) &&
-              styles.btnDisabled,
-          ]}
-          onPress={handleNext}
-          disabled={!isDataEntered || isSubmitting || !patientId}
+      <View style={{ zIndex: 10 }}>
+        <View
+          style={{
+            paddingHorizontal: 40,
+            backgroundColor: theme.background,
+            paddingBottom: 15,
+          }}
         >
-          {isSubmitting ? (
-            <ActivityIndicator size="small" color={theme.primary} />
-          ) : (
-            <>
-              <Text
-                style={[
-                  styles.btnText,
-                  (!isDataEntered || isSubmitting || !patientId) && {
-                    color: theme.textMuted,
-                  },
-                ]}
-              >
-                {isLastStage ? 'SUBMIT' : 'NEXT'}
-              </Text>
-              {!isLastStage && (
+          {/* HEADER Section */}
+          <View style={[styles.header, { marginBottom: 0 }]}>
+            <View>
+              <Text style={styles.title}>Medical{'\n'}Reconciliation</Text>
+              <Text style={styles.subDate}>{currentDate}</Text>
+            </View>
+            <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
+              <Icon name="more-vert" size={35} color={theme.primary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <LinearGradient
+          colors={headerFadeColors}
+          style={{ height: 20 }}
+          pointerEvents="none"
+        />
+      </View>
+
+      <View style={{ flex: 1, marginTop: -20 }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          scrollEnabled={scrollEnabled}
+        >
+          <View style={{ height: 20 }} />
+          <PatientSearchBar
+            initialPatientName={patientName}
+            onPatientSelect={handlePatientSelect}
+            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+          />
+
+          {/* STAGE Indicator */}
+          <View style={styles.stageTab}>
+            <Text style={styles.stageText}>{currentStage}</Text>
+          </View>
+
+          {/* INPUT Cards Flow - Wrapped in Pressable for validation */}
+          <Pressable onPress={() => !patientId && triggerPatientAlert()}>
+            <View
+              pointerEvents={patientId ? 'auto' : 'none'}
+              style={{ opacity: patientId ? 1 : 0.6 }}
+            >
+              <MedicalReconCard
+                label="Medication"
+                value={values.med}
+                onChangeText={(v: string) => handleUpdate('med', v)}
+              />
+              <MedicalReconCard
+                label="Dose"
+                value={values.dose}
+                onChangeText={(v: string) => handleUpdate('dose', v)}
+              />
+              <MedicalReconCard
+                label="Route"
+                value={values.route}
+                onChangeText={(v: string) => handleUpdate('route', v)}
+              />
+              <MedicalReconCard
+                label="Frequency"
+                value={values.freq}
+                onChangeText={(v: string) => handleUpdate('freq', v)}
+              />
+
+              {/* Indication is hidden in Stage 3 */}
+              {stageIndex !== 2 && (
+                <MedicalReconCard
+                  label="Indication"
+                  value={values.indication}
+                  onChangeText={(v: string) => handleUpdate('indication', v)}
+                />
+              )}
+
+              <MedicalReconCard
+                label={getExtraLabel()}
+                value={values.extra}
+                onChangeText={(v: string) => handleUpdate('extra', v)}
+              />
+            </View>
+          </Pressable>
+
+          {/* FOOTER: Disabled until data is entered or while submitting */}
+          <TouchableOpacity
+            style={[
+              styles.actionBtn,
+              (!isDataEntered || isSubmitting || !patientId) &&
+                styles.btnDisabled,
+            ]}
+            onPress={handleNext}
+            disabled={!isDataEntered || isSubmitting || !patientId}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color={theme.primary} />
+            ) : (
+              <>
                 <Text
                   style={[
-                    styles.chevron,
+                    styles.btnText,
                     (!isDataEntered || isSubmitting || !patientId) && {
                       color: theme.textMuted,
                     },
                   ]}
                 >
-                  ›
+                  {isLastStage ? 'SUBMIT' : 'NEXT'}
                 </Text>
-              )}
-            </>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
+                {!isLastStage && (
+                  <Text
+                    style={[
+                      styles.chevron,
+                      (!isDataEntered || isSubmitting || !patientId) && {
+                        color: theme.textMuted,
+                    },
+                    ]}
+                  >
+                    ›
+                  </Text>
+                )}
+              </>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+        <LinearGradient
+          colors={fadeColors}
+          style={styles.fadeBottom}
+          pointerEvents="none"
+        />
+      </View>
 
       {/* Options Menu Modal */}
       <Modal transparent visible={isMenuVisible} animationType="fade">
@@ -304,7 +340,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
   );
 };
 
-const createStyles = (theme: any, commonStyles: any) =>
+const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: theme.background },
     scrollContent: { paddingHorizontal: 40, paddingBottom: 20 },
@@ -382,6 +418,13 @@ const createStyles = (theme: any, commonStyles: any) =>
       alignItems: 'center',
     },
     closeMenuText: { color: theme.primary, fontWeight: 'bold' },
+    fadeBottom: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 60,
+    },
   });
 
 export default MedicalReconciliationScreen;
