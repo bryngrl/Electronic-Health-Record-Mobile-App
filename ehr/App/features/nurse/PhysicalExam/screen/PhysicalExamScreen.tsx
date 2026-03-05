@@ -16,6 +16,7 @@ import {
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import ExamInputCard from '../components/PhysicalInputCard';
 import ADPIEScreen from './ADPIEScreen'; // Integrated Stepper
 import { usePhysicalExam } from '../hook/usePhysicalExam';
@@ -41,8 +42,8 @@ interface PhysicalExamProps {
 const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
-    () => createStyles(theme, commonStyles),
-    [theme, commonStyles],
+    () => createStyles(theme, commonStyles, isDarkMode),
+    [theme, commonStyles, isDarkMode],
   );
 
   const { saveAssessment, checkAssessmentAlerts, fetchLatestPhysicalExam } =
@@ -247,6 +248,18 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
     v => v && v.trim().length > 0,
   );
 
+  const fadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
+    : [
+        'rgba(255, 255, 255, 0)',
+        'rgba(255, 255, 255, 0.8)',
+        'rgba(255, 255, 255, 1)',
+      ];
+
+  const headerFadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
+    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
+
   // Switch to ADPIE Screen if active
   if (isAdpieActive && examId && selectedPatientId) {
     return (
@@ -262,118 +275,141 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        style={styles.container}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={scrollEnabled}
-      >
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Physical Exam</Text>
-            <Text style={styles.dateText}>{formatDate()}</Text>
+      <View style={{ zIndex: 10 }}>
+        <View
+          style={{
+            paddingHorizontal: 40,
+            backgroundColor: theme.background,
+            paddingBottom: 15,
+          }}
+        >
+          <View style={[styles.header, { marginBottom: 0 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>Physical Exam</Text>
+              <Text style={styles.dateText}>{formatDate()}</Text>
+            </View>
           </View>
         </View>
+        <LinearGradient
+          colors={headerFadeColors}
+          style={{ height: 20 }}
+          pointerEvents="none"
+        />
+      </View>
 
-        <PatientSearchBar
-          onPatientSelect={(id, name) => {
-            setSelectedPatientId(id ? id.toString() : null);
-            setSearchText(name);
-          }}
-          initialPatientName={searchText}
-          onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-        />
+      <View style={{ flex: 1, marginTop: -20 }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          style={styles.container}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={scrollEnabled}
+        >
+          <View style={{ height: 20 }} />
+          <PatientSearchBar
+            onPatientSelect={(id, name) => {
+              setSelectedPatientId(id ? id.toString() : null);
+              setSearchText(name);
+            }}
+            initialPatientName={searchText}
+            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+          />
 
-        <View style={styles.banner}>
-          <Text style={styles.bannerText}>PHYSICAL EXAMINATION</Text>
-        </View>
+          <View style={styles.banner}>
+            <Text style={styles.bannerText}>PHYSICAL EXAMINATION</Text>
+          </View>
 
-        {/* Assessment Notepad Cards */}
-        <ExamInputCard
-          label="GENERAL APPEARANCE"
-          value={formData.general_appearance}
-          disabled={!selectedPatientId}
-          alertText={backendAlerts.general_appearance_alert}
-          onChangeText={t => updateField('general_appearance', t)}
-        />
-        <ExamInputCard
-          label="SKIN"
-          value={formData.skin_condition}
-          disabled={!selectedPatientId}
-          alertText={backendAlerts.skin_alert}
-          onChangeText={t => updateField('skin_condition', t)}
-        />
-        <ExamInputCard
-          label="EYES"
-          value={formData.eye_condition}
-          disabled={!selectedPatientId}
-          alertText={backendAlerts.eye_alert}
-          onChangeText={t => updateField('eye_condition', t)}
-        />
-        <ExamInputCard
-          label="ORAL CAVITY"
-          value={formData.oral_condition}
-          disabled={!selectedPatientId}
-          alertText={backendAlerts.oral_alert}
-          onChangeText={t => updateField('oral_condition', t)}
-        />
-        <ExamInputCard
-          label="CARDIOVASCULAR"
-          value={formData.cardiovascular}
-          disabled={!selectedPatientId}
-          alertText={backendAlerts.cardiovascular_alert}
-          onChangeText={t => updateField('cardiovascular', t)}
-        />
-        <ExamInputCard
-          label="ABDOMEN"
-          value={formData.abdomen_condition}
-          disabled={!selectedPatientId}
-          alertText={backendAlerts.abdomen_alert}
-          onChangeText={t => updateField('abdomen_condition', t)}
-        />
-        <ExamInputCard
-          label="EXTREMITIES"
-          value={formData.extremities}
-          disabled={!selectedPatientId}
-          alertText={backendAlerts.extremities_alert}
-          onChangeText={t => updateField('extremities', t)}
-        />
-        <ExamInputCard
-          label="NEUROLOGICAL"
-          value={formData.neurological}
-          disabled={!selectedPatientId}
-          alertText={backendAlerts.neurological_alert}
-          onChangeText={t => updateField('neurological', t)}
-        />
+          {/* Assessment Notepad Cards */}
+          <ExamInputCard
+            label="GENERAL APPEARANCE"
+            value={formData.general_appearance}
+            disabled={!selectedPatientId}
+            alertText={backendAlerts.general_appearance_alert}
+            onChangeText={t => updateField('general_appearance', t)}
+          />
+          <ExamInputCard
+            label="SKIN"
+            value={formData.skin_condition}
+            disabled={!selectedPatientId}
+            alertText={backendAlerts.skin_alert}
+            onChangeText={t => updateField('skin_condition', t)}
+          />
+          <ExamInputCard
+            label="EYES"
+            value={formData.eye_condition}
+            disabled={!selectedPatientId}
+            alertText={backendAlerts.eye_alert}
+            onChangeText={t => updateField('eye_condition', t)}
+          />
+          <ExamInputCard
+            label="ORAL CAVITY"
+            value={formData.oral_condition}
+            disabled={!selectedPatientId}
+            alertText={backendAlerts.oral_alert}
+            onChangeText={t => updateField('oral_condition', t)}
+          />
+          <ExamInputCard
+            label="CARDIOVASCULAR"
+            value={formData.cardiovascular}
+            disabled={!selectedPatientId}
+            alertText={backendAlerts.cardiovascular_alert}
+            onChangeText={t => updateField('cardiovascular', t)}
+          />
+          <ExamInputCard
+            label="ABDOMEN"
+            value={formData.abdomen_condition}
+            disabled={!selectedPatientId}
+            alertText={backendAlerts.abdomen_alert}
+            onChangeText={t => updateField('abdomen_condition', t)}
+          />
+          <ExamInputCard
+            label="EXTREMITIES"
+            value={formData.extremities}
+            disabled={!selectedPatientId}
+            alertText={backendAlerts.extremities_alert}
+            onChangeText={t => updateField('extremities', t)}
+          />
+          <ExamInputCard
+            label="NEUROLOGICAL"
+            value={formData.neurological}
+            disabled={!selectedPatientId}
+            alertText={backendAlerts.neurological_alert}
+            onChangeText={t => updateField('neurological', t)}
+          />
 
-        <View style={styles.footerRow}>
-          {/* CDSS Button: Triggers Nursing Process Stepper */}
-          <TouchableOpacity
-            style={[
-              styles.cdssBtn,
-              isDataEntered && {
-                backgroundColor: theme.buttonBg,
-                borderColor: theme.buttonBorder,
-              },
-            ]}
-            onPress={handleCDSSPress}
-          >
-            <Text
+          <View style={styles.footerRow}>
+            {/* CDSS Button: Triggers Nursing Process Stepper */}
+            <TouchableOpacity
               style={[
-                styles.cdssText,
-                isDataEntered && { color: theme.primary },
+                styles.cdssBtn,
+                isDataEntered && {
+                  backgroundColor: theme.buttonBg,
+                  borderColor: theme.buttonBorder,
+                },
               ]}
+              onPress={handleCDSSPress}
             >
-              CDSS
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.submitBtn} onPress={handleSave}>
-            <Text style={styles.submitText}>SUBMIT</Text>
-          </TouchableOpacity>
-        </View>
+              <Text
+                style={[
+                  styles.cdssText,
+                  isDataEntered && { color: theme.primary },
+                ]}
+              >
+                CDSS
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.submitBtn} onPress={handleSave}>
+              <Text style={styles.submitText}>SUBMIT</Text>
+            </TouchableOpacity>
+          </View>
 
-        <View style={{ height: 100 }} />
-      </ScrollView>
+          <View style={{ height: 100 }} />
+        </ScrollView>
+        <LinearGradient
+          colors={fadeColors}
+          style={styles.fadeBottom}
+          pointerEvents="none"
+        />
+      </View>
 
       <SweetAlert
         visible={alertConfig.visible}
@@ -387,7 +423,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
   );
 };
 
-const createStyles = (theme: any, commonStyles: any) =>
+const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
   StyleSheet.create({
     safeArea: commonStyles.safeArea,
     container: commonStyles.container,
@@ -444,6 +480,13 @@ const createStyles = (theme: any, commonStyles: any) =>
     },
     cdssText: { color: theme.primary, fontWeight: 'bold' },
     submitText: { color: theme.primary, fontWeight: 'bold' },
+    fadeBottom: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 60,
+    },
   });
 
 export default PhysicalExamScreen;

@@ -40,7 +40,10 @@ const PatientRow: React.FC<PatientRowProps> = ({
   onEdit,
 }) => {
   const { theme, isDarkMode } = useAppTheme();
-  const styles = useMemo(() => createStyles(theme, isDarkMode), [theme, isDarkMode]);
+  const styles = useMemo(
+    () => createStyles(theme, isDarkMode),
+    [theme, isDarkMode],
+  );
 
   return (
     <Pressable
@@ -48,7 +51,9 @@ const PatientRow: React.FC<PatientRowProps> = ({
       onLongPress={onLongPress}
       style={({ pressed }) => [
         styles.tableRow,
-        (pressed || isSelected) && { backgroundColor: isDarkMode ? '#1a2e1d' : '#F1F8E9' },
+        (pressed || isSelected) && {
+          backgroundColor: isDarkMode ? '#1a2e1d' : '#F1F8E9',
+        },
       ]}
     >
       <View style={styles.idCol}>
@@ -77,11 +82,16 @@ const PatientRow: React.FC<PatientRowProps> = ({
           disabled={isSelectionMode}
           onPress={() => onEdit && onEdit(item.id)}
         >
-          <View style={[styles.iconCircle, { borderColor: isDarkMode ? '#FFD54F' : '#FFD54F', backgroundColor: isDarkMode ? 'transparent' : 'transparent' }]}>
-            <Image 
-              source={editIcon} 
-              style={styles.fullIcon} 
-            />
+          <View
+            style={[
+              styles.iconCircle,
+              {
+                borderColor: isDarkMode ? '#FFD54F' : '#FFD54F',
+                backgroundColor: isDarkMode ? 'transparent' : 'transparent',
+              },
+            ]}
+          >
+            <Image source={editIcon} style={styles.fullIcon} />
           </View>
         </TouchableOpacity>
 
@@ -90,10 +100,20 @@ const PatientRow: React.FC<PatientRowProps> = ({
             style={[
               styles.iconCircle,
               {
-                borderColor: item.isActive ? (isDarkMode ? theme.primary : '#81C784') : (isDarkMode ? theme.error : '#E57373'),
-                backgroundColor: item.isActive 
-                  ? (isDarkMode ? 'rgba(74, 222, 128, 0.1)' : '#E8F5E9') 
-                  : (isDarkMode ? 'rgba(255, 82, 82, 0.1)' : '#FFEBEE'),
+                borderColor: item.isActive
+                  ? isDarkMode
+                    ? theme.primary
+                    : '#81C784'
+                  : isDarkMode
+                  ? theme.error
+                  : '#E57373',
+                backgroundColor: item.isActive
+                  ? isDarkMode
+                    ? 'rgba(74, 222, 128, 0.1)'
+                    : '#E8F5E9'
+                  : isDarkMode
+                  ? 'rgba(255, 82, 82, 0.1)'
+                  : '#FFEBEE',
               },
             ]}
           >
@@ -108,68 +128,69 @@ const PatientRow: React.FC<PatientRowProps> = ({
   );
 };
 
-const createStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
-    marginHorizontal: 20,
-  },
-  idCol: { flex: 0.15, alignItems: 'center', justifyContent: 'center' },
-  nameCol: { flex: 0.55, paddingLeft: 30 },
-  actionsCol: {
-    flex: 0.3,
-    paddingRight: 25,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-  },
-  idText: {
-    color: theme.primary,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  emptyIdCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: theme.border,
-  },
-  checkCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: theme.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  uncheckCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  nameText: {
-    color: theme.primary,
-    fontSize: 14,
-    fontFamily: 'AlteHaasGrotesk',
-  },
-  actionBtn: { padding: 0 },
-  iconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 0.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  fullIcon: { width: '100%', height: '100%', resizeMode: 'cover' },
-});
+const createStyles = (theme: any, isDarkMode: boolean) =>
+  StyleSheet.create({
+    tableRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+      marginHorizontal: 0,
+    },
+    idCol: { flex: 0.15, alignItems: 'center', justifyContent: 'center' },
+    nameCol: { flex: 0.55, paddingLeft: 30 },
+    actionsCol: {
+      flex: 0.3,
+      paddingRight: 10,
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 12,
+    },
+    idText: {
+      color: theme.primary,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    emptyIdCircle: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: theme.border,
+    },
+    checkCircle: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: theme.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden',
+    },
+    uncheckCircle: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden',
+    },
+    nameText: {
+      color: theme.primary,
+      fontSize: 14,
+      fontFamily: 'AlteHaasGrotesk',
+    },
+    actionBtn: { padding: 0 },
+    iconCircle: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      borderWidth: 0.5,
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden',
+    },
+    fullIcon: { width: '100%', height: '100%', resizeMode: 'cover' },
+  });
 
 export default PatientRow;

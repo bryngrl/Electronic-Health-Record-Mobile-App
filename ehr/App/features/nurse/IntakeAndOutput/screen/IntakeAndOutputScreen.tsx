@@ -18,9 +18,11 @@ import {
   Modal,
   FlatList,
   Image,
+  Dimensions,
   BackHandler,
   Platform,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 
 const backArrow = require('@assets/icons/back_arrow.png');
 import IntakeOutputCard from '../component/IntakeOutputCard';
@@ -213,6 +215,18 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     setAlertVisible(false);
   };
 
+  const fadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
+    : [
+        'rgba(255, 255, 255, 0)',
+        'rgba(255, 255, 255, 0.8)',
+        'rgba(255, 255, 255, 1)',
+      ];
+
+  const headerFadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
+    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
+
   if (isAdpieActive && recordId) {
     return (
       <ADPIEScreen
@@ -243,137 +257,160 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   return (
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        scrollEnabled={scrollEnabled}
-      >
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
-              Intake and Output
-            </Text>
-            <Text style={styles.subDate}>{currentDate}</Text>
+      <View style={{ zIndex: 10 }}>
+        <View
+          style={{
+            paddingHorizontal: 40,
+            backgroundColor: theme.background,
+            paddingBottom: 15,
+          }}
+        >
+          <View style={[styles.header, { marginBottom: 0 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
+                Intake and Output
+              </Text>
+              <Text style={styles.subDate}>{currentDate}</Text>
+            </View>
           </View>
         </View>
-
-        <PatientSearchBar
-          initialPatientName={patientName}
-          onPatientSelect={handleSelectPatient}
-          onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+        <LinearGradient
+          colors={headerFadeColors}
+          style={{ height: 20 }}
+          pointerEvents="none"
         />
+      </View>
 
-        <Pressable
-          onPress={() =>
-            !selectedPatientId && (triggerPatientAlert(), setAlertVisible(true))
-          }
+      <View style={{ flex: 1, marginTop: -20 }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          scrollEnabled={scrollEnabled}
         >
-          <View
-            pointerEvents={selectedPatientId ? 'auto' : 'none'}
-            style={{ opacity: 1 }}
+          <View style={{ height: 20 }} />
+          <PatientSearchBar
+            initialPatientName={patientName}
+            onPatientSelect={handleSelectPatient}
+            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+          />
+
+          <Pressable
+            onPress={() =>
+              !selectedPatientId && (triggerPatientAlert(), setAlertVisible(true))
+            }
           >
-            <IntakeOutputCard
-              label="ORAL INTAKE"
-              value={intakeOutput.oral_intake}
-              onChangeText={text => handleUpdateField('oral_intake', text)}
-            />
+            <View
+              pointerEvents={selectedPatientId ? 'auto' : 'none'}
+              style={{ opacity: 1 }}
+            >
+              <IntakeOutputCard
+                label="ORAL INTAKE"
+                value={intakeOutput.oral_intake}
+                onChangeText={text => handleUpdateField('oral_intake', text)}
+              />
 
-            <IntakeOutputCard
-              label="IV FLUIDS"
-              value={intakeOutput.iv_fluids}
-              onChangeText={text => handleUpdateField('iv_fluids', text)}
-            />
+              <IntakeOutputCard
+                label="IV FLUIDS"
+                value={intakeOutput.iv_fluids}
+                onChangeText={text => handleUpdateField('iv_fluids', text)}
+              />
 
-            <IntakeOutputCard
-              label="URINE OUTPUT"
-              value={intakeOutput.urine_output}
-              onChangeText={text => handleUpdateField('urine_output', text)}
-            />
-          </View>
-        </Pressable>
+              <IntakeOutputCard
+                label="URINE OUTPUT"
+                value={intakeOutput.urine_output}
+                onChangeText={text => handleUpdateField('urine_output', text)}
+              />
+            </View>
+          </Pressable>
 
-        <View style={styles.footerAction}>
-          <TouchableOpacity
-            style={[
-              styles.alertIcon,
-              {
-                backgroundColor: hasRealAlert
-                  ? isDarkMode
-                    ? '#78350F'
-                    : '#FFECBD'
-                  : isDataEntered && selectedPatientId
-                  ? theme.surface
-                  : theme.card,
-                borderColor: theme.border,
-              },
-            ]}
-            disabled={!isDataEntered || !selectedPatientId}
-            onPress={handleAlertPress}
-          >
-            <Image
-              source={alertIcon}
-              style={[
-                styles.fullImg,
-                hasRealAlert
-                  ? { tintColor: '#EDB62C', opacity: 1 }
-                  : isDataEntered && selectedPatientId
-                  ? { tintColor: '#EDB62C', opacity: 0.8 }
-                  : { tintColor: theme.textMuted, opacity: 0.5 },
-              ]}
-            />
-          </TouchableOpacity>
-
-          <View style={styles.buttonGroup}>
+          <View style={styles.footerAction}>
             <TouchableOpacity
               style={[
-                styles.cdssButton,
-                isDataEntered &&
-                  selectedPatientId && {
-                    backgroundColor: theme.buttonBg,
-                    borderColor: theme.buttonBorder,
-                  },
-                (!isDataEntered || !selectedPatientId) && styles.disabledButton,
+                styles.alertIcon,
+                {
+                  backgroundColor: hasRealAlert
+                    ? isDarkMode
+                      ? '#78350F'
+                      : '#FFECBD'
+                    : isDataEntered && selectedPatientId
+                    ? theme.surface
+                    : theme.card,
+                  borderColor: theme.border,
+                },
               ]}
-              onPress={handleCDSSPress}
               disabled={!isDataEntered || !selectedPatientId}
+              onPress={handleAlertPress}
             >
-              <Text
+              <Image
+                source={alertIcon}
                 style={[
-                  styles.cdssBtnText,
-                  isDataEntered &&
-                    selectedPatientId && { color: theme.primary },
+                  styles.fullImg,
+                  hasRealAlert
+                    ? { tintColor: '#EDB62C', opacity: 1 }
+                    : isDataEntered && selectedPatientId
+                    ? { tintColor: '#EDB62C', opacity: 0.8 }
+                    : { tintColor: theme.textMuted, opacity: 0.5 },
                 ]}
-              >
-                CDSS
-              </Text>
+              />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                (!isDataEntered || !selectedPatientId) && styles.disabledButton,
-              ]}
-              onPress={handleSubmit}
-              disabled={!isDataEntered || !selectedPatientId || loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color={theme.primary} />
-              ) : (
+
+            <View style={styles.buttonGroup}>
+              <TouchableOpacity
+                style={[
+                  styles.cdssButton,
+                  isDataEntered &&
+                    selectedPatientId && {
+                      backgroundColor: theme.buttonBg,
+                      borderColor: theme.buttonBorder,
+                    },
+                  (!isDataEntered || !selectedPatientId) && styles.disabledButton,
+                ]}
+                onPress={handleCDSSPress}
+                disabled={!isDataEntered || !selectedPatientId}
+              >
                 <Text
                   style={[
-                    styles.submitBtnText,
-                    (!isDataEntered || !selectedPatientId) && {
-                      color: theme.textMuted,
-                    },
+                    styles.cdssBtnText,
+                    isDataEntered &&
+                      selectedPatientId && { color: theme.primary },
                   ]}
                 >
-                  SUBMIT
+                  CDSS
                 </Text>
-              )}
-            </TouchableOpacity>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.submitButton,
+                  (!isDataEntered || !selectedPatientId) && styles.disabledButton,
+                ]}
+                onPress={handleSubmit}
+                disabled={!isDataEntered || !selectedPatientId || loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color={theme.primary} />
+                ) : (
+                  <Text
+                    style={[
+                      styles.submitBtnText,
+                      (!isDataEntered || !selectedPatientId) && {
+                        color: theme.textMuted,
+                      },
+                    ]}
+                  >
+                    SUBMIT
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+        <LinearGradient
+          colors={fadeColors}
+          style={styles.fadeBottom}
+          pointerEvents="none"
+        />
+      </View>
 
       <CDSSModal
         visible={cdssModalVisible}
@@ -499,6 +536,13 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       alignItems: 'center',
     },
     closeMenuText: { color: theme.primary, fontWeight: 'bold' },
+    fadeBottom: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 60,
+    },
   });
 
 export default IntakeAndOutputScreen;

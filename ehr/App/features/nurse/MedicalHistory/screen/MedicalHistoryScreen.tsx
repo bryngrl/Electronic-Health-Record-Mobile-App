@@ -16,6 +16,7 @@ import {
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import HistoryInputCard from '../components/HistoryInputCard';
 import Button from '@components/button';
 import { useMedicalHistory } from '../hook/useMedicalHistory';
@@ -279,58 +280,95 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
   const currentStepKey = steps[step].key;
   const currentFields = STEP_FIELDS[currentStepKey];
 
+  const fadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
+    : [
+        'rgba(255, 255, 255, 0)',
+        'rgba(255, 255, 255, 0.8)',
+        'rgba(255, 255, 255, 1)',
+      ];
+
+  const headerFadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
+    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        style={styles.container}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        scrollEnabled={scrollEnabled}
-      >
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Medical History</Text>
-            <Text style={styles.dateText}>{formatDate()}</Text>
+      <View style={{ zIndex: 10 }}>
+        <View
+          style={{
+            paddingHorizontal: 40,
+            backgroundColor: theme.background,
+            paddingBottom: 15,
+          }}
+        >
+          <View style={[styles.header, { marginBottom: 0 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>Medical History</Text>
+              <Text style={styles.dateText}>{formatDate()}</Text>
+            </View>
           </View>
         </View>
-
-        <PatientSearchBar
-          onPatientSelect={id => setSelectedPatientId(id)}
-          onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+        <LinearGradient
+          colors={headerFadeColors}
+          style={{ height: 20 }}
+          pointerEvents="none"
         />
+      </View>
 
-        <View style={styles.stepHeader}>
-          <Text style={styles.stepHeaderText}>{steps[step].title}</Text>
-        </View>
-
-        {currentFields.map(field => (
-          <HistoryInputCard
-            key={`${currentStepKey}-${field}`}
-            label={FIELD_LABELS[field] || field.replace('_', ' ').toUpperCase()}
-            value={
-              (formData[currentStepKey as keyof typeof formData] as any)[
-                field
-              ] || ''
-            }
-            onChangeText={(val: string) => updateField(field, val)}
-            disabled={!selectedPatientId}
-            onDisabledPress={() =>
-              showAlert(
-                'Patient Required',
-                'Please select a patient first in the search bar.',
-              )
-            }
+      <View style={{ flex: 1, marginTop: -20 }}>
+        <ScrollView
+          style={styles.container}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          scrollEnabled={scrollEnabled}
+        >
+          <View style={{ height: 20 }} />
+          <PatientSearchBar
+            onPatientSelect={id => setSelectedPatientId(id)}
+            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
           />
-        ))}
 
-        <View style={styles.btnContainer}>
-          <Button
-            title={step === steps.length - 1 ? 'SUBMIT' : 'NEXT'}
-            onPress={handleNext}
-          />
-        </View>
-        <View style={{ height: 100 }} />
-      </ScrollView>
+          <View style={styles.stepHeader}>
+            <Text style={styles.stepHeaderText}>{steps[step].title}</Text>
+          </View>
+
+          {currentFields.map(field => (
+            <HistoryInputCard
+              key={`${currentStepKey}-${field}`}
+              label={
+                FIELD_LABELS[field] || field.replace('_', ' ').toUpperCase()
+              }
+              value={
+                (formData[currentStepKey as keyof typeof formData] as any)[
+                  field
+                ] || ''
+              }
+              onChangeText={(val: string) => updateField(field, val)}
+              disabled={!selectedPatientId}
+              onDisabledPress={() =>
+                showAlert(
+                  'Patient Required',
+                  'Please select a patient first in the search bar.',
+                )
+              }
+            />
+          ))}
+
+          <View style={styles.btnContainer}>
+            <Button
+              title={step === steps.length - 1 ? 'SUBMIT' : 'NEXT'}
+              onPress={handleNext}
+            />
+          </View>
+          <View style={{ height: 100 }} />
+        </ScrollView>
+        <LinearGradient
+          colors={fadeColors}
+          style={styles.fadeBottom}
+          pointerEvents="none"
+        />
+      </View>
 
       <SweetAlert
         visible={alertConfig.visible}
@@ -369,6 +407,13 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontSize: 14,
     },
     btnContainer: { marginTop: 10 },
+    fadeBottom: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 60,
+    },
   });
 
 export default MedicalHistoryScreen;

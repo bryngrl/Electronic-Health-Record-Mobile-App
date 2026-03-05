@@ -19,6 +19,7 @@ import { useMedAdministration } from '../hook/useMedAdministration';
 import apiClient from '@api/apiClient';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
+import LinearGradient from 'react-native-linear-gradient';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
 const MedAdministrationScreen = ({ onBack }: any) => {
@@ -189,106 +190,140 @@ const MedAdministrationScreen = ({ onBack }: any) => {
     );
   };
 
+  const fadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
+    : [
+        'rgba(255, 255, 255, 0)',
+        'rgba(255, 255, 255, 0.8)',
+        'rgba(255, 255, 255, 1)',
+      ];
+
+  const headerFadeColors = isDarkMode
+    ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
+    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={{ paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        scrollEnabled={scrollEnabled}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Medication {'\n'}Administration</Text>
-            <Text style={styles.dateText}>{formatDate()}</Text>
-          </View>
-        </View>
-
-        <PatientSearchBar
-          initialPatientName={formData.patientName}
-          onPatientSelect={handlePatientSelect}
-          onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-        />
-
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>DATE :</Text>
-          <View style={styles.pillInput}>
-            <Text style={styles.dateVal}>{formData.date}</Text>
-          </View>
-        </View>
-
-        {/* Time Progress Banner */}
-        <View style={styles.timeBanner}>
-          <Text style={styles.timeText}>{timeSlots[step]}</Text>
-        </View>
-
-        {/* Input Cards */}
-        <MedAdministrationInputCard
-          label="Medication"
-          value={currentMed.medication}
-          onChangeText={t => updateCurrentMed('medication', t)}
-          editable={!!formData.patient_id}
-          onDisabledPress={onDisabledPress}
-        />
-        <MedAdministrationInputCard
-          label="Dose"
-          value={currentMed.dose}
-          onChangeText={t => updateCurrentMed('dose', t)}
-          editable={!!formData.patient_id}
-          onDisabledPress={onDisabledPress}
-        />
-        <MedAdministrationInputCard
-          label="Route"
-          value={currentMed.route}
-          onChangeText={t => updateCurrentMed('route', t)}
-          editable={!!formData.patient_id}
-          onDisabledPress={onDisabledPress}
-        />
-        <MedAdministrationInputCard
-          label="Frequency"
-          value={currentMed.frequency}
-          onChangeText={t => updateCurrentMed('frequency', t)}
-          editable={!!formData.patient_id}
-          onDisabledPress={onDisabledPress}
-        />
-        <MedAdministrationInputCard
-          label="Comments"
-          value={currentMed.comments}
-          onChangeText={t => updateCurrentMed('comments', t)}
-          multiline
-          editable={!!formData.patient_id}
-          onDisabledPress={onDisabledPress}
-        />
-
-        {/* Footer Navigation Button */}
-        <TouchableOpacity
-          style={[styles.actionBtn, !isFormValid && styles.disabledButton]}
-          onPress={handleAction}
-          disabled={
-            !isFormValid &&
-            !!formData.patient_id &&
-            currentMed.medication !== ''
-          }
+      <View style={{ zIndex: 10 }}>
+        <View
+          style={{
+            paddingHorizontal: 40,
+            backgroundColor: theme.background,
+            paddingBottom: 15,
+          }}
         >
-          <Text
-            style={[
-              styles.actionBtnText,
-              !isFormValid && { color: theme.textMuted },
-            ]}
+          <View style={[styles.header, { marginBottom: 0 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>Medication {'\n'}Administration</Text>
+              <Text style={styles.dateText}>{formatDate()}</Text>
+            </View>
+          </View>
+        </View>
+        <LinearGradient
+          colors={headerFadeColors}
+          style={{ height: 20 }}
+          pointerEvents="none"
+        />
+      </View>
+
+      <View style={{ flex: 1, marginTop: -20 }}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          scrollEnabled={scrollEnabled}
+        >
+          <View style={{ height: 20 }} />
+          <PatientSearchBar
+            initialPatientName={formData.patientName}
+            onPatientSelect={handlePatientSelect}
+            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+          />
+
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>DATE :</Text>
+            <View style={styles.pillInput}>
+              <Text style={styles.dateVal}>{formData.date}</Text>
+            </View>
+          </View>
+
+          {/* Time Progress Banner */}
+          <View style={styles.timeBanner}>
+            <Text style={styles.timeText}>{timeSlots[step]}</Text>
+          </View>
+
+          {/* Input Cards */}
+          <MedAdministrationInputCard
+            label="Medication"
+            value={currentMed.medication}
+            onChangeText={t => updateCurrentMed('medication', t)}
+            editable={!!formData.patient_id}
+            onDisabledPress={onDisabledPress}
+          />
+          <MedAdministrationInputCard
+            label="Dose"
+            value={currentMed.dose}
+            onChangeText={t => updateCurrentMed('dose', t)}
+            editable={!!formData.patient_id}
+            onDisabledPress={onDisabledPress}
+          />
+          <MedAdministrationInputCard
+            label="Route"
+            value={currentMed.route}
+            onChangeText={t => updateCurrentMed('route', t)}
+            editable={!!formData.patient_id}
+            onDisabledPress={onDisabledPress}
+          />
+          <MedAdministrationInputCard
+            label="Frequency"
+            value={currentMed.frequency}
+            onChangeText={t => updateCurrentMed('frequency', t)}
+            editable={!!formData.patient_id}
+            onDisabledPress={onDisabledPress}
+          />
+          <MedAdministrationInputCard
+            label="Comments"
+            value={currentMed.comments}
+            onChangeText={t => updateCurrentMed('comments', t)}
+            multiline
+            editable={!!formData.patient_id}
+            onDisabledPress={onDisabledPress}
+          />
+
+          {/* Footer Navigation Button */}
+          <TouchableOpacity
+            style={[styles.actionBtn, !isFormValid && styles.disabledButton]}
+            onPress={handleAction}
+            disabled={
+              !isFormValid &&
+              !!formData.patient_id &&
+              currentMed.medication !== ''
+            }
           >
-            {step === 2 ? 'SUBMIT' : 'NEXT'}
-          </Text>
-          {step < 2 && (
-            <Icon
-              name="chevron-right"
-              size={24}
-              color={isFormValid ? theme.primary : theme.textMuted}
-            />
-          )}
-        </TouchableOpacity>
-      </ScrollView>
+            <Text
+              style={[
+                styles.actionBtnText,
+                !isFormValid && { color: theme.textMuted },
+              ]}
+            >
+              {step === 2 ? 'SUBMIT' : 'NEXT'}
+            </Text>
+            {step < 2 && (
+              <Icon
+                name="chevron-right"
+                size={24}
+                color={isFormValid ? theme.primary : theme.textMuted}
+              />
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+        <LinearGradient
+          colors={fadeColors}
+          style={styles.fadeBottom}
+          pointerEvents="none"
+        />
+      </View>
 
       <SweetAlert
         visible={alertConfig.visible}
@@ -367,6 +402,13 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontWeight: 'bold',
       fontSize: 15,
       marginRight: 5,
+    },
+    fadeBottom: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 60,
     },
   });
 
