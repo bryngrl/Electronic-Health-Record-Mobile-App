@@ -8,6 +8,7 @@ from app.database.db import get_db
 from app.models.lab_values.lab_values import LabValues
 from app.models.patient import Patient
 from app.core.cdss_engine import CDSSEngine
+from app.routers.doctor import create_doctor_update
 
 router = APIRouter(prefix="/lab-values", tags=["Lab Values"])
 
@@ -332,6 +333,9 @@ def create_lab_values(payload: AssessmentCreate, db: Session = Depends(get_db)):
     )
 
     db.add(record)
+    # Create an update for the doctor
+    create_doctor_update(db, payload.patient_id, "Lab Results")
+    
     db.commit()
     db.refresh(record)
     return record

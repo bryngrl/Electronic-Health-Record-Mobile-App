@@ -7,6 +7,7 @@ from app.models.medication_reconciliation.medication_reconciliation import (
     HomeMedication, CurrentMedication, ChangesInMedication
 )
 from pydantic import BaseModel, ConfigDict
+from app.routers.doctor import create_doctor_update
 
 router = APIRouter(prefix="/medication-reconciliation", tags=["Medication Reconciliation"])
 

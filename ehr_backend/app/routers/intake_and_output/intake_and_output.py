@@ -9,6 +9,7 @@ from app.database.db import get_db
 from app.models.intake_and_output.intake_and_output import IntakeAndOutput
 from app.models.patient import Patient
 from app.core.cdss_engine import CDSSEngine
+from app.routers.doctor import create_doctor_update
 
 router = APIRouter(prefix="/intake-output", tags=["Intake and Output"])
 
@@ -199,6 +200,7 @@ def create_intake_and_output(payload: AssessmentCreate, db: Session = Depends(ge
         )
         db.add(record)
 
+    create_doctor_update(db, payload.patient_id, "Intake and Output")
     db.commit()
     db.refresh(record)
     return record
