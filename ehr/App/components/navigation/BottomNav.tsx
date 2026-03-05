@@ -8,7 +8,6 @@ import {
   Image,
 } from 'react-native';
 
-// Asset Mapping - Static requires for React Native
 const icons: { [key: string]: any } = {
   home: require('@assets/icons/home.png'),
   home_active: require('@assets/icons/home_active.png'),
@@ -47,6 +46,7 @@ const BottomNav = ({
       <TouchableOpacity
         style={styles.iconContainer}
         onPress={() => onNavigate?.(routeName)}
+        hitSlop={{ top: 20, bottom: 20, left: 15, right: 15 }}
       >
         <Image
           source={iconSource}
@@ -59,12 +59,10 @@ const BottomNav = ({
 
   return (
     <View style={[styles.container, { width: width }]}>
-      {/* Main Navigation Bar */}
       <View style={styles.navBar}>
         {renderNavIcon('Home', 'home_active', 'home')}
         {renderNavIcon('Search', 'search_active', 'search')}
 
-        {/* Space for the Floating Center Button */}
         <View style={styles.placeholder} />
 
         {renderNavIcon('Dashboard', 'dashboard_active', 'dashboard')}
@@ -80,6 +78,7 @@ const BottomNav = ({
         ]}
         activeOpacity={0.8}
         onPress={onAddPatient}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <View style={styles.fabInner}>
           <Image
@@ -123,6 +122,7 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     flex: 1,
+    height: '100%', // Makes the entire height of the bar touchable
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -144,6 +144,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
+    elevation: 4,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
