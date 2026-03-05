@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   BackHandler,
   Image,
+  useColorScheme,
 } from 'react-native';
 
 const backArrow = require('@assets/icons/back_arrow.png');
@@ -20,11 +21,7 @@ import { Dropdown } from 'react-native-element-dropdown';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useEditPatient } from '../hook/useEditPatient';
 import SweetAlert from '@components/SweetAlert';
-
-const THEME_GREEN = '#035022';
-const BANNER_GREEN = '#E5FFE8';
-const REQUIRED_RED = '#FF0000';
-const PLACEHOLDER_COLOR = '#999';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 // Dropdown Data
 const religionData = [
@@ -83,6 +80,11 @@ interface Props {
 }
 
 const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
+  const isDarkMode = useColorScheme() === 'dark';
+  const theme = getTheme(isDarkMode);
+  const commonStyles = getCommonStyles(isDarkMode);
+  const styles = useMemo(() => createStyles(theme, commonStyles), [theme, commonStyles]);
+
   const {
     step,
     setStep,
@@ -222,8 +224,8 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
 
   if (isLoading && step === 1 && !form.first_name) {
     return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color={THEME_GREEN} />
+      <View style={[styles.loaderContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -270,7 +272,7 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                   }
                   style={styles.addIconCircle}
                 >
-                  <Icon name="add" size={24} color={THEME_GREEN} />
+                  <Icon name="add" size={24} color={theme.primary} />
                 </TouchableOpacity>
               )}
             </View>
@@ -285,7 +287,7 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                 <TextInput
                   style={styles.input}
                   placeholder="Enter First Name"
-                  placeholderTextColor={PLACEHOLDER_COLOR}
+                  placeholderTextColor={theme.textMuted}
                   value={form.first_name}
                   onChangeText={v => setForm({ ...form, first_name: v })}
                   onBlur={() => formatNameOnBlur('first_name')}
@@ -296,7 +298,7 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                   ref={middleNameRef}
                   style={[styles.input, { marginTop: 12 }]}
                   placeholder="Enter Middle Name"
-                  placeholderTextColor={PLACEHOLDER_COLOR}
+                  placeholderTextColor={theme.textMuted}
                   value={form.middle_name}
                   onChangeText={v => setForm({ ...form, middle_name: v })}
                   onBlur={() => formatNameOnBlur('middle_name')}
@@ -307,7 +309,7 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                   ref={lastNameRef}
                   style={[styles.input, { marginTop: 12 }]}
                   placeholder="Enter Last Name"
-                  placeholderTextColor={PLACEHOLDER_COLOR}
+                  placeholderTextColor={theme.textMuted}
                   value={form.last_name}
                   onChangeText={v => setForm({ ...form, last_name: v })}
                   onBlur={() => formatNameOnBlur('last_name')}
@@ -329,6 +331,8 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
                     itemTextStyle={styles.itemTextStyle}
+                    containerStyle={{ backgroundColor: theme.card }}
+                    activeColor={theme.surface}
                     value={birthParts.month}
                     onChange={item =>
                       setBirthParts({ ...birthParts, month: item.value })
@@ -343,6 +347,8 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
                     itemTextStyle={styles.itemTextStyle}
+                    containerStyle={{ backgroundColor: theme.card }}
+                    activeColor={theme.surface}
                     value={birthParts.day}
                     onChange={item =>
                       setBirthParts({ ...birthParts, day: item.value })
@@ -357,6 +363,8 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
                     itemTextStyle={styles.itemTextStyle}
+                    containerStyle={{ backgroundColor: theme.card }}
+                    activeColor={theme.surface}
                     value={birthParts.year}
                     onChange={item =>
                       setBirthParts({ ...birthParts, year: item.value })
@@ -387,6 +395,8 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
                     itemTextStyle={styles.itemTextStyle}
+                    containerStyle={{ backgroundColor: theme.card }}
+                    activeColor={theme.surface}
                     value={form.sex}
                     onChange={item => setForm({ ...form, sex: item.value })}
                   />
@@ -400,7 +410,7 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                 <TextInput
                   style={styles.input}
                   placeholder="Enter Address"
-                  placeholderTextColor={PLACEHOLDER_COLOR}
+                  placeholderTextColor={theme.textMuted}
                   value={form.address}
                   onChangeText={v => setForm({ ...form, address: v })}
                   returnKeyType="next"
@@ -415,7 +425,7 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                   ref={birthplaceRef}
                   style={styles.input}
                   placeholder="Enter Birth Place"
-                  placeholderTextColor={PLACEHOLDER_COLOR}
+                  placeholderTextColor={theme.textMuted}
                   value={form.birthplace}
                   onChangeText={v => setForm({ ...form, birthplace: v })}
                   returnKeyType="done"
@@ -436,6 +446,8 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
                     itemTextStyle={styles.itemTextStyle}
+                    containerStyle={{ backgroundColor: theme.card }}
+                    activeColor={theme.surface}
                     value={form.religion}
                     onChange={item =>
                       setForm({ ...form, religion: item.value })
@@ -453,6 +465,8 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
                     itemTextStyle={styles.itemTextStyle}
+                    containerStyle={{ backgroundColor: theme.card }}
+                    activeColor={theme.surface}
                     value={form.ethnicity}
                     onChange={item =>
                       setForm({ ...form, ethnicity: item.value })
@@ -466,7 +480,7 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                 <TextInput
                   style={styles.input}
                   placeholder="Enter Chief of Complaints"
-                  placeholderTextColor={PLACEHOLDER_COLOR}
+                  placeholderTextColor={theme.textMuted}
                   value={form.chief_complaints}
                   onChangeText={v => setForm({ ...form, chief_complaints: v })}
                 />
@@ -488,6 +502,8 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
                     itemTextStyle={styles.itemTextStyle}
+                    containerStyle={{ backgroundColor: theme.card }}
+                    activeColor={theme.surface}
                     value={form.room_no}
                     onChange={item => setForm({ ...form, room_no: item.value })}
                   />
@@ -505,6 +521,8 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                     placeholderStyle={styles.placeholderStyle}
                     selectedTextStyle={styles.selectedTextStyle}
                     itemTextStyle={styles.itemTextStyle}
+                    containerStyle={{ backgroundColor: theme.card }}
+                    activeColor={theme.surface}
                     value={form.bed_no}
                     onChange={item => setForm({ ...form, bed_no: item.value })}
                   />
@@ -516,7 +534,7 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                 onPress={() => setStep(2)}
               >
                 <Text style={styles.submitText}>NEXT</Text>
-                <Icon name="chevron-right" size={22} color={THEME_GREEN} />
+                <Icon name="chevron-right" size={22} color={theme.primary} />
               </TouchableOpacity>
               
               <TouchableOpacity
@@ -541,7 +559,7 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                       <Icon
                         name="remove-circle"
                         size={20}
-                        color={REQUIRED_RED}
+                        color={theme.error}
                       />
                     </TouchableOpacity>
                   )}
@@ -552,7 +570,7 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                     <TextInput
                       style={styles.input}
                       placeholder="Enter Full Name"
-                      placeholderTextColor={PLACEHOLDER_COLOR}
+                      placeholderTextColor={theme.textMuted}
                       value={contact.name}
                       onChangeText={v => {
                         const updated = [...contacts];
@@ -572,7 +590,7 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                       ref={contactRelRef}
                       style={styles.input}
                       placeholder="Enter Relationship"
-                      placeholderTextColor={PLACEHOLDER_COLOR}
+                      placeholderTextColor={theme.textMuted}
                       value={contact.relationship}
                       onChangeText={v => {
                         const updated = [...contacts];
@@ -601,7 +619,7 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
                         ref={contactNumRef}
                         style={styles.flexInput}
                         placeholder="9193420569"
-                        placeholderTextColor={PLACEHOLDER_COLOR}
+                        placeholderTextColor={theme.textMuted}
                         keyboardType="number-pad"
                         maxLength={11}
                         value={contact.number}
@@ -639,11 +657,11 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any, commonStyles: any) => StyleSheet.create({
   loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  safeArea: { flex: 1, backgroundColor: '#fff' },
-  container: { flex: 1, paddingHorizontal: 40 },
-  header: { marginTop: Platform.OS === 'ios' ? 20 : 40, marginBottom: 35 },
+  safeArea: commonStyles.safeArea,
+  container: commonStyles.container,
+  header: commonStyles.header,
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -657,64 +675,39 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   titleContainer: { flex: 1 },
-  title: {
-    fontSize: 35,
-    color: THEME_GREEN,
-    fontFamily: 'MinionPro-SemiboldItalic',
-    marginBottom: 2,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: 'AlteHaasGroteskBold',
-    color: THEME_GREEN,
-    fontWeight: 'bold',
-    marginTop: 2,
-  },
+  title: commonStyles.title,
+  sectionTitle: commonStyles.sectionTitle,
   addIconCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: THEME_GREEN,
+    borderColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 15,
   },
   inputGroup: { marginBottom: 20 },
-  inputLabel: {
-    fontSize: 14,
-    fontFamily: 'AlteHaasGroteskBold',
-    color: THEME_GREEN,
-    marginBottom: 8,
-  },
-  required: { color: REQUIRED_RED },
-  input: {
-    borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 14,
-    color: '#333',
-    backgroundColor: '#fff',
-    fontFamily: 'AlteHaasGrotesk',
-  },
+  inputLabel: commonStyles.label,
+  required: { color: theme.error },
+  input: commonStyles.input,
   phoneInputRow: {
     flexDirection: 'row',
     borderWidth: 1.5,
-    borderColor: '#E0E0E0',
+    borderColor: theme.border,
     borderRadius: 10,
     overflow: 'hidden',
-    backgroundColor: '#fff',
+    backgroundColor: theme.inputBg,
   },
   prefixContainer: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.surface,
     paddingHorizontal: 12,
     justifyContent: 'center',
     borderRightWidth: 1.5,
-    borderRightColor: '#E0E0E0',
+    borderRightColor: theme.border,
   },
   prefixText: {
-    color: THEME_GREEN,
+    color: theme.primary,
     fontFamily: 'AlteHaasGroteskBold',
     fontSize: 14,
   },
@@ -722,69 +715,53 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 14,
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     fontFamily: 'AlteHaasGrotesk',
   },
-  inputError: { borderColor: REQUIRED_RED },
+  inputError: { borderColor: theme.error },
   errorText: {
-    color: REQUIRED_RED,
+    color: theme.error,
     fontSize: 12,
     marginTop: 5,
     fontFamily: 'AlteHaasGrotesk',
   },
   placeholderStyle: {
     fontSize: 14,
-    color: '#999',
+    color: theme.textMuted,
     fontFamily: 'AlteHaasGrotesk',
   },
   selectedTextStyle: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     fontFamily: 'AlteHaasGroteskBold',
   },
   itemTextStyle: {
     fontSize: 14,
-    color: '#555555',
+    color: theme.text,
     fontFamily: 'AlteHaasGrotesk',
   },
   readOnlyInput: {
-    backgroundColor: '#F5F5F5',
-    color: '#555',
+    backgroundColor: theme.surface,
+    color: theme.text,
     fontFamily: 'AlteHaasGroteskBold',
   },
   dropdown: {
     borderWidth: 1.5,
-    borderColor: '#E0E0E0',
+    borderColor: theme.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 52,
-    backgroundColor: '#fff',
+    backgroundColor: theme.inputBg,
   },
   row: { flexDirection: 'row', alignItems: 'center' },
   contactBlock: { marginBottom: 10 },
   removeBtn: { alignSelf: 'flex-end', marginBottom: 5 },
-  submitBtn: {
-    backgroundColor: BANNER_GREEN,
-    height: 55,
-    borderRadius: 30,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: THEME_GREEN,
-    marginTop: 10,
-  },
-  submitText: {
-    color: THEME_GREEN,
-    fontFamily: 'AlteHaasGroteskBold',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginRight: 5,
-  },
+  submitBtn: commonStyles.submitBtn,
+  submitText: commonStyles.submitText,
   backLink: { marginTop: 20 },
   backLinkText: {
     textAlign: 'center',
-    color: '#666',
+    color: theme.textMuted,
     textDecorationLine: 'underline',
   },
 });

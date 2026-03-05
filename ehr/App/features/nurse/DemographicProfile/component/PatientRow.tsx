@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Pressable,
   Image,
 } from 'react-native';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 export interface PatientDisplay {
   id: number;
@@ -38,13 +39,16 @@ const PatientRow: React.FC<PatientRowProps> = ({
   onLongPress,
   onEdit,
 }) => {
+  const { theme, isDarkMode } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme, isDarkMode), [theme, isDarkMode]);
+
   return (
     <Pressable
       onPress={onPress}
       onLongPress={onLongPress}
       style={({ pressed }) => [
         styles.tableRow,
-        (pressed || isSelected) && { backgroundColor: '#F1F8E9' },
+        (pressed || isSelected) && { backgroundColor: isDarkMode ? '#1a2e1d' : '#F1F8E9' },
       ]}
     >
       <View style={styles.idCol}>
@@ -73,8 +77,11 @@ const PatientRow: React.FC<PatientRowProps> = ({
           disabled={isSelectionMode}
           onPress={() => onEdit && onEdit(item.id)}
         >
-          <View style={[styles.iconCircle, { borderColor: '#FFD54F' }]}>
-            <Image source={editIcon} style={styles.fullIcon} />
+          <View style={[styles.iconCircle, { borderColor: isDarkMode ? '#FFD54F' : '#FFD54F', backgroundColor: isDarkMode ? 'transparent' : 'transparent' }]}>
+            <Image 
+              source={editIcon} 
+              style={[styles.fullIcon, isDarkMode && { tintColor: '#FFD54F' }]} 
+            />
           </View>
         </TouchableOpacity>
 
@@ -83,14 +90,19 @@ const PatientRow: React.FC<PatientRowProps> = ({
             style={[
               styles.iconCircle,
               {
-                borderColor: item.isActive ? '#81C784' : '#E57373',
-                backgroundColor: item.isActive ? '#E8F5E9' : '#FFEBEE',
+                borderColor: item.isActive ? (isDarkMode ? theme.primary : '#81C784') : (isDarkMode ? theme.error : '#E57373'),
+                backgroundColor: item.isActive 
+                  ? (isDarkMode ? 'rgba(74, 222, 128, 0.1)' : '#E8F5E9') 
+                  : (isDarkMode ? 'rgba(255, 82, 82, 0.1)' : '#FFEBEE'),
               },
             ]}
           >
             <Image
               source={item.isActive ? activeIcon : inactiveIcon}
-              style={styles.fullIcon}
+              style={[
+                styles.fullIcon,
+                isDarkMode && { tintColor: item.isActive ? theme.primary : theme.error }
+              ]}
             />
           </View>
         </TouchableOpacity>
@@ -99,13 +111,13 @@ const PatientRow: React.FC<PatientRowProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
+    borderBottomColor: theme.border,
     marginHorizontal: 20,
   },
   idCol: { flex: 0.15, alignItems: 'center', justifyContent: 'center' },
@@ -118,7 +130,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   idText: {
-    color: '#035022',
+    color: theme.primary,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -126,13 +138,13 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: theme.border,
   },
   checkCircle: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -146,7 +158,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   nameText: {
-    color: '#035022',
+    color: theme.primary,
     fontSize: 14,
     fontFamily: 'AlteHaasGrotesk',
   },

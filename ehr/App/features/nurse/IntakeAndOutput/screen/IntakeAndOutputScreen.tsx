@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react';
 import {
   View,
   Text,
@@ -23,6 +29,7 @@ import PatientSearchBar from '@components/PatientSearchBar';
 import { useIntakeAndOutputLogic } from '../hook/useIntakeAndOutputLogic';
 import ADPIEScreen from '@nurse/VitalSigns/screen/ADPIEScreen';
 import CDSSModal from '@components/CDSSModal';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 const alertIcon = require('@assets/icons/alert.png');
 
@@ -33,6 +40,12 @@ interface IntakeAndOutputScreenProps {
 const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   onBack,
 }) => {
+  const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const styles = useMemo(
+    () => createStyles(theme, commonStyles, isDarkMode),
+    [theme, commonStyles, isDarkMode],
+  );
+
   const {
     patientName,
     selectedPatientId,
@@ -229,7 +242,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.root}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -286,10 +299,13 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
               styles.alertIcon,
               {
                 backgroundColor: hasRealAlert
-                  ? '#FFECBD'
+                  ? isDarkMode
+                    ? '#78350F'
+                    : '#FFECBD'
                   : isDataEntered && selectedPatientId
-                  ? '#E5FFE8'
-                  : '#F0F0F0',
+                  ? theme.surface
+                  : theme.card,
+                borderColor: theme.border,
               },
             ]}
             disabled={!isDataEntered || !selectedPatientId}
@@ -302,8 +318,8 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                 hasRealAlert
                   ? { tintColor: '#EDB62C', opacity: 1 }
                   : isDataEntered && selectedPatientId
-                  ? { tintColor: '#29A539', opacity: 0.8 }
-                  : { tintColor: '#9E9E9E', opacity: 0.5 },
+                  ? { tintColor: theme.secondary, opacity: 0.8 }
+                  : { tintColor: theme.textMuted, opacity: 0.5 },
               ]}
             />
           </TouchableOpacity>
@@ -314,8 +330,8 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                 styles.cdssButton,
                 isDataEntered &&
                   selectedPatientId && {
-                    backgroundColor: '#DCFCE7',
-                    borderColor: '#035022',
+                    backgroundColor: theme.buttonBg,
+                    borderColor: theme.buttonBorder,
                   },
                 (!isDataEntered || !selectedPatientId) && styles.disabledButton,
               ]}
@@ -325,7 +341,8 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
               <Text
                 style={[
                   styles.cdssBtnText,
-                  isDataEntered && selectedPatientId && { color: '#035022' },
+                  isDataEntered &&
+                    selectedPatientId && { color: theme.primary },
                 ]}
               >
                 CDSS
@@ -340,13 +357,13 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
               disabled={!isDataEntered || !selectedPatientId || loading}
             >
               {loading ? (
-                <ActivityIndicator size="small" color="#035022" />
+                <ActivityIndicator size="small" color={theme.primary} />
               ) : (
                 <Text
                   style={[
                     styles.submitBtnText,
                     (!isDataEntered || !selectedPatientId) && {
-                      color: '#9E9E9E',
+                      color: theme.textMuted,
                     },
                   ]}
                 >
@@ -396,112 +413,92 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#fff' },
-  scrollContent: { paddingHorizontal: 40, paddingBottom: 130 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: Platform.OS === 'ios' ? 20 : 40,
-    marginBottom: 35,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    flex: 1,
-  },
-  backBtn: {
-    marginTop: 12,
-    marginRight: 10,
-  },
-  backIcon: {
-    width: 25,
-    height: 25,
-    resizeMode: 'contain',
-  },
-  title: {
-    fontSize: 35,
-    color: '#035022',
-    fontFamily: 'MinionPro-SemiboldItalic',
-    lineHeight: 38,
-  },
-  subDate: { color: '#999', fontFamily: 'AlteHaasGroteskBold', fontSize: 13 },
-  footerAction: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
-  alertIcon: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-  },
-  fullImg: { width: '80%', height: '80%', resizeMode: 'contain' },
-  buttonGroup: { flex: 1, flexDirection: 'row', marginLeft: 15 },
-  cdssButton: {
-    flex: 1,
-    height: 48,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    marginRight: 5,
-  },
-  cdssBtnText: { color: '#6B7280', fontWeight: 'bold', fontSize: 14 },
-  submitButton: {
-    flex: 1,
-    height: 48,
-    backgroundColor: '#DCFCE7',
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#035022',
-    marginLeft: 5,
-  },
-  submitBtnText: { color: '#035022', fontWeight: 'bold', fontSize: 14 },
-  disabledButton: {
-    backgroundColor: '#F0F0F0',
-    borderColor: '#E0E0E0',
-    opacity: 0.6,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  menuContainer: {
-    width: '85%',
-    backgroundColor: '#FFF',
-    borderRadius: 25,
-    padding: 25,
-    maxHeight: '80%',
-  },
-  menuTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#035022',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  menuItem: {
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  menuItemText: { fontSize: 16, color: '#333', textAlign: 'center' },
-  activeMenuText: { color: '#29A539', fontWeight: 'bold' },
-  closeMenuBtn: {
-    marginTop: 20,
-    backgroundColor: '#E5FFE8',
-    paddingVertical: 12,
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  closeMenuText: { color: '#035022', fontWeight: 'bold' },
-});
+const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: theme.background },
+    scrollContent: { paddingHorizontal: 40, paddingBottom: 130 },
+    header: commonStyles.header,
+    title: commonStyles.title,
+    subDate: {
+      color: theme.textMuted,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 13,
+    },
+    footerAction: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
+    alertIcon: {
+      width: 45,
+      height: 45,
+      borderRadius: 22.5,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+    },
+    fullImg: { width: '80%', height: '80%', resizeMode: 'contain' },
+    buttonGroup: { flex: 1, flexDirection: 'row', marginLeft: 15 },
+    cdssButton: {
+      flex: 1,
+      height: 48,
+      backgroundColor: theme.buttonBg,
+      borderRadius: 25,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.buttonBorder,
+      marginRight: 5,
+    },
+    cdssBtnText: { color: theme.textMuted, fontWeight: 'bold', fontSize: 14 },
+    submitButton: {
+      flex: 1,
+      height: 48,
+      backgroundColor: theme.buttonBg,
+      borderRadius: 25,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.buttonBorder,
+      marginLeft: 5,
+    },
+    submitBtnText: { color: theme.primary, fontWeight: 'bold', fontSize: 14 },
+    disabledButton: {
+      backgroundColor: theme.card,
+      borderColor: theme.border,
+      opacity: 0.6,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: theme.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    menuContainer: {
+      width: '85%',
+      backgroundColor: theme.card,
+      borderRadius: 25,
+      padding: 25,
+      maxHeight: '80%',
+    },
+    menuTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: theme.primary,
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    menuItem: {
+      paddingVertical: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    menuItemText: { fontSize: 16, color: theme.text, textAlign: 'center' },
+    activeMenuText: { color: theme.secondary, fontWeight: 'bold' },
+    closeMenuBtn: {
+      marginTop: 20,
+      backgroundColor: theme.surface,
+      paddingVertical: 12,
+      borderRadius: 20,
+      alignItems: 'center',
+    },
+    closeMenuText: { color: theme.primary, fontWeight: 'bold' },
+  });
 
 export default IntakeAndOutputScreen;

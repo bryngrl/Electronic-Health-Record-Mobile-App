@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,6 +10,7 @@ import {
   BackHandler,
   Image,
   Platform,
+  useColorScheme,
 } from 'react-native';
 
 const backArrow = require('@assets/icons/back_arrow.png');
@@ -17,12 +18,19 @@ import useIvsAndLinesData from '../hook/useIvsAndLinesData';
 import DataCard from '../components/DataCard';
 import PatientSearchBar from '@components/PatientSearchBar';
 import SweetAlert from '@components/SweetAlert';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 interface IvsAndLinesScreenProps {
   onBack: () => void;
 }
 
 const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
+  const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const styles = useMemo(
+    () => createStyles(theme, commonStyles, isDarkMode),
+    [theme, commonStyles, isDarkMode],
+  );
+
   // Use the custom hook
   const {
     patientName,
@@ -189,7 +197,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="#E5FFE8" />
+            <ActivityIndicator color={theme.surface} />
           ) : (
             <Text style={styles.submitButtonText}>SUBMIT</Text>
           )}
@@ -209,66 +217,49 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingHorizontal: 40,
-    paddingTop: 0,
-    paddingBottom: 20,
-  },
-  headerContainer: {
-    marginTop: Platform.OS === 'ios' ? 20 : 40,
-    marginBottom: 35,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  backBtn: {
-    marginTop: 12,
-    marginRight: 10,
-  },
-  backIcon: {
-    width: 25,
-    height: 25,
-    resizeMode: 'contain',
-  },
-  titleText: {
-    marginBottom: -10,
-    fontSize: 35,
-    color: '#035022',
-    fontFamily: 'MinionPro-SemiboldItalic',
-  },
-  dateText: {
-    color: '#9B9B9B',
-    fontSize: 13,
-    fontFamily: 'AlteHaasGroteskBold',
-    marginTop: 5,
-  },
-  submitButton: {
-    backgroundColor: '#EAF8EF',
-    borderColor: '#29A539',
-    borderWidth: 1.5,
-    borderRadius: 24,
-    paddingVertical: 15,
-    marginTop: 30,
-    marginBottom: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 56,
-  },
-  submitButtonText: {
-    color: '#035022',
-    fontWeight: '700',
-    fontSize: 16,
-    letterSpacing: 1,
-  },
-});
+const createStyles = (theme: any, commonStyles: any) =>
+  StyleSheet.create({
+    mainContainer: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    container: {
+      flex: 1,
+    },
+    contentContainer: {
+      paddingHorizontal: 40,
+      paddingTop: 0,
+      paddingBottom: 20,
+    },
+    headerContainer: {
+      ...commonStyles.header,
+      flexDirection: 'column',
+    },
+    titleText: commonStyles.title,
+    dateText: {
+      color: theme.textMuted,
+      fontSize: 13,
+      fontFamily: 'AlteHaasGroteskBold',
+      marginTop: 5,
+    },
+    submitButton: {
+      backgroundColor: theme.tableHeader,
+      borderColor: theme.primary,
+      borderWidth: 1.5,
+      borderRadius: 24,
+      paddingVertical: 15,
+      marginTop: 30,
+      marginBottom: 30,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 56,
+    },
+    submitButtonText: {
+      color: theme.primary,
+      fontWeight: '700',
+      fontSize: 16,
+      letterSpacing: 1,
+    },
+  });
 
 export default IvsAndLinesScreen;

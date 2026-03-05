@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,6 +7,7 @@ import {
   Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 interface SearchBarProps {
   query: string;
@@ -20,37 +21,42 @@ export const SearchBar = ({
   setQuery,
   onFilterPress,
   isSortActive, // Destructure here
-}: SearchBarProps) => (
-  <View style={styles.container}>
-    <View style={styles.searchBar}>
-      <Icon
-        name="search-outline"
-        size={20}
-        color="#CCC"
-        style={styles.searchIcon}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Search"
-        value={query}
-        onChangeText={setQuery}
-        placeholderTextColor="#CCC"
-      />
-    </View>
-    <TouchableOpacity style={styles.filterBtn} onPress={onFilterPress}>
-      <Image
-        source={
-          isSortActive
-            ? require('@assets/icons/sort_active.png')
-            : require('@assets/icons/sort.png')
-        }
-        style={styles.sortIcon}
-      />
-    </TouchableOpacity>
-  </View>
-);
+}: SearchBarProps) => {
+  const { theme, isDarkMode } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme, isDarkMode), [theme, isDarkMode]);
 
-const styles = StyleSheet.create({
+  return (
+    <View style={styles.container}>
+      <View style={styles.searchBar}>
+        <Icon
+          name="search-outline"
+          size={20}
+          color={theme.textMuted}
+          style={styles.searchIcon}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Search"
+          value={query}
+          onChangeText={setQuery}
+          placeholderTextColor={theme.textMuted}
+        />
+      </View>
+      <TouchableOpacity style={styles.filterBtn} onPress={onFilterPress}>
+        <Image
+          source={
+            isSortActive
+              ? require('@assets/icons/sort_active.png')
+              : require('@assets/icons/sort.png')
+          }
+          style={[styles.sortIcon, isDarkMode && { tintColor: theme.primary }]}
+        />
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const createStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -60,12 +66,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderRadius: 225,
     paddingHorizontal: 15,
     height: 60,
     borderWidth: 1,
-    borderColor: '#EFEFEF',
+    borderColor: theme.border,
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 1, height: 1 },
@@ -77,18 +83,18 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontFamily: 'AlteHaasGrotesk',
-    color: '#292929',
+    color: theme.text,
   },
   filterBtn: {
     marginLeft: 20,
     width: 60,
     height: 60,
     borderRadius: 255,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: theme.border,
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 1, height: 1 },

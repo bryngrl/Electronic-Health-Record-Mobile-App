@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  useColorScheme,
 } from 'react-native';
 import { SearchBar } from '@nurse/Search/component/SearchBar';
 import { SearchResults } from '@nurse/Search/component/SearchResults';
@@ -14,6 +15,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import apiClient from '@api/apiClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 const RECENT_SEARCHES_KEY = '@recent_searches';
 
@@ -51,6 +53,9 @@ export default function SearchScreen({
   onNavigate: (route: string) => void;
   onPatientSelect: (id: number) => void;
 }) {
+  const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme, commonStyles), [theme, commonStyles]);
+
   const [query, setQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -226,9 +231,9 @@ export default function SearchScreen({
             style={styles.sortTrigger}
             onPress={() => setSortModalVisible(true)}
           >
-            <MaterialIcon name="swap-vert" size={18} color="#999696" />
+            <MaterialIcon name="swap-vert" size={18} color={theme.textMuted} />
             <Text style={styles.sortLabel}>{sortBy}</Text>
-            <Icon name="chevron-down" size={16} color="#999696" />
+            <Icon name="chevron-down" size={16} color={theme.textMuted} />
           </TouchableOpacity>
         )}
 
@@ -244,7 +249,7 @@ export default function SearchScreen({
         </View>
 
         {loading && patients.length === 0 ? (
-          <ActivityIndicator size="large" color="#1B4332" />
+          <ActivityIndicator size="large" color={theme.primary} />
         ) : (
           <SearchResults data={filteredResults} onItemPress={handleItemPress} />
         )}
@@ -261,10 +266,10 @@ export default function SearchScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any, commonStyles: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.background,
     paddingHorizontal: 40,
     paddingTop: Platform.OS === 'ios' ? 20 : 40,
   },
@@ -279,24 +284,24 @@ const styles = StyleSheet.create({
   resultsTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#B2B2B2',
+    color: theme.textMuted,
     fontFamily: 'AlteHaasGroteskBold',
   },
   clearText: {
     fontSize: 12,
-    color: '#035022',
+    color: theme.primary,
     fontFamily: 'AlteHaasGroteskBold',
   },
   sortTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: theme.card,
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 40,
     borderWidth: 1,
-    borderColor: '#EFEFEF',
+    borderColor: theme.border,
     marginBottom: 20,
     height: 50,
   },
@@ -304,6 +309,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     fontSize: 13,
     fontFamily: 'AlteHaasGrotesk',
-    color: '#999696',
+    color: theme.textMuted,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import Button from '@components/button';
 import SweetAlert from '@components/SweetAlert';
 import { useDemographicLogic } from '../hook/useDemographicLogic';
 import PatientDetailsScreen from '@nurse/PatientDetails/screen/PatientDetailScreen';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 interface Patient {
   patient_id: number;
@@ -44,7 +45,12 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
   onSelectionChange,
   onPatientClick,
 }) => {
-  const isDarkMode = useColorScheme() === 'dark';
+  const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const styles = useMemo(
+    () => createStyles(theme, commonStyles),
+    [theme, commonStyles],
+  );
+
   const [showSelectMenu, setShowSelectMenu] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(
     null,
@@ -85,7 +91,13 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
     }
     onBack();
     return true;
-  }, [selectedPatientId, isSelectionMode, showSelectMenu, clearSelection, onBack]);
+  }, [
+    selectedPatientId,
+    isSelectionMode,
+    showSelectMenu,
+    clearSelection,
+    onBack,
+  ]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
@@ -108,10 +120,10 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
 
   if (selectedPatientId) {
     return (
-      <PatientDetailsScreen 
-        patientId={selectedPatientId} 
-        onBack={() => setSelectedPatientId(null)} 
-        onEdit={(id) => {
+      <PatientDetailsScreen
+        patientId={selectedPatientId}
+        onBack={() => setSelectedPatientId(null)}
+        onEdit={id => {
           setSelectedPatientId(null);
           onPatientClick && onPatientClick(id);
         }}
@@ -119,11 +131,8 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
     );
   }
 
-
   return (
     <View style={styles.root}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-
       {/* MAIN CONTENT */}
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
@@ -138,7 +147,10 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
                 <TouchableOpacity
                   onPress={() => setShowSelectMenu(!showSelectMenu)}
                 >
-                  <Image source={dotsIcon} style={styles.dotsIcon} />
+                  <Image
+                    source={dotsIcon}
+                    style={[styles.dotsIcon, { tintColor: theme.icon }]}
+                  />
                 </TouchableOpacity>
               )}
             </View>
@@ -164,7 +176,7 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
           {isLoading && !isRefreshing ? (
             <ActivityIndicator
               size="large"
-              color="#29A539"
+              color={theme.secondary}
               style={{ marginTop: 50 }}
             />
           ) : (
@@ -191,7 +203,7 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
                       : handlePatientClick(item.patient_id)
                   }
                   onLongPress={() => toggleSelection(item.patient_id)}
-                  onEdit={(id) => onPatientClick && onPatientClick(id)}
+                  onEdit={id => onPatientClick && onPatientClick(id)}
                 />
               )}
             />
@@ -205,7 +217,10 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
                 onPress={() => updateStatus(true)}
               >
                 <View
-                  style={[styles.statusCircle, { backgroundColor: '#E8F5E9' }]}
+                  style={[
+                    styles.statusCircle,
+                    { backgroundColor: isDarkMode ? '#064E3B' : '#E8F5E9' },
+                  ]}
                 >
                   <Image source={activeIcon} style={styles.footerIcon} />
                 </View>
@@ -217,7 +232,10 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
                 onPress={() => updateStatus(false)}
               >
                 <View
-                  style={[styles.statusCircle, { backgroundColor: '#FFEBEE' }]}
+                  style={[
+                    styles.statusCircle,
+                    { backgroundColor: isDarkMode ? '#7F1D1D' : '#FFEBEE' },
+                  ]}
                 >
                   <Image source={inactiveIcon} style={styles.footerIcon} />
                 </View>
@@ -257,114 +275,99 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FFF' },
+const createStyles = (theme: any, commonStyles: any) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: theme.background },
 
-  darkOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    zIndex: 10,
-  },
+    darkOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: theme.overlay,
+      zIndex: 10,
+    },
 
-  safeArea: {
-    flex: 1,
-  },
+    safeArea: commonStyles.safeArea,
 
-  container: { flex: 1, paddingHorizontal: 40 },
+    container: commonStyles.container,
 
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: Platform.OS === 'ios' ? 20 : 40,
-    marginBottom: 35,
-  },
+    header: commonStyles.header,
 
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
 
-  backBtn: {
-    marginTop: 12,
-    marginRight: 10,
-  },
+    backBtn: {
+      marginTop: 12,
+      marginRight: 10,
+    },
 
-  backIcon: {
-    width: 25,
-    height: 25,
-    resizeMode: 'contain',
-  },
+    backIcon: {
+      width: 25,
+      height: 25,
+      resizeMode: 'contain',
+    },
 
-  headerActions: {
-    alignItems: 'flex-end',
-    marginTop: 10,
-  },
+    headerActions: {
+      alignItems: 'flex-end',
+      marginTop: 10,
+    },
 
-  title: {
-    fontSize: 35,
-    color: '#035022',
-    fontFamily: 'MinionPro-SemiboldItalic',
-  },
+    title: commonStyles.title,
 
-  dotsIcon: { width: 24, height: 24, resizeMode: 'contain', marginTop: 5 },
+    dotsIcon: { width: 24, height: 24, resizeMode: 'contain', marginTop: 5 },
 
-  menuPopup: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 120 : 90,
-    right: 45,
-    width: 165,
-    height: 60,
-    zIndex: 20,
-    elevation: 10,
-  },
+    menuPopup: {
+      position: 'absolute',
+      top: Platform.OS === 'ios' ? 120 : 90,
+      right: 45,
+      width: 165,
+      height: 60,
+      zIndex: 20,
+      elevation: 10,
+    },
 
-  fullSelectImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
-  },
+    fullSelectImage: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'contain',
+    },
 
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#E5FFE8',
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
+    tableHeader: commonStyles.tableHeader,
 
-  headerText: {
-    color: '#29A539',
-    fontFamily: 'AlteHaasGroteskBold',
-    fontSize: 14,
-    paddingRight: 10,
-  },
+    headerText: {
+      color: theme.secondary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 14,
+      paddingRight: 10,
+    },
 
-  actionFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    backgroundColor: '#FFF',
-  },
+    actionFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      paddingVertical: 20,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+      backgroundColor: theme.card,
+    },
 
-  footerItem: { flexDirection: 'row', alignItems: 'center' },
+    footerItem: { flexDirection: 'row', alignItems: 'center' },
 
-  statusCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-    overflow: 'hidden',
-  },
+    statusCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 10,
+      overflow: 'hidden',
+    },
 
-  footerIcon: { width: '100%', height: '100%', resizeMode: 'cover' },
-  footerText: { color: '#004D40', fontSize: 15, fontWeight: '500' },
-});
+    footerIcon: { width: '100%', height: '100%', resizeMode: 'cover' },
+    footerText: { color: theme.primary, fontSize: 15, fontWeight: '500' },
+  });
 
 export default DemographicProfileScreen;

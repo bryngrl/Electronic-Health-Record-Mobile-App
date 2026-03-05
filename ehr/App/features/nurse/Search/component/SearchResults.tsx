@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,8 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-
-const THEME_GREEN = '#035022';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 interface SearchResultsProps {
   data: any[];
@@ -16,13 +15,16 @@ interface SearchResultsProps {
 }
 
 export const SearchResults = ({ data, onItemPress }: SearchResultsProps) => {
+  const { theme, isDarkMode } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme, isDarkMode), [theme, isDarkMode]);
+
   const renderItem = ({ item }: any) => (
     <TouchableOpacity
       style={styles.resultItem}
       onPress={() => onItemPress(item)}
     >
       <View style={styles.iconContainer}>
-        <Icon name={item.icon || 'person'} size={24} color={THEME_GREEN} />
+        <Icon name={item.icon || 'person'} size={24} color={theme.primary} />
       </View>
       <View style={styles.textContainer}>
         <Text style={styles.resultName}>{item.name}</Text>
@@ -43,7 +45,7 @@ export const SearchResults = ({ data, onItemPress }: SearchResultsProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   list: { paddingBottom: 100 },
   resultItem: {
     flexDirection: 'row',
@@ -55,11 +57,11 @@ const styles = StyleSheet.create({
     width: 45,
     height: 45,
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: theme.border,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 2 },
@@ -68,12 +70,12 @@ const styles = StyleSheet.create({
   resultName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: THEME_GREEN,
+    color: theme.primary,
     fontFamily: 'AlteHaasGroteskBold',
   },
   resultType: {
     fontSize: 12,
-    color: '#BBB',
+    color: theme.textMuted,
     marginTop: 2,
     fontFamily: 'AlteHaasGrotesk',
   },

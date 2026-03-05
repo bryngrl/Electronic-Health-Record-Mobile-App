@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,9 +9,9 @@ import {
   Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 const { height } = Dimensions.get('window');
-const THEME_GREEN = '#1B4332';
 
 interface SortModalProps {
   visible: boolean;
@@ -28,6 +28,8 @@ export const SortModal = ({
   onSelect,
   options,
 }: SortModalProps) => {
+  const { theme, isDarkMode } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme, isDarkMode), [theme, isDarkMode]);
 
   return (
     <Modal
@@ -62,7 +64,7 @@ export const SortModal = ({
                         {option}
                       </Text>
                       {selectedOption === option && (
-                        <Icon name="checkmark" size={20} color={THEME_GREEN} />
+                        <Icon name="checkmark" size={20} color={theme.primary} />
                       )}
                     </TouchableOpacity>
                     {index < options.length - 1 && (
@@ -79,14 +81,14 @@ export const SortModal = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    backgroundColor: '#F2F2F7',
+    backgroundColor: theme.background,
     borderTopLeftRadius: 35,
     borderTopRightRadius: 35,
     paddingHorizontal: 20,
@@ -97,7 +99,7 @@ const styles = StyleSheet.create({
   handle: {
     width: 45,
     height: 5,
-    backgroundColor: '#C7C7CC',
+    backgroundColor: theme.border,
     borderRadius: 3,
     alignSelf: 'center',
     marginBottom: 20,
@@ -105,12 +107,12 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 18,
     fontWeight: '700',
-    color: THEME_GREEN,
+    color: theme.primary,
     textAlign: 'center',
     marginBottom: 25,
   },
   optionsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     borderRadius: 20,
     overflow: 'hidden',
   },
@@ -120,7 +122,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  optionText: { fontSize: 16, color: '#999696' },
-  selectedText: { color: THEME_GREEN, fontWeight: '600', fontStyle: 'italic' },
-  separator: { height: 1, backgroundColor: '#E5E5EA', marginHorizontal: 20 },
+  optionText: { fontSize: 16, color: theme.textMuted },
+  selectedText: { color: theme.primary, fontWeight: '600', fontStyle: 'italic' },
+  separator: { height: 1, backgroundColor: theme.border, marginHorizontal: 20 },
 });

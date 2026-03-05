@@ -1,4 +1,10 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from 'react';
 import {
   View,
   Text,
@@ -25,6 +31,7 @@ import SweetAlert from '@components/SweetAlert';
 import CDSSModal from '@components/CDSSModal';
 import ADPIEScreen from '@nurse/VitalSigns/screen/ADPIEScreen';
 import PatientSearchBar from '@components/PatientSearchBar';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 const ITEM_WIDTH = width * 0.72;
@@ -41,6 +48,12 @@ interface VitalSignsScreenProps {
 }
 
 const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
+  const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const styles = useMemo(
+    () => createStyles(theme, commonStyles),
+    [theme, commonStyles],
+  );
+
   const {
     vitals,
     handleUpdateVital,
@@ -277,7 +290,10 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
             <Text style={styles.fieldLabel}>DAY NO :</Text>
             <View style={[styles.pillInput, styles.dropdownRow]}>
               <Text style={styles.dateVal}>{calculateDayNumber()}</Text>
-              <Image source={arrowIcon} style={styles.arrowIconImage} />
+              <Image
+                source={arrowIcon}
+                style={[styles.arrowIconImage, { tintColor: theme.textMuted }]}
+              />
             </View>
           </View>
         </View>
@@ -290,7 +306,10 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
               onPress={() => scrollChart('prev')}
             >
               <View style={styles.arrowCircle}>
-                <Image source={backArrow} style={styles.arrowImg} />
+                <Image
+                  source={backArrow}
+                  style={[styles.arrowImg, { tintColor: theme.primary }]}
+                />
               </View>
             </TouchableOpacity>
           )}
@@ -327,7 +346,10 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
               onPress={() => scrollChart('next')}
             >
               <View style={styles.arrowCircle}>
-                <Image source={nextArrow} style={styles.arrowImg} />
+                <Image
+                  source={nextArrow}
+                  style={[styles.arrowImg, { tintColor: theme.primary }]}
+                />
               </View>
             </TouchableOpacity>
           )}
@@ -380,16 +402,20 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
                 {
                   backgroundColor:
                     currentAlert || isDataComplete
-                      ? '#FFECBD'
+                      ? isDarkMode
+                        ? '#78350F'
+                        : '#FFECBD'
                       : isDataEntered
-                      ? '#E5FFE8'
+                      ? '#FFECBD'
+                      : isDarkMode
+                      ? '#333'
                       : '#EBEBEB',
                   borderColor:
                     currentAlert || isDataComplete
                       ? '#EDB62C'
                       : isDataEntered
-                      ? '#29A539'
-                      : '#F0F0F0',
+                      ? '#EDB62C'
+                      : theme.border,
                 },
               ]}
               disabled={!isDataEntered}
@@ -402,8 +428,8 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
                   currentAlert || isDataComplete
                     ? { tintColor: '#EDB62C', opacity: 1 }
                     : isDataEntered
-                    ? { tintColor: '#29A539', opacity: 0.8 }
-                    : { tintColor: '#999696', opacity: 0.5 },
+                    ? { tintColor: '#EDB62C', opacity: 1 }
+                    : { tintColor: theme.textMuted, opacity: 1 },
                 ]}
               />
             </TouchableOpacity>
@@ -444,7 +470,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
               <Text
                 style={[
                   styles.nextBtnText,
-                  !selectedPatientId && { color: '#666' },
+                  !selectedPatientId && { color: theme.textMuted },
                 ]}
               >
                 NEXT ›
@@ -540,202 +566,170 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FFF' },
-  scrollContent: { paddingHorizontal: 40, paddingBottom: 20 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: Platform.OS === 'ios' ? 20 : 40,
-    marginBottom: 35,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  backBtn: {
-    marginTop: 12,
-    marginRight: 10,
-  },
-  backIcon: {
-    width: 25,
-    height: 25,
-    resizeMode: 'contain',
-  },
-  title: {
-    fontSize: 35,
-    color: '#035022',
-    fontFamily: 'MinionPro-SemiboldItalic',
-  },
-  subDate: { color: '#999', fontSize: 13, fontFamily: 'AlteHaasGroteskBold' },
-  menuDots: { fontSize: 28, color: '#035022' },
-  inputGroup: { marginBottom: 15, zIndex: 100 },
-  fieldLabel: {
-    color: '#0A8219',
-    fontFamily: 'AlteHaasGroteskBold',
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  pillInput: {
-    borderWidth: 1.5,
-    borderColor: '#EBEBEB',
-    borderRadius: 25,
-    height: 45,
-    paddingHorizontal: 20,
-    justifyContent: 'center',
-  },
-  dateVal: { color: '#333', fontFamily: 'AlteHaasGrotesk' },
-  dropdown: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#eee',
-    elevation: 3,
-    position: 'absolute',
-    top: 70,
-    left: 0,
-    right: 0,
-    zIndex: 99,
-  },
-  dropItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#f9f9f9' },
-  row: { flexDirection: 'row' },
-  dropdownRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingRight: 15,
-  },
-  arrowIconImage: {
-    width: 14,
-    height: 8,
-    resizeMode: 'contain',
-    tintColor: '#606060',
-  },
-  chartCarousel: { height: 210, marginVertical: 20, position: 'relative' },
-  navArrow: {
-    position: 'absolute',
-    top: '38%',
-    zIndex: 10,
-  },
-  arrowCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(78, 139, 66, 0.28)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#138221',
-  },
-  arrowImg: {
-    width: 25,
-    height: 25,
-    resizeMode: 'contain',
-    tintColor: '#035022',
-    backgroundColor: 'transparent',
-  },
+const createStyles = (theme: any, commonStyles: any) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: theme.background },
+    scrollContent: { paddingHorizontal: 40, paddingBottom: 20 },
+    header: commonStyles.header,
+    title: commonStyles.title,
+    subDate: {
+      color: theme.textMuted,
+      fontSize: 13,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+    menuDots: { fontSize: 28, color: theme.primary },
+    fieldLabel: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 14,
+      marginBottom: 8,
+    },
+    pillInput: {
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      borderRadius: 25,
+      height: 45,
+      paddingHorizontal: 20,
+      justifyContent: 'center',
+      backgroundColor: theme.card,
+    },
+    dateVal: { color: theme.text, fontFamily: 'AlteHaasGrotesk' },
+    row: { flexDirection: 'row' },
+    dropdownRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingRight: 15,
+    },
+    arrowIconImage: {
+      width: 14,
+      height: 8,
+      resizeMode: 'contain',
+    },
+    chartCarousel: { height: 210, marginVertical: 20, position: 'relative' },
+    navArrow: {
+      position: 'absolute',
+      top: '38%',
+      zIndex: 10,
+    },
+    arrowCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: '#c6e9c289',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: theme.secondary,
+    },
+    arrowImg: {
+      width: 25,
+      height: 25,
+      resizeMode: 'contain',
+      backgroundColor: 'transparent',
+    },
 
-  timeBanner: {
-    backgroundColor: '#E5FFE8',
-    paddingVertical: 10,
-    borderRadius: 20,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  timeText: {
-    color: '#29A539',
-    fontFamily: 'AlteHaasGroteskBold',
-    fontSize: 14,
-  },
-  footerAction: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
-  alertIcon: {
-    width: 45,
-    height: 45,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 22.5,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-  },
-  fullImg: { width: '70%', height: '70%', resizeMode: 'contain' },
-  buttonGroup: { flex: 1, flexDirection: 'row', marginLeft: 15 },
-  cdssButton: {
-    flex: 1,
-    height: 48,
-    backgroundColor: '#DCFCE7',
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#035022',
-    marginRight: 5,
-  },
-  cdssBtnText: { color: '#035022', fontWeight: 'bold', fontSize: 14 },
-  submitButton: {
-    flex: 1,
-    height: 48,
-    backgroundColor: '#DCFCE7',
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#035022',
-    marginLeft: 5,
-  },
-  submitBtnText: { color: '#035022', fontWeight: 'bold', fontSize: 14 },
-  nextButton: {
-    flex: 1,
-    backgroundColor: '#E5FFE8',
-    height: 48,
-    borderRadius: 25,
-    marginLeft: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#C8E6C9',
-  },
-  nextButtonDisabled: { backgroundColor: '#F0F0F0', borderColor: '#E0E0E0' },
-  disabledButton: {
-    backgroundColor: '#F0F0F0',
-    borderColor: '#E0E0E0',
-    opacity: 0.6,
-  },
-  nextBtnText: { color: '#035022', fontWeight: 'bold', fontSize: 16 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  menuContainer: {
-    width: '85%',
-    backgroundColor: '#FFF',
-    borderRadius: 25,
-    padding: 25,
-    maxHeight: '80%',
-  },
-  menuTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#035022',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  menuItem: {
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  menuItemText: { fontSize: 16, color: '#333', textAlign: 'center' },
-  activeMenuText: { color: '#29A539', fontWeight: 'bold' },
-  closeMenuBtn: {
-    marginTop: 20,
-    backgroundColor: '#E5FFE8',
-    paddingVertical: 12,
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  closeMenuText: { color: '#035022', fontWeight: 'bold' },
-});
+    timeBanner: {
+      backgroundColor: theme.tableHeader,
+      paddingVertical: 10,
+      borderRadius: 20,
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    timeText: {
+      color: theme.secondary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 14,
+    },
+    footerAction: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
+    alertIcon: {
+      width: 45,
+      height: 45,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 22.5,
+      borderWidth: 1,
+      marginBottom: 40,
+    },
+    fullImg: { width: '70%', height: '70%', resizeMode: 'contain' },
+    buttonGroup: { flex: 1, flexDirection: 'row', marginLeft: 15 },
+    cdssButton: {
+      flex: 1,
+      height: 48,
+      backgroundColor: theme.buttonBg,
+      borderRadius: 25,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.buttonBorder,
+      marginRight: 5,
+    },
+    cdssBtnText: { color: theme.primary, fontWeight: 'bold', fontSize: 14 },
+    submitButton: {
+      flex: 1,
+      height: 48,
+      backgroundColor: theme.buttonBg,
+      borderRadius: 25,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.buttonBorder,
+      marginLeft: 5,
+    },
+    submitBtnText: { color: theme.primary, fontWeight: 'bold', fontSize: 14 },
+    nextButton: {
+      flex: 1,
+      backgroundColor: theme.buttonBg,
+      height: 48,
+      borderRadius: 25,
+      marginLeft: 15,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.buttonBorder,
+      marginBottom: 40,
+    },
+    disabledButton: {
+      backgroundColor: theme.surface,
+      borderColor: theme.border,
+      opacity: 0.6,
+    },
+    nextBtnText: { color: theme.primary, fontWeight: 'bold', fontSize: 16 },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: theme.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    menuContainer: {
+      width: '85%',
+      backgroundColor: theme.card,
+      borderRadius: 25,
+      padding: 25,
+      maxHeight: '80%',
+    },
+    menuTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: theme.primary,
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    menuItem: {
+      paddingVertical: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    menuItemText: { fontSize: 16, color: theme.text, textAlign: 'center' },
+    activeMenuText: { color: theme.secondary, fontWeight: 'bold' },
+    closeMenuBtn: {
+      marginTop: 20,
+      backgroundColor: theme.surface,
+      paddingVertical: 12,
+      borderRadius: 20,
+      alignItems: 'center',
+    },
+    closeMenuText: { color: theme.primary, fontWeight: 'bold' },
+  });
 
 export default VitalSignsScreen;

@@ -10,16 +10,16 @@ import {
   TextInput,
   Dimensions,
   Image,
+  useColorScheme,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { AccountModal } from '@components/AccountModal';
 import apiClient from '@api/apiClient';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
-const THEME_GREEN = '#035022';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-
 const DashboardSummary = ({
   onNavigate,
   onPatientSelect,
@@ -27,6 +27,9 @@ const DashboardSummary = ({
   onNavigate: (route: string) => void;
   onPatientSelect: (id: number) => void;
 }) => {
+  const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const styles = createStyles(theme, commonStyles);
+
   const [modalVisible, setModalVisible] = useState(false);
   const [patients, setPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +86,7 @@ const DashboardSummary = ({
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
       <ScrollView
         style={styles.container}
         showsVerticalScrollIndicator={false}
@@ -98,7 +101,7 @@ const DashboardSummary = ({
             onPress={() => setModalVisible(true)}
             style={{ marginTop: 10 }}
           >
-            <Icon name="keyboard-arrow-down" size={24} color="#000000" />
+            <Icon name="keyboard-arrow-down" size={24} color={theme.text} />
           </TouchableOpacity>
         </View>
 
@@ -107,7 +110,7 @@ const DashboardSummary = ({
             <Ionicons
               name="search-outline"
               size={20}
-              color="#CCC"
+              color={theme.textMuted}
               style={styles.searchIcon}
             />
             <TextInput
@@ -115,7 +118,7 @@ const DashboardSummary = ({
               placeholder="Search patients..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholderTextColor="#CCC"
+              placeholderTextColor={theme.textMuted}
             />
           </View>
 
@@ -123,7 +126,7 @@ const DashboardSummary = ({
 
           {loading ? (
             <ActivityIndicator
-              color={THEME_GREEN}
+              color={theme.primary}
               style={{ marginVertical: 20 }}
             />
           ) : patients && patients.length > 0 ? (
@@ -143,7 +146,12 @@ const DashboardSummary = ({
                     filteredPatients.map((item, index) => (
                       <TouchableOpacity
                         key={index}
-                        style={styles.patientItem}
+                        style={[
+                          styles.patientItem,
+                          index === filteredPatients.length - 1 && {
+                            marginBottom: 40,
+                          },
+                        ]}
                         onPress={() => {
                           onPatientSelect(item.patient_id || item.id);
                           onNavigate('PatientDetail');
@@ -153,7 +161,7 @@ const DashboardSummary = ({
                           <Icon
                             name="person"
                             size={20}
-                            color={THEME_GREEN}
+                            color={theme.primary}
                             style={styles.patientIcon}
                           />
                           <Text style={styles.patientName}>
@@ -176,9 +184,11 @@ const DashboardSummary = ({
                 {filteredPatients.length > (showAll ? 7 : 3) && (
                   <LinearGradient
                     colors={[
-                      'rgba(255,255,255,0)',
-                      'rgba(255,255,255,0.8)',
-                      'rgba(255,255,255,1)',
+                      'rgba(0,0,0,0)',
+                      isDarkMode
+                        ? 'rgba(18,18,18,0.8)'
+                        : 'rgba(255,255,255,0.8)',
+                      isDarkMode ? 'rgba(18,18,18,1)' : 'rgba(255,255,255,1)',
                     ]}
                     style={styles.fadeBottom}
                     pointerEvents="none"
@@ -198,7 +208,7 @@ const DashboardSummary = ({
                   <Icon
                     name={showAll ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
                     size={20}
-                    color="#B2B2B2"
+                    color={theme.textMuted}
                   />
                 </TouchableOpacity>
               )}
@@ -225,21 +235,21 @@ const DashboardSummary = ({
               style={styles.recentCard}
               onPress={() => onNavigate('Register')}
             >
-              <Icon name="person-add" size={28} color={THEME_GREEN} />
+              <Icon name="person-add" size={28} color={theme.primary} />
               <Text style={styles.cardText}>Register Patient</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.recentCard}
               onPress={() => onNavigate('Vital Signs')}
             >
-              <Icon name="monitor-heart" size={28} color={THEME_GREEN} />
+              <Icon name="monitor-heart" size={28} color={theme.primary} />
               <Text style={styles.cardText}>Vital Signs</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.recentCard}
               onPress={() => onNavigate('IvsAndLines')}
             >
-              <Icon name="medication" size={28} color={THEME_GREEN} />
+              <Icon name="medication" size={28} color={theme.primary} />
               <Text style={styles.cardText}>IVs and Lines</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -252,11 +262,11 @@ const DashboardSummary = ({
           <View style={styles.btnContent}>
             <Image
               source={require('@assets/icons/document.png')}
-              style={styles.btnIcon}
+              style={[styles.btnIcon]}
             />
             <Text style={styles.btnLabel}>Start documenting patient</Text>
           </View>
-          <Icon name="arrow-forward-ios" size={20} color="#BDBDBD" />
+          <Icon name="arrow-forward-ios" size={20} color={theme.textMuted} />
         </TouchableOpacity>
       </ScrollView>
 
@@ -269,169 +279,174 @@ const DashboardSummary = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 40 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginTop: Platform.OS === 'ios' ? 20 : 40,
-    marginBottom: 35,
-  },
-  greeting: {
-    fontSize: 35,
-    fontFamily: 'MinionPro-SemiboldItalic',
-    color: '#035022',
-  },
-  dateText: {
-    fontSize: 14,
-    color: '#B2B2B2',
-    marginTop: 4,
-    fontFamily: 'AlteHaasGroteskBold',
-  },
-  section: { marginBottom: 30 },
-  sectionTitle: {
-    fontSize: 14,
-    color: '#858583',
-    marginBottom: 15,
-    fontFamily: 'AlteHaasGroteskBold',
-  },
-  searchBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 125,
-    paddingHorizontal: 15,
-    height: 60,
-    borderWidth: 0,
-    borderColor: '#EFEFEF',
-    marginBottom: 25,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-  },
-  searchIcon: { marginRight: 10 },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: '#292929',
-    fontFamily: 'AlteHaasGrotesk',
-  },
-  patientListWrapper: {
-    backgroundColor: '#fff',
-  },
-  patientListScroll: {
-    width: '100%',
-  },
-  patientItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  patientLeft: { flexDirection: 'row', alignItems: 'center' },
-  patientIcon: { marginRight: 25 },
-  patientName: {
-    fontSize: 15,
-    color: '#000000',
-    fontFamily: 'AlteHaasGrotesk',
-  },
-  patientDate: {
-    fontSize: 13,
-    color: '#B2B2B2',
-    fontFamily: 'AlteHaasGroteskBold',
-  },
-  fadeBottom: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 40,
-  },
-  showMoreBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  showMoreText: {
-    color: '#B2B2B2',
-    fontSize: 13,
-    marginRight: 5,
-    fontFamily: 'AlteHaasGrotesk',
-  },
-  noResultsText: {
-    textAlign: 'center',
-    color: '#999',
-    marginTop: 20,
-    fontSize: 14,
-    fontFamily: 'AlteHaasGrotesk',
-  },
-  emptyCard: {
-    paddingVertical: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 15,
-  },
-  emptyText: {
-    color: '#999',
-    fontSize: 14,
-    marginBottom: 15,
-    fontFamily: 'AlteHaasGrotesk',
-  },
-  addPatientBtn: {
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 20,
-    paddingHorizontal: 30,
-    paddingVertical: 8,
-  },
-  addPatientText: {
-    color: '#333',
-    fontSize: 12,
-    fontFamily: 'AlteHaasGrotesk',
-  },
-  recentCard: {
-    width: 110,
-    height: 110,
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    borderWidth: 1.5,
-    borderColor: '#D8F3DC',
-    padding: 15,
-    marginRight: 15,
-    justifyContent: 'space-between',
-  },
-  cardText: {
-    fontSize: 13,
-    color: THEME_GREEN,
-    lineHeight: 16,
-    fontFamily: 'AlteHaasGrotesk',
-  },
-  actionBtn: {
-    backgroundColor: '#F2F2F2',
-    borderRadius: 15,
-    padding: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  btnContent: { flexDirection: 'row', alignItems: 'center' },
-  btnIcon: {
-    width: 35,
-    height: 35,
-    resizeMode: 'contain',
-  },
-  btnLabel: {
-    marginLeft: 15,
-    fontSize: 15,
-    color: '#999696',
-    fontFamily: 'AlteHaasGroteskBold',
-  },
-});
+const createStyles = (theme: any, commonStyles: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background,
+      paddingHorizontal: 40,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginTop: Platform.OS === 'ios' ? 20 : 40,
+      marginBottom: 35,
+    },
+    greeting: {
+      fontSize: 35,
+      fontFamily: 'MinionPro-SemiboldItalic',
+      color: theme.primary,
+    },
+    dateText: {
+      fontSize: 14,
+      color: theme.textMuted,
+      marginTop: 4,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+    section: { marginBottom: 30 },
+    sectionTitle: {
+      fontSize: 14,
+      color: theme.textMuted,
+      marginBottom: 15,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+    searchBarContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.card,
+      borderRadius: 125,
+      paddingHorizontal: 15,
+      height: 60,
+      borderWidth: 0,
+      borderColor: theme.border,
+      marginBottom: 25,
+      elevation: 5,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.3,
+      shadowRadius: 2,
+    },
+    searchIcon: { marginRight: 10 },
+    searchInput: {
+      flex: 1,
+      fontSize: 15,
+      color: theme.text,
+      fontFamily: 'AlteHaasGrotesk',
+    },
+    patientListWrapper: {
+      backgroundColor: theme.background,
+    },
+    patientListScroll: {
+      width: '100%',
+    },
+    patientItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 12,
+    },
+    patientLeft: { flexDirection: 'row', alignItems: 'center' },
+    patientIcon: { marginRight: 25 },
+    patientName: {
+      fontSize: 15,
+      color: theme.text,
+      fontFamily: 'AlteHaasGrotesk',
+    },
+    patientDate: {
+      fontSize: 13,
+      color: theme.textMuted,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+    fadeBottom: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 40,
+    },
+    showMoreBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 10,
+    },
+    showMoreText: {
+      color: theme.textMuted,
+      fontSize: 13,
+      marginRight: 5,
+      fontFamily: 'AlteHaasGrotesk',
+    },
+    noResultsText: {
+      textAlign: 'center',
+      color: theme.textMuted,
+      marginTop: 20,
+      fontSize: 14,
+      fontFamily: 'AlteHaasGrotesk',
+    },
+    emptyCard: {
+      paddingVertical: 30,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 15,
+    },
+    emptyText: {
+      color: theme.textMuted,
+      fontSize: 14,
+      marginBottom: 15,
+      fontFamily: 'AlteHaasGrotesk',
+    },
+    addPatientBtn: {
+      borderWidth: 1,
+      borderColor: theme.primary,
+      borderRadius: 20,
+      paddingHorizontal: 30,
+      paddingVertical: 8,
+    },
+    addPatientText: {
+      color: theme.primary,
+      fontSize: 12,
+      fontFamily: 'AlteHaasGrotesk',
+    },
+    recentCard: {
+      width: 110,
+      height: 110,
+      backgroundColor: theme.card,
+      borderRadius: 15,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      padding: 15,
+      marginRight: 15,
+      justifyContent: 'space-between',
+    },
+    cardText: {
+      fontSize: 13,
+      color: theme.primary,
+      lineHeight: 16,
+      fontFamily: 'AlteHaasGrotesk',
+    },
+    actionBtn: {
+      backgroundColor: theme.surface,
+      borderRadius: 15,
+      padding: 18,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    btnContent: { flexDirection: 'row', alignItems: 'center' },
+    btnIcon: {
+      width: 35,
+      height: 35,
+      resizeMode: 'contain',
+    },
+    btnLabel: {
+      marginLeft: 15,
+      fontSize: 15,
+      color: theme.textMuted,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+  });
 
 export default DashboardSummary;

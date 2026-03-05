@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 interface ButtonProps {
   title: string;
@@ -12,6 +13,7 @@ interface ButtonProps {
 }
 
 const CustomButton = ({ title, onPress, style, disabled }: ButtonProps) => {
+  const { theme } = useAppTheme();
   const [isPressed, setIsPressed] = useState(false);
 
   return (
@@ -33,8 +35,8 @@ const CustomButton = ({ title, onPress, style, disabled }: ButtonProps) => {
           </LinearGradient>
         </View>
       ) : (
-        <View style={styles.outlinedButton}>
-          <Text style={styles.outlinedText}>{title}</Text>
+        <View style={[styles.outlinedButton, { backgroundColor: theme.buttonBg, borderColor: theme.buttonBorder }]}>
+          <Text style={[styles.outlinedText, { color: theme.primary }]}>{title}</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -45,14 +47,12 @@ const styles = StyleSheet.create({
   container: { minWidth: 120 },
   outlinedButton: {
     borderWidth: 1,
-    borderColor: '#29A539',
-    backgroundColor: '#E5FFE8',
     borderRadius: 50,
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  outlinedText: { color: '#035022', fontWeight: 'bold', fontSize: 15 },
+  outlinedText: { fontWeight: 'bold', fontSize: 15 },
   shadowWrapper: {
     shadowColor: '#004d26',
     shadowOffset: { width: 0, height: 4 },

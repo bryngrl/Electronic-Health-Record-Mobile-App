@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import {
   StyleSheet,
   View,
@@ -15,13 +21,7 @@ import ADPIEScreen from './ADPIEScreen'; // Integrated Stepper
 import { usePhysicalExam } from '../hook/usePhysicalExam';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
-
-const THEME_GREEN = '#035022';
-// ... (rest of the component)
-
-interface PhysicalExamProps {
-  onBack: () => void;
-}
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 const initialFormData = {
   general_appearance: '',
@@ -34,7 +34,17 @@ const initialFormData = {
   neurological: '',
 };
 
+interface PhysicalExamProps {
+  onBack: () => void;
+}
+
 const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
+  const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const styles = useMemo(
+    () => createStyles(theme, commonStyles),
+    [theme, commonStyles],
+  );
+
   const { saveAssessment, checkAssessmentAlerts, fetchLatestPhysicalExam } =
     usePhysicalExam();
   const [searchText, setSearchText] = useState('');
@@ -88,8 +98,6 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
   }, [onBack]);
 
   const loadPatientData = useCallback(
-// ... (rest of methods)
-
     async (patientId: number) => {
       const data = await fetchLatestPhysicalExam(patientId);
       if (data) {
@@ -344,14 +352,17 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
             style={[
               styles.cdssBtn,
               isDataEntered && {
-                backgroundColor: '#DCFCE7',
-                borderColor: THEME_GREEN,
+                backgroundColor: theme.buttonBg,
+                borderColor: theme.buttonBorder,
               },
             ]}
             onPress={handleCDSSPress}
           >
             <Text
-              style={[styles.cdssText, isDataEntered && { color: THEME_GREEN }]}
+              style={[
+                styles.cdssText,
+                isDataEntered && { color: theme.primary },
+              ]}
             >
               CDSS
             </Text>
@@ -376,67 +387,63 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#fff' },
-  container: { flex: 1, paddingHorizontal: 40 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: Platform.OS === 'ios' ? 20 : 40,
-    marginBottom: 35,
-  },
-  title: {
-    fontSize: 35,
-    color: THEME_GREEN,
-    fontFamily: 'MinionPro-SemiboldItalic',
-  },
-  dateText: { fontSize: 13, fontFamily: 'AlteHaasGroteskBold', color: '#999' },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: THEME_GREEN,
-    marginBottom: 8,
-  },
-  banner: {
-    backgroundColor: '#E5FFE8',
-    paddingVertical: 10,
-    borderRadius: 25,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  bannerText: {
-    color: '#29A539',
-    fontFamily: 'AlteHaasGroteskBold',
-    fontSize: 14,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    paddingBottom: 40,
-  },
-  cdssBtn: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 15,
-    borderRadius: 25,
-    alignItems: 'center',
-    marginHorizontal: 5,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  submitBtn: {
-    flex: 1,
-    backgroundColor: '#DCFCE7',
-    paddingVertical: 15,
-    borderRadius: 25,
-    alignItems: 'center',
-    marginHorizontal: 5,
-    borderWidth: 1,
-    borderColor: THEME_GREEN,
-  },
-  cdssText: { color: '#6B7280', fontWeight: 'bold' },
-  submitText: { color: THEME_GREEN, fontWeight: 'bold' },
-});
+const createStyles = (theme: any, commonStyles: any) =>
+  StyleSheet.create({
+    safeArea: commonStyles.safeArea,
+    container: commonStyles.container,
+    header: commonStyles.header,
+    title: commonStyles.title,
+    dateText: {
+      fontSize: 13,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.textMuted,
+    },
+    sectionLabel: {
+      fontSize: 12,
+      fontWeight: 'bold',
+      color: theme.primary,
+      marginBottom: 8,
+    },
+    banner: {
+      backgroundColor: theme.tableHeader,
+      paddingVertical: 10,
+      borderRadius: 25,
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    bannerText: {
+      color: theme.secondary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 14,
+    },
+    footerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 10,
+      paddingBottom: 40,
+    },
+    cdssBtn: {
+      flex: 1,
+      backgroundColor: theme.buttonBg,
+      paddingVertical: 15,
+      borderRadius: 25,
+      alignItems: 'center',
+      marginHorizontal: 5,
+      borderWidth: 1,
+      borderColor: theme.buttonBorder,
+    },
+    submitBtn: {
+      flex: 1,
+      backgroundColor: theme.buttonBg,
+      paddingVertical: 15,
+      borderRadius: 25,
+      alignItems: 'center',
+      marginHorizontal: 5,
+      borderWidth: 1,
+      borderColor: theme.buttonBorder,
+    },
+    cdssText: { color: theme.primary, fontWeight: 'bold' },
+    submitText: { color: theme.primary, fontWeight: 'bold' },
+  });
 
 export default PhysicalExamScreen;

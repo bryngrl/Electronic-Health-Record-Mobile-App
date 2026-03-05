@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { usePatients } from '@nurse/DemographicProfile/hook/usePatients';
 import DetailItem from '../components/DetailItem';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 const backArrow = require('@assets/icons/back_arrow.png');
@@ -33,6 +34,9 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
   onBack,
   onEdit,
 }) => {
+  const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme, commonStyles, isDarkMode), [theme, commonStyles, isDarkMode]);
+
   const patientId = propPatientId || route?.params?.patientId || 1;
   const { getPatientById } = usePatients();
 
@@ -68,8 +72,8 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
 
   if (isLoading) {
     return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#035022" />
+      <View style={[styles.loaderContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -101,7 +105,7 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
               onPress={() => (onBack ? onBack() : navigation?.goBack())}
               style={styles.backButton}
             >
-              <Image source={backArrow} style={styles.backIcon} />
+              <Image source={backArrow} style={[styles.backIcon, { tintColor: theme.icon }]} />
             </TouchableOpacity>
             <View>
               <Text style={styles.titleText}>Patient Details</Text>
@@ -202,10 +206,10 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) => StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.background,
   },
   loaderContainer: {
     flex: 1,
@@ -226,18 +230,18 @@ const styles = StyleSheet.create({
     width: width * 0.7,
     height: width * 0.7,
     borderRadius: (width * 0.7) / 2,
-    backgroundColor: 'rgba(73, 214, 91, 1)',
+    backgroundColor: isDarkMode ? 'rgba(73, 214, 91, 0.2)' : 'rgba(73, 214, 91, 1)',
     opacity: 0.5,
-    zIndex: 0, // Lowered
+    zIndex: 0,
   },
   circle2: {
     position: 'absolute',
     width: width * 0.7,
     height: width * 0.7,
     borderRadius: (width * 0.7) / 2,
-    backgroundColor: 'rgba(200, 255, 207, 1)',
+    backgroundColor: isDarkMode ? 'rgba(200, 255, 207, 0.1)' : 'rgba(200, 255, 207, 1)',
     opacity: 0.5,
-    zIndex: 0, // Lowered
+    zIndex: 0,
   },
   topCircle1: {
     top: -270,
@@ -246,7 +250,6 @@ const styles = StyleSheet.create({
   topCircle2: {
     top: -150,
     right: -200,
-    // Removed zIndex: 100 as it was blocking content
   },
   bottomCircle1: {
     bottom: -170,
@@ -257,11 +260,8 @@ const styles = StyleSheet.create({
     left: -50,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    ...commonStyles.header,
     alignItems: 'center',
-    marginTop: Platform.OS === 'ios' ? 20 : 40,
-    marginBottom: 35,
     zIndex: 10,
   },
   headerLeft: {
@@ -279,14 +279,10 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
     marginTop: 5,
   },
-  titleText: {
-    fontSize: 35,
-    color: '#035022',
-    fontFamily: 'MinionPro-SemiboldItalic',
-  },
+  titleText: commonStyles.title,
   admittedDate: {
     fontSize: 14,
-    color: '#9B9B9B',
+    color: theme.textMuted,
     fontWeight: '600',
   },
   profileRow: {
@@ -299,14 +295,14 @@ const styles = StyleSheet.create({
     width: 85,
     height: 85,
     borderRadius: 28,
-    backgroundColor: '#EAEAEA',
+    backgroundColor: theme.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarLetter: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#9B9B9B',
+    color: theme.textMuted,
   },
   nameContainer: {
     marginLeft: 20,
@@ -334,17 +330,17 @@ const styles = StyleSheet.create({
     borderColor: '#FFD54F',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: theme.card,
     overflow: 'hidden',
   },
   fullName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#035022',
+    color: theme.primary,
   },
   ageText: {
     fontSize: 14,
-    color: '#9B9B9B',
+    color: theme.textMuted,
     marginTop: 2,
   },
   gridContainer: {
@@ -355,9 +351,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#29A539',
+    ...commonStyles.sectionTitle,
     marginTop: 15,
     marginBottom: 20,
     letterSpacing: 0.5,

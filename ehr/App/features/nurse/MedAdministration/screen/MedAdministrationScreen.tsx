@@ -1,5 +1,5 @@
 // MedAdministration/screen/MedAdministrationScreen.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -11,6 +11,7 @@ import {
   Pressable,
   BackHandler,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MedAdministrationInputCard from '../components/MedAdministrationInputCard';
@@ -18,11 +19,15 @@ import { useMedAdministration } from '../hook/useMedAdministration';
 import apiClient from '@api/apiClient';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
-
-const THEME_GREEN = '#035022';
-const LIGHT_GREEN_BG = '#E5FFE8';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 const MedAdministrationScreen = ({ onBack }: any) => {
+  const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const styles = useMemo(
+    () => createStyles(theme, commonStyles, isDarkMode),
+    [theme, commonStyles, isDarkMode],
+  );
+
   const {
     step,
     timeSlots,
@@ -75,8 +80,6 @@ const MedAdministrationScreen = ({ onBack }: any) => {
     setAlertConfig({ visible: true, title, message, type });
   };
 
-  // Fetch patient data when patient or date changes
-// ... (rest of the file)
   useEffect(() => {
     if (
       formData.patient_id &&
@@ -144,7 +147,6 @@ const MedAdministrationScreen = ({ onBack }: any) => {
       );
     }
 
-    // Validation: Medication name is required to proceed
     if (!currentMed.medication || currentMed.medication.trim() === '') {
       return showAlert(
         'Input Required',
@@ -268,10 +270,13 @@ const MedAdministrationScreen = ({ onBack }: any) => {
             !isFormValid &&
             !!formData.patient_id &&
             currentMed.medication !== ''
-          } // Allow press if patient not selected to show alert
+          }
         >
           <Text
-            style={[styles.actionBtnText, !isFormValid && { color: '#9E9E9E' }]}
+            style={[
+              styles.actionBtnText,
+              !isFormValid && { color: theme.textMuted },
+            ]}
           >
             {step === 2 ? 'SUBMIT' : 'NEXT'}
           </Text>
@@ -279,7 +284,7 @@ const MedAdministrationScreen = ({ onBack }: any) => {
             <Icon
               name="chevron-right"
               size={24}
-              color={isFormValid ? THEME_GREEN : '#9E9E9E'}
+              color={isFormValid ? theme.primary : theme.textMuted}
             />
           )}
         </TouchableOpacity>
@@ -297,88 +302,72 @@ const MedAdministrationScreen = ({ onBack }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#fff' },
-  container: { flex: 1, paddingHorizontal: 40 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: Platform.OS === 'ios' ? 20 : 40,
-    marginBottom: 35,
-  },
-  title: {
-    fontSize: 35,
-    color: '#035022',
-    fontFamily: 'MinionPro-SemiboldItalic',
-  },
-  dateText: {
-    fontSize: 13,
-    fontFamily: 'AlteHaasGroteskBold',
-    color: '#999',
-  },
-  section: { marginBottom: 15, zIndex: 10 },
-  sectionLabel: {
-    fontSize: 14,
-    fontFamily: 'AlteHaasGroteskBold',
-    color: '#0A8219',
-    marginBottom: 8,
-  },
-  inputField: {
-    borderRadius: 25,
-    paddingHorizontal: 20,
-    height: 45,
-    borderWidth: 1,
-    borderColor: '#F2F2F2',
-    fontSize: 14,
-  },
-  pillInput: {
-    borderWidth: 1.5,
-    borderColor: '#EBEBEB',
-    borderRadius: 25,
-    height: 45,
-    paddingHorizontal: 20,
-    justifyContent: 'center',
-  },
-  dateVal: {
-    color: '#333',
-    fontFamily: 'AlteHaasGrotesk',
-    fontSize: 14,
-  },
-  timeBanner: {
-    backgroundColor: LIGHT_GREEN_BG,
-    paddingVertical: 10,
-    borderRadius: 20,
-    alignItems: 'center',
-    marginVertical: 15,
-  },
-  timeText: {
-    color: '#29A539',
-    fontFamily: 'AlteHaasGroteskBold',
-
-    fontSize: 14,
-  },
-  actionBtn: {
-    height: 52,
-    backgroundColor: LIGHT_GREEN_BG,
-    borderRadius: 26,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#29A539',
-    marginTop: 10,
-  },
-  disabledButton: {
-    backgroundColor: '#F0F0F0',
-    borderColor: '#E0E0E0',
-    opacity: 0.6,
-  },
-  actionBtnText: {
-    color: THEME_GREEN,
-    fontWeight: 'bold',
-    fontSize: 15,
-    marginRight: 5,
-  },
-});
+const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
+  StyleSheet.create({
+    safeArea: commonStyles.safeArea,
+    container: commonStyles.container,
+    header: commonStyles.header,
+    title: commonStyles.title,
+    dateText: {
+      fontSize: 13,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.textMuted,
+    },
+    section: { marginBottom: 15, zIndex: 10 },
+    sectionLabel: {
+      fontSize: 14,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      marginBottom: 8,
+    },
+    pillInput: {
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      borderRadius: 25,
+      height: 45,
+      paddingHorizontal: 20,
+      justifyContent: 'center',
+      backgroundColor: theme.card,
+    },
+    dateVal: {
+      color: theme.text,
+      fontFamily: 'AlteHaasGrotesk',
+      fontSize: 14,
+    },
+    timeBanner: {
+      backgroundColor: theme.tableHeader,
+      paddingVertical: 10,
+      borderRadius: 20,
+      alignItems: 'center',
+      marginVertical: 15,
+    },
+    timeText: {
+      color: theme.secondary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 14,
+    },
+    actionBtn: {
+      height: 52,
+      backgroundColor: theme.buttonBg,
+      borderRadius: 26,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.buttonBorder,
+      marginTop: 10,
+    },
+    disabledButton: {
+      backgroundColor: theme.card,
+      borderColor: theme.border,
+      opacity: 0.6,
+    },
+    actionBtnText: {
+      color: theme.primary,
+      fontWeight: 'bold',
+      fontSize: 15,
+      marginRight: 5,
+    },
+  });
 
 export default MedAdministrationScreen;

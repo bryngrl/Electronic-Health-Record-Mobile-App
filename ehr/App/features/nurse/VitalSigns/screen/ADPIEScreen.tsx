@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -16,8 +16,8 @@ import apiClient from '@api/apiClient';
 import LinearGradient from 'react-native-linear-gradient';
 import CDSSGuidanceModal from '@components/CDSSGuidanceModal';
 import SweetAlert from '@components/SweetAlert';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
-const THEME_GREEN = '#035022';
 const STEPS = [
   { id: 1, label: 'Diagnosis', key: 'diagnosis' },
   { id: 2, label: 'Planning', key: 'planning' },
@@ -38,6 +38,9 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   patientName,
   feature = 'vital-signs'
 }) => {
+  const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme, commonStyles, isDarkMode), [theme, commonStyles, isDarkMode]);
+
   const [currentIdx, setCurrentIdx] = useState(0);
   const [text, setText] = useState('');
   const [alert, setAlert] = useState<string | null>(null);
@@ -82,7 +85,6 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
     }
   };
 
-  // REAL-TIME CDSS: Debounced polling
   useEffect(() => {
     if (text.trim().length < 3) return;
     const timer = setTimeout(async () => {
@@ -209,7 +211,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
           </View>
 
           <LinearGradient
-            colors={['#0A8219', '#6CCA77', '#C8FFCF']}
+            colors={isDarkMode ? ['#064E3B', '#065F46', '#047857'] : ['#0A8219', '#6CCA77', '#C8FFCF']}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
             style={styles.clinicalBanner}
@@ -231,7 +233,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
               onPress={() => setModalVisible(true)}
             >
               <Text style={styles.viewBtnText}>VIEW</Text>
-              <Icon name="play-arrow" size={14} color="#10B981" />
+              <Icon name="play-arrow" size={14} color={isDarkMode ? '#4ADE80' : '#10B981'} />
             </TouchableOpacity>
           </LinearGradient>
 
@@ -254,17 +256,18 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
                 onChangeText={setText}
                 scrollEnabled={false}
                 placeholder={`Enter ${STEPS[currentIdx].label}...`}
+                placeholderTextColor={theme.textMuted}
               />
             </View>
           </View>
 
           <View style={styles.footer}>
             <TouchableOpacity style={styles.backBtn} onPress={handleBack} disabled={loading}>
-              <Icon name="arrow-back" size={24} color="#666" />
+              <Icon name="arrow-back" size={24} color={theme.text} />
             </TouchableOpacity>
             <TouchableOpacity style={[styles.nextBtn, loading && { opacity: 0.7 }]} onPress={handleNext} disabled={loading}>
               {loading ? (
-                <ActivityIndicator size="small" color={THEME_GREEN} />
+                <ActivityIndicator size="small" color={theme.primary} />
               ) : (
                 <Text style={styles.nextText}>
                   {currentIdx === 3 ? 'SUBMIT' : 'NEXT'}
@@ -297,31 +300,21 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#fff' },
-  container: {
-    flex: 1,
-    paddingHorizontal: 40,
-  },
+const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) => StyleSheet.create({
+  safeArea: commonStyles.safeArea,
+  container: commonStyles.container,
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 20,
   },
-  header: {
-    marginTop: Platform.OS === 'ios' ? 20 : 40,
-    marginBottom: 35,
-  },
-  title: {
-    fontSize: 35,
-    color: THEME_GREEN,
-    fontFamily: 'MinionPro-SemiboldItalic',
-  },
-  subtitle: { fontSize: 10, color: '#999', letterSpacing: 0.5 },
+  header: commonStyles.header,
+  title: commonStyles.title,
+  subtitle: { fontSize: 10, color: theme.textMuted, letterSpacing: 0.5 },
   patientSection: { marginBottom: 20 },
   patientLabel: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#0A8219',
+    color: theme.primary,
     marginBottom: 8,
   },
   patientDisplay: {
@@ -330,9 +323,10 @@ const styles = StyleSheet.create({
     height: 45,
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#F2F2F2',
+    borderColor: theme.border,
+    backgroundColor: theme.card,
   },
-  patientNameText: { color: '#333', fontSize: 13 },
+  patientNameText: { color: theme.text, fontSize: 13 },
   stepperContainer: {
     marginBottom: 30,
     paddingHorizontal: 10,
@@ -352,7 +346,7 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.border,
   },
   progressLineActive: {
     position: 'absolute',
@@ -377,11 +371,11 @@ const styles = StyleSheet.create({
     zIndex: 3,
   },
   activeCircle: { backgroundColor: '#FDE68A' },
-  inactiveCircle: { backgroundColor: '#F3F4F6' },
+  inactiveCircle: { backgroundColor: isDarkMode ? '#333' : '#F3F4F6' },
   activeCircleText: { color: '#B45309', fontWeight: 'bold' },
-  inactiveCircleText: { color: '#999' },
-  stepLabel: { fontSize: 9, marginTop: 6, color: '#CCC' },
-  activeStepLabel: { color: '#B45309' },
+  inactiveCircleText: { color: theme.textMuted },
+  stepLabel: { fontSize: 9, marginTop: 6, color: theme.textMuted },
+  activeStepLabel: { color: isDarkMode ? '#FDE68A' : '#B45309' },
   clinicalBanner: {
     borderRadius: 15,
     paddingVertical: 14,
@@ -438,31 +432,31 @@ const styles = StyleSheet.create({
   },
   notepad: {
     minHeight: 250,
-    backgroundColor: '#FFFBEB',
+    backgroundColor: isDarkMode ? '#1F2937' : '#FFFBEB',
     borderRadius: 25,
     borderWidth: 1,
-    borderColor: '#FEF3C7',
+    borderColor: isDarkMode ? '#374151' : '#FEF3C7',
     overflow: 'hidden',
     marginBottom: 20,
   },
   notepadHeader: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: isDarkMode ? '#374151' : '#FEF3C7',
     paddingVertical: 8,
     alignItems: 'center',
   },
-  headerText: { color: '#B45309', fontWeight: 'bold', fontSize: 11 },
+  headerText: { color: isDarkMode ? '#FDE68A' : '#B45309', fontWeight: 'bold', fontSize: 11 },
   inputArea: { flex: 1, position: 'relative' },
   input: {
     flex: 1,
     padding: 20,
     textAlignVertical: 'top',
     fontSize: 15,
-    color: '#333',
+    color: theme.text,
     zIndex: 2,
     minHeight: 200,
   },
   linesContainer: { ...StyleSheet.absoluteFillObject, paddingTop: 40 },
-  line: { height: 1, backgroundColor: '#FEF3C7', marginBottom: 30 },
+  line: { height: 1, backgroundColor: isDarkMode ? '#374151' : '#FEF3C7', marginBottom: 30 },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -473,19 +467,21 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#E1E8E1',
+    backgroundColor: theme.card,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   nextBtn: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: theme.buttonBg,
     paddingHorizontal: 65,
     paddingVertical: 15,
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: THEME_GREEN,
+    borderColor: theme.buttonBorder,
   },
-  nextText: { color: THEME_GREEN, fontWeight: 'bold', fontSize: 14 },
+  nextText: { color: theme.primary, fontWeight: 'bold', fontSize: 14 },
 });
 
 export default ADPIEScreen;

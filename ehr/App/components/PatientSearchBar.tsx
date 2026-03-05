@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -14,9 +14,9 @@ import {
   Platform,
 } from 'react-native';
 import apiClient from '@api/apiClient';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const THEME_GREEN = '#0A8219';
 
 interface Patient {
   id: number;
@@ -56,6 +56,9 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
   initialPatientName = '',
   placeholder = 'Select Patient name',
 }) => {
+  const { theme, isDarkMode } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme, isDarkMode), [theme, isDarkMode]);
+
   const [searchText, setSearchText] = useState(initialPatientName);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
@@ -177,7 +180,7 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
             ref={inputRef}
             style={[styles.searchInput, inputStyle]}
             placeholder={placeholder}
-            placeholderTextColor="#BDBDBD"
+            placeholderTextColor={theme.textMuted}
             value={searchText}
             onChangeText={handleSearch}
             onFocus={handleFocus}
@@ -187,7 +190,7 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
           {loading && (
             <ActivityIndicator
               size="small"
-              color={THEME_GREEN}
+              color={theme.primary}
               style={styles.loader}
             />
           )}
@@ -209,7 +212,7 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
             >
               {loading && patients.length === 0 ? (
                 <View style={styles.infoContainer}>
-                  <ActivityIndicator size="small" color={THEME_GREEN} />
+                  <ActivityIndicator size="small" color={theme.primary} />
                   <Text style={styles.infoText}>Loading...</Text>
                 </View>
               ) : filteredPatients.length > 0 ? (
@@ -218,7 +221,7 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
                     key={item.id ? item.id.toString() : `p-${index}`}
                     style={({ pressed }) => [
                       styles.dropdownItem,
-                      { backgroundColor: pressed ? '#f0f0f0' : '#fff' },
+                      { backgroundColor: pressed ? (isDarkMode ? '#333' : '#f0f0f0') : theme.card },
                     ]}
                     onPress={() => onSelectPatient(item)}
                   >
@@ -246,7 +249,7 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   section: {
     marginBottom: 15,
     zIndex: 9999,
@@ -259,7 +262,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 14,
     fontFamily: 'AlteHaasGroteskBold',
-    color: THEME_GREEN,
+    color: theme.primary,
     marginBottom: 8,
   },
   searchBar: {
@@ -267,25 +270,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     height: 48,
     borderWidth: 1.5,
-    borderColor: '#EBEBEB',
+    borderColor: theme.border,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     height: '100%',
     fontFamily: 'AlteHaasGrotesk',
   },
   loader: { marginLeft: 10 },
   dropdown: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderRadius: 12,
     marginTop: 5,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     maxHeight: SCREEN_HEIGHT * 0.24,
     zIndex: 10000,
     elevation: 1000,
@@ -297,11 +300,11 @@ const styles = StyleSheet.create({
   dropdownItem: {
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.border,
   },
   dropdownText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     fontFamily: 'AlteHaasGrotesk',
   },
   infoContainer: {
@@ -309,16 +312,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  infoText: { color: '#666', fontSize: 13, textAlign: 'center' },
+  infoText: { color: theme.textMuted, fontSize: 13, textAlign: 'center' },
   closeDropdown: {
     padding: 12,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: theme.surface,
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: theme.border,
   },
   closeText: {
-    color: '#d32f2f',
+    color: theme.error,
     fontFamily: 'AlteHaasGroteskBold',
     fontSize: 11,
     letterSpacing: 1,
