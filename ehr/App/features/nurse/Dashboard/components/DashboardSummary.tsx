@@ -18,8 +18,44 @@ import LinearGradient from 'react-native-linear-gradient';
 import { AccountModal } from '@components/AccountModal';
 import apiClient from '@api/apiClient';
 import { useAppTheme } from '@App/theme/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const DASHBOARD_FEATURES = [
+  { id: 'Register', title: 'Register Patient', icon: 'person-add' },
+  {
+    id: 'Demographic Profile',
+    title: 'Demographic Profile',
+    icon: 'account-box',
+  },
+  { id: 'MedicalHistory', title: 'Medical History', icon: 'history' },
+  { id: 'PhysicalExam', title: 'Physical Exam', icon: 'person-search' },
+  { id: 'Vital Signs', title: 'Vital Signs', icon: 'monitor-heart' },
+  { id: 'Intake and Output', title: 'Intake and Output', icon: 'water-drop' },
+  { id: 'Activities', title: 'Activities of Daily Living', icon: 'extension' },
+  { id: 'LabValues', title: 'Lab Values', icon: 'science' },
+  { id: 'Diagnostics', title: 'Diagnostics', icon: 'biotech' },
+  { id: 'IvsAndLines', title: 'IVs and Lines', icon: 'medication' },
+  {
+    id: 'Medication Administration',
+    title: 'Medication Administration',
+    icon: 'medical-services',
+  },
+  {
+    id: 'Medical Reconciliation',
+    title: 'Medical Reconciliation',
+    icon: 'fact-check',
+  },
+  {
+    id: 'Medication Reconciliation',
+    title: 'Medication Reconciliation',
+    icon: 'fact-check',
+  },
+];
+
+const RECENT_FEATURES_KEY = '@recent_features';
+
 const DashboardSummary = ({
   onNavigate,
   onPatientSelect,
@@ -35,10 +71,67 @@ const DashboardSummary = ({
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
+  const [recentFeatures, setRecentFeatures] = useState<any[]>([]);
 
   useEffect(() => {
     fetchLatestPatients();
+    loadRecentFeatures();
   }, []);
+
+  const loadRecentFeatures = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(RECENT_FEATURES_KEY);
+      if (saved) {
+        const featureIds = JSON.parse(saved);
+        const features = featureIds
+          .map((id: string) => DASHBOARD_FEATURES.find(f => f.id === id))
+          .filter(Boolean);
+        setRecentFeatures(features);
+      } else {
+        // Default recents if none saved
+        const defaults = [
+          DASHBOARD_FEATURES.find(f => f.id === 'Register'),
+          DASHBOARD_FEATURES.find(f => f.id === 'Vital Signs'),
+          DASHBOARD_FEATURES.find(f => f.id === 'IvsAndLines'),
+        ].filter(Boolean);
+        setRecentFeatures(defaults);
+      }
+    } catch (e) {
+      console.error('Failed to load recent features', e);
+    }
+  };
+
+  const saveRecentFeature = async (featureId: string) => {
+    try {
+      const saved = await AsyncStorage.getItem(RECENT_FEATURES_KEY);
+      let featureIds = saved ? JSON.parse(saved) : [];
+
+      // Remove if already exists to move to front
+      featureIds = featureIds.filter((id: string) => id !== featureId);
+      // Add to front
+      featureIds.unshift(featureId);
+      // Keep only top 5
+      featureIds = featureIds.slice(0, 5);
+
+      await AsyncStorage.setItem(
+        RECENT_FEATURES_KEY,
+        JSON.stringify(featureIds),
+      );
+
+      // Update local state
+      const features = featureIds
+        .map((id: string) => DASHBOARD_FEATURES.find(f => f.id === id))
+        .filter(Boolean);
+      setRecentFeatures(features);
+    } catch (e) {
+      console.error('Failed to save recent feature', e);
+    }
+  };
+
+  const handleFeaturePress = (featureId: string) => {
+    saveRecentFeature(featureId);
+    onNavigate(featureId);
+  };
 
   const fetchLatestPatients = async () => {
     try {
@@ -220,7 +313,7 @@ const DashboardSummary = ({
               </Text>
               <TouchableOpacity
                 style={styles.addPatientBtn}
-                onPress={() => onNavigate('Register')}
+                onPress={() => handleFeaturePress('Register')}
               >
                 <Text style={styles.addPatientText}>ADD PATIENT</Text>
               </TouchableOpacity>
@@ -231,27 +324,18 @@ const DashboardSummary = ({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your Recents</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <TouchableOpacity
-              style={styles.recentCard}
-              onPress={() => onNavigate('Register')}
-            >
-              <Icon name="person-add" size={28} color={theme.primary} />
-              <Text style={styles.cardText}>Register Patient</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.recentCard}
-              onPress={() => onNavigate('Vital Signs')}
-            >
-              <Icon name="monitor-heart" size={28} color={theme.primary} />
-              <Text style={styles.cardText}>Vital Signs</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.recentCard}
-              onPress={() => onNavigate('IvsAndLines')}
-            >
-              <Icon name="medication" size={28} color={theme.primary} />
-              <Text style={styles.cardText}>IVs and Lines</Text>
-            </TouchableOpacity>
+            {recentFeatures.map((feature, index) => (
+              <TouchableOpacity
+                key={feature.id + index}
+                style={styles.recentCard}
+                onPress={() => handleFeaturePress(feature.id)}
+              >
+                <Icon name={feature.icon} size={28} color={theme.primary} />
+                <Text style={styles.cardText} numberOfLines={1} ellipsizeMode="tail">
+                  {feature.title}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
         </View>
 
@@ -422,10 +506,10 @@ const createStyles = (theme: any, commonStyles: any) =>
       justifyContent: 'space-between',
     },
     cardText: {
-      fontSize: 13,
+      fontSize: 12,
       color: theme.primary,
       lineHeight: 16,
-      fontFamily: 'AlteHaasGrotesk',
+      fontFamily: 'AlteHaasGroteskBold',
     },
     actionBtn: {
       backgroundColor: theme.surface,
