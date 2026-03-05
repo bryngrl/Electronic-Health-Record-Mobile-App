@@ -19,16 +19,12 @@ const DoctorHomeScreen = ({ onBack, onViewAll, onNavigate }: { onBack?: () => vo
     markAsRead 
   } = useDoctorDashboardLogic();
 
-  // Safety checks for all arrays
-  const safeUpdates = Array.isArray(updates) ? updates : [];
-  const safeFilteredUpdates = Array.isArray(filteredUpdates) ? filteredUpdates : [];
-  
-  const unreadCount = safeUpdates.filter(u => u?.status === 'Unread').length;
-  const readCount = safeUpdates.filter(u => u?.status === 'Read').length;
+  const unreadCount = updates.filter(u => u.status === 'Unread').length;
+  const readCount = updates.filter(u => u.status === 'Read').length;
 
   const renderEmptyState = () => {
     if (activeFilter === 'Unread') {
-      if (safeUpdates.length === 0) {
+      if (updates.length === 0) {
         return (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>no unread updates</Text>
@@ -102,7 +98,7 @@ const DoctorHomeScreen = ({ onBack, onViewAll, onNavigate }: { onBack?: () => vo
 
         {/* Stats Circles */}
         <View style={styles.statsRow}>
-          <StatCircle label="Updates Today" count={safeUpdates.length.toString()} />
+          <StatCircle label="Updates Today" count={updates.length.toString()} />
           <StatCircle label="Unread Updates" count={unreadCount.toString()} />
           <StatCircle label="Read Updates" count={readCount.toString()} />
         </View>
@@ -126,8 +122,8 @@ const DoctorHomeScreen = ({ onBack, onViewAll, onNavigate }: { onBack?: () => vo
         </View>
 
         {/* Updates List */}
-        {safeFilteredUpdates.length > 0 ? (
-          safeFilteredUpdates.map(item => (
+        {filteredUpdates.length > 0 ? (
+          filteredUpdates.map(item => (
             <TouchableOpacity 
               key={item.id} 
               onPress={() => item.status === 'Unread' && markAsRead(item.id)}

@@ -10,53 +10,19 @@ export interface PatientUpdate {
   created_at: string;
 }
 
-// MOCK DATA for temporary use since backend endpoint /doctor/updates doesn't exist yet
-const MOCK_UPDATES: PatientUpdate[] = [
-  {
-    id: '1',
-    patient_id: 101,
-    patient_name: 'Juan Dela Cruz',
-    update_type: 'Vital Signs',
-    status: 'Unread',
-    created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString(), // 5 mins ago
-  },
-  {
-    id: '2',
-    patient_id: 102,
-    patient_name: 'Maria Clara',
-    update_type: 'Lab Results Ready',
-    status: 'Unread',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-  },
-  {
-    id: '3',
-    patient_id: 103,
-    patient_name: 'Crisostomo Ibarra',
-    update_type: 'New Assessment Added',
-    status: 'Read',
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-  }
-];
-
 export const useDoctorDashboardLogic = () => {
   const [activeFilter, setActiveFilter] = useState<'All' | 'Unread' | 'Read'>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [updates, setUpdates] = useState<PatientUpdate[]>(MOCK_UPDATES);
+  const [updates, setUpdates] = useState<PatientUpdate[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchUpdates = async () => {
     try {
       setLoading(true);
-      // Try to fetch from real API, but fall back to mock data if it fails
       const response = await apiClient.get('/doctor/updates');
-      if (response.data && Array.isArray(response.data)) {
-        setUpdates(response.data);
-      } else {
-        setUpdates(MOCK_UPDATES);
-      }
+      setUpdates(response.data);
     } catch (error) {
-      console.log('Using mock data for doctor updates (Backend endpoint not ready yet)');
-      setUpdates(MOCK_UPDATES);
+      console.error('Error fetching doctor updates:', error);
     } finally {
       setLoading(false);
     }
@@ -88,21 +54,16 @@ export const useDoctorDashboardLogic = () => {
 
   const markAsRead = async (updateId: string) => {
     try {
-      // Optimistic update for UI feel even if API fails
-      setUpdates(prev =>
+      await apiClient.put(`/doctor/updates/${updateId}/read`);
+      setUpdates(prev => 
         prev.map(u => u.id === updateId ? { ...u, status: 'Read' } : u)
       );
-      
-      // Attempt real API call
-      await apiClient.put(`/doctor/updates/${updateId}/read`);
     } catch (error) {
-      console.log('Update status sync with backend failed, but UI was updated.');
+      console.error('Error marking update as read:', error);
     }
   };
 
   const filteredUpdates = useMemo(() => {
-    if (!updates || !Array.isArray(updates)) return [];
-    
     return updates
       .filter(item => {
         const matchesFilter = activeFilter === 'All' || item.status === activeFilter;
@@ -112,11 +73,10 @@ export const useDoctorDashboardLogic = () => {
       .map(item => ({
         ...item,
         name: item.patient_name,
-        time: formatTime(item.created_at),
         type: item.update_type,
-        unread: item.status === 'Unread'
+        time: formatTime(item.created_at)
       }));
-  }, [updates, activeFilter, searchQuery]);
+  }, [activeFilter, searchQuery, updates]);
 
   return {
     activeFilter,
@@ -124,8 +84,9 @@ export const useDoctorDashboardLogic = () => {
     searchQuery,
     setSearchQuery,
     filteredUpdates,
+    updates,
     loading,
-    markAsRead,
-    refresh: fetchUpdates
+    refreshUpdates: fetchUpdates,
+    markAsRead
   };
 };

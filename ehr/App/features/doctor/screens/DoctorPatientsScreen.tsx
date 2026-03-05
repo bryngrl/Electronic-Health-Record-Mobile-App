@@ -29,11 +29,9 @@ const DoctorPatientsScreen = ({ onNavigate }: { onNavigate: (route: string) => v
   }, []);
 
   const filteredPatients = useMemo(() => {
-    if (!patients || !Array.isArray(patients)) return [];
-    
     return patients.filter(p => 
       `${p.first_name} ${p.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.patient_id?.toString().includes(searchQuery)
+      p.patient_id.toString().includes(searchQuery)
     );
   }, [patients, searchQuery]);
 
