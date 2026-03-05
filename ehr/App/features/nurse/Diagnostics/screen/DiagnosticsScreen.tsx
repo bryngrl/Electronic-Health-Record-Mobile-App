@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -12,6 +12,8 @@ import {
   useWindowDimensions,
   Alert,
   BackHandler,
+  Platform,
+  useColorScheme,
 } from 'react-native';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import Ionicon from 'react-native-vector-icons/Ionicons';
@@ -24,6 +26,7 @@ import SweetAlert from '@components/SweetAlert';
 import apiClient, { BASE_URL } from '@api/apiClient';
 import { useDiagnostics, DiagnosticRecord } from '../hook/useDiagnostics';
 import PatientSearchBar from '@components/PatientSearchBar';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 export type ViewMode = 'grid' | 'list';
 
@@ -32,6 +35,12 @@ interface DiagnosticsProps {
 }
 
 const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
+  const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const styles = useMemo(
+    () => createStyles(theme, commonStyles, isDarkMode),
+    [theme, commonStyles, isDarkMode],
+  );
+
   const { width: windowWidth } = useWindowDimensions();
   const [viewMode, setViewMode] = useState<ViewMode>(
     windowWidth > 600 ? 'grid' : 'list',
@@ -53,8 +62,6 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
     return () => backHandler.remove();
   }, [onBack]);
 
-  // Auto-switch viewMode when screen size changes
-// ... (rest of the file)
   useEffect(() => {
     if (windowWidth > 600) {
       setViewMode('grid');
@@ -185,7 +192,10 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor={theme.background}
+      />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -209,7 +219,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
               <MaterialIcon
                 name="view-agenda"
                 size={22}
-                color={viewMode === 'list' ? '#f1c40f' : '#ccc'}
+                color={viewMode === 'list' ? '#f1c40f' : theme.textMuted}
               />
             </TouchableOpacity>
             <TouchableOpacity
@@ -222,7 +232,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
               <MaterialIcon
                 name="grid-view"
                 size={22}
-                color={viewMode === 'grid' ? '#f1c40f' : '#ccc'}
+                color={viewMode === 'grid' ? '#f1c40f' : theme.textMuted}
               />
             </TouchableOpacity>
           </View>
@@ -237,7 +247,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
         {loading && diagnostics.length === 0 && (
           <ActivityIndicator
             size="large"
-            color="#14532d"
+            color={theme.primary}
             style={{ marginVertical: 20 }}
           />
         )}
@@ -317,7 +327,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
           <Text
             style={[
               styles.submitText,
-              !selectedPatientId && { color: '#9E9E9E' },
+              !selectedPatientId && { color: theme.textMuted },
             ]}
           >
             DONE
@@ -339,72 +349,68 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  scrollContent: { padding: 30, paddingBottom: 100 },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 25,
-  },
-  titleContainer: { flex: 1 },
-  titleText: {
-    fontSize: 35,
-    color: '#035022',
-    fontFamily: 'MinionPro-SemiboldItalic',
-  },
-  dateText: {
-    fontSize: 13,
-    fontFamily: 'AlteHaasGroteskBold',
-    color: '#A1A1A1',
-    marginTop: 0,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#F2F2F2',
-    borderRadius: 10,
-    padding: 4,
-  },
-  toggleBtn: { padding: 8, borderRadius: 8 },
-  toggleActive: {
-    backgroundColor: '#FFFFFF',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  horizontalScroll: {
-    paddingBottom: 10,
-    flexDirection: 'row',
-  },
-  horizontalCardLarge: {
-    width: CARD_WIDTH,
-  },
-  gridWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  gridCard: {
-    width: '46%',
-  },
-  listWrap: { flexDirection: 'column' },
-  submitButton: {
-    backgroundColor: '#DCFCE7',
-    borderWidth: 1,
-    borderColor: '#035022',
-    borderRadius: 25,
-    height: 55,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  disabledButton: {
-    backgroundColor: '#F0F0F0',
-    borderColor: '#E0E0E0',
-    opacity: 0.6,
-  },
-  submitText: { color: '#035022', fontWeight: 'bold', fontSize: 16 },
-});
+const createStyles = (theme: any, commonStyles: any) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.background },
+    scrollContent: { padding: 40, paddingBottom: 100 },
+    headerRow: {
+      ...commonStyles.header,
+      alignItems: 'center',
+    },
+    titleContainer: { flex: 1 },
+    titleText: commonStyles.title,
+    dateText: {
+      fontSize: 13,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.textMuted,
+      marginTop: 0,
+    },
+    toggleContainer: {
+      flexDirection: 'row',
+      backgroundColor: theme.surface,
+      borderRadius: 10,
+      padding: 4,
+    },
+    toggleBtn: { padding: 8, borderRadius: 8 },
+    toggleActive: {
+      backgroundColor: theme.card,
+      elevation: 3,
+      shadowColor: '#000',
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+    },
+    horizontalScroll: {
+      paddingBottom: 10,
+      flexDirection: 'row',
+    },
+    horizontalCardLarge: {
+      width: CARD_WIDTH,
+    },
+    gridWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+    },
+    gridCard: {
+      width: '46%',
+    },
+    listWrap: { flexDirection: 'column' },
+    submitButton: {
+      backgroundColor: theme.buttonBg,
+      borderWidth: 1,
+      borderColor: theme.primary,
+      borderRadius: 25,
+      height: 55,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 20,
+    },
+    disabledButton: {
+      backgroundColor: theme.card,
+      borderColor: theme.border,
+      opacity: 0.6,
+    },
+    submitText: { color: theme.primary, fontWeight: 'bold', fontSize: 16 },
+  });
 
 export default DiagnosticsScreen;

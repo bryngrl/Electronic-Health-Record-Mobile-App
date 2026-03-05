@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -7,6 +7,7 @@ import {
   Platform,
   Image,
 } from 'react-native';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 const icons: { [key: string]: any } = {
   home: require('@assets/icons/home.png'),
@@ -33,6 +34,8 @@ const BottomNav = ({
   activeRoute,
 }: BottomNavProps) => {
   const { width } = useWindowDimensions();
+  const { theme, isDarkMode } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme, isDarkMode), [theme, isDarkMode]);
 
   const renderNavIcon = (
     routeName: string,
@@ -50,7 +53,10 @@ const BottomNav = ({
       >
         <Image
           source={iconSource}
-          style={styles.navIcon}
+          style={[
+            styles.navIcon,
+            isDarkMode && { tintColor: isActive ? theme.primary : theme.textMuted }
+          ]}
           resizeMode="contain"
         />
       </TouchableOpacity>
@@ -87,7 +93,10 @@ const BottomNav = ({
                 ? icons.add_patient_active
                 : icons.add_patient
             }
-            style={styles.fabIcon}
+            style={[
+              styles.fabIcon,
+              isDarkMode && { tintColor: activeRoute === 'Register' ? theme.primary : theme.textMuted }
+            ]}
             resizeMode="contain"
           />
         </View>
@@ -96,7 +105,7 @@ const BottomNav = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   container: {
     position: 'absolute',
     bottom: 0,
@@ -107,9 +116,9 @@ const styles = StyleSheet.create({
   navBar: {
     flexDirection: 'row',
     height: 70,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     borderTopWidth: 1,
-    borderTopColor: '#F2F2F2',
+    borderTopColor: theme.border,
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingHorizontal: 10,
@@ -117,18 +126,18 @@ const styles = StyleSheet.create({
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 10,
   },
   iconContainer: {
     flex: 1,
-    height: '100%', // Makes the entire height of the bar touchable
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   navIcon: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
   },
   placeholder: {
     width: 70,
@@ -140,18 +149,21 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     shadowOpacity: 0.1,
     shadowRadius: 6,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
   },
   fabInactiveBorder: {
-    borderColor: '#E0E0E0',
+    borderColor: theme.border,
   },
   fabActiveBorder: {
-    borderColor: '#1B5E20',
+    borderColor: theme.primary,
     borderWidth: 2,
   },
   fabInner: {

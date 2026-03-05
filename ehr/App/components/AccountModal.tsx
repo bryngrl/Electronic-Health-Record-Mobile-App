@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,8 +8,10 @@ import {
   TouchableWithoutFeedback,
   Dimensions,
   Platform,
+  Switch,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 const { height } = Dimensions.get('window');
 
@@ -19,25 +21,32 @@ interface AccountModalProps {
   onLogout: () => void;
 }
 
-export const AccountModal = ({ visible, onClose, onLogout }: AccountModalProps) => {
+export const AccountModal = ({
+  visible,
+  onClose,
+  onLogout,
+}: AccountModalProps) => {
+  const { theme, isDarkMode, toggleDarkMode } = useAppTheme();
+  const styles = useMemo(
+    () => createStyles(theme, isDarkMode),
+    [theme, isDarkMode],
+  );
+
   return (
     <Modal
-      animationType="slide" // This provides the "liquid" slide-up motion
+      animationType="slide"
       transparent={true}
       visible={visible}
       onRequestClose={onClose}
     >
-      {/* Tap overlay to close */}
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
           <TouchableWithoutFeedback>
             <View style={styles.modalContainer}>
-              {/* Top Handle Bar */}
               <View style={styles.handle} />
 
               <Text style={styles.titleText}>Accounts</Text>
 
-              {/* Profile Card Section */}
               <View style={styles.profileSection}>
                 <View style={styles.avatarBox}>
                   <Text style={styles.avatarText}>J</Text>
@@ -48,17 +57,34 @@ export const AccountModal = ({ visible, onClose, onLogout }: AccountModalProps) 
                 </View>
               </View>
 
-              {/* Menu Options */}
               <View style={styles.menuCard}>
+                <View style={styles.menuItem}>
+                  <View style={styles.switchRow}>
+                    <Text style={styles.menuText}>Dark Mode</Text>
+                    <Switch
+                      trackColor={{ false: '#767577', true: theme.primary }}
+                      thumbColor={isDarkMode ? '#fff' : '#f4f3f4'}
+                      onValueChange={toggleDarkMode}
+                      value={isDarkMode}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.separator} />
+
                 <TouchableOpacity style={styles.menuItem}>
                   <Text style={styles.menuText}>Switch Account</Text>
                 </TouchableOpacity>
-                
+
                 <View style={styles.separator} />
 
                 <TouchableOpacity style={styles.menuItem} onPress={onLogout}>
                   <View style={styles.logoutRow}>
-                    <Icon name="close-circle-outline" size={24} color="#FF3B30" />
+                    <Icon
+                      name="close-circle-outline"
+                      size={24}
+                      color={theme.error}
+                    />
                     <Text style={styles.logoutLabel}>Log out</Text>
                   </View>
                 </TouchableOpacity>
@@ -71,77 +97,107 @@ export const AccountModal = ({ visible, onClose, onLogout }: AccountModalProps) 
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)', // Darker overlay for depth
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    backgroundColor: '#F2F2F7', // Slightly grey background to pop white cards
-    borderTopLeftRadius: 35, // High radius for liquid look
-    borderTopRightRadius: 35,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 40,
-    minHeight: height * 0.38,
-    // Higher zIndex to sit above BottomNav
-    zIndex: 9999,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-      },
-      android: {
-        elevation: 24,
-      },
-    }),
-  },
-  handle: {
-    width: 45,
-    height: 5,
-    backgroundColor: '#C7C7CC',
-    borderRadius: 3,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  titleText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1B4332',
-    textAlign: 'center',
-    marginBottom: 25,
-  },
-  profileSection: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    padding: 18,
-    borderRadius: 20,
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  avatarBox: {
-    width: 52,
-    height: 52,
-    backgroundColor: '#86B79D', // Sage green from image
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: { color: '#FFF', fontSize: 22, fontWeight: 'bold' },
-  profileText: { marginLeft: 16 },
-  userName: { fontSize: 18, fontWeight: 'bold', color: '#1B5E20' },
-  userRole: { fontSize: 14, color: '#8E8E93' },
-  menuCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  menuItem: { padding: 20 },
-  menuText: { fontSize: 16, color: '#000', fontWeight: '500' },
-  separator: { height: 1, backgroundColor: '#E5E5EA', marginHorizontal: 20 },
-  logoutRow: { flexDirection: 'row', alignItems: 'center' },
-  logoutLabel: { color: '#FF3B30', fontSize: 16, marginLeft: 12, fontWeight: '600' },
-});
+const createStyles = (theme: any, isDarkMode: boolean) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      justifyContent: 'flex-end',
+    },
+    modalContainer: {
+      backgroundColor: theme.modalBg,
+      borderTopLeftRadius: 35,
+      borderTopRightRadius: 35,
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 40,
+      minHeight: height * 0.42,
+      zIndex: 9999,
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -10 },
+          shadowOpacity: 0.1,
+          shadowRadius: 20,
+        },
+        android: {
+          elevation: 24,
+        },
+      }),
+    },
+    handle: {
+      width: 45,
+      height: 5,
+      backgroundColor: theme.modalHandle,
+      borderRadius: 3,
+      alignSelf: 'center',
+      marginBottom: 20,
+    },
+    titleText: {
+      fontSize: 18,
+      color: theme.primary,
+      textAlign: 'center',
+      marginBottom: 25,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+    profileSection: {
+      flexDirection: 'row',
+      backgroundColor: theme.card,
+      padding: 18,
+      borderRadius: 20,
+      alignItems: 'center',
+      marginBottom: 15,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    avatarBox: {
+      width: 52,
+      height: 52,
+      backgroundColor: theme.primary,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarText: { color: '#FFF', fontSize: 22, fontWeight: 'bold' },
+    profileText: { marginLeft: 16 },
+    userName: {
+      fontSize: 18,
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+    userRole: {
+      fontSize: 14,
+      color: theme.textMuted,
+      fontFamily: 'AlteHaasGrotesk',
+    },
+    menuCard: {
+      backgroundColor: theme.card,
+      borderRadius: 20,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    menuItem: { padding: 20 },
+    menuText: {
+      fontSize: 16,
+      color: theme.text,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+    switchRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    separator: {
+      height: 1,
+      backgroundColor: theme.border,
+      marginHorizontal: 20,
+    },
+    logoutRow: { flexDirection: 'row', alignItems: 'center' },
+    logoutLabel: {
+      color: theme.error,
+      fontSize: 16,
+      marginLeft: 12,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+  });

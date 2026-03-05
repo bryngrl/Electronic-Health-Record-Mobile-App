@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, SafeAreaView, BackHandler } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import DashboardSummary from '../components/DashboardSummary';
 import { DashboardGrid } from '@components/navigation/DashboardGrid';
@@ -22,6 +23,23 @@ import IvsAndLinesScreen from '@nurse/IvsAndLines/screen/IvsAndLinesScreen';
 import IntakeAndOutputScreen from '@nurse/IntakeAndOutput/screen/IntakeAndOutputScreen';
 import PatientDetailsScreen from '@nurse/PatientDetails/screen/PatientDetailScreen';
 
+const RECENT_FEATURES_KEY = '@recent_features';
+const DASHBOARD_ITEM_IDS = [
+  'Register',
+  'Demographic Profile',
+  'MedicalHistory',
+  'PhysicalExam',
+  'Vital Signs',
+  'Intake and Output',
+  'Activities',
+  'LabValues',
+  'Diagnostics',
+  'IvsAndLines',
+  'Medication Administration',
+  'Medical Reconciliation',
+  'Medication Reconciliation',
+];
+
 export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('Home');
   const [navigationHistory, setNavigationHistory] = useState<string[]>([
@@ -33,7 +51,26 @@ export default function HomeScreen() {
     null,
   );
 
+  const saveRecentFeature = async (featureId: string) => {
+    try {
+      const saved = await AsyncStorage.getItem(RECENT_FEATURES_KEY);
+      let featureIds = saved ? JSON.parse(saved) : [];
+
+      featureIds = featureIds.filter((id: string) => id !== featureId);
+      featureIds.unshift(featureId);
+      featureIds = featureIds.slice(0, 5);
+
+      await AsyncStorage.setItem(RECENT_FEATURES_KEY, JSON.stringify(featureIds));
+    } catch (e) {
+      console.error('Failed to save recent feature in HomeScreen', e);
+    }
+  };
+
   const handleNavigation = useCallback((route: string) => {
+    if (DASHBOARD_ITEM_IDS.includes(route)) {
+      saveRecentFeature(route);
+    }
+
     setActiveTab(prevTab => {
       if (prevTab !== route) {
         setNavigationHistory(prev => [...prev, route]);
@@ -93,6 +130,10 @@ export default function HomeScreen() {
               setSelectedPatientId(id);
               handleNavigation('PatientDetail');
             }}
+            onEdit={id => {
+              setEditingPatientId(id);
+              handleNavigation('EditPatient');
+            }}
           />
         );
       case 'PatientDetail':
@@ -143,7 +184,9 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.flex1}>{getScreenContent()}</View>
+      <View style={[styles.flex1, !isSelecting && { paddingBottom: 70 }]}>
+        {getScreenContent()}
+      </View>
 
       {!isSelecting && (
         <BottomNav

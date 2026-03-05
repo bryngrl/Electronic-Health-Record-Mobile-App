@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import {
   StyleSheet,
   View,
@@ -7,6 +13,7 @@ import {
   ScrollView,
   SafeAreaView,
   BackHandler,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import ADLInputCard from '../components/ADLInputCard';
@@ -14,8 +21,7 @@ import ADLCDSSStepper from './ADPIEScreen';
 import { useADL } from '../hook/useADL';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
-
-const THEME_GREEN = '#035022';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 const initialFormData = {
   mobility: '',
@@ -28,6 +34,12 @@ const initialFormData = {
 };
 
 const ADLScreen = ({ onBack }: any) => {
+  const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const styles = useMemo(
+    () => createStyles(theme, commonStyles, isDarkMode),
+    [theme, commonStyles, isDarkMode],
+  );
+
   const {
     alerts,
     setAlerts,
@@ -81,8 +93,6 @@ const ADLScreen = ({ onBack }: any) => {
   }, [onBack]);
 
   const loadPatientData = useCallback(
-// ... (rest of methods)
-
     async (patientId: number) => {
       const data = await fetchLatestADL(patientId);
       if (data) {
@@ -96,7 +106,6 @@ const ADLScreen = ({ onBack }: any) => {
           sleep_pattern: data.sleep_pattern || '',
           pain_level: data.pain_level || '',
         });
-        // Set initial alerts if they exist
         setAlerts({
           mobility_alert: data.mobility_alert,
           hygiene_alert: data.hygiene_alert,
@@ -128,7 +137,6 @@ const ADLScreen = ({ onBack }: any) => {
     }
   }, [selectedPatient, loadPatientData, setAlerts]);
 
-  // CALCULATIONS: Admission Date & Day Number
   const getCurrentDateFormatted = () => {
     return new Date().toLocaleDateString('en-US', {
       month: 'long',
@@ -148,7 +156,6 @@ const ADLScreen = ({ onBack }: any) => {
     return diffDays > 0 ? diffDays.toString() : '1';
   };
 
-  // REAL-TIME CDSS
   useEffect(() => {
     if (!selectedPatient?.id) return;
     const timer = setTimeout(async () => {
@@ -162,7 +169,7 @@ const ADLScreen = ({ onBack }: any) => {
             ...formData,
           });
         } catch (e) {
-          console.error('CDSS Real-time Error:', e);
+          console.error('ADL CDSS Error:', e);
         }
       }
     }, 1000);
@@ -281,7 +288,7 @@ const ADLScreen = ({ onBack }: any) => {
                 <Icon
                   name="arrow-drop-down"
                   size={24}
-                  color={THEME_GREEN}
+                  color={theme.primary}
                   style={{ position: 'absolute', right: 10 }}
                 />
               </View>
@@ -344,8 +351,8 @@ const ADLScreen = ({ onBack }: any) => {
             style={[
               styles.cdssBtn,
               Object.values(formData).some(v => v) && {
-                backgroundColor: '#DCFCE7',
-                borderColor: THEME_GREEN,
+                backgroundColor: theme.buttonBg,
+                borderColor: theme.buttonBorder,
               },
             ]}
             onPress={handleCDSSPress}
@@ -353,7 +360,9 @@ const ADLScreen = ({ onBack }: any) => {
             <Text
               style={[
                 styles.cdssText,
-                Object.values(formData).some(v => v) && { color: THEME_GREEN },
+                Object.values(formData).some(v => v) && {
+                  color: theme.primary,
+                },
               ]}
             >
               CDSS
@@ -378,68 +387,68 @@ const ADLScreen = ({ onBack }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
-  inputBox: {
-    height: 48,
-    borderRadius: 25,
-    borderWidth: 1.5,
-    borderColor: '#EBEBEB',
-    paddingHorizontal: 20,
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    marginBottom: 15,
-  },
-  inputText: { fontSize: 14, color: '#333', fontFamily: 'AlteHaasGrotesk' },
-  row: { flexDirection: 'row', marginTop: 5 },
-  safeArea: { flex: 1, backgroundColor: '#fff' },
-  container: { flex: 1, paddingHorizontal: 25 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 40,
-    marginBottom: 25,
-  },
-  title: {
-    fontSize: 35,
-    color: THEME_GREEN,
-    fontFamily: 'MinionPro-SemiboldItalic',
-  },
-  dateText: { fontSize: 13, fontFamily: 'AlteHaasGroteskBold', color: '#999' },
-  section: { marginBottom: 15, zIndex: 10 },
-  sectionLabel: {
-    fontSize: 14,
-    fontFamily: 'AlteHaasGroteskBold',
-    color: '#0A8219',
-    marginBottom: 8,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    paddingBottom: 40,
-  },
-  cdssBtn: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 15,
-    borderRadius: 25,
-    alignItems: 'center',
-    marginHorizontal: 5,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  submitBtn: {
-    flex: 1,
-    backgroundColor: '#DCFCE7',
-    paddingVertical: 15,
-    borderRadius: 25,
-    alignItems: 'center',
-    marginHorizontal: 5,
-    borderWidth: 1,
-    borderColor: THEME_GREEN,
-  },
-  cdssText: { color: '#6B7280', fontWeight: 'bold' },
-  submitText: { color: THEME_GREEN, fontWeight: 'bold' },
-});
+const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
+  StyleSheet.create({
+    inputBox: {
+      height: 48,
+      borderRadius: 25,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      paddingHorizontal: 20,
+      justifyContent: 'center',
+      backgroundColor: theme.card,
+      marginBottom: 15,
+    },
+    inputText: {
+      fontSize: 14,
+      color: theme.text,
+      fontFamily: 'AlteHaasGrotesk',
+    },
+    row: { flexDirection: 'row', marginTop: 5 },
+    safeArea: commonStyles.safeArea,
+    container: commonStyles.container,
+    header: commonStyles.header,
+    title: commonStyles.title,
+    dateText: {
+      fontSize: 13,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.textMuted,
+    },
+    section: { marginBottom: 15, zIndex: 10 },
+    sectionLabel: {
+      fontSize: 14,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      marginBottom: 8,
+    },
+    footerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 10,
+      paddingBottom: 40,
+    },
+    cdssBtn: {
+      flex: 1,
+      backgroundColor: theme.buttonBg,
+      paddingVertical: 15,
+      borderRadius: 25,
+      alignItems: 'center',
+      marginHorizontal: 5,
+      borderWidth: 1,
+      borderColor: theme.buttonBorder,
+    },
+    submitBtn: {
+      flex: 1,
+      backgroundColor: theme.buttonBg,
+      paddingVertical: 15,
+      borderRadius: 25,
+      alignItems: 'center',
+      marginHorizontal: 5,
+      borderWidth: 1,
+      borderColor: theme.buttonBorder,
+    },
+    cdssText: { color: theme.textMuted, fontWeight: 'bold' },
+    submitText: { color: theme.primary, fontWeight: 'bold' },
+  });
 
 export default ADLScreen;

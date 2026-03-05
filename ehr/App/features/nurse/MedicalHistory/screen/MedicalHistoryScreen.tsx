@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import {
   StyleSheet,
   View,
@@ -7,6 +13,7 @@ import {
   ScrollView,
   SafeAreaView,
   BackHandler,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import HistoryInputCard from '../components/HistoryInputCard';
@@ -14,10 +21,7 @@ import Button from '@components/button';
 import { useMedicalHistory } from '../hook/useMedicalHistory';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
-
-const THEME_GREEN = '#035022';
-// ... (rest of constants and initialFormData)
-const LIGHT_GREEN_BG = '#E5FFE8';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 interface MedicalHistoryProps {
   onBack: () => void;
@@ -122,6 +126,12 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
+  const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const styles = useMemo(
+    () => createStyles(theme, commonStyles, isDarkMode),
+    [theme, commonStyles, isDarkMode],
+  );
+
   const { saveMedicalHistory, fetchMedicalHistory } = useMedicalHistory();
   const [step, setStep] = useState(0);
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(
@@ -168,8 +178,6 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
   }, [onBack]);
 
   const loadPatientData = useCallback(
-// ... (rest of methods)
-
     async (patientId: number) => {
       const data = await fetchMedicalHistory(patientId);
       if (data) {
@@ -336,35 +344,31 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#fff' },
-  container: { flex: 1, paddingHorizontal: 25 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 40,
-    marginBottom: 25,
-  },
-  title: {
-    fontSize: 35,
-    color: THEME_GREEN,
-    fontFamily: 'MinionPro-SemiboldItalic',
-  },
-  dateText: { fontSize: 13, fontFamily: 'AlteHaasGroteskBold', color: '#999' },
-  stepHeader: {
-    backgroundColor: LIGHT_GREEN_BG,
-    paddingVertical: 10,
-    borderRadius: 25,
-    alignItems: 'center',
-    marginBottom: 10,
-    marginTop: 20,
-  },
-  stepHeaderText: {
-    color: '#29A539',
-    fontFamily: 'AlteHaasGroteskBold',
-    fontSize: 14,
-  },
-  btnContainer: { marginTop: 10 },
-});
+const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
+  StyleSheet.create({
+    safeArea: commonStyles.safeArea,
+    container: commonStyles.container,
+    header: commonStyles.header,
+    title: commonStyles.title,
+    dateText: {
+      fontSize: 13,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.textMuted,
+    },
+    stepHeader: {
+      backgroundColor: theme.tableHeader,
+      paddingVertical: 10,
+      borderRadius: 25,
+      alignItems: 'center',
+      marginBottom: 10,
+      marginTop: 20,
+    },
+    stepHeaderText: {
+      color: theme.secondary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 14,
+    },
+    btnContainer: { marginTop: 10 },
+  });
 
 export default MedicalHistoryScreen;

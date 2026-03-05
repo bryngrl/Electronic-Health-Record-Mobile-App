@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   Pressable,
   BackHandler,
   Image,
+  Platform,
 } from 'react-native';
 
 const backArrow = require('@assets/icons/back_arrow.png');
@@ -22,6 +23,7 @@ import MedicalReconCard from '../component/MedicalReconCard';
 import { useMedicalReconLogic } from '../hook/useMedicalReconLogic';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 interface MedicalReconciliationProps {
   onBack: () => void;
@@ -30,6 +32,12 @@ interface MedicalReconciliationProps {
 const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
   onBack,
 }) => {
+  const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const styles = useMemo(
+    () => createStyles(theme, commonStyles),
+    [theme, commonStyles],
+  );
+
   const {
     stageIndex,
     currentStage,
@@ -76,7 +84,6 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
   }, [handleBackPress]);
 
   useEffect(() => {
-    // Simplified date formatting that's safer for React Native
     const now = new Date();
     const days = [
       'Sunday',
@@ -106,7 +113,6 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
     );
   }, []);
 
-  // Dynamic label para sa ika-anim na field
   const getExtraLabel = () => {
     if (stageIndex === 0) return 'Administered during stay?';
     if (stageIndex === 1) return 'Discontinued on admission?';
@@ -129,7 +135,6 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
 
   return (
     <SafeAreaView style={styles.root}>
-      <StatusBar barStyle="light-content" />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -143,7 +148,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
             <Text style={styles.subDate}>{currentDate}</Text>
           </View>
           <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
-            <Icon name="more-vert" size={35} color="#035022" />
+            <Icon name="more-vert" size={35} color={theme.primary} />
           </TouchableOpacity>
         </View>
 
@@ -213,14 +218,14 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
           disabled={!isDataEntered || isSubmitting || !patientId}
         >
           {isSubmitting ? (
-            <ActivityIndicator size="small" color="#035022" />
+            <ActivityIndicator size="small" color={theme.primary} />
           ) : (
             <>
               <Text
                 style={[
                   styles.btnText,
                   (!isDataEntered || isSubmitting || !patientId) && {
-                    color: '#9E9E9E',
+                    color: theme.textMuted,
                   },
                 ]}
               >
@@ -231,7 +236,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
                   style={[
                     styles.chevron,
                     (!isDataEntered || isSubmitting || !patientId) && {
-                      color: '#9E9E9E',
+                      color: theme.textMuted,
                     },
                   ]}
                 >
@@ -295,144 +300,88 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
         type="success"
         onConfirm={() => setSuccessVisible(false)}
       />
-
-      {/* BOTTOM NAV */}
-      <View style={styles.bottomNav}>
-        <Text style={styles.navIcon}>🏠</Text>
-        <Text style={styles.navIcon}>🔍</Text>
-        <View style={styles.fab}>
-          <Text style={styles.plusSign}>+</Text>
-        </View>
-        <Text style={styles.navIcon}>📊</Text>
-        <Text style={styles.navIcon}>📅</Text>
-      </View>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FFF' },
-  scrollContent: { paddingHorizontal: 25, paddingBottom: 130 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 40,
-    marginBottom: 25,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  backBtn: {
-    marginTop: 12,
-    marginRight: 10,
-  },
-  backIcon: {
-    width: 25,
-    height: 25,
-    resizeMode: 'contain',
-  },
-  title: {
-    fontSize: 35,
-    color: '#035022',
-    fontFamily: 'MinionPro-SemiboldItalic',
-    lineHeight: 38,
-  },
-  subDate: { color: '#999', fontFamily: 'AlteHaasGroteskBold', fontSize: 13 },
-  menuDots: { fontSize: 32, color: '#035022' },
-  stageTab: {
-    backgroundColor: '#E5FFE8',
-    paddingVertical: 10,
-    borderRadius: 20,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  stageText: {
-    color: '#29A539',
-    fontFamily: 'AlteHaasGroteskBold',
-    fontSize: 14,
-  },
-  actionBtn: {
-    backgroundColor: '#DCFCE7',
-    height: 50,
-    borderRadius: 25,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#035022',
-  },
-  btnDisabled: {
-    backgroundColor: '#F0F0F0',
-    borderColor: '#E0E0E0',
-    opacity: 0.6,
-  },
-  btnText: { color: '#035022', fontWeight: 'bold', fontSize: 16 },
-  chevron: { color: '#035022', fontSize: 20, marginLeft: 10 },
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    height: 70,
-    backgroundColor: '#FFF',
-    borderTopWidth: 1,
-    borderColor: '#EEE',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  navIcon: { fontSize: 22, color: '#035022' },
-  fab: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FFF',
-    elevation: 5,
-    marginTop: -35,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#EEE',
-  },
-  plusSign: { fontSize: 24, color: '#29A539', fontWeight: 'bold' },
+const createStyles = (theme: any, commonStyles: any) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: theme.background },
+    scrollContent: { paddingHorizontal: 40, paddingBottom: 20 },
+    header: commonStyles.header,
+    title: commonStyles.title,
+    subDate: {
+      color: theme.textMuted,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 13,
+    },
+    stageTab: {
+      backgroundColor: theme.tableHeader,
+      paddingVertical: 12,
+      borderRadius: 20,
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    stageText: {
+      color: theme.secondary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 14,
+    },
+    actionBtn: {
+      backgroundColor: theme.buttonBg,
+      height: 50,
+      borderRadius: 25,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 10,
+      borderWidth: 1,
+      borderColor: theme.buttonBorder,
+    },
+    btnDisabled: {
+      backgroundColor: theme.surface,
+      borderColor: theme.border,
+      opacity: 0.6,
+    },
+    btnText: { color: theme.primary, fontWeight: 'bold', fontSize: 16 },
+    chevron: { color: theme.primary, fontSize: 20, marginLeft: 10 },
 
-  // Menu Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  menuContainer: {
-    width: '85%',
-    backgroundColor: '#FFF',
-    borderRadius: 25,
-    padding: 25,
-    maxHeight: '80%',
-  },
-  menuTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#035022',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  menuItem: {
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  menuItemText: { fontSize: 16, color: '#333', textAlign: 'center' },
-  activeMenuText: { color: '#29A539', fontWeight: 'bold' },
-  closeMenuBtn: {
-    marginTop: 20,
-    backgroundColor: '#E5FFE8',
-    paddingVertical: 12,
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  closeMenuText: { color: '#035022', fontWeight: 'bold' },
-});
+    // Menu Modal Styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: theme.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    menuContainer: {
+      width: '85%',
+      backgroundColor: theme.card,
+      borderRadius: 25,
+      padding: 25,
+      maxHeight: '80%',
+    },
+    menuTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: theme.primary,
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    menuItem: {
+      paddingVertical: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    menuItemText: { fontSize: 16, color: theme.text, textAlign: 'center' },
+    activeMenuText: { color: theme.secondary, fontWeight: 'bold' },
+    closeMenuBtn: {
+      marginTop: 20,
+      backgroundColor: theme.surface,
+      paddingVertical: 12,
+      borderRadius: 20,
+      alignItems: 'center',
+    },
+    closeMenuText: { color: theme.primary, fontWeight: 'bold' },
+  });
 
 export default MedicalReconciliationScreen;

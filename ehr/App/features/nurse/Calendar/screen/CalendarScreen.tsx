@@ -1,32 +1,40 @@
-import React from 'react';
-import { StyleSheet, View, Text, Platform } from 'react-native';
-
-const THEME_GREEN = '#1B5E20';
+import React, { useMemo } from 'react';
+import { StyleSheet, View, Text, Platform, useColorScheme } from 'react-native';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 export default function CalendarScreen() {
+  const { theme, commonStyles } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme, commonStyles), [theme, commonStyles]);
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Calendar</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Calendar</Text>
+      </View>
       {/* You can integrate react-native-calendars here later */}
       <View style={styles.emptyContent}>
-        <Text style={styles.placeholderText}>No scheduled appointments for today.</Text>
+        <Text style={styles.placeholderText}>
+          No scheduled appointments for today.
+        </Text>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any, commonStyles: any) => StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 25,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    ...commonStyles.container,
+    paddingTop: Platform.OS === 'ios' ? 20 : 40,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 35,
   },
   title: {
-    fontSize: 32,
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    color: THEME_GREEN,
-    fontWeight: 'semibold',
+    ...commonStyles.title,
+    marginBottom: 0, // Reset since headerRow has marginBottom
   },
   emptyContent: {
     flex: 1,
@@ -34,7 +42,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   placeholderText: {
-    color: '#999',
+    color: theme.textMuted,
     fontSize: 16,
-  }
+  },
 });

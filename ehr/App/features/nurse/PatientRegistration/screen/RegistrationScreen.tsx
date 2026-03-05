@@ -1,16 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TextInput,
   TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Dropdown } from 'react-native-element-dropdown';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-// Call your new reusable button component
 import CustomButton from '@components/button';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 interface FormProps {
   updateField: (field: string, value: string) => void;
@@ -23,6 +26,9 @@ const genderData = [
 ];
 
 export default function RegistrationForm({ updateField, onBack }: FormProps) {
+  const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme, commonStyles, isDarkMode), [theme, commonStyles, isDarkMode]);
+
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [age, setAge] = useState('');
@@ -62,7 +68,7 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
     setEmergencyContacts(emergencyContacts.filter(c => c.id !== id));
 
   return (
-    <View>
+    <ScrollView style={styles.root} contentContainerStyle={styles.scrollContent}>
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.headerText}>PATIENT DETAILS</Text>
@@ -74,6 +80,7 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
               <TextInput
                 style={styles.input}
                 placeholder="Juan"
+                placeholderTextColor={theme.textMuted}
                 onChangeText={v => updateField('firstName', v)}
               />
             </View>
@@ -82,6 +89,7 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
               <TextInput
                 style={styles.input}
                 placeholder="Dela Cruz"
+                placeholderTextColor={theme.textMuted}
                 onChangeText={v => updateField('lastName', v)}
               />
             </View>
@@ -90,6 +98,7 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
           <TextInput
             style={styles.input}
             placeholder="Optional"
+            placeholderTextColor={theme.textMuted}
             onChangeText={v => updateField('middleName', v)}
           />
           <View style={styles.row}>
@@ -109,6 +118,12 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
                 labelField="label"
                 valueField="value"
                 placeholder="Select"
+                placeholderStyle={styles.placeholderStyle}
+                selectedTextStyle={styles.selectedTextStyle}
+                itemTextStyle={styles.itemTextStyle}
+                containerStyle={{ backgroundColor: theme.card }}
+                activeColor={theme.surface}
+                value={null}
                 onChange={item => updateField('sex', item.value)}
               />
             </View>
@@ -117,16 +132,25 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
           <TextInput
             style={styles.input}
             placeholder="Street, City, Province"
+            placeholderTextColor={theme.textMuted}
             onChangeText={v => updateField('address', v)}
           />
           <View style={styles.row}>
             <View style={styles.col}>
               <Text style={styles.label}>Birth Place</Text>
-              <TextInput style={styles.input} placeholder="City" />
+              <TextInput 
+                style={styles.input} 
+                placeholder="City" 
+                placeholderTextColor={theme.textMuted}
+              />
             </View>
             <View style={styles.col}>
               <Text style={styles.label}>Ethnicity</Text>
-              <TextInput style={styles.input} placeholder="Ethnicity" />
+              <TextInput 
+                style={styles.input} 
+                placeholder="Ethnicity" 
+                placeholderTextColor={theme.textMuted}
+              />
             </View>
           </View>
           <Text style={styles.label}>Chief of Complaints</Text>
@@ -134,6 +158,7 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
             style={[styles.input, styles.textArea]}
             multiline
             placeholder="Symptoms..."
+            placeholderTextColor={theme.textMuted}
           />
         </View>
       </View>
@@ -153,7 +178,7 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
                   style={styles.removeBtn}
                   onPress={() => removeContact(contact.id)}
                 >
-                  <Icon name="remove-circle" size={18} color="red" />
+                  <Icon name="remove-circle" size={18} color={theme.error} />
                   <Text style={styles.removeText}>Remove</Text>
                 </TouchableOpacity>
               )}
@@ -161,15 +186,23 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
               <TextInput
                 style={[styles.input, { marginBottom: 10 }]}
                 placeholder="Full Name"
+                placeholderTextColor={theme.textMuted}
               />
               <View style={styles.row}>
                 <View style={styles.col}>
                   <Text style={styles.label}>Relationship</Text>
-                  <TextInput style={styles.input} />
+                  <TextInput 
+                    style={styles.input} 
+                    placeholderTextColor={theme.textMuted}
+                  />
                 </View>
                 <View style={styles.col}>
                   <Text style={styles.label}>Contact Number</Text>
-                  <TextInput style={styles.input} keyboardType="phone-pad" />
+                  <TextInput 
+                    style={styles.input} 
+                    keyboardType="phone-pad" 
+                    placeholderTextColor={theme.textMuted}
+                  />
                 </View>
               </View>
             </View>
@@ -177,7 +210,6 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
         </View>
       </View>
 
-      {/* FIXED 2-COLUMN BUTTON LAYOUT USING CUSTOM COMPONENTS */}
       <View style={styles.buttonRow}>
         <CustomButton title="BACK" onPress={onBack} variant="outlined" />
         <CustomButton
@@ -186,25 +218,29 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
           variant="gradient"
         />
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: theme.background },
+  scrollContent: { padding: 20 },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderRadius: 10,
     elevation: 4,
     marginBottom: 15,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.border,
   },
-  cardHeader: { backgroundColor: '#1A6A24', padding: 12 },
+  cardHeader: { backgroundColor: theme.primary, padding: 12 },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  headerText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  headerText: { color: theme.white, fontWeight: 'bold', fontSize: 16 },
   formPadding: { padding: 15 },
   row: {
     flexDirection: 'row',
@@ -212,35 +248,33 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   col: { width: '48%' },
-  label: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 5,
-    marginTop: 5,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#EBEBEB',
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 14,
-    minHeight: 45,
-    backgroundColor: '#EBEBEB',
-  },
-  disabled: { backgroundColor: '#f5f5f5', color: '#666' },
+  label: commonStyles.label,
+  input: commonStyles.input,
+  disabled: { backgroundColor: theme.surface, color: theme.textMuted },
   textArea: { height: 80, textAlignVertical: 'top' },
   dropdown: {
-    height: 45,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 8,
+    height: 52,
+    borderColor: theme.border,
+    borderWidth: 1.5,
+    borderRadius: 10,
     paddingHorizontal: 10,
-    backgroundColor: '#fff',
+    backgroundColor: theme.inputBg,
+  },
+  placeholderStyle: {
+    fontSize: 14,
+    color: theme.textMuted,
+  },
+  selectedTextStyle: {
+    fontSize: 14,
+    color: theme.text,
+  },
+  itemTextStyle: {
+    fontSize: 14,
+    color: theme.text,
   },
   divider: {
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: theme.border,
     marginTop: 15,
     paddingTop: 10,
   },
@@ -250,7 +284,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     marginBottom: 5,
   },
-  removeText: { color: 'red', fontSize: 12, marginLeft: 5 },
+  removeText: { color: theme.error, fontSize: 12, marginLeft: 5 },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
