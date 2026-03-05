@@ -138,7 +138,13 @@ const DashboardSummary = ({
       setLoading(true);
       const response = await apiClient.get('/patients/');
       if (response.data && Array.isArray(response.data)) {
-        setPatients(response.data.reverse());
+        const activePatients = response.data.filter(
+          (patient: any) =>
+            patient.is_active === '1' ||
+            patient.is_active === 1 ||
+            patient.is_active === true,
+        );
+        setPatients(activePatients.reverse());
       }
     } catch (error) {
       console.error('Connection Error:', error);
