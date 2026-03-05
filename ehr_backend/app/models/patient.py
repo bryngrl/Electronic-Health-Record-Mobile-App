@@ -41,3 +41,4 @@ class Patient(Base):
     home_medications = relationship("HomeMedication", back_populates="patient")
     current_medications = relationship("CurrentMedication", back_populates="patient")
     changes_in_medications = relationship("ChangesInMedication", back_populates="patient")
+    updates = relationship("DoctorUpdate", back_populates="patient")

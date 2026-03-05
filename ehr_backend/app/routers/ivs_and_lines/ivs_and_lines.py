@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.database.db import get_db
 from app.models.ivs_and_lines.ivs_and_lines import IVsAndLines
+from app.routers.doctor import create_doctor_update
 
 # ==================== PYDANTIC SCHEMAS ====================
 
@@ -80,6 +81,7 @@ def create_ivs_and_lines(
     )
     
     db.add(db_ivs)
+    create_doctor_update(db, patient_id, "IVs and Lines Updated")
     db.commit()
     db.refresh(db_ivs)
     

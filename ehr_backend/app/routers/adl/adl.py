@@ -9,6 +9,7 @@ from app.database.db import get_db
 from app.models.adl.adl import ADL
 from app.models.patient import Patient
 from app.core.cdss_engine import CDSSEngine
+from app.routers.doctor import create_doctor_update
 
 router = APIRouter(prefix="/adl", tags=["ADL"])
 
@@ -173,6 +174,7 @@ def create_adl(payload: AssessmentCreate, db: Session = Depends(get_db)):
         )
         db.add(record)
 
+    create_doctor_update(db, payload.patient_id, "ADL Updated")
     db.commit()
     db.refresh(record)
     return record

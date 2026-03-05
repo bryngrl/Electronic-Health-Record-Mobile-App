@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.database.db import get_db
 from app.models.diagnostics.diagnostics import Diagnostic
+from app.routers.doctor import create_doctor_update
 
 # ==================== PYDANTIC SCHEMAS ====================
 
@@ -148,6 +149,7 @@ async def create_diagnostic(
     )
     
     db.add(db_diagnostic)
+    create_doctor_update(db, patient_id, "Diagnostics Added")
     db.commit()
     db.refresh(db_diagnostic)
     

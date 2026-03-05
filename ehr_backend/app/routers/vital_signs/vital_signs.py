@@ -9,6 +9,7 @@ from app.database.db import get_db
 from app.models.vital_signs.vital_signs import VitalSigns
 from app.models.patient import Patient
 from app.core.cdss_engine import CDSSEngine
+from app.routers.doctor import create_doctor_update
 
 router = APIRouter(prefix="/vital-signs", tags=["Vital Signs"])
 
@@ -275,6 +276,8 @@ def create_vital_signs(payload: AssessmentCreate, db: Session = Depends(get_db))
             updated_at=now,
         )
         db.add(record)
+        # Create an update for the doctor
+        create_doctor_update(db, payload.patient_id, "Vital Signs Updated")
 
     db.commit()
     db.refresh(record)

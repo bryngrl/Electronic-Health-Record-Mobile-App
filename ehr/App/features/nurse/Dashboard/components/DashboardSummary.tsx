@@ -179,6 +179,14 @@ const DashboardSummary = ({
               <Icon name="medication" size={28} color={THEME_GREEN} />
               <Text style={styles.cardText}>IVs and Lines</Text>
             </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.recentCard, { borderColor: '#1B5E20', backgroundColor: '#E8F5E9' }]}
+              onPress={() => onNavigate('Doctor')}
+            >
+              <Icon name="medical-services" size={28} color={THEME_GREEN} />
+              <Text style={[styles.cardText, { color: '#1B5E20' }]}>Doctor Portal</Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
 

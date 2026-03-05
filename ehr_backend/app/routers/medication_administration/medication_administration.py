@@ -4,6 +4,7 @@ from typing import Optional, List
 from datetime import datetime
 from app.database.db import get_db
 from app.models.medication_administration.medication_administration import MedicationAdministration
+from app.routers.doctor import create_doctor_update
 from pydantic import BaseModel, ConfigDict
 
 router = APIRouter(prefix="/medication-administration", tags=["Medication Administration"])
@@ -81,6 +82,9 @@ def create_medication_administration(
         date=med_admin.date
     )
     db.add(new_record)
+    # Create an update for the doctor
+    create_doctor_update(db, med_admin.patient_id, "Medication Administered")
+    
     db.commit()
     db.refresh(new_record)
     return new_record

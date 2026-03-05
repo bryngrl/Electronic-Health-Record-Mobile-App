@@ -6,6 +6,7 @@ from app.database.base import Base
 # Model imports
 from app.models.user import User
 from app.models.patient import Patient
+from app.models.doctor_update import DoctorUpdate
 from app.models.physical_exam.physical_exam import PhysicalExam
 from app.models.vital_signs.vital_signs import VitalSigns
 from app.models.intake_and_output.intake_and_output import IntakeAndOutput
@@ -23,7 +24,7 @@ from app.models.medication_reconciliation.medication_reconciliation import (
 )
 
 # Router imports
-from app.routers import auth, patient
+from app.routers import auth, patient, doctor
 from app.routers.physical_exam import physical_exam as pe_router
 from app.routers.vital_signs import vital_signs as vs_router
 from app.routers.intake_and_output import intake_and_output as iao_router
@@ -62,6 +63,7 @@ app.add_middleware(
 # Auth & Patient
 app.include_router(auth.router)
 app.include_router(patient.router)
+app.include_router(doctor.router)
 
 # Physical Exam (with ADPIE)
 app.include_router(pe_router.router)
