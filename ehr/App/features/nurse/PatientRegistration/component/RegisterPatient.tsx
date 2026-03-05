@@ -22,17 +22,17 @@ const REQUIRED_RED = '#FF0000';
 const PLACEHOLDER_COLOR = '#999';
 
 // Dropdown Data
-// ... (rest of the dropdown data)
 const religionData = [
   { label: 'Roman Catholic', value: 'Roman Catholic' },
   { label: 'Islam', value: 'Islam' },
   { label: 'Born Again', value: 'Born Again' },
-  { label: 'Iglesia ni Cristo', value: 'Iglesia ni Cristo' },
+  { label: 'Iglesia ni Chris Brown', value: 'Iglesia ni Chris Brown' },
   { label: 'Other', value: 'Other' },
 ];
 const ethnicityData = [
   { label: 'Tagalog', value: 'Tagalog' },
   { label: 'Cebuano', value: 'Cebuano' },
+  { label: 'Bisaya', value: 'Bisaya' },
   { label: 'Other', value: 'Other' },
 ];
 const roomData = [
@@ -196,26 +196,26 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.mainContainer}>
+      <SweetAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onConfirm={alertConfig.onConfirm}
+        confirmText="OK"
+      />
+
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         <ScrollView
           keyboardShouldPersistTaps="handled"
-          style={styles.container}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* SweetAlert Component */}
-          <SweetAlert
-            visible={alertConfig.visible}
-            title={alertConfig.title}
-            message={alertConfig.message}
-            type={alertConfig.type}
-            onConfirm={alertConfig.onConfirm}
-            confirmText="OK"
-          />
-
           <View style={styles.header}>
             <View style={styles.headerRow}>
               <View style={styles.titleContainer}>
@@ -283,7 +283,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 />
               </View>
 
-              <View style={styles.inputGroup}>
+              <View style={[styles.inputGroup, { zIndex: 5000 }]}>
                 <Text style={styles.inputLabel}>
                   Birthday <Text style={styles.required}>*</Text>
                 </Text>
@@ -333,7 +333,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 </View>
               </View>
 
-              <View style={[styles.row, styles.inputGroup]}>
+              <View style={[styles.row, styles.inputGroup, { zIndex: 4000 }]}>
                 <View style={{ flex: 1, marginRight: 10 }}>
                   <Text style={styles.inputLabel}>Age</Text>
                   <TextInput
@@ -390,7 +390,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 />
               </View>
 
-              <View style={[styles.row, styles.inputGroup]}>
+              <View style={[styles.row, styles.inputGroup, { zIndex: 3000 }]}>
                 <View style={{ flex: 1, marginRight: 10 }}>
                   <Text style={styles.inputLabel}>
                     Religion <Text style={styles.required}>*</Text>
@@ -441,7 +441,11 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
               </View>
 
               <View
-                style={[styles.row, styles.inputGroup, { marginBottom: 30 }]}
+                style={[
+                  styles.row,
+                  styles.inputGroup,
+                  { marginBottom: 30, zIndex: 2000 },
+                ]}
               >
                 <View style={{ flex: 1, marginRight: 10 }}>
                   <Text style={styles.inputLabel}>
@@ -597,11 +601,14 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
           <View style={{ height: 100 }} />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: '#fff' },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingHorizontal: 40, paddingBottom: 20 },
   safeArea: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1, paddingHorizontal: 40 },
   header: { marginTop: Platform.OS === 'ios' ? 20 : 40, marginBottom: 35 },
