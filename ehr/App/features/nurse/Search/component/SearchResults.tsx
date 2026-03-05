@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
-const THEME_GREEN = '#1B4332';
+const THEME_GREEN = '#035022';
 
 interface SearchResultsProps {
   data: any[];
@@ -17,13 +17,12 @@ interface SearchResultsProps {
 
 export const SearchResults = ({ data, onItemPress }: SearchResultsProps) => {
   const renderItem = ({ item }: any) => (
-    <TouchableOpacity style={styles.resultItem} onPress={() => onItemPress(item)}>
+    <TouchableOpacity
+      style={styles.resultItem}
+      onPress={() => onItemPress(item)}
+    >
       <View style={styles.iconContainer}>
-        <Icon 
-          name={item.icon || 'person'} 
-          size={24} 
-          color={THEME_GREEN} 
-        />
+        <Icon name={item.icon || 'person'} size={24} color={THEME_GREEN} />
       </View>
       <View style={styles.textContainer}>
         <Text style={styles.resultName}>{item.name}</Text>
@@ -66,6 +65,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 2, height: 2 },
   },
   textContainer: { marginLeft: 15 },
-  resultName: { fontSize: 16, fontWeight: 'bold', color: THEME_GREEN, fontFamily: 'AlteHaasGroteskBold' },
-  resultType: { fontSize: 12, color: '#BBB', marginTop: 2, fontFamily: 'AlteHaasGrotesk' },
+  resultName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: THEME_GREEN,
+    fontFamily: 'AlteHaasGroteskBold',
+  },
+  resultType: {
+    fontSize: 12,
+    color: '#BBB',
+    marginTop: 2,
+    fontFamily: 'AlteHaasGrotesk',
+  },
 });

@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   },
   clearText: {
     fontSize: 12,
-    color: '#1B4332',
+    color: '#035022',
     fontFamily: 'AlteHaasGroteskBold',
   },
   sortTrigger: {
