@@ -13,7 +13,7 @@ import {
   Keyboard,
   Platform,
 } from 'react-native';
-import apiClient from '../api/apiClient';
+import apiClient from '@api/apiClient';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const THEME_GREEN = '#0A8219';
