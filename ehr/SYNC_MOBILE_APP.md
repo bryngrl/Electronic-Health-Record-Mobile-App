@@ -43,7 +43,7 @@ These endpoints save the **actual data** from your forms and trigger CDSS.
 
 ---
 
-## 💊 4. Medication Administration (FIXED)
+## 💊 4. Medication Administration
 
 To handle display and editing based on time slots without app crashes:
 
@@ -52,32 +52,51 @@ To handle display and editing based on time slots without app crashes:
 When a user selects a time (e.g., 08:00), call this:
 
 - **URL:** `GET /api/medication-administration/patient/{patient_id}/time/{time}`
-- **Response Logic:**
-  - Always returns **200 OK** (never 404).
-  - If data exists: `response.data.exists` is `true`.
-  - If no data: `response.data.exists` is `false`.
-
-**React Native Example:**
-
-```javascript
-const response = await apiClient.get(
-  `/medication-administration/patient/19/time/08:00`,
-);
-if (response.data.exists) {
-  // Fill inputs with response.data.medication, etc.
-} else {
-  // Clear inputs for new entry
-}
-```
+- **Response Logic:** Always returns **200 OK**. Check `response.data.exists`.
 
 ### **B. Save or Edit**
 
 - **URL:** `POST /api/medication-administration`
-- **Logic:** Uses `updateOrCreate`. Sending the same `patient_id`, `date`, and `time` will **overwrite** the old data automatically.
+- **Logic:** Uses `updateOrCreate`. Automatically overwrites old data for same patient/date/time.
 
 ---
 
-## 📝 5. Medical History Forms (5 Sub-forms)
+## 🤝 5. Medical Reconciliation (Medication Reconciliation)
+
+Handles the 3-category medication sync between mobile and website.
+
+### **A. Unified Fetch (Patient History)**
+
+- **URL:** `GET /api/medical-reconciliation/patient/{patient_id}`
+- **Returns:** `{ "current": [], "home": [], "changes": [] }`
+
+### **B. Save / Update Sub-Forms**
+
+The API uses `updateOrCreate` for each category.
+
+| Category         | Method | Endpoint                              |
+| :--------------- | :----- | :------------------------------------ |
+| **Current Meds** | POST   | `/api/medical-reconciliation/current` |
+| **Home Meds**    | POST   | `/api/medical-reconciliation/home`    |
+| **Med Changes**  | POST   | `/api/medical-reconciliation/changes` |
+
+**JSON Body Example (Current Meds):**
+
+```json
+{
+  "patient_id": 19,
+  "current_med": "Aspirin",
+  "current_dose": "81mg",
+  "current_route": "Oral",
+  "current_frequency": "Once daily",
+  "current_indication": "Blood thinner",
+  "current_text": "Patient has been taking this for 2 years"
+}
+```
+
+---
+
+## 📝 6. Medical History Forms (5 Sub-forms)
 
 Access all history for a patient via `GET /api/medical-history/patient/{id}`.
 
@@ -90,7 +109,7 @@ Access all history for a patient via `GET /api/medical-history/patient/{id}`.
 
 ---
 
-## 💉 6. Clinical & Diagnostics
+## 💉 7. Clinical & Diagnostics
 
 | Form               | Method | Endpoint                        |
 | :----------------- | :----- | :------------------------------ |
@@ -103,6 +122,6 @@ Access all history for a patient via `GET /api/medical-history/patient/{id}`.
 
 ## 🛠️ Troubleshooting Tips
 
-1.  **Duplicate Records:** Ensure your `time` format is consistent (HH:mm). The API will normalize `08:00` to `08:00:00`.
-2.  **404 Errors:** Double-check the URL prefixes (`/patient/`, `/time/`, etc.) match exactly.
-3.  **Syncing:** The website uses the same `is_active` logic. If you deactivate on mobile, the website row turns red automatically.
+1.  **Duplicate Records:** Use the provided ID endpoints to update instead of creating new ones.
+2.  **404 Errors:** Double-check the URL prefixes match the organized sections above.
+3.  **Syncing:** The website automatically detects mobile updates via the same shared MySQL database.
