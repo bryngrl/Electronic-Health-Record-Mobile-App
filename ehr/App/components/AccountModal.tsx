@@ -77,7 +77,14 @@ export const AccountModal = ({
                 <View style={styles.menuCard}>
                   <View style={styles.menuItem}>
                     <View style={styles.switchRow}>
-                      <Text style={styles.menuText}>Dark Mode</Text>
+                      <View style={styles.iconLabelRow}>
+                        <Icon
+                          name="moon-outline"
+                          size={24}
+                          color={theme.primary}
+                        />
+                        <Text style={styles.menuText}>Dark Mode</Text>
+                      </View>
                       <Switch
                         trackColor={{ false: '#767577', true: theme.primary }}
                         thumbColor={isDarkMode ? '#fff' : '#f4f3f4'}
@@ -204,11 +211,16 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
     menuText: {
       fontSize: 16,
       color: theme.text,
+      marginLeft: 12,
       fontFamily: 'AlteHaasGroteskBold',
     },
     switchRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    iconLabelRow: {
+      flexDirection: 'row',
       alignItems: 'center',
     },
     separator: {

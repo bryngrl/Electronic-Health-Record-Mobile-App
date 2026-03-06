@@ -210,7 +210,11 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
               halfWidth
             />
           </View>
-          <DetailItem label="Contact Number" value={patient?.contact_number} />
+          <DetailItem
+            style={(marginBottom = 15)}
+            label="Contact Number"
+            value={patient?.contact_number}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
