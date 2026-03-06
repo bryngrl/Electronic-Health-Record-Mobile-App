@@ -1,6 +1,6 @@
 # 📱 Master Sync Guide: Mobile App API Reference
 
-This document is the complete reference for connecting your React Native app to the Laravel EHR backend. Every form on the website now has a matching API endpoint.
+This document is the complete reference for connecting your React Native app to the Laravel EHR backend.
 
 ---
 
@@ -24,9 +24,9 @@ This document is the complete reference for connecting your React Native app to 
 
 ---
 
-## 3. 🩺 Core Assessment Forms
+## 3. 🩺 Core Assessment Forms (ADPIE)
 
-These endpoints save the **actual data** from your forms. If a field is empty, the API automatically sets it to `"N/A"`.
+These endpoints save the **actual data** from your forms and trigger CDSS.
 
 | Feature           | Method | Endpoint             | Form Data Examples                                           |
 | :---------------- | :----- | :------------------- | :----------------------------------------------------------- |
@@ -34,18 +34,46 @@ These endpoints save the **actual data** from your forms. If a field is empty, t
 | **Physical Exam** | POST   | `/physical-exam`     | `general_appearance`, `skin_condition`, `neurological`, etc. |
 | **ADL**           | POST   | `/adl`               | `mobility_assessment`, `hygiene_assessment`, etc.            |
 | **Intake/Output** | POST   | `/intake-and-output` | `oral_intake`, `iv_fluids_volume`, `urine_output`            |
-| **Lab Values**    | POST   | `/lab-values`        | `wbc_result`, `hgb_result`, `platelets_result`, etc.         |
+
+**Workflow:**
+
+1. `GET .../{id}/assessment` to load current data.
+2. `PUT .../{id}/assessment` to update existing data.
+3. `PUT .../{id}/{step}` (diagnosis, planning, etc.) to save ADPIE steps.
 
 ---
 
-## 🧠 4. ADPIE & CDSS Workflow
+## 💊 4. Medication Administration (FIXED)
 
-For every feature above, you can update the **Nursing Diagnosis** (ADPIE) steps. This also triggers the CDSS recommendations.
+To handle display and editing based on time slots without app crashes:
 
-- **URL Pattern:** `PUT /api/{feature}/{id}/{step}`
-- **Steps:** `diagnosis`, `planning`, `intervention`, `evaluation`
-- **Example:** `PUT /api/vital-signs/10/diagnosis`
-- **Body:** `{ "diagnosis": "Patient has high fever..." }`
+### **A. Load Data for a Time Slot**
+
+When a user selects a time (e.g., 08:00), call this:
+
+- **URL:** `GET /api/medication-administration/patient/{patient_id}/time/{time}`
+- **Response Logic:**
+  - Always returns **200 OK** (never 404).
+  - If data exists: `response.data.exists` is `true`.
+  - If no data: `response.data.exists` is `false`.
+
+**React Native Example:**
+
+```javascript
+const response = await apiClient.get(
+  `/medication-administration/patient/19/time/08:00`,
+);
+if (response.data.exists) {
+  // Fill inputs with response.data.medication, etc.
+} else {
+  // Clear inputs for new entry
+}
+```
+
+### **B. Save or Edit**
+
+- **URL:** `POST /api/medication-administration`
+- **Logic:** Uses `updateOrCreate`. Sending the same `patient_id`, `date`, and `time` will **overwrite** the old data automatically.
 
 ---
 
@@ -59,85 +87,10 @@ Access all history for a patient via `GET /api/medical-history/patient/{id}`.
 | **Past Medical**    | POST   | `/api/medical-history/past-history`    |
 | **Allergies**       | POST   | `/api/medical-history/allergies`       |
 | **Vaccination**     | POST   | `/api/medical-history/vaccination`     |
-| **Developmental**   | POST   | `/api/medical-history/developmental`   |
 
 ---
 
-## 💊 6. Medication Forms
-
-| Form               | Method | Endpoint                                      |
-| :----------------- | :----- | :-------------------------------------------- |
-| **Administration** | POST   | `/api/medication-administration`              |
-| **Med History**    | GET    | `/api/medication-administration/patient/{id}` |
-| **Recon: Current** | POST   | `/api/medication-reconciliation/current`      |
-| **Recon: Home**    | POST   | `/api/medication-reconciliation/home`         |
-| **Recon: Changes** | POST   | `/api/medication-reconciliation/              |
-| changes`           |
-
-# 📱 Medication Administration API Guide
-
-Use these instructions to fix the data display and submission in your mobile app.
-
----
-
-## 1. 📋 Displaying Data (Fetching History)
-
-To show the list of medications already given to a patient:
-
-- **Endpoint:** `GET /api/medication-administration/patient/{patient_id}`
-- **React Native Example:**
-
-```javascript
-const response = await apiClient.get(
-  `/medication-administration/patient/${currentPatientId}`,
-);
-const medHistory = response.data; // This is an array of all records
-```
-
----
-
-## 2. 📝 Submitting Data (Saving Form)
-
-To save a new medication entry or update an existing one for a specific time:
-
-- **Endpoint:** `POST /api/medication-administration`
-- **Required JSON Body:**
-
-```json
-{
-  "patient_id": 19,
-  "medication": "Paracetamol",
-  "dose": "500mg",
-  "route": "Oral",
-  "frequency": "Every 4 hours",
-  "time": "08:00",
-  "date": "2026-03-07",
-  "comments": "Patient feels better"
-}
-```
-
-> **Note:** If you send the same `patient_id`, `date`, and `time`, the API will **automatically update** the existing record instead of creating a duplicate.
-
----
-
-## 3. ✏️ Editing a Specific Record
-
-If you have the unique `id` of a record and want to edit it directly:
-
-- **Load Data:** `GET /api/medication-administration/{id}`
-- **Update Data:** `PUT /api/medication-administration/{id}`
-
----
-
-## 🛠️ Quick Troubleshooting
-
-1.  **Data not showing?** Ensure your `GET` URL includes the `/patient/` prefix: `/api/medication-administration/patient/19`.
-2.  **Submit failing?** Check that `medication`, `patient_id`, and `time` are included in your JSON body.
-3.  **Time Format:** Use the `HH:mm` format (e.g., `08:00`, `14:30`) to match the website's database.
-
----
-
-## 💉 7. Clinical & Diagnostics
+## 💉 6. Clinical & Diagnostics
 
 | Form               | Method | Endpoint                        |
 | :----------------- | :----- | :------------------------------ |
@@ -150,7 +103,6 @@ If you have the unique `id` of a record and want to edit it directly:
 
 ## 🛠️ Troubleshooting Tips
 
-1.  **404 Error:** Ensure your mobile URL ends with `/api`.
-2.  **401 Error:** Login again to get a fresh token.
-3.  **Missing Data:** The website uses `patient_id`. I have mapped this to `id` in all API responses for your React Native app.
-4.  **Audit Logs:** Every form you submit via mobile will automatically appear in the Audit Logs on the website.
+1.  **Duplicate Records:** Ensure your `time` format is consistent (HH:mm). The API will normalize `08:00` to `08:00:00`.
+2.  **404 Errors:** Double-check the URL prefixes (`/patient/`, `/time/`, etc.) match exactly.
+3.  **Syncing:** The website uses the same `is_active` logic. If you deactivate on mobile, the website row turns red automatically.

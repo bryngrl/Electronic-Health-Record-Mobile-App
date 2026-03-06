@@ -20,20 +20,9 @@ const toRawDate = displayDate => {
   return `${year}-${month}-${day}`;
 };
 
-const normalizeTime = time => {
-  if (!time) return '';
-  // Convert HH:mm:ss or H:m to HH:mm
-  const parts = time.split(':');
-  if (parts.length >= 2) {
-    const h = parts[0].trim().padStart(2, '0');
-    const m = parts[1].trim().padStart(2, '0');
-    return `${h}:${m}`;
-  }
-  return time;
-};
-
 export const useMedAdministration = () => {
   const [step, setStep] = useState(0); 
+  // Schedule: 10:00, 14:00, 18:00 (HH:mm format)
   const rawTimeSlots = ['10:00', '14:00', '18:00'];
   const displayTimeSlots = ['10:00 AM', '02:00 PM', '06:00 PM'];
 
@@ -61,58 +50,43 @@ export const useMedAdministration = () => {
   };
 
   const fetchPatientData = useCallback(async (patientId, dateStr) => {
+    if (!patientId) return;
+    
     try {
       const rawDate = toRawDate(dateStr);
       console.log(`[MedAdmin] Fetching for patient ${patientId} on ${rawDate}`);
       
-      const response = await apiClient.get(
-        `/medication-administration/patient/${patientId}?patient_id=${patientId}`,
-      );
-      
-      const responseData = response.data;
-      console.log('[MedAdmin] Raw API Response:', JSON.stringify(responseData));
+      const fetchSlot = async (timeStr) => {
+        try {
+          const response = await apiClient.get(`/medication-administration/patient/${patientId}/time/${timeStr}`);
+          const data = response.data;
 
-      // Handle Laravel wrapping
-      const records = Array.isArray(responseData) ? responseData : (responseData.data || []);
-
-      // Filter for the selected date
-      const todayRecords = records.filter(r => {
-          const recDate = (r.date || r.created_at || '').split('T')[0].split(' ')[0];
-          return recDate === rawDate;
-      });
-
-      const newMeds = [
-        { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
-        { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
-        { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
-      ];
-
-      todayRecords.forEach(record => {
-        const recordTime = normalizeTime(record.time);
-        
-        // Match 10:00, 14:00, or 18:00
-        const timeIndex = rawTimeSlots.indexOf(recordTime);
-        
-        if (timeIndex !== -1) {
-          console.log(`[MedAdmin] Matched record ${record.id} to slot ${timeIndex} (${recordTime})`);
-          newMeds[timeIndex] = {
-            id: record.id,
-            medication: record.medication === 'N/A' ? '' : record.medication || '',
-            dose: record.dose === 'N/A' ? '' : record.dose || '',
-            route: record.route === 'N/A' ? '' : record.route || '',
-            frequency: record.frequency === 'N/A' ? '' : record.frequency || '',
-            comments: record.comments === 'N/A' ? '' : record.comments || '',
-          };
+          if (data && data.exists) {
+            console.log(`[MedAdmin] Record found for ${timeStr}: ID ${data.id}`);
+            return {
+              id: data.id, // Store ID for PUT updates
+              medication: data.medication === 'N/A' ? '' : data.medication || '',
+              dose: data.dose === 'N/A' ? '' : data.dose || '',
+              route: data.route === 'N/A' ? '' : data.route || '',
+              frequency: data.frequency === 'N/A' ? '' : data.frequency || '',
+              comments: data.comments === 'N/A' ? '' : data.comments || '',
+            };
+          }
+        } catch (error) {
+          console.log(`[MedAdmin] No record for slot ${timeStr}`);
         }
-      });
+        return { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' };
+      };
+
+      const updatedMeds = await Promise.all(rawTimeSlots.map(time => fetchSlot(time)));
 
       setFormData(prev => ({
         ...prev,
-        medications: newMeds,
+        medications: updatedMeds,
         patient_id: patientId,
       }));
     } catch (error) {
-      console.error('Error fetching patient med data:', error);
+      console.error('Error in fetchPatientData:', error);
     }
   }, []);
 
@@ -141,24 +115,25 @@ export const useMedAdministration = () => {
     };
 
     try {
-      let res;
-      // If we have an existing ID for this slot, use PUT to update it specifically
+      let response;
       if (item.id) {
-        res = await apiClient.put(`/medication-administration/${item.id}`, payload);
+        // Option 3 in Guide: If we have an ID, update specifically with PUT
+        console.log(`[MedAdmin] Editing existing record ID: ${item.id}`);
+        response = await apiClient.put(`/medication-administration/${item.id}`, payload);
       } else {
-        // Otherwise use POST (Backend guide says POST also updates if patient/date/time match)
-        res = await apiClient.post('/medication-administration', payload);
+        // Option B in Guide: New record via POST
+        console.log(`[MedAdmin] Creating new record for ${rawTimeSlots[step]}`);
+        response = await apiClient.post('/medication-administration', payload);
       }
       
-      const savedData = res.data?.data || res.data;
-      console.log('[MedAdmin] Saved successfully:', JSON.stringify(savedData));
-
+      const savedData = response.data?.data || response.data;
       if (savedData?.id) {
-          setFormData(prev => {
-              const newMeds = [...prev.medications];
-              newMeds[step] = { ...newMeds[step], id: savedData.id };
-              return { ...prev, medications: newMeds };
-          });
+        // Update local state with the returned ID
+        setFormData(prev => {
+          const newMeds = [...prev.medications];
+          newMeds[step] = { ...newMeds[step], id: savedData.id };
+          return { ...prev, medications: newMeds };
+        });
       }
       return savedData;
     } catch (err) {

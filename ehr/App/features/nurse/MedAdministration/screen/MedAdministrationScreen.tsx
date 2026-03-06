@@ -1,5 +1,5 @@
 // MedAdministration/screen/MedAdministrationScreen.tsx
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,16 +8,11 @@ import {
   SafeAreaView,
   StatusBar,
   TouchableOpacity,
-  TextInput,
-  Pressable,
   BackHandler,
-  Platform,
-  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MedAdministrationInputCard from '../components/MedAdministrationInputCard';
 import { useMedAdministration } from '../hook/useMedAdministration';
-import apiClient from '@api/apiClient';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import LinearGradient from 'react-native-linear-gradient';
@@ -32,6 +27,7 @@ const MedAdministrationScreen = ({ onBack }: any) => {
 
   const {
     step,
+    setStep,
     timeSlots,
     formData,
     setFormData,
@@ -44,10 +40,10 @@ const MedAdministrationScreen = ({ onBack }: any) => {
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [isNA, setIsNA] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
-  const lastFetched = useRef<{ id: number | null; date: string }>({
-    id: null,
-    date: '',
-  });
+  
+  // Dedicated state for selected patient ID to trigger fetching properly
+  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
+  const lastFetchedRef = useRef<{ id: number | null; date: string }>({ id: null, date: '' });
 
   const toggleNA = () => {
     const newState = !isNA;
@@ -76,16 +72,15 @@ const MedAdministrationScreen = ({ onBack }: any) => {
   };
 
   useEffect(() => {
-    if (formData.patient_id) {
+    if (selectedPatientId) {
       const currentMed = formData.medications[step];
-      const allNA = Object.keys(currentMed)
-        .filter(k => k !== 'id')
+      const allNA = ['medication', 'dose', 'route', 'frequency', 'comments']
         .every(k => (currentMed as any)[k] === 'N/A');
       setIsNA(allNA);
     } else {
       setIsNA(false);
     }
-  }, [formData.patient_id, step, formData.medications]);
+  }, [selectedPatientId, step, formData.medications]);
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -122,18 +117,16 @@ const MedAdministrationScreen = ({ onBack }: any) => {
     setAlertConfig({ visible: true, title, message, type });
   };
 
+  // Robust fetching logic matching Medical History pattern
   useEffect(() => {
-    if (
-      formData.patient_id &&
-      (formData.patient_id !== lastFetched.current.id ||
-        formData.date !== lastFetched.current.date)
-    ) {
-      lastFetched.current = { id: formData.patient_id, date: formData.date };
-      fetchPatientData(formData.patient_id, formData.date);
+    if (selectedPatientId && (selectedPatientId !== lastFetchedRef.current.id || formData.date !== lastFetchedRef.current.date)) {
+        lastFetchedRef.current = { id: selectedPatientId, date: formData.date };
+        fetchPatientData(selectedPatientId, formData.date);
     }
-  }, [formData.patient_id, formData.date, fetchPatientData]);
+  }, [selectedPatientId, formData.date, fetchPatientData]);
 
   const handlePatientSelect = (id: number | null, name: string) => {
+    setSelectedPatientId(id);
     if (id) {
       setFormData(prev => ({
         ...prev,
@@ -141,45 +134,25 @@ const MedAdministrationScreen = ({ onBack }: any) => {
         patientName: name,
       }));
     } else {
+      lastFetchedRef.current = { id: null, date: '' };
       setFormData(prev => ({
         ...prev,
         patient_id: null,
         patientName: '',
         medications: [
-          {
-            id: null,
-            medication: '',
-            dose: '',
-            route: '',
-            frequency: '',
-            comments: '',
-          },
-          {
-            id: null,
-            medication: '',
-            dose: '',
-            route: '',
-            frequency: '',
-            comments: '',
-          },
-          {
-            id: null,
-            medication: '',
-            dose: '',
-            route: '',
-            frequency: '',
-            comments: '',
-          },
+          { medication: '', dose: '', route: '', frequency: '', comments: '' },
+          { medication: '', dose: '', route: '', frequency: '', comments: '' },
+          { medication: '', dose: '', route: '', frequency: '', comments: '' },
         ],
       }));
     }
   };
 
   const currentMed = formData.medications[step];
-  const isFormValid = !!formData.patient_id;
+  const isFormValid = !!selectedPatientId;
 
   const handleAction = async () => {
-    if (!formData.patient_id) {
+    if (!selectedPatientId) {
       return showAlert(
         'Patient Required',
         'Please select a patient first in the search bar.',
@@ -187,7 +160,7 @@ const MedAdministrationScreen = ({ onBack }: any) => {
     }
 
     try {
-      // Save current step data
+      // Save current step data (uses POST updateOrCreate as per API guide)
       await saveMedAdministration();
 
       if (step === 2) {
@@ -197,6 +170,8 @@ const MedAdministrationScreen = ({ onBack }: any) => {
           'success',
         );
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        // Refresh data to show what was saved
+        fetchPatientData(selectedPatientId, formData.date);
       } else {
         nextStep();
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
@@ -290,9 +265,9 @@ const MedAdministrationScreen = ({ onBack }: any) => {
           </View>
 
           <TouchableOpacity
-            style={[styles.naRow, !formData.patient_id && { opacity: 0.5 }]}
+            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
             onPress={() => {
-              if (!formData.patient_id) {
+              if (!selectedPatientId) {
                 onDisabledPress();
               } else {
                 toggleNA();
@@ -302,7 +277,7 @@ const MedAdministrationScreen = ({ onBack }: any) => {
             <Text
               style={[
                 styles.naText,
-                !formData.patient_id && { color: theme.textMuted },
+                !selectedPatientId && { color: theme.textMuted },
               ]}
             >
               Mark all as N/A
@@ -310,7 +285,7 @@ const MedAdministrationScreen = ({ onBack }: any) => {
             <Icon
               name={isNA ? 'check-box' : 'check-box-outline-blank'}
               size={22}
-              color={formData.patient_id ? theme.primary : theme.textMuted}
+              color={selectedPatientId ? theme.primary : theme.textMuted}
             />
           </TouchableOpacity>
 
@@ -333,38 +308,38 @@ const MedAdministrationScreen = ({ onBack }: any) => {
           {/* Input Cards */}
           <MedAdministrationInputCard
             label="Medication"
-            value={currentMed.medication}
+            value={currentMed?.medication || ''}
             onChangeText={t => updateCurrentMed('medication', t)}
-            editable={!!formData.patient_id && !isNA}
+            editable={!!selectedPatientId && !isNA}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
             label="Dose"
-            value={currentMed.dose}
+            value={currentMed?.dose || ''}
             onChangeText={t => updateCurrentMed('dose', t)}
-            editable={!!formData.patient_id && !isNA}
+            editable={!!selectedPatientId && !isNA}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
             label="Route"
-            value={currentMed.route}
+            value={currentMed?.route || ''}
             onChangeText={t => updateCurrentMed('route', t)}
-            editable={!!formData.patient_id && !isNA}
+            editable={!!selectedPatientId && !isNA}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
             label="Frequency"
-            value={currentMed.frequency}
+            value={currentMed?.frequency || ''}
             onChangeText={t => updateCurrentMed('frequency', t)}
-            editable={!!formData.patient_id && !isNA}
+            editable={!!selectedPatientId && !isNA}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
             label="Comments"
-            value={currentMed.comments}
+            value={currentMed?.comments || ''}
             onChangeText={t => updateCurrentMed('comments', t)}
             multiline
-            editable={!!formData.patient_id && !isNA}
+            editable={!!selectedPatientId && !isNA}
             onDisabledPress={onDisabledPress}
           />
 
@@ -372,7 +347,7 @@ const MedAdministrationScreen = ({ onBack }: any) => {
           <TouchableOpacity
             style={[
               styles.actionBtn,
-              !formData.patient_id && {
+              !selectedPatientId && {
                 backgroundColor: theme.buttonDisabledBg,
                 borderColor: theme.buttonDisabledBorder,
               },
@@ -381,14 +356,14 @@ const MedAdministrationScreen = ({ onBack }: any) => {
             disabled={
               !isFormValid &&
               !isNA &&
-              !!formData.patient_id &&
+              !!selectedPatientId &&
               currentMed.medication !== ''
             }
           >
             <Text
               style={[
                 styles.actionBtnText,
-                !formData.patient_id && { color: theme.textMuted },
+                !selectedPatientId && { color: theme.textMuted },
               ]}
             >
               {step === 2 ? 'SUBMIT' : 'NEXT'}
@@ -397,7 +372,7 @@ const MedAdministrationScreen = ({ onBack }: any) => {
               <Icon
                 name="chevron-right"
                 size={24}
-                color={formData.patient_id ? theme.primary : theme.textMuted}
+                color={selectedPatientId ? theme.primary : theme.textMuted}
               />
             )}
           </TouchableOpacity>
