@@ -35,8 +35,25 @@ const CustomButton = ({ title, onPress, style, disabled }: ButtonProps) => {
           </LinearGradient>
         </View>
       ) : (
-        <View style={[styles.outlinedButton, { backgroundColor: theme.buttonBg, borderColor: theme.buttonBorder }]}>
-          <Text style={[styles.outlinedText, { color: theme.primary }]}>{title}</Text>
+        <View
+          style={[
+            styles.outlinedButton,
+            {
+              backgroundColor: disabled ? theme.buttonDisabledBg : theme.buttonBg,
+              borderColor: disabled
+                ? theme.buttonDisabledBorder
+                : theme.buttonBorder,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.outlinedText,
+              { color: disabled ? theme.textMuted : theme.primary },
+            ]}
+          >
+            {title}
+          </Text>
         </View>
       )}
     </TouchableOpacity>

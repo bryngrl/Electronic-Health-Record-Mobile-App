@@ -4,6 +4,16 @@ import apiClient from '@api/apiClient';
 export const useMedicalHistory = () => {
   const saveMedicalHistory = useCallback(async (patientId: number, formData: any) => {
     try {
+      const sanitize = (data: any) => {
+        const sanitized = { ...data };
+        Object.keys(sanitized).forEach(key => {
+          if (typeof sanitized[key] === 'string' && sanitized[key].trim() === '') {
+            sanitized[key] = 'N/A';
+          }
+        });
+        return sanitized;
+      };
+
       // Map the 5 sub-components to their respective API endpoints
       const endpoints = {
         present: '/medical-history/present-illness',
@@ -13,19 +23,25 @@ export const useMedicalHistory = () => {
         developmental: '/medical-history/developmental-history'
       };
 
+      const present = sanitize(formData.present);
+      const past = sanitize(formData.past);
+      const allergies = sanitize(formData.allergies);
+      const vaccination = sanitize(formData.vaccination);
+      const developmental = sanitize(formData.developmental);
+
       // Create an array of individual POST requests (backend handles upsert)
       const requests = [
-        apiClient.post(endpoints.present, { ...formData.present, patient_id: patientId }),
-        apiClient.post(endpoints.past, { ...formData.past, patient_id: patientId }),
-        apiClient.post(endpoints.allergies, { ...formData.allergies, patient_id: patientId }),
-        apiClient.post(endpoints.vaccination, { ...formData.vaccination, patient_id: patientId }),
+        apiClient.post(endpoints.present, { ...present, patient_id: patientId }),
+        apiClient.post(endpoints.past, { ...past, patient_id: patientId }),
+        apiClient.post(endpoints.allergies, { ...allergies, patient_id: patientId }),
+        apiClient.post(endpoints.vaccination, { ...vaccination, patient_id: patientId }),
         apiClient.post(endpoints.developmental, { 
           patient_id: patientId,
-          gross_motor: formData.developmental.gross_motor,
-          fine_motor: formData.developmental.fine_motor,
-          language: formData.developmental.language,
-          cognitive: formData.developmental.cognitive,
-          social: formData.developmental.social
+          gross_motor: developmental.gross_motor,
+          fine_motor: developmental.fine_motor,
+          language: developmental.language,
+          cognitive: developmental.cognitive,
+          social: developmental.social
         })
       ];
 

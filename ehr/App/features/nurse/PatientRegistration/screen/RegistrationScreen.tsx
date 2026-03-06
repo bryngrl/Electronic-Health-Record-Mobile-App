@@ -8,6 +8,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Dropdown } from 'react-native-element-dropdown';
@@ -69,6 +70,11 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.scrollContent}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.headerText}>PATIENT DETAILS</Text>

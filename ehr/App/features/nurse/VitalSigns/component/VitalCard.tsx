@@ -1,16 +1,20 @@
 import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 
 interface VitalCardProps {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
+  disabled?: boolean;
+  onDisabledPress?: () => void;
 }
 
 const VitalCard: React.FC<VitalCardProps> = ({
   label,
   value,
   onChangeText,
+  disabled,
+  onDisabledPress,
 }) => (
   <View style={styles.cardContainer}>
     {/* Outer Box / Label Header Area */}
@@ -18,7 +22,14 @@ const VitalCard: React.FC<VitalCardProps> = ({
       <Text style={styles.labelText}>{label}</Text>
     </View>
     {/* Inner Box / Input Field Area */}
-    <View style={styles.inputWrapper}>
+    <Pressable
+      style={styles.inputWrapper}
+      onPress={() => {
+        if (disabled && onDisabledPress) {
+          onDisabledPress();
+        }
+      }}
+    >
       <TextInput
         style={styles.innerInput}
         value={value}
@@ -26,8 +37,10 @@ const VitalCard: React.FC<VitalCardProps> = ({
         keyboardType="numeric"
         placeholder="--"
         placeholderTextColor="#C7C7CD"
+        editable={!disabled}
+        pointerEvents={disabled ? 'none' : 'auto'}
       />
-    </View>
+    </Pressable>
   </View>
 );
 

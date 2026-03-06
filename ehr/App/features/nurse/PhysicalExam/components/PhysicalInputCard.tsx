@@ -19,6 +19,7 @@ interface ExamInputProps {
   disabled: boolean;
   alertText?: string;
   onChangeText: (text: string) => void;
+  onDisabledPress?: () => void;
 }
 
 const LINE_HEIGHT = 28;
@@ -30,14 +31,14 @@ const ExamInputCard = ({
   disabled,
   alertText,
   onChangeText,
+  onDisabledPress,
 }: ExamInputProps) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [showAlert, setShowAlert] = useState(false);
   const [inputHeight, setInputHeight] = useState(
     4 * LINE_HEIGHT + INPUT_PADDING_BOTTOM,
   );
 
-  const isAlertActive = value.trim().length > 0;
+  const isAlertActive = value.trim().length > 0 && value !== 'N/A';
   const hasBackendAlert = !!alertText && alertText.trim().length > 0;
 
   const visibleTypingHeight = Math.max(0, inputHeight - INPUT_PADDING_BOTTOM);
@@ -70,7 +71,7 @@ const ExamInputCard = ({
   };
 
   return (
-    <View style={[styles.card, disabled && {}]}>
+    <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.headerText}>{label}</Text>
       </View>
@@ -84,8 +85,8 @@ const ExamInputCard = ({
         <Pressable
           style={styles.inputArea}
           onPress={() => {
-            if (disabled) {
-              setShowAlert(true);
+            if (disabled && onDisabledPress) {
+              onDisabledPress();
             }
           }}
         >
@@ -113,8 +114,8 @@ const ExamInputCard = ({
             { opacity: isAlertActive ? 1.0 : 0.3 },
             hasBackendAlert && styles.activeAlert,
           ]}
-          onPress={() => isAlertActive && setModalVisible(true)}
-          disabled={!isAlertActive}
+          onPress={() => isAlertActive && !disabled && setModalVisible(true)}
+          disabled={!isAlertActive || disabled}
         >
           <Image source={alert1} style={styles.alertImage} />
         </TouchableOpacity>
@@ -125,15 +126,6 @@ const ExamInputCard = ({
         onClose={() => setModalVisible(false)}
         category={label}
         alertText={alertText || 'Analyzing findings for potential risks...'}
-      />
-
-      <SweetAlert
-        visible={showAlert}
-        title="Patient Required"
-        message="Please select a patient first in the search bar before entering findings."
-        type="error"
-        onConfirm={() => setShowAlert(false)}
-        confirmText="OK"
       />
     </View>
   );

@@ -60,19 +60,16 @@ const useIvsAndLinesData = () => {
       throw new Error('Please select a patient first.');
     }
 
-    // Validation: Do not accept empty inputs
-    if (!ivFluid.trim() || !rate.trim() || !site.trim() || !status.trim()) {
-      throw new Error('All fields are required. Please fill in all the details.');
-    }
-
     setIsSubmitting(true);
     try {
+      const sanitize = (val: string) => (val.trim() === '' ? 'N/A' : val);
+
       let response;
       const payload = {
-        iv_fluid: ivFluid,
-        rate: rate,
-        site: site,
-        status: status,
+        iv_fluid: sanitize(ivFluid),
+        rate: sanitize(rate),
+        site: sanitize(site),
+        status: sanitize(status),
       };
 
       if (recordId) {

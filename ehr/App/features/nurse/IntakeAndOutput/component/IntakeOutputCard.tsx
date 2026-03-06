@@ -1,16 +1,20 @@
 import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 
 interface IntakeOutputCardProps {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
+  disabled?: boolean;
+  onDisabledPress?: () => void;
 }
 
 const IntakeOutputCard: React.FC<IntakeOutputCardProps> = ({
   label,
   value,
   onChangeText,
+  disabled,
+  onDisabledPress,
 }) => (
   <View style={styles.cardContainer}>
     {/* Outer Box / Label Header Area */}
@@ -18,7 +22,14 @@ const IntakeOutputCard: React.FC<IntakeOutputCardProps> = ({
       <Text style={styles.labelText}>{label}</Text>
     </View>
     {/* Inner Box / Input Field Area */}
-    <View style={styles.inputWrapper}>
+    <Pressable
+      style={styles.inputWrapper}
+      onPress={() => {
+        if (disabled && onDisabledPress) {
+          onDisabledPress();
+        }
+      }}
+    >
       {/* Spacer to balance the unitBadge on the right for true centering */}
       <View style={{ width: 95 }} />
       <TextInput
@@ -28,11 +39,13 @@ const IntakeOutputCard: React.FC<IntakeOutputCardProps> = ({
         keyboardType="numeric"
         placeholder="--"
         placeholderTextColor="#C7C7CD"
+        editable={!disabled}
+        pointerEvents={disabled ? 'none' : 'auto'}
       />
       <View style={styles.unitBadge}>
         <Text style={styles.unitText}>mL</Text>
       </View>
-    </View>
+    </Pressable>
   </View>
 );
 

@@ -61,9 +61,11 @@ export const useMedAdministration = () => {
   });
 
   const updateCurrentMed = (field, value) => {
-    const newMeds = [...formData.medications];
-    newMeds[step] = { ...newMeds[step], [field]: value };
-    setFormData(prev => ({ ...prev, medications: newMeds }));
+    setFormData(prev => {
+      const newMeds = [...prev.medications];
+      newMeds[step] = { ...newMeds[step], [field]: value };
+      return { ...prev, medications: newMeds };
+    });
   };
 
   const nextStep = () => {
@@ -136,9 +138,15 @@ export const useMedAdministration = () => {
       throw new Error('Patient is required');
     }
 
-    const medsToSubmit = formData.medications
-      .map((med, index) => ({ med, index }))
-      .filter(item => item.med.medication.trim() !== '');
+    const sanitize = val =>
+      val === null || (typeof val === 'string' && val.trim() === '')
+        ? 'N/A'
+        : val;
+
+    const medsToSubmit = formData.medications.map((med, index) => ({
+      med,
+      index,
+    }));
 
     if (medsToSubmit.length === 0) {
       throw new Error('No medication data to submit');
@@ -149,11 +157,11 @@ export const useMedAdministration = () => {
     for (const item of medsToSubmit) {
       const payload = {
         patient_id: parseInt(formData.patient_id, 10),
-        medication: item.med.medication.trim(),
-        dose: item.med.dose.trim() || null,
-        route: item.med.route.trim() || null,
-        frequency: item.med.frequency.trim() || null,
-        comments: item.med.comments.trim() || null,
+        medication: sanitize(item.med.medication),
+        dose: sanitize(item.med.dose),
+        route: sanitize(item.med.route),
+        frequency: sanitize(item.med.frequency),
+        comments: sanitize(item.med.comments),
         time: rawTimeSlots[item.index],
         date: rawDate,
       };

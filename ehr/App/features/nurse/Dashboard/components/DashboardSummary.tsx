@@ -523,7 +523,7 @@ const createStyles = (theme: any, commonStyles: any) =>
       shadowOffset: { width: 1, height: 1 },
       shadowOpacity: 0.3,
       shadowRadius: 10,
-      marginBottom: 0,
+      marginBottom: 10,
     },
     cardText: {
       fontSize: 12,

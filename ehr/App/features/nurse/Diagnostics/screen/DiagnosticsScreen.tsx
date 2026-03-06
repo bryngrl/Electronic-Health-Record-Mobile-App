@@ -186,8 +186,13 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
     { id: 'ECHOCARDIOGRAM', label: 'ECHOCARDIOGRAM' },
   ];
 
-  const getDiagnosticForType = (type: string) => {
-    return diagnostics.find(d => d.image_type === type);
+  const getDiagnosticsForType = (type: string) => {
+    return diagnostics
+      .filter(d => d.image_type === type)
+      .map(d => ({
+        id: d.diagnostic_id,
+        url: `${BASE_URL}/diagnostics/${d.diagnostic_id}/file`,
+      }));
   };
 
   const formatDate = () => {
@@ -224,7 +229,8 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
     <View style={styles.container}>
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.background}
+        backgroundColor="transparent"
+        translucent={true}
       />
 
       <View style={{ zIndex: 10 }}>
@@ -333,10 +339,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
                 }}
               >
                 {diagnosticTypes.map((item, index) => {
-                  const diagnostic = getDiagnosticForType(item.id);
-                  const imageUrl = diagnostic
-                    ? `${BASE_URL}/diagnostics/${diagnostic.diagnostic_id}/file`
-                    : null;
+                  const images = getDiagnosticsForType(item.id);
 
                   return (
                     <View
@@ -350,11 +353,9 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
                       <DiagnosticCard
                         label={item.label}
                         viewMode={viewMode}
-                        imageUrl={imageUrl}
+                        images={images}
                         onImport={() => handleImport(item.id)}
-                        onDelete={() =>
-                          diagnostic && handleDelete(diagnostic.diagnostic_id)
-                        }
+                        onDelete={handleDelete}
                         disabled={loading}
                       />
                     </View>
@@ -379,21 +380,16 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
           ) : (
             <View style={styles.gridWrap}>
               {diagnosticTypes.map(item => {
-                const diagnostic = getDiagnosticForType(item.id);
-                const imageUrl = diagnostic
-                  ? `${BASE_URL}/diagnostics/${diagnostic.diagnostic_id}/file`
-                  : null;
+                const images = getDiagnosticsForType(item.id);
 
                 return (
                   <View key={item.id} style={styles.gridCard}>
                     <DiagnosticCard
                       label={item.label}
                       viewMode={viewMode}
-                      imageUrl={imageUrl}
+                      images={images}
                       onImport={() => handleImport(item.id)}
-                      onDelete={() =>
-                        diagnostic && handleDelete(diagnostic.diagnostic_id)
-                      }
+                      onDelete={handleDelete}
                       disabled={loading}
                     />
                   </View>
@@ -408,7 +404,15 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
               !selectedPatientId && styles.disabledButton,
             ]}
             disabled={!selectedPatientId}
-            onPress={onBack}
+            onPress={() => {
+              if (selectedPatientId) {
+                showAlert(
+                  'Success',
+                  'Diagnostic records have been saved successfully.',
+                  'success',
+                );
+              }
+            }}
           >
             <Text
               style={[
@@ -416,7 +420,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
                 !selectedPatientId && { color: theme.textMuted },
               ]}
             >
-              DONE
+              SUBMIT
             </Text>
           </TouchableOpacity>
         </ScrollView>

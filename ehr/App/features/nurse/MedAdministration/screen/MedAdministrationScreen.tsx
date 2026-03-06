@@ -6,6 +6,7 @@ import {
   Text,
   ScrollView,
   SafeAreaView,
+  StatusBar,
   TouchableOpacity,
   TextInput,
   Pressable,
@@ -41,10 +42,50 @@ const MedAdministrationScreen = ({ onBack }: any) => {
   } = useMedAdministration();
 
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [isNA, setIsNA] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
   const lastFetched = useRef<{ id: number | null; date: string }>({
     id: null,
     date: '',
   });
+
+  const toggleNA = () => {
+    const newState = !isNA;
+    setIsNA(newState);
+
+    setFormData(prev => {
+      const updatedMeds = [...prev.medications];
+      const newMed = { ...updatedMeds[step] };
+      const fields = ['medication', 'dose', 'route', 'frequency', 'comments'];
+
+      if (newState) {
+        fields.forEach(f => {
+          (newMed as any)[f] = 'N/A';
+        });
+      } else {
+        fields.forEach(f => {
+          if ((newMed as any)[f] === 'N/A') {
+            (newMed as any)[f] = '';
+          }
+        });
+      }
+
+      updatedMeds[step] = newMed;
+      return { ...prev, medications: updatedMeds };
+    });
+  };
+
+  useEffect(() => {
+    if (formData.patient_id) {
+      const currentMed = formData.medications[step];
+      const allNA = Object.keys(currentMed)
+        .filter(k => k !== 'id')
+        .every(k => (currentMed as any)[k] === 'N/A');
+      setIsNA(allNA);
+    } else {
+      setIsNA(false);
+    }
+  }, [formData.patient_id, step, formData.medications]);
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -135,23 +176,13 @@ const MedAdministrationScreen = ({ onBack }: any) => {
   };
 
   const currentMed = formData.medications[step];
-  const isFormValid =
-    formData.patient_id &&
-    currentMed.medication &&
-    currentMed.medication.trim() !== '';
+  const isFormValid = !!formData.patient_id;
 
   const handleAction = async () => {
     if (!formData.patient_id) {
       return showAlert(
         'Patient Required',
         'Please select a patient first in the search bar.',
-      );
-    }
-
-    if (!currentMed.medication || currentMed.medication.trim() === '') {
-      return showAlert(
-        'Input Required',
-        'Please enter the medication name before proceeding.',
       );
     }
 
@@ -163,6 +194,7 @@ const MedAdministrationScreen = ({ onBack }: any) => {
           'Medication Administration records saved successfully.',
           'success',
         );
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       } catch (error: any) {
         showAlert(
           'Error',
@@ -171,6 +203,7 @@ const MedAdministrationScreen = ({ onBack }: any) => {
       }
     } else {
       nextStep();
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     }
   };
 
@@ -204,6 +237,11 @@ const MedAdministrationScreen = ({ onBack }: any) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={{ zIndex: 10 }}>
         <View
           style={{
@@ -228,6 +266,7 @@ const MedAdministrationScreen = ({ onBack }: any) => {
 
       <View style={{ flex: 1, marginTop: -20 }}>
         <ScrollView
+          ref={scrollViewRef}
           style={styles.container}
           contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
@@ -248,6 +287,42 @@ const MedAdministrationScreen = ({ onBack }: any) => {
             </View>
           </View>
 
+          <TouchableOpacity
+            style={[styles.naRow, !formData.patient_id && { opacity: 0.5 }]}
+            onPress={() => {
+              if (!formData.patient_id) {
+                onDisabledPress();
+              } else {
+                toggleNA();
+              }
+            }}
+          >
+            <Text
+              style={[
+                styles.naText,
+                !formData.patient_id && { color: theme.textMuted },
+              ]}
+            >
+              Mark all as N/A
+            </Text>
+            <Icon
+              name={isNA ? 'check-box' : 'check-box-outline-blank'}
+              size={22}
+              color={formData.patient_id ? theme.primary : theme.textMuted}
+            />
+          </TouchableOpacity>
+
+          <Text
+            style={[
+              styles.disabledTextAtBottom,
+              isNA && { color: theme.error },
+            ]}
+          >
+            {isNA
+              ? 'All fields below are disabled.'
+              : 'Checking this will disable all fields below.'}
+          </Text>
+
           {/* Time Progress Banner */}
           <View style={styles.timeBanner}>
             <Text style={styles.timeText}>{timeSlots[step]}</Text>
@@ -258,28 +333,28 @@ const MedAdministrationScreen = ({ onBack }: any) => {
             label="Medication"
             value={currentMed.medication}
             onChangeText={t => updateCurrentMed('medication', t)}
-            editable={!!formData.patient_id}
+            editable={!!formData.patient_id && !isNA}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
             label="Dose"
             value={currentMed.dose}
             onChangeText={t => updateCurrentMed('dose', t)}
-            editable={!!formData.patient_id}
+            editable={!!formData.patient_id && !isNA}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
             label="Route"
             value={currentMed.route}
             onChangeText={t => updateCurrentMed('route', t)}
-            editable={!!formData.patient_id}
+            editable={!!formData.patient_id && !isNA}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
             label="Frequency"
             value={currentMed.frequency}
             onChangeText={t => updateCurrentMed('frequency', t)}
-            editable={!!formData.patient_id}
+            editable={!!formData.patient_id && !isNA}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
@@ -287,16 +362,23 @@ const MedAdministrationScreen = ({ onBack }: any) => {
             value={currentMed.comments}
             onChangeText={t => updateCurrentMed('comments', t)}
             multiline
-            editable={!!formData.patient_id}
+            editable={!!formData.patient_id && !isNA}
             onDisabledPress={onDisabledPress}
           />
 
           {/* Footer Navigation Button */}
           <TouchableOpacity
-            style={[styles.actionBtn, !isFormValid && styles.disabledButton]}
+            style={[
+              styles.actionBtn,
+              !formData.patient_id && {
+                backgroundColor: theme.buttonDisabledBg,
+                borderColor: theme.buttonDisabledBorder,
+              },
+            ]}
             onPress={handleAction}
             disabled={
               !isFormValid &&
+              !isNA &&
               !!formData.patient_id &&
               currentMed.medication !== ''
             }
@@ -304,7 +386,7 @@ const MedAdministrationScreen = ({ onBack }: any) => {
             <Text
               style={[
                 styles.actionBtnText,
-                !isFormValid && { color: theme.textMuted },
+                !formData.patient_id && { color: theme.textMuted },
               ]}
             >
               {step === 2 ? 'SUBMIT' : 'NEXT'}
@@ -313,7 +395,7 @@ const MedAdministrationScreen = ({ onBack }: any) => {
               <Icon
                 name="chevron-right"
                 size={24}
-                color={isFormValid ? theme.primary : theme.textMuted}
+                color={formData.patient_id ? theme.primary : theme.textMuted}
               />
             )}
           </TouchableOpacity>
@@ -347,6 +429,26 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontSize: 13,
       fontFamily: 'AlteHaasGroteskBold',
       color: theme.textMuted,
+    },
+    naRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      marginBottom: 5,
+      marginTop: 5,
+    },
+    naText: {
+      fontSize: 14,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      marginRight: 8,
+    },
+    disabledTextAtBottom: {
+      fontSize: 13,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.textMuted,
+      textAlign: 'right',
+      marginBottom: 15,
     },
     section: { marginBottom: 15, zIndex: 10 },
     sectionLabel: {
