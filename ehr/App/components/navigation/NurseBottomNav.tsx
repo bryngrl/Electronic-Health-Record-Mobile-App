@@ -45,15 +45,15 @@ const NurseBottomNav = ({
         style={styles.navItemWrapper}
       >
         <View style={[styles.navItem, isActive && styles.activeNavItem]}>
-          <Image 
-            source={source} 
+          <Image
+            source={source}
             style={[
-              styles.navIconImage, 
+              styles.navIconImage,
               !isActive && { tintColor: '#848484' },
               isActive && !isDarkMode && { tintColor: '#29A539' },
-              isDarkMode && isActive && { tintColor: theme.primary }
-            ]} 
-            resizeMode="contain" 
+              isDarkMode && isActive && { tintColor: theme.primary },
+            ]}
+            resizeMode="contain"
           />
           <Text
             style={[

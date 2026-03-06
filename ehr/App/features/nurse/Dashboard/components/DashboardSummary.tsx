@@ -377,7 +377,7 @@ const DashboardSummary = ({
             />
             <Text style={styles.btnLabel}>Start documenting patient</Text>
           </View>
-          <Icon name="arrow-forward-ios" size={20} color={theme.textMuted} />
+          <Icon name="arrow-forward-ios" size={15} color={theme.textMuted} />
         </TouchableOpacity>
       </ScrollView>
 
@@ -536,7 +536,7 @@ const createStyles = (theme: any, commonStyles: any) =>
       shadowOffset: { width: 1, height: 1 },
       shadowOpacity: 0.3,
       shadowRadius: 10,
-      marginBottom: 20,
+      marginBottom: 0,
     },
     cardText: {
       fontSize: 12,
@@ -547,21 +547,25 @@ const createStyles = (theme: any, commonStyles: any) =>
     actionBtn: {
       backgroundColor: theme.surface,
       borderRadius: 15,
-      padding: 18,
+      padding: 15,
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 80,
+      alignItems: 'center',
+      marginBottom: 100,
+    },
+
+    btnContent: {
+      flexDirection: 'row',
       alignItems: 'center',
     },
-    btnContent: { flexDirection: 'row', alignItems: 'center' },
     btnIcon: {
-      width: 35,
-      height: 35,
+      width: 30,
+      height: 30,
       resizeMode: 'contain',
     },
     btnLabel: {
       marginLeft: 15,
-      fontSize: 15,
+      fontSize: 14,
       color: theme.textMuted,
       fontFamily: 'AlteHaasGroteskBold',
     },

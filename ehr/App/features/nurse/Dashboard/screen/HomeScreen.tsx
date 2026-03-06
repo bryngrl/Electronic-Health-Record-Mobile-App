@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
 // --- NURSE FEATURE IMPORTS ---
-import DashboardSummary from '../components/DashboardSummary';
+import DashboardSummary from '@nurse/Dashboard/components/DashboardSummary';
 import { DashboardGrid } from '@components/navigation/DashboardGrid';
 import SearchScreen from '@nurse/Search/screen/SearchScreen';
 import CalendarScreen from '@nurse/Calendar/screen/CalendarScreen';
@@ -41,12 +41,6 @@ const DASHBOARD_ITEM_IDS = [
   'Medication Reconciliation',
 ];
 
-// --- DOCTOR FEATURE IMPORTS ---
-import DoctorHomeScreen from '@features/doctor/screens/DoctorHomeScreen';
-import DoctorPatientsScreen from '@features/doctor/screens/DoctorPatientsScreen';
-import DoctorReportsScreen from '@features/doctor/screens/DoctorReportsScreen';
-import DoctorUpdatesScreen from '@features/doctor/screens/DoctorUpdatesScreen';
-
 export default function HomeScreen() {
   const { theme } = useAppTheme();
   const [activeTab, setActiveTab] = useState('Home');
@@ -82,15 +76,11 @@ export default function HomeScreen() {
       saveRecentFeature(route);
     }
 
-    // Standardize route names for doctor internal nav
-    let targetRoute = route;
-    if (route === 'Doctors') targetRoute = 'Doctor';
-
     setActiveTab(prevTab => {
-      if (prevTab !== targetRoute) {
-        setNavigationHistory(prev => [...prev, targetRoute]);
+      if (prevTab !== route) {
+        setNavigationHistory(prev => [...prev, route]);
       }
-      return targetRoute;
+      return route;
     });
     setIsSelecting(false);
   }, []);
@@ -192,37 +182,25 @@ export default function HomeScreen() {
       case 'Intake and Output':
         return <IntakeAndOutputScreen onBack={handleBack} />;
 
-      // DOCTOR SCREENS
-      case 'Doctor':
-      case 'Doctors': // Alias to support internal nav
+      default:
         return (
-          <DoctorHomeScreen
-            onBack={handleBack}
+          <DashboardSummary
             onNavigate={handleNavigation}
-            onViewAll={() => handleNavigation('DoctorUpdates')}
+            onPatientSelect={setSelectedPatientId}
           />
         );
-      case 'DoctorPatients':
-        return <DoctorPatientsScreen onNavigate={handleNavigation} />;
-      case 'DoctorReports':
-        return <DoctorReportsScreen onNavigate={handleNavigation} />;
-      case 'DoctorUpdates':
-        return <DoctorUpdatesScreen onNavigate={handleNavigation} />;
-
-      default:
-        return <DashboardSummary onNavigate={handleNavigation} />;
     }
   };
-
-  const isDoctorRoute = activeTab.startsWith('Doctor');
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <View style={styles.flex1}>{getScreenContent()}</View>
+      <View style={[styles.flex1, !isSelecting && { paddingBottom: 50 }]}>
+        {getScreenContent()}
+      </View>
 
-      {!isSelecting && !isDoctorRoute && (
+      {!isSelecting && (
         <NurseBottomNav
           activeRoute={activeTab}
           onNavigate={handleNavigation}

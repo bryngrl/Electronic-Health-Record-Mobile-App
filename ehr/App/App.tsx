@@ -2,7 +2,7 @@ import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import HomeScreen from '@features/nurse/Dashboard/screen/HomeScreen';
-import DoctorHomeScreen from '@features/doctor/screens/DoctorHomeScreen';
+import DoctorMainScreen from '@features/doctor/screens/DoctorMainScreen';
 import LoginScreen from '@features/Auth/screen/LoginScreen';
 import { ThemeProvider } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from '@features/Auth/AuthContext';
@@ -24,7 +24,7 @@ const MainApp = () => {
 
   // Redirect based on role
   if (user.role === 'doctor') {
-    return <DoctorHomeScreen />;
+    return <DoctorMainScreen />;
   }
 
   // Default for nurse

@@ -197,7 +197,7 @@ const DoctorPatientsScreen = ({ onNavigate }: { onNavigate: (route: string) => v
       </ScrollView>
 
       <View style={styles.bottomNav}>
-        <NavItem label="Home" icon={require('../../../../assets/doctors-page/doctor-home.png')} onPress={() => onNavigate('Doctors')} />
+        <NavItem label="Home" icon={require('../../../../assets/doctors-page/doctor-home.png')} onPress={() => onNavigate('DoctorHome')} />
         <NavItem label="Patients" icon={require('../../../../assets/doctors-page/doctor-patients.png')} active />
         <NavItem label="Reports" icon={require('../../../../assets/doctors-page/doctor-reports.png')} onPress={() => onNavigate('DoctorReports')} />
         <NavItem label="Settings" icon={require('../../../../assets/doctors-page/doctor-settings.png')} />
