@@ -10,6 +10,7 @@ class MainActivity : ReactActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     setTheme(R.style.AppTheme)
+    window.statusBarColor = getColor(R.color.splash_background)
     super.onCreate(null)
   }
 

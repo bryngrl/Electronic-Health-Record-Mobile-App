@@ -6,6 +6,7 @@ import {
   Dimensions,
   Image,
   Platform,
+  StatusBar,
 } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -23,9 +24,8 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationFinish }) => {
   const [animationDone, setAnimationDone] = useState(false);
 
   // --- LOGO POSITIONING---
-  // These values are calculated to match LoginScreen's layout (flex: 1 for logoContainer)
-  // height / 2 is center, we move it up to roughly where LoginScreen's logo is.
-  const LOGO_TARGET_Y = -(height * 0.31); // Adjust this to move logo Up (-) or Down (+)
+  // Adjust this to move logo Up (-) or Down (+) to match LoginScreen perfectly
+  const LOGO_TARGET_Y = -(height * 0.31); 
   // -----------------------------
 
   useEffect(() => {
@@ -54,13 +54,13 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationFinish }) => {
         useNativeDriver: true,
       }),
       Animated.delay(800),
-      // 5. Move logo to top (to match LoginScreen position)
+      // 4. Move logo to top
       Animated.timing(logoTranslateY, {
         toValue: LOGO_TARGET_Y,
         duration: 800,
         useNativeDriver: true,
       }),
-      // 6. Final delay before switching screens
+      // 5. Final delay
       Animated.delay(500),
     ]).start(() => {
       setAnimationDone(true);
@@ -74,6 +74,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationFinish }) => {
 
   return (
     <View style={styles.container}>
+      <StatusBar backgroundColor="#035022" barStyle="light-content" />
       {/* Expanding White Circle */}
       <Animated.View
         style={[
@@ -98,6 +99,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationFinish }) => {
           source={require('@assets/icons/ehr_logo.png')}
           style={styles.logo}
           resizeMode="contain"
+          fadeDuration={0}
         />
       </Animated.View>
     </View>
