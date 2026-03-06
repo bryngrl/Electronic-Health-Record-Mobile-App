@@ -10,6 +10,18 @@ This document summarizes the changes made to implement the authentication system
 
 ---
 
+## 🚀 Setup & Seeding
+To initialize the database with user accounts and sample patient data, run the following commands:
+
+```bash
+cd ehr
+npm install
+node AccountSeed.js # Creates Nurse and Doctor accounts
+node PatientSeed.js # Creates sample patients
+```
+
+---
+
 ## 🛠️ Changes Summary
 
 ### **1. Frontend: Shared Authentication Feature**
