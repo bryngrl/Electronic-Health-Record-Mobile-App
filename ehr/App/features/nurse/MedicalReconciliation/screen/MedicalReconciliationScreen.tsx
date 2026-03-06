@@ -328,11 +328,11 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
           <TouchableOpacity
             style={[
               styles.actionBtn,
-              (!isDataEntered && !isNA || isSubmitting || !patientId) &&
+              (isSubmitting || !patientId) &&
                 styles.btnDisabled,
             ]}
             onPress={handleNextPress}
-            disabled={(!isDataEntered && !isNA) || isSubmitting || !patientId}
+            disabled={isSubmitting || !patientId}
           >
             {isSubmitting ? (
               <ActivityIndicator size="small" color={theme.primary} />
@@ -341,7 +341,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
                 <Text
                   style={[
                     styles.btnText,
-                    (!isDataEntered && !isNA || isSubmitting || !patientId) && {
+                    (isSubmitting || !patientId) && {
                       color: theme.textMuted,
                     },
                   ]}
@@ -352,7 +352,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
                   <Text
                     style={[
                       styles.chevron,
-                      (!isDataEntered && !isNA || isSubmitting || !patientId) && {
+                      (isSubmitting || !patientId) && {
                         color: theme.textMuted,
                       },
                     ]}

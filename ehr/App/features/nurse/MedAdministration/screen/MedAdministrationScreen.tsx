@@ -176,23 +176,13 @@ const MedAdministrationScreen = ({ onBack }: any) => {
   };
 
   const currentMed = formData.medications[step];
-  const isFormValid =
-    formData.patient_id &&
-    currentMed.medication &&
-    currentMed.medication.trim() !== '';
+  const isFormValid = !!formData.patient_id;
 
   const handleAction = async () => {
     if (!formData.patient_id) {
       return showAlert(
         'Patient Required',
         'Please select a patient first in the search bar.',
-      );
-    }
-
-    if (!isNA && (!currentMed.medication || currentMed.medication.trim() === '')) {
-      return showAlert(
-        'Input Required',
-        'Please enter the medication name before proceeding.',
       );
     }
 

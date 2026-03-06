@@ -55,23 +55,33 @@ export const useVitalSignsLogic = () => {
   const currentTime = useMemo(() => TIME_SLOTS[currentTimeIndex], [currentTimeIndex]);
 
   const isDataEntered = useMemo(() => {
-    return Object.values(currentVitals).some(value => value.trim() !== '');
-  }, [currentVitals]);
+    return true; // Enable empty inputs as per requirement
+  }, []);
 
   const isDataComplete = useMemo(() => {
-    return Object.values(currentVitals).every(value => value.trim() !== '');
-  }, [currentVitals]);
+    return true; // Enable empty inputs as per requirement
+  }, []);
 
   const saveAssessment = async (dayNo?: number) => {
     if (!selectedPatientId) return null;
 
-    const payload = {
+    const sanitize = (data: any) => {
+      const sanitized = { ...data };
+      Object.keys(sanitized).forEach(key => {
+        if (typeof sanitized[key] === 'string' && sanitized[key].trim() === '') {
+          sanitized[key] = 'N/A';
+        }
+      });
+      return sanitized;
+    };
+
+    const payload = sanitize({
       patient_id: parseInt(selectedPatientId, 10),
       date: new Date().toLocaleDateString('en-CA'),
       time: convertTo24h(currentTime),
       day_no: dayNo || 1,
       ...currentVitals
-    };
+    });
 
     try {
       const response = await apiClient.post('/vital-signs/', payload);
@@ -208,8 +218,9 @@ export const useVitalSignsLogic = () => {
 
   const updateDPIE = useCallback(async (recordId: number, stepKey: string, text: string) => {
     try {
+      const sanitizedText = text.trim() === '' ? 'N/A' : text;
       const response = await apiClient.put(`/vital-signs/${recordId}/${stepKey}`, {
-        [stepKey]: text
+        [stepKey]: sanitizedText
       });
       return response.data;
     } catch (err) {

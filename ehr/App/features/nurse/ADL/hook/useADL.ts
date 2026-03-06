@@ -4,14 +4,26 @@ import apiClient from '@api/apiClient';
 export const useADL = () => {
   const [alerts, setAlerts] = useState<any>({});
 
+  const sanitize = (data: any) => {
+    const sanitized = { ...data };
+    Object.keys(sanitized).forEach(key => {
+      if (typeof sanitized[key] === 'string' && sanitized[key].trim() === '') {
+        sanitized[key] = 'N/A';
+      }
+    });
+    return sanitized;
+  };
+
   const saveADLAssessment = useCallback(async (payload: any) => {
-    const response = await apiClient.post('/adl/', payload);
+    const sanitized = sanitize(payload);
+    const response = await apiClient.post('/adl/', sanitized);
     return response.data;
   }, []);
 
   const checkADLAlerts = useCallback(async (payload: any) => {
     try {
-      const response = await apiClient.post('/adl/check-alerts', payload);
+      const sanitized = sanitize(payload);
+      const response = await apiClient.post('/adl/check-alerts', sanitized);
       if (response.data) {
         setAlerts(response.data);
       }
@@ -22,8 +34,9 @@ export const useADL = () => {
   }, []);
 
   const updateADLStep = useCallback(async (recordId: number, stepKey: string, text: string) => {
+    const sanitizedText = text.trim() === '' ? 'N/A' : text;
     const response = await apiClient.put(`/adl/${recordId}/${stepKey}`, {
-      [stepKey]: text
+      [stepKey]: sanitizedText
     });
     return response.data;
   }, []);
