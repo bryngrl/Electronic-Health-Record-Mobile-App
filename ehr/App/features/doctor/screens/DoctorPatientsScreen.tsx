@@ -11,27 +11,97 @@ import {
   RefreshControl, 
   ActivityIndicator, 
   Modal, 
-  Dimensions,
-  Platform
+  Dimensions
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { AccountModal } from '../../../components/AccountModal';
 import apiClient from '../../../api/apiClient';
 
-// --- UPDATED PATIENT RECORD MODAL COMPONENT (CENTERED BOX STYLE) ---
+const { width } = Dimensions.get('window');
+
+// --- HELPER FUNCTION: REAL-TIME UPDATES ---
+// Ito ang magko-convert ng date galing sa DB papuntang "3h ago" or "Just now"
+const getTimeAgo = (dateString: string | null) => {
+  if (!dateString) return 'No updates';
+
+  const now = new Date();
+  const updateDate = new Date(dateString);
+  const diffInSeconds = Math.floor((now.getTime() - updateDate.getTime()) / 1000);
+
+  if (diffInSeconds < 60) return 'Just now';
+  
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) return `${diffInDays}d ago`;
+
+  return updateDate.toLocaleDateString(); // Fallback to actual date if > 7 days
+};
+
+// --- MODAL COMPONENT ---
 const PatientRecordModal = ({ visible, onClose, patient, onSelectCategory }: any) => {
-  const categories = [
-    { name: 'Medical History', update: 'Updated 3 hours ago', icon: 'history' },
-    { name: 'Physical Exam', update: 'Updated 3 hours ago', icon: 'person-search' },
-    { name: 'Vital Signs', update: 'Updated 3 hours ago', icon: 'show-chart' },
-    { name: 'Intake and Output', update: 'No updates', icon: 'water-drop' },
-    { name: 'Lab Values', update: 'Updated 3 hours ago', icon: 'science' },
-    { name: 'Diagnostics', update: 'Updated 3 hours ago', icon: 'biotech' },
-    { name: 'IVs & Lines', update: 'Updated 3 hours ago', icon: 'vaccines' },
-    { name: 'Activities of Daily Living', update: 'Updated 3 hours ago', icon: 'accessibility' },
-    { name: 'Medical Administration', update: 'Updated 3 hours ago', icon: 'medication' },
-    { name: 'Medical Reconciliation', update: 'Updated 3 hours ago', icon: 'assignment-turned-in' },
+  
+  // Dito natin ima-map ang category sa specific column sa database mo.
+  // Halimbawa: Ang 'Vital Signs' ay kukuha ng data sa 'patient.vitals_updated_at'
+  const getCategoryData = (patientData: any) => [
+    { 
+      name: 'Medical History', 
+      icon: 'history', 
+      // Palitan mo 'history_updated_at' ng totoong column name sa DB mo
+      update: getTimeAgo(patientData?.history_updated_at) 
+    },
+    { 
+      name: 'Physical Exam', 
+      icon: 'person-search', 
+      update: getTimeAgo(patientData?.physical_exam_updated_at) 
+    },
+    { 
+      name: 'Vital Signs', 
+      icon: 'show-chart', 
+      update: getTimeAgo(patientData?.vitals_updated_at || patientData?.updated_at) // Example fallback
+    },
+    { 
+      name: 'Intake and Output', 
+      icon: 'water-drop', 
+      update: getTimeAgo(patientData?.io_updated_at) 
+    },
+    { 
+      name: 'Lab Values', 
+      icon: 'science', 
+      update: getTimeAgo(patientData?.lab_updated_at) 
+    },
+    { 
+      name: 'Diagnostics', 
+      icon: 'biotech', 
+      update: getTimeAgo(patientData?.diagnostics_updated_at) 
+    },
+    { 
+      name: 'IVs & Lines', 
+      icon: 'vaccines', 
+      update: getTimeAgo(patientData?.iv_updated_at) 
+    },
+    { 
+      name: 'Activities of Daily Living', 
+      icon: 'accessibility', 
+      update: getTimeAgo(patientData?.adl_updated_at) 
+    },
+    { 
+      name: 'Medical Administration', 
+      icon: 'medication', 
+      update: getTimeAgo(patientData?.meds_updated_at) 
+    },
+    { 
+      name: 'Medical Reconciliation', 
+      icon: 'assignment-turned-in', 
+      update: getTimeAgo(patientData?.reco_updated_at) 
+    },
   ];
+
+  const categories = patient ? getCategoryData(patient) : [];
 
   return (
     <Modal 
@@ -42,6 +112,7 @@ const PatientRecordModal = ({ visible, onClose, patient, onSelectCategory }: any
     >
       <View style={modalStyles.overlay}>
         <View style={modalStyles.modalContainer}>
+          
           <View style={modalStyles.header}>
             <View>
               <Text style={modalStyles.title}>Patient Record</Text>
@@ -60,18 +131,21 @@ const PatientRecordModal = ({ visible, onClose, patient, onSelectCategory }: any
                 key={index} 
                 style={modalStyles.categoryCard}
                 onPress={() => onSelectCategory(item.name)}
-                activeOpacity={0.6}
+                activeOpacity={0.7}
               >
                 <View style={modalStyles.cardLeft}>
-                  <View style={modalStyles.iconCircle}>
+                  <View style={modalStyles.iconContainer}>
                     <Icon name={item.icon} size={22} color="#035022" />
                   </View>
                   <View style={modalStyles.cardInfo}>
                     <Text style={modalStyles.categoryName}>{item.name}</Text>
-                    <Text style={modalStyles.updateText}>{item.update}</Text>
+                    {/* Dito na lalabas yung Real-time update text */}
+                    <Text style={modalStyles.updateText}>
+                        {item.update === 'No updates' ? 'No updates' : `Updated ${item.update}`}
+                    </Text>
                   </View>
                 </View>
-                <Icon name="chevron-right" size={24} color="#035022" />
+                <Icon name="chevron-right" size={22} color="#035022" />
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -130,6 +204,7 @@ const DoctorPatientsScreen = ({ onNavigate }: { onNavigate: (route: string) => v
           <RefreshControl refreshing={loading} onRefresh={fetchPatients} colors={['#29A539']} />
         }
       >
+        {/* Header - UPDATED: REMOVED ARROW */}
         <View style={styles.header}>
           <View>
             <Text style={styles.welcome}>Patients</Text>
@@ -137,9 +212,7 @@ const DoctorPatientsScreen = ({ onNavigate }: { onNavigate: (route: string) => v
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => setAccountModalVisible(true)}>
-            <Icon name="keyboard-arrow-down" size={24} color="#333" />
-          </TouchableOpacity>
+          {/* Removed the TouchableOpacity with keyboard-arrow-down here */}
         </View>
 
         <View style={styles.searchContainer}>
@@ -230,8 +303,14 @@ const NavItem = ({ label, icon, active, onPress }: any) => (
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#FFF' },
-  scrollContent: { paddingHorizontal: 25, paddingBottom: 150, paddingTop: 40 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  scrollContent: { paddingHorizontal: 40, paddingBottom: 150, paddingTop: 40 },
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start', 
+    marginBottom: 35,
+    marginTop: 10
+  },
   welcome: { fontSize: 35, color: '#035022', fontFamily: 'MinionPro-SemiboldItalic' },
   date: { fontSize: 14, color: '#B2B2B2', marginTop: 4, fontWeight: 'bold' },
   searchContainer: { marginBottom: 25 },
@@ -268,42 +347,82 @@ const styles = StyleSheet.create({
 const modalStyles = StyleSheet.create({
   overlay: { 
     flex: 1, 
-    backgroundColor: 'rgba(0,0,0,0.6)', 
+    backgroundColor: 'rgba(255,255,255,0.2)', 
     justifyContent: 'center', 
     alignItems: 'center', 
   },
   modalContainer: { 
-    width: '90%',
-    maxHeight: '85%',
+    width: '85%', 
+    maxHeight: '75%', 
     backgroundColor: '#FFF', 
-    borderRadius: 20,
-    padding: 25, 
-    elevation: 15,
-    borderWidth: 3,
-    borderColor: '#035022', // Updated Border Color
+    borderRadius: 20, 
+    padding: 20, 
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    borderWidth: 2, 
+    borderColor: '#035022', 
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 25 },
-  title: { fontSize: 24, color: '#035022', fontWeight: 'bold', fontFamily: 'MinionPro-Bold' },
-  patientName: { fontSize: 16, color: '#B2B2B2', marginTop: 4 },
-  closeButton: { padding: 5, marginTop: -5, marginRight: -5 },
-  scrollContent: { paddingBottom: 10 },
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start', 
+    marginBottom: 15 
+  },
+  title: { 
+    fontSize: 20, 
+    color: '#035022', 
+    fontWeight: '700', 
+    marginBottom: 2
+  },
+  patientName: { 
+    fontSize: 13, 
+    color: '#999',
+    fontWeight: '400'
+  },
+  closeButton: { 
+    padding: 5, 
+    marginTop: -5, 
+    marginRight: -5 
+  },
+  scrollContent: { 
+    paddingBottom: 5 
+  },
   categoryCard: { 
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', 
-    backgroundColor: '#F6FFF7', 
-    borderRadius: 18, 
-    padding: 16, 
-    marginBottom: 12,
-    borderWidth: 0, 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    backgroundColor: '#F4FDF6', 
+    borderRadius: 14, 
+    paddingVertical: 14, 
+    paddingHorizontal: 14,
+    marginBottom: 8,
   },
-  cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  iconCircle: { 
-    width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFF', 
-    justifyContent: 'center', alignItems: 'center', marginRight: 15,
-    elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 3
+  cardLeft: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    flex: 1 
   },
-  cardInfo: { justifyContent: 'center', flex: 1 },
-  categoryName: { fontSize: 16, fontWeight: '600', color: '#035022' }, // Components Name Color
-  updateText: { fontSize: 12, color: '#999', marginTop: 2 },
+  iconContainer: { 
+    marginRight: 12,
+  },
+  cardInfo: { 
+    justifyContent: 'center', 
+    flex: 1 
+  },
+  categoryName: { 
+    fontSize: 14, 
+    fontWeight: '700', 
+    color: '#035022',
+    marginBottom: 1
+  },
+  updateText: { 
+    fontSize: 11, 
+    color: '#B0B0B0', 
+    fontWeight: '400'
+  },
 });
 
 export default DoctorPatientsScreen;
