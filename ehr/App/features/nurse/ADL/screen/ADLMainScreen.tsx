@@ -520,9 +520,7 @@ const ADLScreen = ({ onBack }: any) => {
             <TouchableOpacity
               style={[
                 styles.cdssBtn,
-                (!selectedPatient ||
-                  (!Object.values(formData).some(v => v && v !== 'N/A') &&
-                    !isNA)) && {
+                (!selectedPatient) && {
                   backgroundColor: theme.buttonDisabledBg,
                   borderColor: theme.buttonDisabledBorder,
                 },
@@ -533,9 +531,7 @@ const ADLScreen = ({ onBack }: any) => {
               <Text
                 style={[
                   styles.cdssText,
-                  (!selectedPatient ||
-                    (!Object.values(formData).some(v => v && v !== 'N/A') &&
-                      !isNA))
+                  (!selectedPatient)
                     ? { color: theme.textMuted }
                     : { color: theme.primary },
                 ]}

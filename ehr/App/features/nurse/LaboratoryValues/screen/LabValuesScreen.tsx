@@ -235,7 +235,7 @@ const LabValuesScreen = ({ onBack }: any) => {
     !currentAlert.includes('No result') &&
     !currentAlert.includes('Unable to compare');
 
-  const isFormValid = selectedPatientId && (hasInputData || isNA);
+  const isFormValid = !!selectedPatientId;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -378,7 +378,7 @@ const LabValuesScreen = ({ onBack }: any) => {
                     ? isDarkMode
                       ? '#78350F'
                       : '#FFECBD'
-                    : hasInputData && selectedPatientId
+                    : selectedPatientId
                     ? isDarkMode
                       ? '#78350F'
                       : '#FFECBD'
@@ -386,19 +386,19 @@ const LabValuesScreen = ({ onBack }: any) => {
                     ? '#333'
                     : '#EBEBEB',
                   borderColor:
-                    isClinicalAlert || (hasInputData && selectedPatientId)
+                    isClinicalAlert || selectedPatientId
                       ? '#EDB62C'
                       : theme.border,
                 },
               ]}
-              disabled={!hasInputData || !selectedPatientId}
+              disabled={!selectedPatientId}
               onPress={() => setModalVisible(true)}
             >
               <Image
                 source={alertIcon}
                 style={[
                   styles.fullImg,
-                  isClinicalAlert || (hasInputData && selectedPatientId)
+                  isClinicalAlert || selectedPatientId
                     ? { tintColor: '#EDB62C', opacity: 1 }
                     : { tintColor: theme.textMuted, opacity: 0.5 },
                 ]}

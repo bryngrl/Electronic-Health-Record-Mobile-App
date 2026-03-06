@@ -191,16 +191,6 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
       return;
     }
 
-    if (!isDataEntered) {
-      setBackendAlert({
-        title: 'Form Empty',
-        message: 'Please enter at least one value.',
-        type: 'error',
-      });
-      setAlertVisible(true);
-      return;
-    }
-
     const result = await saveAssessment();
     if (result) {
       const isUpdate =
