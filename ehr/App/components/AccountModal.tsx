@@ -13,6 +13,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAppTheme } from '@App/theme/ThemeContext';
 import { useAuth } from '@features/Auth/AuthContext';
+import SweetAlert from './SweetAlert';
 
 const { height } = Dimensions.get('window');
 
@@ -29,74 +30,93 @@ export const AccountModal = ({
 }: AccountModalProps) => {
   const { theme, isDarkMode, toggleDarkMode } = useAppTheme();
   const { user, logout } = useAuth();
+  const [showLogoutAlert, setShowLogoutAlert] = React.useState(false);
   
   const styles = useMemo(
     () => createStyles(theme, isDarkMode),
     [theme, isDarkMode],
   );
 
-  const handleLogout = async () => {
+  const handleLogoutPress = () => {
+    setShowLogoutAlert(true);
+  };
+
+  const confirmLogout = async () => {
+    setShowLogoutAlert(false);
     await logout();
     if (onLogout) onLogout();
     onClose();
   };
 
   return (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
-          <TouchableWithoutFeedback>
-            <View style={styles.modalContainer}>
-              <View style={styles.handle} />
+    <>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={visible}
+        onRequestClose={onClose}
+      >
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.overlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContainer}>
+                <View style={styles.handle} />
 
-              <Text style={styles.titleText}>Account</Text>
+                <Text style={styles.titleText}>Account</Text>
 
-              <View style={styles.profileSection}>
-                <View style={styles.avatarBox}>
-                  <Text style={styles.avatarText}>{user?.full_name?.charAt(0) || 'U'}</Text>
-                </View>
-                <View style={styles.profileText}>
-                  <Text style={styles.userName}>{user?.full_name || 'User'}</Text>
-                  <Text style={styles.userRole}>{user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1) || 'Role'}</Text>
-                </View>
-              </View>
-
-              <View style={styles.menuCard}>
-                <View style={styles.menuItem}>
-                  <View style={styles.switchRow}>
-                    <Text style={styles.menuText}>Dark Mode</Text>
-                    <Switch
-                      trackColor={{ false: '#767577', true: theme.primary }}
-                      thumbColor={isDarkMode ? '#fff' : '#f4f3f4'}
-                      onValueChange={toggleDarkMode}
-                      value={isDarkMode}
-                    />
+                <View style={styles.profileSection}>
+                  <View style={styles.avatarBox}>
+                    <Text style={styles.avatarText}>{user?.full_name?.charAt(0) || 'U'}</Text>
+                  </View>
+                  <View style={styles.profileText}>
+                    <Text style={styles.userName}>{user?.full_name || 'User'}</Text>
+                    <Text style={styles.userRole}>{user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1) || 'Role'}</Text>
                   </View>
                 </View>
 
-                <View style={styles.separator} />
-
-                <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-                  <View style={styles.logoutRow}>
-                    <Icon
-                      name="log-out-outline"
-                      size={24}
-                      color={theme.error}
-                    />
-                    <Text style={styles.logoutLabel}>Log out</Text>
+                <View style={styles.menuCard}>
+                  <View style={styles.menuItem}>
+                    <View style={styles.switchRow}>
+                      <Text style={styles.menuText}>Dark Mode</Text>
+                      <Switch
+                        trackColor={{ false: '#767577', true: theme.primary }}
+                        thumbColor={isDarkMode ? '#fff' : '#f4f3f4'}
+                        onValueChange={toggleDarkMode}
+                        value={isDarkMode}
+                      />
+                    </View>
                   </View>
-                </TouchableOpacity>
+
+                  <View style={styles.separator} />
+
+                  <TouchableOpacity style={styles.menuItem} onPress={handleLogoutPress}>
+                    <View style={styles.logoutRow}>
+                      <Icon
+                        name="log-out-outline"
+                        size={24}
+                        color={theme.error}
+                      />
+                      <Text style={styles.logoutLabel}>Log out</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      <SweetAlert
+        visible={showLogoutAlert}
+        title="Logout"
+        message="Are you sure you want to log out of your account?"
+        type="warning"
+        confirmText="Logout"
+        cancelText="Cancel"
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutAlert(false)}
+      />
+    </>
   );
 };
 
