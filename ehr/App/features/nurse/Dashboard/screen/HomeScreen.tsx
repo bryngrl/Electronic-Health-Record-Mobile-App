@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, BackHandler } from 'react-native';
+import { View, StyleSheet, SafeAreaView, BackHandler, Keyboard, Platform, useWindowDimensions, StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 // --- NURSE FEATURE IMPORTS ---
-import DashboardSummary from '../components/DashboardSummary';
+import DashboardSummary from '@nurse/Dashboard/components/DashboardSummary';
 import { DashboardGrid } from '@components/navigation/DashboardGrid';
 import SearchScreen from '@nurse/Search/screen/SearchScreen';
 import CalendarScreen from '@nurse/Calendar/screen/CalendarScreen';
-import BottomNav from '@components/navigation/BottomNav';
+import NurseBottomNav from '@components/navigation/NurseBottomNav';
 import RegisterPatient from '@nurse/PatientRegistration/component/RegisterPatient';
 import DemographicProfileScreen from '@nurse/DemographicProfile/screen/DemographicProfileScreen';
 import VitalSignsScreen from '@nurse/VitalSigns/screen/VitalSignsScreen';
@@ -40,18 +41,32 @@ const DASHBOARD_ITEM_IDS = [
   'Medication Reconciliation',
 ];
 
-// --- DOCTOR FEATURE IMPORTS ---
-import DoctorHomeScreen from '@features/doctor/screens/DoctorHomeScreen';
-import DoctorPatientsScreen from '@features/doctor/screens/DoctorPatientsScreen';
-import DoctorReportsScreen from '@features/doctor/screens/DoctorReportsScreen';
-import DoctorUpdatesScreen from '@features/doctor/screens/DoctorUpdatesScreen';
-
 export default function HomeScreen() {
+  const { isDarkMode, theme } = useAppTheme();
+  const { height: windowHeight } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState('Home');
-  const [navigationHistory, setNavigationHistory] = useState<string[]>(['Home']);
+  const [navigationHistory, setNavigationHistory] = useState<string[]>([
+    'Home',
+  ]);
   const [isSelecting, setIsSelecting] = useState(false);
   const [editingPatientId, setEditingPatientId] = useState<number | null>(null);
-  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
+  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(
+    null,
+  );
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSubscription = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const saveRecentFeature = async (featureId: string) => {
     try {
@@ -62,7 +77,10 @@ export default function HomeScreen() {
       featureIds.unshift(featureId);
       featureIds = featureIds.slice(0, 5);
 
-      await AsyncStorage.setItem(RECENT_FEATURES_KEY, JSON.stringify(featureIds));
+      await AsyncStorage.setItem(
+        RECENT_FEATURES_KEY,
+        JSON.stringify(featureIds),
+      );
     } catch (e) {
       console.error('Failed to save recent feature in HomeScreen', e);
     }
@@ -73,15 +91,11 @@ export default function HomeScreen() {
       saveRecentFeature(route);
     }
 
-    // Standardize route names for doctor internal nav
-    let targetRoute = route;
-    if (route === 'Doctors') targetRoute = 'Doctor';
-    
     setActiveTab(prevTab => {
-      if (prevTab !== targetRoute) {
-        setNavigationHistory(prev => [...prev, targetRoute]);
+      if (prevTab !== route) {
+        setNavigationHistory(prev => [...prev, route]);
       }
-      return targetRoute;
+      return route;
     });
     setIsSelecting(false);
   }, []);
@@ -110,9 +124,19 @@ export default function HomeScreen() {
     switch (activeTab) {
       // NURSE SCREENS
       case 'Home':
-        return <DashboardSummary onNavigate={handleNavigation} onPatientSelect={setSelectedPatientId} />;
+        return (
+          <DashboardSummary
+            onNavigate={handleNavigation}
+            onPatientSelect={setSelectedPatientId}
+          />
+        );
       case 'Search':
-        return <SearchScreen onNavigate={handleNavigation} onPatientSelect={setSelectedPatientId} />;
+        return (
+          <SearchScreen
+            onNavigate={handleNavigation}
+            onPatientSelect={setSelectedPatientId}
+          />
+        );
       case 'Dashboard':
         return <DashboardGrid onPressItem={handleNavigation} />;
       case 'Calendar':
@@ -144,7 +168,12 @@ export default function HomeScreen() {
           />
         );
       case 'EditPatient':
-        return <EditPatientScreen patientId={editingPatientId || 0} onBack={handleBack} />;
+        return (
+          <EditPatientScreen
+            patientId={editingPatientId || 0}
+            onBack={handleBack}
+          />
+        );
       case 'Vital Signs':
         return <VitalSignsScreen onBack={handleBack} />;
       case 'Register':
@@ -168,42 +197,65 @@ export default function HomeScreen() {
       case 'Intake and Output':
         return <IntakeAndOutputScreen onBack={handleBack} />;
 
-      // DOCTOR SCREENS
-      case 'Doctor':
-      case 'Doctors': // Alias to support internal nav
-        return <DoctorHomeScreen onBack={handleBack} onNavigate={handleNavigation} onViewAll={() => handleNavigation('DoctorUpdates')} />;
-      case 'DoctorPatients':
-        return <DoctorPatientsScreen onNavigate={handleNavigation} />;
-      case 'DoctorReports':
-        return <DoctorReportsScreen onNavigate={handleNavigation} />;
-      case 'DoctorUpdates':
-        return <DoctorUpdatesScreen onNavigate={handleNavigation} />;
-
       default:
-        return <DashboardSummary onNavigate={handleNavigation} />;
+        return (
+          <DashboardSummary
+            onNavigate={handleNavigation}
+            onPatientSelect={setSelectedPatientId}
+          />
+        );
     }
   };
 
-  const isDoctorRoute = activeTab.startsWith('Doctor');
-
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={[styles.flex1, (!isSelecting && !isDoctorRoute) && { paddingBottom: 70 }]}>
-        {getScreenContent()}
-      </View>
+    <View style={styles.root}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.background }]}
+      >
+        <View
+          style={[
+            styles.flex1,
+            !isSelecting && !isKeyboardVisible && { paddingBottom: 50 },
+          ]}
+        >
+          {getScreenContent()}
+        </View>
+      </SafeAreaView>
 
-      {!isSelecting && !isDoctorRoute && (
-        <BottomNav
-          activeRoute={activeTab}
-          onNavigate={handleNavigation}
-          onAddPatient={() => handleNavigation('Register')}
-        />
+      {!isSelecting && (
+        <View 
+          style={[
+            styles.fixedNavContainer, 
+            { height: windowHeight }
+          ]} 
+          pointerEvents="box-none"
+        >
+          <NurseBottomNav
+            activeRoute={activeTab}
+            onNavigate={handleNavigation}
+            onAddPatient={() => handleNavigation('Register')}
+          />
+        </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  root: { flex: 1 },
+  container: { flex: 1 },
   flex1: { flex: 1 },
+  fixedNavContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'transparent',
+    zIndex: 1000,
+  },
 });

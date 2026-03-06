@@ -25,6 +25,7 @@ import {
   Easing,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import VitalCard from '@nurse/VitalSigns/component/VitalCard';
 import PreciseVitalChart from '@nurse/VitalSigns/component/VitalSignsChart';
 import { useVitalSignsLogic } from '@nurse/VitalSigns/hook/useVitalSignsLogic';
@@ -79,6 +80,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
 
   const [chartIndex, setChartIndex] = useState(0);
   const chartListRef = useRef<FlatList>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
   const [cdssVisible, setCdssVisible] = useState(false);
   const [alertVisible, setAlertVisible] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
@@ -87,8 +89,32 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
 
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [recordId, setRecordId] = useState<number | null>(null);
+  const [isNA, setIsNA] = useState(false);
+
+  const toggleNA = () => {
+    const newState = !isNA;
+    setIsNA(newState);
+    if (newState) {
+      vitalKeys.forEach(k => handleUpdateVital(k, 'N/A'));
+    } else {
+      vitalKeys.forEach(k => {
+        if (vitals[k] === 'N/A') {
+          handleUpdateVital(k, '');
+        }
+      });
+    }
+  };
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (selectedPatientId) {
+      const allNA = Object.values(vitals).every(v => v === 'N/A');
+      setIsNA(allNA);
+    } else {
+      setIsNA(false);
+    }
+  }, [selectedPatientId, vitals]);
 
   useEffect(() => {
     if (isDataComplete) {
@@ -195,6 +221,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
       }
     }
     handleNextTime();
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const handleCDSSPress = async () => {
@@ -206,14 +233,17 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
     if (res && res.id) {
       setRecordId(res.id);
       setIsAdpieActive(true);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } else if (recordId) {
       setIsAdpieActive(true);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     }
   };
 
   const handleBackPress = useCallback(() => {
     if (isAdpieActive) {
       setIsAdpieActive(false);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       return true;
     }
     if (isMenuVisible) {
@@ -251,13 +281,21 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
       <ADPIEScreen
         recordId={recordId}
         patientName={patientName}
-        onBack={() => setIsAdpieActive(false)}
+        onBack={() => {
+          setIsAdpieActive(false);
+          scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        }}
       />
     );
   }
 
   return (
     <SafeAreaView style={styles.root}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={{ zIndex: 10 }}>
         <View
           style={{
@@ -291,6 +329,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
 
       <View style={{ flex: 1, marginTop: -20 }}>
         <ScrollView
+          ref={scrollViewRef}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
@@ -326,7 +365,10 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
                 <Text style={styles.dateVal}>{calculateDayNumber()}</Text>
                 <Image
                   source={arrowIcon}
-                  style={[styles.arrowIconImage, { tintColor: theme.textMuted }]}
+                  style={[
+                    styles.arrowIconImage,
+                    { tintColor: theme.textMuted },
+                  ]}
                 />
               </View>
             </View>
@@ -389,43 +431,104 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
             )}
           </View>
 
+          <TouchableOpacity
+            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+            onPress={() => {
+              if (!selectedPatientId) {
+                setAlertVisible(true);
+              } else {
+                toggleNA();
+              }
+            }}
+          >
+            <Text
+              style={[
+                styles.naText,
+                !selectedPatientId && { color: theme.textMuted },
+              ]}
+            >
+              Mark all as N/A
+            </Text>
+            <Icon
+              name={isNA ? 'check-box' : 'check-box-outline-blank'}
+              size={22}
+              color={selectedPatientId ? theme.primary : theme.textMuted}
+            />
+          </TouchableOpacity>
+
+          <Text
+            style={[
+              styles.disabledTextAtBottom,
+              isNA && { color: theme.error },
+            ]}
+          >
+            {isNA
+              ? 'All fields below are disabled.'
+              : 'Checking this will disable all fields below.'}
+          </Text>
+
           <View style={styles.timeBanner}>
             <Text style={styles.timeText}>{currentTime}</Text>
           </View>
 
           {/* Vital Cards */}
-          <Pressable onPress={() => !selectedPatientId && setAlertVisible(true)}>
-            <View
-              pointerEvents={selectedPatientId ? 'auto' : 'none'}
-              style={{ opacity: selectedPatientId ? 1 : 0.6 }}
-            >
-              <VitalCard
-                label="Temperature"
-                value={vitals.temperature}
-                onChangeText={v => handleUpdateVital('temperature', v)}
-              />
-              <VitalCard
-                label="HR"
-                value={vitals.hr}
-                onChangeText={v => handleUpdateVital('hr', v)}
-              />
-              <VitalCard
-                label="RR"
-                value={vitals.rr}
-                onChangeText={v => handleUpdateVital('rr', v)}
-              />
-              <VitalCard
-                label="BP"
-                value={vitals.bp}
-                onChangeText={v => handleUpdateVital('bp', v)}
-              />
-              <VitalCard
-                label="SP02"
-                value={vitals.spo2}
-                onChangeText={v => handleUpdateVital('spo2', v)}
-              />
-            </View>
-          </Pressable>
+          <View style={{ opacity: selectedPatientId ? 1 : 0.6 }}>
+            <VitalCard
+              label="Temperature"
+              value={vitals.temperature}
+              onChangeText={v => handleUpdateVital('temperature', v)}
+              disabled={!selectedPatientId || isNA}
+              onDisabledPress={() => {
+                if (!selectedPatientId) {
+                  setAlertVisible(true);
+                }
+              }}
+            />
+            <VitalCard
+              label="HR"
+              value={vitals.hr}
+              onChangeText={v => handleUpdateVital('hr', v)}
+              disabled={!selectedPatientId || isNA}
+              onDisabledPress={() => {
+                if (!selectedPatientId) {
+                  setAlertVisible(true);
+                }
+              }}
+            />
+            <VitalCard
+              label="RR"
+              value={vitals.rr}
+              onChangeText={v => handleUpdateVital('rr', v)}
+              disabled={!selectedPatientId || isNA}
+              onDisabledPress={() => {
+                if (!selectedPatientId) {
+                  setAlertVisible(true);
+                }
+              }}
+            />
+            <VitalCard
+              label="BP"
+              value={vitals.bp}
+              onChangeText={v => handleUpdateVital('bp', v)}
+              disabled={!selectedPatientId || isNA}
+              onDisabledPress={() => {
+                if (!selectedPatientId) {
+                  setAlertVisible(true);
+                }
+              }}
+            />
+            <VitalCard
+              label="SP02"
+              value={vitals.spo2}
+              onChangeText={v => handleUpdateVital('spo2', v)}
+              disabled={!selectedPatientId || isNA}
+              onDisabledPress={() => {
+                if (!selectedPatientId) {
+                  setAlertVisible(true);
+                }
+              }}
+            />
+          </View>
 
           {/* Footer Action Area */}
           <View style={styles.footerAction}>
@@ -474,29 +577,54 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
                 <TouchableOpacity
                   style={[
                     styles.cdssButton,
-                    !isDataEntered && styles.disabledButton,
+                    (!selectedPatientId || (!isDataEntered && !isNA)) && {
+                      backgroundColor: theme.buttonDisabledBg,
+                      borderColor: theme.buttonDisabledBorder,
+                    },
                   ]}
                   onPress={handleCDSSPress}
-                  disabled={!isDataEntered}
+                  disabled={!selectedPatientId}
                 >
-                  <Text style={styles.cdssBtnText}>CDSS</Text>
+                  <Text
+                    style={[
+                      styles.cdssBtnText,
+                      (!selectedPatientId || (!isDataEntered && !isNA)) && {
+                        color: theme.textMuted,
+                      },
+                    ]}
+                  >
+                    CDSS
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
                     styles.submitButton,
-                    !isDataEntered && styles.disabledButton,
+                    !selectedPatientId && {
+                      backgroundColor: theme.buttonDisabledBg,
+                      borderColor: theme.buttonDisabledBorder,
+                    },
                   ]}
                   onPress={handleNextPress}
-                  disabled={!isDataEntered}
+                  disabled={!selectedPatientId}
                 >
-                  <Text style={styles.submitBtnText}>SUBMIT</Text>
+                  <Text
+                    style={[
+                      styles.submitBtnText,
+                      !selectedPatientId && { color: theme.textMuted },
+                    ]}
+                  >
+                    SUBMIT
+                  </Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity
                 style={[
                   styles.nextButton,
-                  !selectedPatientId && styles.disabledButton,
+                  !selectedPatientId && {
+                    backgroundColor: theme.buttonDisabledBg,
+                    borderColor: theme.buttonDisabledBorder,
+                  },
                 ]}
                 onPress={handleNextPress}
                 disabled={!selectedPatientId}
@@ -646,6 +774,26 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       height: 8,
       resizeMode: 'contain',
     },
+    naRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      marginBottom: 5,
+      marginTop: 5,
+    },
+    naText: {
+      fontSize: 14,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      marginRight: 8,
+    },
+    disabledTextAtBottom: {
+      fontSize: 13,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.textMuted,
+      textAlign: 'right',
+      marginBottom: 25,
+    },
     chartCarousel: { height: 210, marginVertical: 20, position: 'relative' },
     navArrow: {
       position: 'absolute',
@@ -674,7 +822,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       paddingVertical: 10,
       borderRadius: 20,
       alignItems: 'center',
-      marginBottom: 20,
+      marginBottom: 10,
     },
     timeText: {
       color: theme.secondary,
@@ -700,11 +848,15 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       borderRadius: 25,
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: theme.buttonBorder,
       marginRight: 5,
     },
-    cdssBtnText: { color: theme.primary, fontWeight: 'bold', fontSize: 14 },
+    cdssBtnText: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 14,
+    },
     submitButton: {
       flex: 1,
       height: 48,
@@ -712,11 +864,15 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       borderRadius: 25,
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: theme.buttonBorder,
       marginLeft: 5,
     },
-    submitBtnText: { color: theme.primary, fontWeight: 'bold', fontSize: 14 },
+    submitBtnText: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 14,
+    },
     nextButton: {
       flex: 1,
       backgroundColor: theme.buttonBg,
@@ -725,7 +881,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       marginLeft: 15,
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: theme.buttonBorder,
       marginBottom: 40,
     },
@@ -734,7 +890,11 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       borderColor: theme.border,
       opacity: 0.6,
     },
-    nextBtnText: { color: theme.primary, fontWeight: 'bold', fontSize: 16 },
+    nextBtnText: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 16,
+    },
     modalOverlay: {
       flex: 1,
       backgroundColor: theme.overlay,

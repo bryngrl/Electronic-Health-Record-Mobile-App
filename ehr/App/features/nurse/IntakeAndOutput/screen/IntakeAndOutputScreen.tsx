@@ -23,6 +23,7 @@ import {
   Platform,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const backArrow = require('@assets/icons/back_arrow.png');
 import IntakeOutputCard from '../component/IntakeOutputCard';
@@ -64,6 +65,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     loading,
     recordId,
     ADPIE_STAGES,
+    setIntakeOutput,
   } = useIntakeAndOutputLogic();
 
   const [alertVisible, setAlertVisible] = useState(false);
@@ -77,10 +79,41 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [isNA, setIsNA] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const toggleNA = () => {
+    const newState = !isNA;
+    setIsNA(newState);
+    if (newState) {
+      setIntakeOutput({
+        oral_intake: 'N/A',
+        iv_fluids: 'N/A',
+        urine_output: 'N/A',
+      });
+    } else {
+      setIntakeOutput(prev => ({
+        oral_intake: prev.oral_intake === 'N/A' ? '' : prev.oral_intake,
+        iv_fluids: prev.iv_fluids === 'N/A' ? '' : prev.iv_fluids,
+        urine_output: prev.urine_output === 'N/A' ? '' : prev.urine_output,
+      }));
+    }
+  };
+
+  useEffect(() => {
+    if (selectedPatientId) {
+      const fields = ['oral_intake', 'iv_fluids', 'urine_output'];
+      const allNA = fields.every(f => (intakeOutput as any)[f] === 'N/A');
+      setIsNA(allNA);
+    } else {
+      setIsNA(false);
+    }
+  }, [selectedPatientId, intakeOutput]);
 
   const handleBackPress = useCallback(() => {
     if (isAdpieActive) {
       setIsAdpieActive(false);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       return true;
     }
     if (cdssModalVisible) {
@@ -158,16 +191,6 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
       return;
     }
 
-    if (!isDataEntered) {
-      setBackendAlert({
-        title: 'Form Empty',
-        message: 'Please enter at least one value.',
-        type: 'error',
-      });
-      setAlertVisible(true);
-      return;
-    }
-
     const result = await saveAssessment();
     if (result) {
       const isUpdate =
@@ -193,8 +216,10 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     const res = await saveAssessment();
     if (res && res.id) {
       setIsAdpieActive(true);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } else if (recordId) {
       setIsAdpieActive(true);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } else {
       setAlertVisible(true);
     }
@@ -256,7 +281,11 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.root}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={{ zIndex: 10 }}>
         <View
           style={{
@@ -283,6 +312,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
 
       <View style={{ flex: 1, marginTop: -20 }}>
         <ScrollView
+          ref={scrollViewRef}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
@@ -295,34 +325,86 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
             onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
           />
 
-          <Pressable
-            onPress={() =>
-              !selectedPatientId && (triggerPatientAlert(), setAlertVisible(true))
-            }
+          <TouchableOpacity
+            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+            onPress={() => {
+              if (!selectedPatientId) {
+                triggerPatientAlert();
+                setAlertVisible(true);
+              } else {
+                toggleNA();
+              }
+            }}
           >
-            <View
-              pointerEvents={selectedPatientId ? 'auto' : 'none'}
-              style={{ opacity: 1 }}
+            <Text
+              style={[
+                styles.naText,
+                !selectedPatientId && { color: theme.textMuted },
+              ]}
             >
-              <IntakeOutputCard
-                label="ORAL INTAKE"
-                value={intakeOutput.oral_intake}
-                onChangeText={text => handleUpdateField('oral_intake', text)}
-              />
+              Mark all as N/A
+            </Text>
+            <Icon
+              name={isNA ? 'check-box' : 'check-box-outline-blank'}
+              size={22}
+              color={selectedPatientId ? theme.primary : theme.textMuted}
+            />
+          </TouchableOpacity>
 
-              <IntakeOutputCard
-                label="IV FLUIDS"
-                value={intakeOutput.iv_fluids}
-                onChangeText={text => handleUpdateField('iv_fluids', text)}
-              />
+          <Text
+            style={[
+              styles.disabledTextAtBottom,
+              isNA && { color: theme.error },
+            ]}
+          >
+            {isNA
+              ? 'All fields below are disabled.'
+              : 'Checking this will disable all fields below.'}
+          </Text>
 
-              <IntakeOutputCard
-                label="URINE OUTPUT"
-                value={intakeOutput.urine_output}
-                onChangeText={text => handleUpdateField('urine_output', text)}
-              />
-            </View>
-          </Pressable>
+          <View
+            pointerEvents={selectedPatientId ? 'auto' : 'none'}
+            style={{ opacity: selectedPatientId ? 1 : 0.6 }}
+          >
+            <IntakeOutputCard
+              label="ORAL INTAKE"
+              value={intakeOutput.oral_intake}
+              onChangeText={text => handleUpdateField('oral_intake', text)}
+              disabled={!selectedPatientId || isNA}
+              onDisabledPress={() => {
+                if (!selectedPatientId) {
+                  triggerPatientAlert();
+                  setAlertVisible(true);
+                }
+              }}
+            />
+
+            <IntakeOutputCard
+              label="IV FLUIDS"
+              value={intakeOutput.iv_fluids}
+              onChangeText={text => handleUpdateField('iv_fluids', text)}
+              disabled={!selectedPatientId || isNA}
+              onDisabledPress={() => {
+                if (!selectedPatientId) {
+                  triggerPatientAlert();
+                  setAlertVisible(true);
+                }
+              }}
+            />
+
+            <IntakeOutputCard
+              label="URINE OUTPUT"
+              value={intakeOutput.urine_output}
+              onChangeText={text => handleUpdateField('urine_output', text)}
+              disabled={!selectedPatientId || isNA}
+              onDisabledPress={() => {
+                if (!selectedPatientId) {
+                  triggerPatientAlert();
+                  setAlertVisible(true);
+                }
+              }}
+            />
+          </View>
 
           <View style={styles.footerAction}>
             <TouchableOpacity
@@ -335,7 +417,9 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                       : '#FFECBD'
                     : isDataEntered && selectedPatientId
                     ? theme.surface
-                    : theme.card,
+                    : isDarkMode
+                    ? '#333'
+                    : '#EBEBEB',
                   borderColor: theme.border,
                 },
               ]}
@@ -359,21 +443,20 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
               <TouchableOpacity
                 style={[
                   styles.cdssButton,
-                  isDataEntered &&
-                    selectedPatientId && {
-                      backgroundColor: theme.buttonBg,
-                      borderColor: theme.buttonBorder,
-                    },
-                  (!isDataEntered || !selectedPatientId) && styles.disabledButton,
+                  (!selectedPatientId || (!isDataEntered && !isNA)) && {
+                    backgroundColor: theme.buttonDisabledBg,
+                    borderColor: theme.buttonDisabledBorder,
+                  },
                 ]}
                 onPress={handleCDSSPress}
-                disabled={!isDataEntered || !selectedPatientId}
+                disabled={!selectedPatientId}
               >
                 <Text
                   style={[
                     styles.cdssBtnText,
-                    isDataEntered &&
-                      selectedPatientId && { color: theme.primary },
+                    (!selectedPatientId || (!isDataEntered && !isNA))
+                      ? { color: theme.textMuted }
+                      : { color: theme.primary },
                   ]}
                 >
                   CDSS
@@ -382,10 +465,13 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
               <TouchableOpacity
                 style={[
                   styles.submitButton,
-                  (!isDataEntered || !selectedPatientId) && styles.disabledButton,
+                  !selectedPatientId && {
+                    backgroundColor: theme.buttonDisabledBg,
+                    borderColor: theme.buttonDisabledBorder,
+                  },
                 ]}
                 onPress={handleSubmit}
-                disabled={!isDataEntered || !selectedPatientId || loading}
+                disabled={!selectedPatientId || loading}
               >
                 {loading ? (
                   <ActivityIndicator size="small" color={theme.primary} />
@@ -393,9 +479,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                   <Text
                     style={[
                       styles.submitBtnText,
-                      (!isDataEntered || !selectedPatientId) && {
-                        color: theme.textMuted,
-                      },
+                      !selectedPatientId && { color: theme.textMuted },
                     ]}
                   >
                     SUBMIT
@@ -461,6 +545,26 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontFamily: 'AlteHaasGroteskBold',
       fontSize: 13,
     },
+    naRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      marginBottom: 5,
+      marginTop: 5,
+    },
+    naText: {
+      fontSize: 14,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      marginRight: 8,
+    },
+    disabledTextAtBottom: {
+      fontSize: 13,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.textMuted,
+      textAlign: 'right',
+      marginBottom: 15,
+    },
     footerAction: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
     alertIcon: {
       width: 45,
@@ -479,11 +583,15 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       borderRadius: 25,
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: theme.buttonBorder,
       marginRight: 5,
     },
-    cdssBtnText: { color: theme.textMuted, fontWeight: 'bold', fontSize: 14 },
+    cdssBtnText: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 14,
+    },
     submitButton: {
       flex: 1,
       height: 48,
@@ -491,13 +599,17 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       borderRadius: 25,
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: theme.buttonBorder,
       marginLeft: 5,
     },
-    submitBtnText: { color: theme.primary, fontWeight: 'bold', fontSize: 14 },
+    submitBtnText: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 14,
+    },
     disabledButton: {
-      backgroundColor: theme.card,
+      backgroundColor: theme.surface,
       borderColor: theme.border,
       opacity: 0.6,
     },

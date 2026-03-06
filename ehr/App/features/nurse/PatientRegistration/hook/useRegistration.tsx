@@ -26,12 +26,46 @@ export const useRegistration = () => {
     { name: '', relationship: '', number: '' },
   ]);
   const [contactErrors, setContactErrors] = useState<string[]>([]);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!form.first_name) errors.first_name = 'First name is required';
+    if (!form.middle_name) errors.middle_name = 'Middle name is required';
+    if (!form.last_name) errors.last_name = 'Last name is required';
+    if (!form.birthdate) errors.birthdate = 'Birthdate is required';
+    if (!form.sex) errors.sex = 'Sex is required';
+    if (!form.address) errors.address = 'Address is required';
+    if (!form.birthplace) errors.birthplace = 'Birthplace is required';
+    if (!form.religion) errors.religion = 'Religion is required';
+    if (form.religion === 'Other' && !form.other_religion)
+      errors.other_religion = 'Please specify religion';
+    if (!form.ethnicity) errors.ethnicity = 'Ethnicity is required';
+    if (form.ethnicity === 'Other' && !form.other_ethnicity)
+      errors.other_ethnicity = 'Please specify ethnicity';
+    if (!form.chief_complaints)
+      errors.chief_complaints = 'Chief of complaints is required';
+    if (!form.room_no) errors.room_no = 'Room number is required';
+    if (!form.bed_no) errors.bed_no = 'Bed number is required';
+
+    contacts.forEach((contact, index) => {
+      if (!contact.name) errors[`contact_name_${index}`] = 'Contact name is required';
+      if (!contact.relationship) errors[`contact_relationship_${index}`] = 'Relationship is required';
+      if (!contact.number) errors[`contact_number_${index}`] = 'Contact number is required';
+    });
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const capitalize = (str: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
 
   const formatNameOnBlur = (field: keyof typeof form) => {
     setForm(prev => ({ ...prev, [field]: capitalize(prev[field] as string) }));
+    if (form[field]) {
+      setFormErrors(prev => ({ ...prev, [field]: '' }));
+    }
   };
 
   const handleNumberChange = (index: number, val: string) => {
@@ -44,6 +78,7 @@ export const useRegistration = () => {
     const errors = [...contactErrors];
     errors[index] = '';
     setContactErrors(errors);
+    setFormErrors(prev => ({ ...prev, [`contact_number_${index}`]: '' }));
   };
 
   const validateNumberOnBlur = (index: number) => {
@@ -67,6 +102,9 @@ export const useRegistration = () => {
   };
 
   const registerPatient = async () => {
+    if (!validateForm()) {
+      throw new Error('Please fill in all required fields.');
+    }
     if (contactErrors.some(e => e !== '')) {
       throw new Error('Please correct the contact number errors.');
     }
@@ -114,6 +152,9 @@ export const useRegistration = () => {
     formatNameOnBlur,
     handleNumberChange,
     validateNumberOnBlur,
+    setFormErrors,
+    formErrors,
+    validateForm,
     registerPatient,
     capitalize,
   };

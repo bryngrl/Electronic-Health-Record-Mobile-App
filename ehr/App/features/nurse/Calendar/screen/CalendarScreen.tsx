@@ -1,13 +1,18 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, View, Text, Platform, useColorScheme } from 'react-native';
+import { StyleSheet, View, Text, Platform, useColorScheme, StatusBar } from 'react-native';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
 export default function CalendarScreen() {
-  const { theme, commonStyles } = useAppTheme();
+  const { theme, commonStyles, isDarkMode } = useAppTheme();
   const styles = useMemo(() => createStyles(theme, commonStyles), [theme, commonStyles]);
 
   return (
     <View style={styles.container}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={styles.headerRow}>
         <Text style={styles.title}>Calendar</Text>
       </View>

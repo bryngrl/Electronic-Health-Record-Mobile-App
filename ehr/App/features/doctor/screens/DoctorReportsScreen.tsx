@@ -66,7 +66,7 @@ const DoctorReportsScreen = ({ onNavigate }: { onNavigate: (route: string) => vo
 
       {/* Doctor Internal Bottom Nav */}
       <View style={styles.bottomNav}>
-        <NavItem label="Home" icon={require('../../../../assets/doctors-page/doctor-home.png')} onPress={() => onNavigate('Doctors')} />
+        <NavItem label="Home" icon={require('../../../../assets/doctors-page/doctor-home.png')} onPress={() => onNavigate('DoctorHome')} />
         <NavItem label="Patients" icon={require('../../../../assets/doctors-page/doctor-patients.png')} onPress={() => onNavigate('DoctorPatients')} />
         <NavItem label="Reports" icon={require('../../../../assets/doctors-page/doctor-reports.png')} active />
         <NavItem label="Settings" icon={require('../../../../assets/doctors-page/doctor-settings.png')} />

@@ -13,17 +13,20 @@ interface SearchBarProps {
   query: string;
   setQuery: (text: string) => void;
   onFilterPress: () => void;
-  isSortActive: boolean; // Updated prop name
+  isSortActive: boolean;
 }
 
 export const SearchBar = ({
   query,
   setQuery,
   onFilterPress,
-  isSortActive, // Destructure here
+  isSortActive,
 }: SearchBarProps) => {
   const { theme, isDarkMode } = useAppTheme();
-  const styles = useMemo(() => createStyles(theme, isDarkMode), [theme, isDarkMode]);
+  const styles = useMemo(
+    () => createStyles(theme, isDarkMode),
+    [theme, isDarkMode],
+  );
 
   return (
     <View style={styles.container}>
@@ -56,54 +59,55 @@ export const SearchBar = ({
   );
 };
 
-const createStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.card,
-    borderRadius: 225,
-    paddingHorizontal: 15,
-    height: 60,
-    borderWidth: 1,
-    borderColor: theme.border,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 1, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-  },
-  searchIcon: { marginRight: 10 },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: 'AlteHaasGrotesk',
-    color: theme.text,
-  },
-  filterBtn: {
-    marginLeft: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 255,
-    backgroundColor: theme.card,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.border,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 1, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-  },
-  sortIcon: {
-    width: 24, // Standard icon size
-    height: 24,
-    resizeMode: 'contain',
-  },
-});
+const createStyles = (theme: any, isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginVertical: 20,
+    },
+    searchBar: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.card,
+      borderRadius: 225,
+      paddingHorizontal: 15,
+      height: 60,
+      borderWidth: 1,
+      borderColor: theme.border,
+      elevation: 5,
+      shadowColor: '#000',
+      shadowOffset: { width: 1, height: 1 },
+      shadowOpacity: 0.3,
+      shadowRadius: 5,
+    },
+    searchIcon: { marginRight: 10 },
+    input: {
+      flex: 1,
+      fontSize: 16,
+      fontFamily: 'AlteHaasGrotesk',
+      color: theme.text,
+    },
+    filterBtn: {
+      marginLeft: 20,
+      width: 60,
+      height: 60,
+      borderRadius: 255,
+      backgroundColor: theme.card,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.border,
+      elevation: 5,
+      shadowColor: '#000',
+      shadowOffset: { width: 1, height: 1 },
+      shadowOpacity: 0.3,
+      shadowRadius: 5,
+    },
+    sortIcon: {
+      width: 24,
+      height: 24,
+      resizeMode: 'contain',
+    },
+  });

@@ -18,6 +18,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { AccountModal } from '@components/AccountModal';
 import apiClient from '@api/apiClient';
 import { useAppTheme } from '@App/theme/ThemeContext';
+import { useAuth } from '@features/Auth/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -64,6 +65,7 @@ const DashboardSummary = ({
   onPatientSelect: (id: number) => void;
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const { user } = useAuth();
   const styles = createStyles(theme, commonStyles);
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -193,7 +195,9 @@ const DashboardSummary = ({
       >
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Hello, Jovilyn</Text>
+            <Text style={styles.greeting}>
+              Hello, {user?.full_name?.split(' ')[0] || 'User'}
+            </Text>
             <Text style={styles.dateText}>{formatDate()}</Text>
           </View>
           <TouchableOpacity
@@ -346,14 +350,6 @@ const DashboardSummary = ({
                 </Text>
               </TouchableOpacity>
             ))}
-            
-            <TouchableOpacity
-              style={[styles.recentCard, { borderColor: '#1B5E20', backgroundColor: '#E8F5E9' }]}
-              onPress={() => onNavigate('Doctor')}
-            >
-              <Icon name="medical-services" size={28} color={theme.primary} />
-              <Text style={[styles.cardText, { color: '#1B5E20' }]}>Doctor Portal</Text>
-            </TouchableOpacity>
           </ScrollView>
         </View>
 
@@ -368,7 +364,7 @@ const DashboardSummary = ({
             />
             <Text style={styles.btnLabel}>Start documenting patient</Text>
           </View>
-          <Icon name="arrow-forward-ios" size={20} color={theme.textMuted} />
+          <Icon name="arrow-forward-ios" size={15} color={theme.textMuted} />
         </TouchableOpacity>
       </ScrollView>
 
@@ -451,7 +447,7 @@ const createStyles = (theme: any, commonStyles: any) =>
     patientLeft: { flexDirection: 'row', alignItems: 'center' },
     patientIcon: { marginRight: 25 },
     patientName: {
-      fontSize: 15,
+      fontSize: 14,
       color: theme.text,
       fontFamily: 'AlteHaasGrotesk',
     },
@@ -527,7 +523,7 @@ const createStyles = (theme: any, commonStyles: any) =>
       shadowOffset: { width: 1, height: 1 },
       shadowOpacity: 0.3,
       shadowRadius: 10,
-      marginBottom: 20,
+      marginBottom: 10,
     },
     cardText: {
       fontSize: 12,
@@ -538,21 +534,25 @@ const createStyles = (theme: any, commonStyles: any) =>
     actionBtn: {
       backgroundColor: theme.surface,
       borderRadius: 15,
-      padding: 18,
+      padding: 15,
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 80,
+      alignItems: 'center',
+      marginBottom: 100,
+    },
+
+    btnContent: {
+      flexDirection: 'row',
       alignItems: 'center',
     },
-    btnContent: { flexDirection: 'row', alignItems: 'center' },
     btnIcon: {
-      width: 35,
-      height: 35,
+      width: 30,
+      height: 30,
       resizeMode: 'contain',
     },
     btnLabel: {
       marginLeft: 15,
-      fontSize: 15,
+      fontSize: 14,
       color: theme.textMuted,
       fontFamily: 'AlteHaasGroteskBold',
     },

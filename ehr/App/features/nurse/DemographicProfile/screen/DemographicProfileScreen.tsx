@@ -135,6 +135,11 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
 
   return (
     <View style={styles.root}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       {/* MAIN CONTENT */}
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>

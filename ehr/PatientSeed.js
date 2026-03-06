@@ -1,4 +1,5 @@
 const axios = require('axios');
+
 const patients = [
   {
     first_name: 'Juan',
@@ -402,15 +403,16 @@ const patients = [
   },
 ];
 
-const YOUR_IP = '192.168.1.13'; //change this to match your current ip (ipconfig in cmd prompt)
+const YOUR_IP = '192.168.1.14'; //change this to match your current ip (ipconfig in cmd prompt)
 const API_URL = 'http://' + YOUR_IP + ':8000/patients/';
 
-async function runSeed() {
+async function seedPatients() {
+  console.log('--- Seeding Patients ---');
   console.log(`Starting seed process for ${patients.length} patients...`);
 
   for (let i = 0; i < patients.length; i++) {
     try {
-      const response = await axios.post(API_URL, patients[i]);
+      await axios.post(API_URL, patients[i]);
       console.log(
         ` --[${i + 1}/${patients.length}] Success: ${patients[i].first_name} ${
           patients[i].last_name
@@ -424,8 +426,7 @@ async function runSeed() {
       );
     }
   }
-
-  console.log('Seeding complete!');
+  console.log('Patient seeding complete!');
 }
 
-runSeed();
+seedPatients();

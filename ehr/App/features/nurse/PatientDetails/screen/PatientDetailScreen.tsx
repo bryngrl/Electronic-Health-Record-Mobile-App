@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Image,
-  Platform,
+  StatusBar,
 } from 'react-native';
 import { usePatients } from '@nurse/DemographicProfile/hook/usePatients';
 import DetailItem from '../components/DetailItem';
@@ -85,7 +85,12 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.mainContainer}>
-      {/* Decorative Background Circles - Z-INDEX 0 */}
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
+      {/* Decorative Background Circles */}
       <View pointerEvents="none" style={[styles.circle1, styles.topCircle1]} />
       <View pointerEvents="none" style={[styles.circle2, styles.topCircle2]} />
       <View
@@ -97,7 +102,6 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
         style={[styles.circle2, styles.bottomCircle2]}
       />
 
-      {/* Main Content - Z-INDEX 1 */}
       <ScrollView
         style={styles.scrollViewLayer}
         contentContainerStyle={styles.scrollContent}
@@ -204,7 +208,13 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
               halfWidth
             />
           </View>
-          <DetailItem label="Contact Number" value={patient?.contact_number} />
+
+          <View style={{ marginBottom: 45 }}>
+            <DetailItem
+              label="Contact Number"
+              value={patient?.contact_number}
+            />
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -222,7 +232,6 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       justifyContent: 'center',
       alignItems: 'center',
     },
-    // Ensure the ScrollView is on top of absolute background elements
     scrollViewLayer: {
       zIndex: 1,
     },
@@ -253,22 +262,10 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       opacity: 0.5,
       zIndex: 0,
     },
-    topCircle1: {
-      top: -270,
-      right: -80,
-    },
-    topCircle2: {
-      top: -150,
-      right: -200,
-    },
-    bottomCircle1: {
-      bottom: -240,
-      left: -180,
-    },
-    bottomCircle2: {
-      bottom: -280,
-      left: -50,
-    },
+    topCircle1: { top: -270, right: -80 },
+    topCircle2: { top: -150, right: -200 },
+    bottomCircle1: { bottom: -240, left: -180 },
+    bottomCircle2: { bottom: -280, left: -50 },
     header: {
       ...commonStyles.header,
       alignItems: 'center',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -14,13 +14,13 @@ import {
   BackHandler,
   Platform,
   useColorScheme,
+  Image,
 } from 'react-native';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import Ionicon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 
-const CARD_WIDTH = 350;
-const CARD_GAP = 20;
+const CARD_GAP = 20; // Kept the gap constant
 
 import DiagnosticCard from '../components/DiagnosticCard';
 import SweetAlert from '@components/SweetAlert';
@@ -28,6 +28,9 @@ import apiClient, { BASE_URL } from '@api/apiClient';
 import { useDiagnostics, DiagnosticRecord } from '../hook/useDiagnostics';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
+
+const backArrow = require('@assets/icons/back_arrow.png');
+const nextArrow = require('@assets/icons/next_arrow.png');
 
 export type ViewMode = 'grid' | 'list';
 
@@ -47,7 +50,11 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
     windowWidth > 600 ? 'grid' : 'list',
   );
 
-  const sidePadding = (windowWidth - CARD_WIDTH) / 4;
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // --- DYNAMIC WIDTH CALCULATION ---
+  const dynamicCardWidth = windowWidth - 80;
 
   useEffect(() => {
     const backAction = () => {
@@ -179,8 +186,13 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
     { id: 'ECHOCARDIOGRAM', label: 'ECHOCARDIOGRAM' },
   ];
 
-  const getDiagnosticForType = (type: string) => {
-    return diagnostics.find(d => d.image_type === type);
+  const getDiagnosticsForType = (type: string) => {
+    return diagnostics
+      .filter(d => d.image_type === type)
+      .map(d => ({
+        id: d.diagnostic_id,
+        url: `${BASE_URL}/diagnostics/${d.diagnostic_id}/file`,
+      }));
   };
 
   const formatDate = () => {
@@ -189,6 +201,16 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
       month: 'long',
       day: 'numeric',
     });
+  };
+
+  const scrollToIndex = (index: number) => {
+    if (index >= 0 && index < diagnosticTypes.length) {
+      setCurrentIndex(index);
+      scrollViewRef.current?.scrollTo({
+        x: index * (dynamicCardWidth + CARD_GAP),
+        animated: true,
+      });
+    }
   };
 
   const fadeColors = isDarkMode
@@ -207,7 +229,8 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
     <View style={styles.container}>
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.background}
+        backgroundColor="transparent"
+        translucent={true}
       />
 
       <View style={{ zIndex: 10 }}>
@@ -284,60 +307,89 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
 
           {/* DIAGNOSTIC CARDS GRID/LIST */}
           {viewMode === 'list' ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[
-                styles.horizontalScroll,
-                { paddingHorizontal: sidePadding },
-              ]}
-              snapToInterval={CARD_WIDTH + CARD_GAP}
-              decelerationRate="fast"
-              snapToAlignment="center"
-            >
-              {diagnosticTypes.map(item => {
-                const diagnostic = getDiagnosticForType(item.id);
-                const imageUrl = diagnostic
-                  ? `${BASE_URL}/diagnostics/${diagnostic.diagnostic_id}/file`
-                  : null;
+            <View style={styles.carouselContainer}>
+              {currentIndex > 0 && (
+                <TouchableOpacity
+                  style={[styles.navArrow, { left: -15 }]}
+                  onPress={() => scrollToIndex(currentIndex - 1)}
+                >
+                  <View style={styles.arrowCircle}>
+                    <Image
+                      source={backArrow}
+                      style={[styles.arrowImg, { tintColor: theme.primary }]}
+                    />
+                  </View>
+                </TouchableOpacity>
+              )}
 
-                return (
-                  <View key={item.id} style={{ flexDirection: 'row' }}>
-                    <View style={styles.horizontalCardLarge}>
+              <ScrollView
+                ref={scrollViewRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalScroll}
+                snapToInterval={dynamicCardWidth + CARD_GAP}
+                decelerationRate="fast"
+                snapToAlignment="start"
+                onMomentumScrollEnd={ev => {
+                  const newIndex = Math.round(
+                    ev.nativeEvent.contentOffset.x /
+                      (dynamicCardWidth + CARD_GAP),
+                  );
+                  setCurrentIndex(newIndex);
+                }}
+              >
+                {diagnosticTypes.map((item, index) => {
+                  const images = getDiagnosticsForType(item.id);
+
+                  return (
+                    <View
+                      key={item.id}
+                      style={{
+                        width: dynamicCardWidth,
+                        marginRight:
+                          index === diagnosticTypes.length - 1 ? 0 : CARD_GAP,
+                      }}
+                    >
                       <DiagnosticCard
                         label={item.label}
                         viewMode={viewMode}
-                        imageUrl={imageUrl}
+                        images={images}
                         onImport={() => handleImport(item.id)}
-                        onDelete={() =>
-                          diagnostic && handleDelete(diagnostic.diagnostic_id)
-                        }
+                        onDelete={handleDelete}
                         disabled={loading}
                       />
                     </View>
-                    <View style={{ width: CARD_GAP }} />
+                  );
+                })}
+              </ScrollView>
+
+              {currentIndex < diagnosticTypes.length - 1 && (
+                <TouchableOpacity
+                  style={[styles.navArrow, { right: -15 }]}
+                  onPress={() => scrollToIndex(currentIndex + 1)}
+                >
+                  <View style={styles.arrowCircle}>
+                    <Image
+                      source={nextArrow}
+                      style={[styles.arrowImg, { tintColor: theme.primary }]}
+                    />
                   </View>
-                );
-              })}
-            </ScrollView>
+                </TouchableOpacity>
+              )}
+            </View>
           ) : (
             <View style={styles.gridWrap}>
               {diagnosticTypes.map(item => {
-                const diagnostic = getDiagnosticForType(item.id);
-                const imageUrl = diagnostic
-                  ? `${BASE_URL}/diagnostics/${diagnostic.diagnostic_id}/file`
-                  : null;
+                const images = getDiagnosticsForType(item.id);
 
                 return (
                   <View key={item.id} style={styles.gridCard}>
                     <DiagnosticCard
                       label={item.label}
                       viewMode={viewMode}
-                      imageUrl={imageUrl}
+                      images={images}
                       onImport={() => handleImport(item.id)}
-                      onDelete={() =>
-                        diagnostic && handleDelete(diagnostic.diagnostic_id)
-                      }
+                      onDelete={handleDelete}
                       disabled={loading}
                     />
                   </View>
@@ -352,7 +404,15 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
               !selectedPatientId && styles.disabledButton,
             ]}
             disabled={!selectedPatientId}
-            onPress={onBack}
+            onPress={() => {
+              if (selectedPatientId) {
+                showAlert(
+                  'Success',
+                  'Diagnostic records have been saved successfully.',
+                  'success',
+                );
+              }
+            }}
           >
             <Text
               style={[
@@ -360,7 +420,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
                 !selectedPatientId && { color: theme.textMuted },
               ]}
             >
-              DONE
+              SUBMIT
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -415,12 +475,34 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       shadowOpacity: 0.1,
       shadowRadius: 2,
     },
+    carouselContainer: {
+      position: 'relative',
+      marginVertical: 10,
+    },
+    navArrow: {
+      position: 'absolute',
+      top: '45%',
+      zIndex: 10,
+    },
+    arrowCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: '#c6e9c22e',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: theme.secondary,
+    },
+    arrowImg: {
+      width: 25,
+      height: 25,
+      resizeMode: 'contain',
+      backgroundColor: 'transparent',
+    },
     horizontalScroll: {
       paddingBottom: 10,
       flexDirection: 'row',
-    },
-    horizontalCardLarge: {
-      width: CARD_WIDTH,
     },
     gridWrap: {
       flexDirection: 'row',

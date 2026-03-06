@@ -129,8 +129,8 @@ export const useMedicalReconLogic = () => {
 
   // VALIDATION: Hindi makaka-next kung walang maski isang input
   const isDataEntered = useMemo(() => {
-    return Object.values(values).some(v => v.trim() !== '');
-  }, [values]);
+    return true; // Enable empty inputs as per requirement
+  }, []);
 
   const handleUpdate = (field: keyof ReconEntry, value: string) => {
     setReconData(prev => ({
@@ -153,69 +153,65 @@ export const useMedicalReconLogic = () => {
     setIsSubmitting(true);
     const isUpdate = !!(existingIds.current || existingIds.home || existingIds.changes);
 
+    const sanitize = (val: string) => (val.trim() === '' ? 'N/A' : val);
+
     try {
       const newIds = { ...existingIds };
 
       // Stage 0: Current Medication
       const currentMed = reconData[0];
-      if (Object.values(currentMed).some(v => v.trim() !== '')) {
-        const payload = {
-          patient_id: patientId,
-          current_med: currentMed.med,
-          current_dose: currentMed.dose,
-          current_route: currentMed.route,
-          current_frequency: currentMed.freq,
-          current_indication: currentMed.indication,
-          current_text: currentMed.extra
-        };
+      const payload0 = {
+        patient_id: patientId,
+        current_med: sanitize(currentMed.med),
+        current_dose: sanitize(currentMed.dose),
+        current_route: sanitize(currentMed.route),
+        current_frequency: sanitize(currentMed.freq),
+        current_indication: sanitize(currentMed.indication),
+        current_text: sanitize(currentMed.extra)
+      };
 
-        if (existingIds.current) {
-          await apiClient.put(`/medication-reconciliation/current-medication/${existingIds.current}/`, payload);
-        } else {
-          const res = await apiClient.post('/medication-reconciliation/current-medication/', payload);
-          if (res.data?.id) newIds.current = res.data.id;
-        }
+      if (existingIds.current) {
+        await apiClient.put(`/medication-reconciliation/current-medication/${existingIds.current}/`, payload0);
+      } else {
+        const res = await apiClient.post('/medication-reconciliation/current-medication/', payload0);
+        if (res.data?.id) newIds.current = res.data.id;
       }
 
       // Stage 1: Home Medication
       const homeMed = reconData[1];
-      if (Object.values(homeMed).some(v => v.trim() !== '')) {
-        const payload = {
-          patient_id: patientId,
-          home_med: homeMed.med,
-          home_dose: homeMed.dose,
-          home_route: homeMed.route,
-          home_frequency: homeMed.freq,
-          home_indication: homeMed.indication,
-          home_text: homeMed.extra
-        };
+      const payload1 = {
+        patient_id: patientId,
+        home_med: sanitize(homeMed.med),
+        home_dose: sanitize(homeMed.dose),
+        home_route: sanitize(homeMed.route),
+        home_frequency: sanitize(homeMed.freq),
+        home_indication: sanitize(homeMed.indication),
+        home_text: sanitize(homeMed.extra)
+      };
 
-        if (existingIds.home) {
-          await apiClient.put(`/medication-reconciliation/home-medication/${existingIds.home}/`, payload);
-        } else {
-          const res = await apiClient.post('/medication-reconciliation/home-medication/', payload);
-          if (res.data?.id) newIds.home = res.data.id;
-        }
+      if (existingIds.home) {
+        await apiClient.put(`/medication-reconciliation/home-medication/${existingIds.home}/`, payload1);
+      } else {
+        const res = await apiClient.post('/medication-reconciliation/home-medication/', payload1);
+        if (res.data?.id) newIds.home = res.data.id;
       }
 
       // Stage 2: Changes in Medication
       const changeMed = reconData[2];
-      if (Object.values(changeMed).some(v => v.trim() !== '')) {
-        const payload = {
-          patient_id: patientId,
-          change_med: changeMed.med,
-          change_dose: changeMed.dose,
-          change_route: changeMed.route,
-          change_frequency: changeMed.freq,
-          change_text: changeMed.extra
-        };
+      const payload2 = {
+        patient_id: patientId,
+        change_med: sanitize(changeMed.med),
+        change_dose: sanitize(changeMed.dose),
+        change_route: sanitize(changeMed.route),
+        change_frequency: sanitize(changeMed.freq),
+        change_text: sanitize(changeMed.extra)
+      };
 
-        if (existingIds.changes) {
-          await apiClient.put(`/medication-reconciliation/changes-in-medication/${existingIds.changes}/`, payload);
-        } else {
-          const res = await apiClient.post('/medication-reconciliation/changes-in-medication/', payload);
-          if (res.data?.id) newIds.changes = res.data.id;
-        }
+      if (existingIds.changes) {
+        await apiClient.put(`/medication-reconciliation/changes-in-medication/${existingIds.changes}/`, payload2);
+      } else {
+        const res = await apiClient.post('/medication-reconciliation/changes-in-medication/', payload2);
+        if (res.data?.id) newIds.changes = res.data.id;
       }
 
       setExistingIds(newIds);

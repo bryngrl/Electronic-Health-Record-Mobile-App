@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,6 +10,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import apiClient from '@api/apiClient';
@@ -49,6 +50,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   const [alert, setAlert] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const endpointPrefix =
     feature === 'vital-signs' ? '/vital-signs' : '/intake-output';
@@ -121,6 +123,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
         setCurrentIdx(currentIdx + 1);
         setText('');
         setAlert(null);
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       } else {
         showAlert(
           'Complete',
@@ -143,6 +146,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
       setCurrentIdx(currentIdx - 1);
       setAlert(null);
       setText('');
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } else {
       onBack();
     }
@@ -150,11 +154,17 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <ScrollView
+          ref={scrollViewRef}
           style={styles.container}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"

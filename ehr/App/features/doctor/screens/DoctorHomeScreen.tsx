@@ -4,9 +4,11 @@ import PatientUpdateCard from '../components/PatientUpdateCard';
 import { useDoctorDashboardLogic } from '../hooks/useDoctorDashboardLogic';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { AccountModal } from '../../../components/AccountModal';
+import { useAuth } from '@features/Auth/AuthContext';
 
 const DoctorHomeScreen = ({ onBack, onViewAll, onNavigate }: { onBack?: () => void, onViewAll?: () => void, onNavigate: (route: string) => void }) => {
   const [modalVisible, setModalVisible] = useState(false);
+  const { user } = useAuth();
   const { 
     activeFilter, 
     setActiveFilter, 
@@ -68,7 +70,7 @@ const DoctorHomeScreen = ({ onBack, onViewAll, onNavigate }: { onBack?: () => vo
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.welcome}>Hello, Dr. Rain</Text>
+            <Text style={styles.welcome}>Hello, {user?.full_name || 'Doctor'}</Text>
             <Text style={styles.date}>
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </Text>
