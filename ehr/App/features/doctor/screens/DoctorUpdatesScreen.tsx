@@ -67,20 +67,22 @@ const DoctorUpdatesScreen = ({ onBack, onNavigate }: { onBack?: () => void, onNa
     else if (type.includes('intake') || type.includes('output')) category = 'intake_output';
     else if (type.includes('adl')) category = 'adl';
 
-    if (category) {
-      if (category === 'vital_signs') {
-        onNavigate('VitalSigns', {
-            patientId: item.patient_id,
-            patientName: item.name
-        });
-      } else {
+    const params = {
+        patientId: item.patient_id,
+        patientName: item.name
+    };
+
+    if (category === 'vital_signs') {
+        onNavigate('VitalSigns', params);
+    } else if (category === 'physical_exam') {
+        onNavigate('PhysicalExam', params);
+    } else if (category) {
         onNavigate('DoctorPatientDetail', {
-          patientId: item.patient_id,
+          ...params,
           category: category
         });
-      }
     } else {
-      console.log('Unmapped update type:', item.type);
+        console.log('Unmapped update type:', item.type);
     }
   };
 

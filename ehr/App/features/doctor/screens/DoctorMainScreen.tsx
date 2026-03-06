@@ -8,7 +8,10 @@ import DoctorPatientsScreen from './DoctorPatientsScreen';
 import DoctorReportsScreen from './DoctorReportsScreen';
 import DoctorUpdatesScreen from './DoctorUpdatesScreen';
 import DoctorPatientDetailScreen from './DoctorPatientDetailScreen';
+
+// --- NURSE SCREENS (RE-USED IN READ-ONLY) ---
 import VitalSignsScreen from '../../nurse/VitalSigns/screen/VitalSignsScreen';
+import PhysicalExamScreen from '../../nurse/PhysicalExam/screen/PhysicalExamScreen';
 
 export default function DoctorMainScreen() {
   const { theme } = useAppTheme();
@@ -17,7 +20,7 @@ export default function DoctorMainScreen() {
   const [selectedPatientData, setSelectedPatientData] = useState<{patientId: number, category: string, recordId?: number, patientName?: string} | null>(null);
 
   const handleNavigation = useCallback((route: string, params?: any) => {
-    if ((route === 'DoctorPatientDetail' || route === 'VitalSigns') && params) {
+    if (params) {
       setSelectedPatientData(params);
     }
     setActiveTab(prevTab => {
@@ -72,6 +75,8 @@ export default function DoctorMainScreen() {
             onBack={handleBack}
           />
         ) : null;
+      
+      // RE-USING NURSE SCREENS IN READ-ONLY MODE
       case 'VitalSigns':
         return selectedPatientData ? (
           <VitalSignsScreen 
@@ -81,6 +86,17 @@ export default function DoctorMainScreen() {
             initialPatientName={selectedPatientData.patientName}
           />
         ) : null;
+
+      case 'PhysicalExam':
+        return selectedPatientData ? (
+          <PhysicalExamScreen 
+            onBack={handleBack}
+            readOnly={true}
+            patientId={selectedPatientData.patientId.toString()}
+            initialPatientName={selectedPatientData.patientName}
+          />
+        ) : null;
+
       default:
         return (
           <DoctorHomeScreen 

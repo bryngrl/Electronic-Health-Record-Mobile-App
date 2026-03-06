@@ -276,9 +276,8 @@ def create_vital_signs(payload: AssessmentCreate, db: Session = Depends(get_db))
             updated_at=now,
         )
         db.add(record)
-        db.flush() # Get the ID before commit
         # Create an update for the doctor
-        create_doctor_update(db, payload.patient_id, "Vital Signs", "vital_signs", record.id)
+        create_doctor_update(db, payload.patient_id, "Vital Signs")
 
     db.commit()
     db.refresh(record)

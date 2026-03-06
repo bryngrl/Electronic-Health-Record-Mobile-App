@@ -64,6 +64,11 @@ const DoctorHomeScreen = ({ onBack = () => {}, onViewAll, onNavigate }: { onBack
             patientId: item.patient_id,
             patientName: item.name
         });
+      } else if (category === 'physical_exam') {
+        onNavigate('PhysicalExam', {
+            patientId: item.patient_id,
+            patientName: item.name
+        });
       } else {
         onNavigate('DoctorPatientDetail', {
           patientId: item.patient_id,

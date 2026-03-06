@@ -267,15 +267,12 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
       <View style={{ zIndex: 10 }}>
         <View style={{ paddingHorizontal: 40, backgroundColor: theme.background, paddingBottom: 15 }}>
           <View style={[styles.header, { marginBottom: 0 }]}>
-            <TouchableOpacity onPress={onBack} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Icon name="arrow-back" size={24} color={theme.primary} style={{ marginRight: 10 }} />
-                <View>
-                    <Text style={styles.title}>Vital Signs {readOnly ? '(View)' : ''}</Text>
-                    <Text style={styles.subDate}>
-                        {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                    </Text>
-                </View>
-            </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+                <Text style={styles.title}>Vital Signs</Text>
+                <Text style={styles.subDate}>
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </Text>
+            </View>
             <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
                 <Text style={styles.menuDots}>⋮</Text>
             </TouchableOpacity>

@@ -199,9 +199,8 @@ def create_intake_and_output(payload: AssessmentCreate, db: Session = Depends(ge
             updated_at=now,
         )
         db.add(record)
-        db.flush()
 
-    create_doctor_update(db, payload.patient_id, "Intake and Output", "intake_output", record.id)
+    create_doctor_update(db, payload.patient_id, "Intake and Output")
     db.commit()
     db.refresh(record)
     return record
