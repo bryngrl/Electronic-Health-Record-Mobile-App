@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, BackHandler } from 'react-native';
+import { View, StyleSheet, SafeAreaView, BackHandler, Keyboard, Platform, useWindowDimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
@@ -43,6 +43,7 @@ const DASHBOARD_ITEM_IDS = [
 
 export default function HomeScreen() {
   const { theme } = useAppTheme();
+  const { height: windowHeight } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState('Home');
   const [navigationHistory, setNavigationHistory] = useState<string[]>([
     'Home',
@@ -52,6 +53,20 @@ export default function HomeScreen() {
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(
     null,
   );
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSubscription = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const saveRecentFeature = async (featureId: string) => {
     try {
@@ -193,25 +208,49 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
-    >
-      <View style={[styles.flex1, !isSelecting && { paddingBottom: 50 }]}>
-        {getScreenContent()}
-      </View>
+    <View style={styles.root}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.background }]}
+      >
+        <View
+          style={[
+            styles.flex1,
+            !isSelecting && !isKeyboardVisible && { paddingBottom: 50 },
+          ]}
+        >
+          {getScreenContent()}
+        </View>
+      </SafeAreaView>
 
       {!isSelecting && (
-        <NurseBottomNav
-          activeRoute={activeTab}
-          onNavigate={handleNavigation}
-          onAddPatient={() => handleNavigation('Register')}
-        />
+        <View 
+          style={[
+            styles.fixedNavContainer, 
+            { height: windowHeight }
+          ]} 
+          pointerEvents="box-none"
+        >
+          <NurseBottomNav
+            activeRoute={activeTab}
+            onNavigate={handleNavigation}
+            onAddPatient={() => handleNavigation('Register')}
+          />
+        </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   container: { flex: 1 },
   flex1: { flex: 1 },
+  fixedNavContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'transparent',
+    zIndex: 1000,
+  },
 });

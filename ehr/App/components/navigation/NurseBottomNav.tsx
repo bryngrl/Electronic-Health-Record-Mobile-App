@@ -101,6 +101,7 @@ const styles = StyleSheet.create({
     right: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1000,
   },
   shadowShape: {
     width: '100%',
