@@ -88,14 +88,29 @@ const NavItem = ({ label, icon, active, onPress }: any) => (
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#FFF' },
-  scrollContent: { paddingHorizontal: 25, paddingBottom: 150, paddingTop: 40 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  scrollContent: { paddingHorizontal: 40, paddingBottom: 150, paddingTop: 40 },
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start', 
+    marginBottom: 35,
+    marginTop: 10
+  },
   welcome: { fontSize: 35, color: '#035022', fontFamily: 'MinionPro-SemiboldItalic' },
   date: { fontSize: 14, color: '#B2B2B2', marginTop: 4, fontWeight: 'bold' },
   searchBarContainer: { marginBottom: 10, zIndex: 999 },
   searchBarWrapper: {
-    backgroundColor: '#FFF', borderRadius: 25, paddingHorizontal: 15, borderWidth: 1, borderColor: '#EBEBEB',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2, height: 48,
+    backgroundColor: '#FFF', 
+    borderRadius: 30, 
+    paddingHorizontal: 15, 
+    borderWidth: 1, 
+    borderColor: '#F0F0F0',
+    height: 50,
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 10, 
+    elevation: 3, 
   },
   instructionContainer: { marginBottom: 25 },
   instructionText: { fontSize: 14, color: '#858583', marginLeft: 5, fontWeight: '500' },
