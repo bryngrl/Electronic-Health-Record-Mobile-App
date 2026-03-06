@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Platform,
   useColorScheme,
+  StatusBar,
 } from 'react-native';
 import { SearchBar } from '@nurse/Search/component/SearchBar';
 import { SearchResults } from '@nurse/Search/component/SearchResults';
@@ -218,6 +219,11 @@ export default function SearchScreen({
 
   return (
     <View style={styles.container}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <SearchBar
         query={query}
         setQuery={setQuery}

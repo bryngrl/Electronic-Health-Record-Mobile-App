@@ -256,7 +256,11 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.root}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={{ zIndex: 10 }}>
         <View
           style={{

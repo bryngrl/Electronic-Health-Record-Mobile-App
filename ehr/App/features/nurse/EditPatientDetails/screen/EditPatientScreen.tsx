@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   BackHandler,
   Image,
+  StatusBar,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 
@@ -243,6 +244,11 @@ const EditPatientScreen: React.FC<Props> = ({ patientId, onBack }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={{ zIndex: 10 }}>
         <View
           style={{

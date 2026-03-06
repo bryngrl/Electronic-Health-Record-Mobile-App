@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   Alert,
   Platform,
+  StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useLabValues } from '../hook/useLabValues';
@@ -86,6 +87,11 @@ const ADPIEScreen = ({ onBack, labId, patientName }: any) => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Lab Values</Text>

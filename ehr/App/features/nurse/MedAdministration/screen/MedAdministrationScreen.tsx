@@ -6,6 +6,7 @@ import {
   Text,
   ScrollView,
   SafeAreaView,
+  StatusBar,
   TouchableOpacity,
   TextInput,
   Pressable,
@@ -204,6 +205,11 @@ const MedAdministrationScreen = ({ onBack }: any) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={{ zIndex: 10 }}>
         <View
           style={{

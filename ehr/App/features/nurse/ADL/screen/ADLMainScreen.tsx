@@ -14,6 +14,7 @@ import {
   SafeAreaView,
   BackHandler,
   Platform,
+  StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -256,6 +257,11 @@ const ADLScreen = ({ onBack }: any) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={{ zIndex: 10 }}>
         <View
           style={{

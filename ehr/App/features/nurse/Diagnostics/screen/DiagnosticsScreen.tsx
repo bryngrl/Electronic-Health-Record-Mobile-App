@@ -224,7 +224,8 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
     <View style={styles.container}>
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.background}
+        backgroundColor="transparent"
+        translucent={true}
       />
 
       <View style={{ zIndex: 10 }}>

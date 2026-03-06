@@ -4,37 +4,45 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import HomeScreen from '@features/nurse/Dashboard/screen/HomeScreen';
 import DoctorMainScreen from '@features/doctor/screens/DoctorMainScreen';
 import LoginScreen from '@features/Auth/screen/LoginScreen';
-import { ThemeProvider } from './theme/ThemeContext';
+import { ThemeProvider, useAppTheme } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from '@features/Auth/AuthContext';
 import SplashScreen from '@components/SplashScreen';
 
 const MainApp = () => {
   const { user, isLoading } = useAuth();
+  const { theme } = useAppTheme();
   const [splashFinished, setSplashFinished] = useState(Platform.OS !== 'android');
 
   if (!splashFinished) {
-    return <SplashScreen onAnimationFinish={() => setSplashFinished(true)} />;
+    return (
+      <View style={{ flex: 1, backgroundColor: '#035022' }}>
+        <SplashScreen onAnimationFinish={() => setSplashFinished(true)} />
+      </View>
+    );
   }
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
         <ActivityIndicator size="large" color="#004d26" />
       </View>
     );
   }
 
+  let content;
   if (!user) {
-    return <LoginScreen />;
+    content = <LoginScreen />;
+  } else if (user.role === 'doctor') {
+    content = <DoctorMainScreen />;
+  } else {
+    content = <HomeScreen />;
   }
 
-  // Redirect based on role
-  if (user.role === 'doctor') {
-    return <DoctorMainScreen />;
-  }
-
-  // Default for nurse
-  return <HomeScreen />;
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+      {content}
+    </SafeAreaView>
+  );
 };
 
 export default function App() {
@@ -42,9 +50,7 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <SafeAreaProvider>
-          <SafeAreaView style={{ flex: 1 }}>
-            <MainApp />
-          </SafeAreaView>
+          <MainApp />
         </SafeAreaProvider>
       </AuthProvider>
     </ThemeProvider>

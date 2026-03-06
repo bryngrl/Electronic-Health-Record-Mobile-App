@@ -10,6 +10,7 @@ import {
   Dimensions,
   Image,
   Platform,
+  StatusBar,
 } from 'react-native';
 import { usePatients } from '@nurse/DemographicProfile/hook/usePatients';
 import DetailItem from '../components/DetailItem';
@@ -85,6 +86,11 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.mainContainer}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       {/* Decorative Background Circles - Z-INDEX 0 */}
       <View pointerEvents="none" style={[styles.circle1, styles.topCircle1]} />
       <View pointerEvents="none" style={[styles.circle2, styles.topCircle2]} />

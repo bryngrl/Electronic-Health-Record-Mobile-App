@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  StatusBar,
   BackHandler,
   Platform,
 } from 'react-native';
@@ -275,6 +276,11 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={{ zIndex: 10 }}>
         <View
           style={{

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, BackHandler, Keyboard, Platform, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, SafeAreaView, BackHandler, Keyboard, Platform, useWindowDimensions, StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
@@ -42,7 +42,7 @@ const DASHBOARD_ITEM_IDS = [
 ];
 
 export default function HomeScreen() {
-  const { theme } = useAppTheme();
+  const { isDarkMode, theme } = useAppTheme();
   const { height: windowHeight } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState('Home');
   const [navigationHistory, setNavigationHistory] = useState<string[]>([
@@ -209,6 +209,11 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.root}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <SafeAreaView
         style={[styles.container, { backgroundColor: theme.background }]}
       >

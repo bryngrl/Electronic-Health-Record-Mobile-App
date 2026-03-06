@@ -5,6 +5,7 @@ import {
   Text,
   ScrollView,
   SafeAreaView,
+  StatusBar,
   ActivityIndicator,
   TouchableOpacity,
   BackHandler,
@@ -145,6 +146,11 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
 
   return (
     <SafeAreaView style={styles.mainContainer}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={{ zIndex: 10 }}>
         <View
           style={{
