@@ -35,6 +35,8 @@ const NurseBottomNav = ({
 }: NurseBottomNavProps) => {
   const { theme, isDarkMode } = useAppTheme();
 
+  const styles = React.useMemo(() => createStyles(theme, isDarkMode), [theme, isDarkMode]);
+
   const NavItem = ({ label, route, iconKey, onPress }: any) => {
     const isActive = activeRoute === route;
     const source = isActive ? icons[iconKey].active : icons[iconKey].inactive;
@@ -93,7 +95,7 @@ const NurseBottomNav = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   shadowContainer: {
     position: 'absolute',
     bottom: 20,
@@ -126,7 +128,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   activeNavItem: {
-    backgroundColor: '#E0FFDD',
+    backgroundColor: theme.navActiveBg,
     borderRadius: 50,
     width: 85,
     height: 55,
