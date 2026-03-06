@@ -22,6 +22,8 @@ export const useRegistration = () => {
     user_id: 1,
   });
 
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
   const [contacts, setContacts] = useState([
     { name: '', relationship: '', number: '' },
   ]);
@@ -66,11 +68,61 @@ export const useRegistration = () => {
     setContactErrors(errors);
   };
 
-  const registerPatient = async () => {
-    if (contactErrors.some(e => e !== '')) {
-      throw new Error('Please correct the contact number errors.');
+  const validateStep1 = () => {
+    const errors: Record<string, string> = {};
+    const requiredFields = [
+      'first_name',
+      'middle_name',
+      'last_name',
+      'birthdate',
+      'sex',
+      'address',
+      'birthplace',
+      'religion',
+      'ethnicity',
+      'chief_complaints',
+      'room_no',
+      'bed_no',
+    ];
+
+    requiredFields.forEach(field => {
+      if (!form[field as keyof typeof form]?.toString().trim()) {
+        errors[field] = 'This field is required';
+      }
+    });
+
+    if (form.religion === 'Other' && !form.other_religion.trim()) {
+      errors.other_religion = 'Please specify religion';
+    }
+    if (form.ethnicity === 'Other' && !form.other_ethnicity.trim()) {
+      errors.other_ethnicity = 'Please specify ethnicity';
     }
 
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const errors: string[] = [];
+    let hasError = false;
+
+    contacts.forEach((contact, index) => {
+      if (!contact.name.trim() || !contact.relationship.trim() || !contact.number.trim()) {
+        errors[index] = 'All contact fields are required';
+        hasError = true;
+      } else if (contact.number.length !== 11) {
+        errors[index] = 'Number must be 11 digits';
+        hasError = true;
+      } else {
+        errors[index] = '';
+      }
+    });
+
+    setContactErrors(errors);
+    return !hasError;
+  };
+
+  const registerPatient = async () => {
     // Explicitly define payload to match FastAPI PatientCreate schema
     const payload = {
       first_name: form.first_name,
@@ -108,12 +160,16 @@ export const useRegistration = () => {
     setStep,
     form,
     setForm,
+    formErrors,
+    setFormErrors,
     contacts,
     setContacts,
     contactErrors,
     formatNameOnBlur,
     handleNumberChange,
     validateNumberOnBlur,
+    validateStep1,
+    validateStep2,
     registerPatient,
     capitalize,
   };
