@@ -37,6 +37,7 @@ const ADPIEScreen = ({ onBack, examId, patientName }: any) => {
   const [text, setText] = useState('');
   const [alert, setAlert] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const scrollViewRef = React.useRef<ScrollView>(null);
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -83,6 +84,7 @@ const ADPIEScreen = ({ onBack, examId, patientName }: any) => {
         setCurrentIdx(currentIdx + 1);
         setText('');
         setAlert(null);
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       } else {
         showAlert('Complete', 'ADPIE Workflow Finished.', 'success', () => {
           onBack();
@@ -98,6 +100,7 @@ const ADPIEScreen = ({ onBack, examId, patientName }: any) => {
       setCurrentIdx(currentIdx - 1);
       setAlert(null);
       setText('');
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } else {
       onBack();
     }
@@ -115,6 +118,7 @@ const ADPIEScreen = ({ onBack, examId, patientName }: any) => {
         style={{ flex: 1 }}
       >
         <ScrollView
+          ref={scrollViewRef}
           style={styles.container}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
