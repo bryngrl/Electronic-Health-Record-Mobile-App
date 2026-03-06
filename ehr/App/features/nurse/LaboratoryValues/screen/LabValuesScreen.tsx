@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -62,6 +62,20 @@ const LabValuesScreen = ({ onBack }: any) => {
     null,
   );
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [isNA, setIsNA] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const toggleNA = () => {
+    const newState = !isNA;
+    setIsNA(newState);
+    if (newState) {
+      setResult('N/A');
+      setNormalRange('N/A');
+    } else {
+      if (result === 'N/A') setResult('');
+      if (normalRange === 'N/A') setNormalRange('');
+    }
+  };
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -136,6 +150,7 @@ const LabValuesScreen = ({ onBack }: any) => {
       if (res && res.id) {
         setLabId(res.id);
         setIsAdpieActive(true);
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
     } catch (e) {
       showAlert('Error', 'Could not initiate nursing process.');
@@ -172,8 +187,9 @@ const LabValuesScreen = ({ onBack }: any) => {
       } else {
         const idx = LAB_TESTS.indexOf(selectedTest);
         setSelectedTest(LAB_TESTS[idx + 1]);
-        setResult('');
-        setNormalRange('');
+        setResult(isNA ? 'N/A' : '');
+        setNormalRange(isNA ? 'N/A' : '');
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
     } catch (e) {
       showAlert('Error', 'Submission failed.');
@@ -203,7 +219,10 @@ const LabValuesScreen = ({ onBack }: any) => {
         labId={labId}
         patientId={selectedPatientId}
         patientName={searchText}
-        onBack={() => setIsAdpieActive(false)}
+        onBack={() => {
+          setIsAdpieActive(false);
+          scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        }}
       />
     );
   }
@@ -216,7 +235,7 @@ const LabValuesScreen = ({ onBack }: any) => {
     !currentAlert.includes('No result') &&
     !currentAlert.includes('Unable to compare');
 
-  const isFormValid = selectedPatientId && hasInputData;
+  const isFormValid = selectedPatientId && (hasInputData || isNA);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -258,6 +277,7 @@ const LabValuesScreen = ({ onBack }: any) => {
 
       <View style={{ flex: 1, marginTop: -20 }}>
         <ScrollView
+          ref={scrollViewRef}
           keyboardShouldPersistTaps="handled"
           style={styles.container}
           contentContainerStyle={styles.scrollContent}
@@ -293,16 +313,60 @@ const LabValuesScreen = ({ onBack }: any) => {
             onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
           />
 
+          <TouchableOpacity
+            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+            onPress={() => {
+              if (!selectedPatientId) {
+                showAlert(
+                  'Patient Required',
+                  'Please select a patient first in the search bar.',
+                );
+              } else {
+                toggleNA();
+              }
+            }}
+          >
+            <Text
+              style={[
+                styles.naText,
+                !selectedPatientId && { color: theme.textMuted },
+              ]}
+            >
+              Mark all as N/A
+            </Text>
+            <Icon
+              name={isNA ? 'check-box' : 'check-box-outline-blank'}
+              size={22}
+              color={selectedPatientId ? theme.primary : theme.textMuted}
+            />
+          </TouchableOpacity>
+
+          <Text
+            style={[
+              styles.disabledTextAtBottom,
+              isNA && { color: theme.error },
+            ]}
+          >
+            {isNA
+              ? 'All fields below are disabled.'
+              : 'Checking this will disable all fields below.'}
+          </Text>
+
           <LabResultCard
             testLabel={selectedTest}
             resultValue={result}
             rangeValue={normalRange}
             onResultChange={setResult}
             onRangeChange={setNormalRange}
-            disabled={!selectedPatientId}
-            onDisabledPress={() =>
-              showAlert('Patient Required', 'Please select a patient first.')
-            }
+            disabled={!selectedPatientId || isNA}
+            onDisabledPress={() => {
+              if (!selectedPatientId) {
+                showAlert(
+                  'Patient Required',
+                  'Please select a patient first in the search bar.',
+                );
+              }
+            }}
           />
 
           <View style={styles.footerRow}>
@@ -311,13 +375,20 @@ const LabValuesScreen = ({ onBack }: any) => {
                 styles.alertIcon,
                 {
                   backgroundColor: isClinicalAlert
-                    ? isDarkMode ? '#78350F' : '#FFECBD'
+                    ? isDarkMode
+                      ? '#78350F'
+                      : '#FFECBD'
                     : hasInputData && selectedPatientId
-                    ? isDarkMode ? '#78350F' : '#FFECBD'
-                    : theme.card,
-                  borderColor: isClinicalAlert || (hasInputData && selectedPatientId)
-                    ? '#EDB62C'
-                    : theme.border,
+                    ? isDarkMode
+                      ? '#78350F'
+                      : '#FFECBD'
+                    : isDarkMode
+                    ? '#333'
+                    : '#EBEBEB',
+                  borderColor:
+                    isClinicalAlert || (hasInputData && selectedPatientId)
+                      ? '#EDB62C'
+                      : theme.border,
                 },
               ]}
               disabled={!hasInputData || !selectedPatientId}
@@ -339,20 +410,20 @@ const LabValuesScreen = ({ onBack }: any) => {
                 <TouchableOpacity
                   style={[
                     styles.cdssBtn,
-                    isFormValid && {
-                      backgroundColor: theme.buttonBg,
-                      borderColor: theme.buttonBorder,
+                    (!selectedPatientId || (!hasInputData && !isNA)) && {
+                      backgroundColor: theme.buttonDisabledBg,
+                      borderColor: theme.buttonDisabledBorder,
                     },
-                    !isFormValid && styles.disabledButton,
                   ]}
                   onPress={handleCDSSPress}
-                  disabled={!isFormValid}
+                  disabled={!selectedPatientId}
                 >
                   <Text
                     style={[
                       styles.cdssText,
-                      isFormValid && { color: theme.primary },
-                      !isFormValid && { color: theme.textMuted },
+                      (!selectedPatientId || (!hasInputData && !isNA))
+                        ? { color: theme.textMuted }
+                        : { color: theme.primary },
                     ]}
                   >
                     CDSS
@@ -361,15 +432,18 @@ const LabValuesScreen = ({ onBack }: any) => {
                 <TouchableOpacity
                   style={[
                     styles.submitBtn,
-                    !isFormValid && styles.disabledButton,
+                    !selectedPatientId && {
+                      backgroundColor: theme.buttonDisabledBg,
+                      borderColor: theme.buttonDisabledBorder,
+                    },
                   ]}
                   onPress={handleNextOrSave}
-                  disabled={!isFormValid}
+                  disabled={!selectedPatientId}
                 >
                   <Text
                     style={[
                       styles.submitText,
-                      !isFormValid && { color: theme.textMuted },
+                      !selectedPatientId && { color: theme.textMuted },
                     ]}
                   >
                     SUBMIT
@@ -378,19 +452,28 @@ const LabValuesScreen = ({ onBack }: any) => {
               </View>
             ) : (
               <TouchableOpacity
-                style={[styles.nextBtn, !isFormValid && styles.disabledButton]}
+                style={[
+                  styles.nextBtn,
+                  !selectedPatientId && {
+                    backgroundColor: theme.buttonDisabledBg,
+                    borderColor: theme.buttonDisabledBorder,
+                  },
+                ]}
                 onPress={handleNextOrSave}
-                disabled={!isFormValid}
+                disabled={!selectedPatientId}
               >
                 <Text
-                  style={[styles.nextText, !isFormValid && { color: theme.textMuted }]}
+                  style={[
+                    styles.nextText,
+                    !selectedPatientId && { color: theme.textMuted },
+                  ]}
                 >
                   NEXT
                 </Text>
                 <Icon
                   name="chevron-right"
                   size={20}
-                  color={isFormValid ? theme.primary : theme.textMuted}
+                  color={selectedPatientId ? theme.primary : theme.textMuted}
                 />
               </TouchableOpacity>
             )}
@@ -428,6 +511,26 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) => Sty
   header: commonStyles.header,
   title: commonStyles.title,
   dateText: { fontSize: 13, fontFamily: 'AlteHaasGroteskBold', color: theme.textMuted },
+  naRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginBottom: 5,
+    marginTop: 5,
+  },
+  naText: {
+    fontSize: 14,
+    fontFamily: 'AlteHaasGroteskBold',
+    color: theme.primary,
+    marginRight: 8,
+  },
+  disabledTextAtBottom: {
+    fontSize: 13,
+    fontFamily: 'AlteHaasGroteskBold',
+    color: theme.textMuted,
+    textAlign: 'right',
+    marginBottom: 15,
+  },
   dropdownOverlay: {
     position: 'absolute',
     top: 90,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -14,6 +14,7 @@ import {
   useColorScheme,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const backArrow = require('@assets/icons/back_arrow.png');
 import useIvsAndLinesData from '../hook/useIvsAndLinesData';
@@ -64,6 +65,25 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
     type: 'info',
   });
 
+  const [isNA, setIsNA] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const toggleNA = () => {
+    const newState = !isNA;
+    setIsNA(newState);
+    if (newState) {
+      setIvFluid('N/A');
+      setRate('N/A');
+      setSite('N/A');
+      setStatus('N/A');
+    } else {
+      if (ivFluid === 'N/A') setIvFluid('');
+      if (rate === 'N/A') setRate('');
+      if (site === 'N/A') setSite('');
+      if (status === 'N/A') setStatus('');
+    }
+  };
+
   const handleBackPress = useCallback(() => {
     onBack();
     return true;
@@ -76,6 +96,19 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
     );
     return () => backHandler.remove();
   }, [handleBackPress]);
+
+  useEffect(() => {
+    if (selectedPatientId) {
+      const allNA =
+        ivFluid === 'N/A' &&
+        rate === 'N/A' &&
+        site === 'N/A' &&
+        status === 'N/A';
+      setIsNA(allNA);
+    } else {
+      setIsNA(false);
+    }
+  }, [selectedPatientId, ivFluid, rate, site, status]);
 
   const formatDate = () => {
     const date = new Date();
@@ -97,7 +130,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
   const showDisabledAlert = () => {
     showAlert(
       'Patient Required',
-      'Please select a patient first in the search bar before filling out the form.',
+      'Please select a patient first in the search bar.',
       'error',
     );
   };
@@ -110,6 +143,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
 
     try {
       const result = await handleSubmit();
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       if (result.action === 'update') {
         showAlert(
           'Edit Success',
@@ -173,6 +207,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
 
       <View style={{ flex: 1, marginTop: -20 }}>
         <ScrollView
+          ref={scrollViewRef}
           style={styles.container}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
@@ -188,13 +223,49 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
             initialPatientName={patientName}
           />
 
+          <TouchableOpacity
+            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+            onPress={() => {
+              if (!selectedPatientId) {
+                showDisabledAlert();
+              } else {
+                toggleNA();
+              }
+            }}
+          >
+            <Text
+              style={[
+                styles.naText,
+                !selectedPatientId && { color: theme.textMuted },
+              ]}
+            >
+              Mark all as N/A
+            </Text>
+            <Icon
+              name={isNA ? 'check-box' : 'check-box-outline-blank'}
+              size={22}
+              color={selectedPatientId ? theme.primary : theme.textMuted}
+            />
+          </TouchableOpacity>
+
+          <Text
+            style={[
+              styles.disabledTextAtBottom,
+              isNA && { color: theme.error },
+            ]}
+          >
+            {isNA
+              ? 'All fields below are disabled.'
+              : 'Checking this will disable all fields below.'}
+          </Text>
+
           {/* Form Sections */}
           <DataCard
             badgeText="IV FLUID"
             value={ivFluid}
             onChangeText={setIvFluid}
             placeholder="e.g., D5W, NS, LR"
-            disabled={!selectedPatientId}
+            disabled={!selectedPatientId || isNA}
             onDisabledPress={showDisabledAlert}
           />
           <DataCard
@@ -202,7 +273,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
             value={rate}
             onChangeText={setRate}
             placeholder="e.g., 100 ml/hr"
-            disabled={!selectedPatientId}
+            disabled={!selectedPatientId || isNA}
             onDisabledPress={showDisabledAlert}
           />
           <DataCard
@@ -210,7 +281,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
             value={site}
             onChangeText={setSite}
             placeholder="e.g., Left hand"
-            disabled={!selectedPatientId}
+            disabled={!selectedPatientId || isNA}
             onDisabledPress={showDisabledAlert}
           />
           <DataCard
@@ -218,7 +289,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
             value={status}
             onChangeText={setStatus}
             placeholder="e.g., Running"
-            disabled={!selectedPatientId}
+            disabled={!selectedPatientId || isNA}
             onDisabledPress={showDisabledAlert}
           />
 
@@ -226,15 +297,25 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
           <TouchableOpacity
             style={[
               styles.submitButton,
-              (isSubmitting || !selectedPatientId) && { opacity: 0.7 },
+              (!selectedPatientId) && {
+                backgroundColor: theme.buttonDisabledBg,
+                borderColor: theme.buttonDisabledBorder,
+              },
             ]}
             onPress={handleFormSubmit}
             disabled={isSubmitting}
           >
             {isSubmitting ? (
-              <ActivityIndicator color={theme.surface} />
+              <ActivityIndicator color={theme.primary} />
             ) : (
-              <Text style={styles.submitButtonText}>SUBMIT</Text>
+              <Text
+                style={[
+                  styles.submitButtonText,
+                  !selectedPatientId && { color: theme.textMuted },
+                ]}
+              >
+                SUBMIT
+              </Text>
             )}
           </TouchableOpacity>
         </ScrollView>
@@ -249,7 +330,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
         visible={alertConfig.visible}
         title={alertConfig.title}
         message={alertConfig.message}
-        type={alertConfig.type}
+        type={alertConfig.type as any}
         onConfirm={() => setAlertConfig({ ...alertConfig, visible: false })}
         onCancel={() => setAlertConfig({ ...alertConfig, visible: false })}
         confirmText="OK"
@@ -283,9 +364,29 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontFamily: 'AlteHaasGroteskBold',
       marginTop: 5,
     },
+    naRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      marginBottom: 5,
+      marginTop: 5,
+    },
+    naText: {
+      fontSize: 14,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      marginRight: 8,
+    },
+    disabledTextAtBottom: {
+      fontSize: 13,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.textMuted,
+      textAlign: 'right',
+      marginBottom: 15,
+    },
     submitButton: {
-      backgroundColor: theme.tableHeader,
-      borderColor: theme.primary,
+      backgroundColor: theme.buttonBg,
+      borderColor: theme.buttonBorder,
       borderWidth: 1.5,
       borderRadius: 50,
       paddingVertical: 15,
@@ -297,7 +398,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     },
     submitButtonText: {
       color: theme.primary,
-      fontWeight: '700',
+      fontFamily: 'AlteHaasGroteskBold',
       fontSize: 16,
       letterSpacing: 1,
     },

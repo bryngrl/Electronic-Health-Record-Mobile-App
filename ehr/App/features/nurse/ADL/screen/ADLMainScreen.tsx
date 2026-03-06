@@ -79,6 +79,31 @@ const ADLScreen = ({ onBack }: any) => {
   const [adlId, setAdlId] = useState<number | null>(null);
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
+  const [isNA, setIsNA] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const toggleNA = () => {
+    const newState = !isNA;
+    setIsNA(newState);
+
+    if (newState) {
+      // Set all fields to "N/A"
+      const updatedData = { ...formData };
+      Object.keys(initialFormData).forEach(key => {
+        (updatedData as any)[key] = 'N/A';
+      });
+      setFormData(updatedData);
+    } else {
+      // Clear fields if they were "N/A"
+      const updatedData = { ...formData };
+      Object.keys(initialFormData).forEach(key => {
+        if ((updatedData as any)[key] === 'N/A') {
+          (updatedData as any)[key] = '';
+        }
+      });
+      setFormData(updatedData);
+    }
+  };
 
   useEffect(() => {
     const backAction = () => {
@@ -99,7 +124,7 @@ const ADLScreen = ({ onBack }: any) => {
       const data = await fetchLatestADL(patientId);
       if (data) {
         setAdlId(data.id);
-        setFormData({
+        const newFormData = {
           mobility: data.mobility || '',
           hygiene: data.hygiene || '',
           toileting: data.toileting || '',
@@ -107,7 +132,13 @@ const ADLScreen = ({ onBack }: any) => {
           hydration: data.hydration || '',
           sleep_pattern: data.sleep_pattern || '',
           pain_level: data.pain_level || '',
-        });
+        };
+        setFormData(newFormData);
+
+        // Check if all fields are N/A
+        const allNA = Object.values(newFormData).every(v => v === 'N/A');
+        setIsNA(allNA);
+
         setAlerts({
           mobility_alert: data.mobility_alert,
           hygiene_alert: data.hygiene_alert,
@@ -120,6 +151,7 @@ const ADLScreen = ({ onBack }: any) => {
       } else {
         setAdlId(null);
         setFormData(initialFormData);
+        setIsNA(false);
         setAlerts({});
       }
     },
@@ -134,6 +166,7 @@ const ADLScreen = ({ onBack }: any) => {
       } else {
         setAdlId(null);
         setFormData(initialFormData);
+        setIsNA(false);
         setAlerts({});
       }
     }
@@ -159,10 +192,10 @@ const ADLScreen = ({ onBack }: any) => {
   };
 
   useEffect(() => {
-    if (!selectedPatient?.id) return;
+    if (!selectedPatient?.id || isNA) return;
     const timer = setTimeout(async () => {
       const hasContent = Object.values(formData).some(
-        v => v && v.trim().length > 0,
+        v => v && v.trim().length > 0 && v !== 'N/A',
       );
       if (hasContent) {
         try {
@@ -176,7 +209,7 @@ const ADLScreen = ({ onBack }: any) => {
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [formData, selectedPatient, checkADLAlerts]);
+  }, [formData, selectedPatient, checkADLAlerts, isNA]);
 
   const handleCDSSPress = async () => {
     if (!selectedPatient) {
@@ -194,6 +227,7 @@ const ADLScreen = ({ onBack }: any) => {
       if (id) {
         setAdlId(id);
         setIsAdpieActive(true);
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
     } catch (e) {
       showAlert('Error', 'Could not initiate clinical support.');
@@ -227,6 +261,7 @@ const ADLScreen = ({ onBack }: any) => {
       );
 
       loadPatientData(selectedPatient.id);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } catch (e) {
       showAlert('Error', 'Submission failed.');
     }
@@ -250,7 +285,10 @@ const ADLScreen = ({ onBack }: any) => {
         adlId={adlId}
         patientId={selectedPatient.id}
         patientName={searchText}
-        onBack={() => setIsAdpieActive(false)}
+        onBack={() => {
+          setIsAdpieActive(false);
+          scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        }}
       />
     );
   }
@@ -292,6 +330,7 @@ const ADLScreen = ({ onBack }: any) => {
 
       <View style={{ flex: 1, marginTop: -20 }}>
         <ScrollView
+          ref={scrollViewRef}
           keyboardShouldPersistTaps="handled"
           style={styles.container}
           showsVerticalScrollIndicator={false}
@@ -306,6 +345,45 @@ const ADLScreen = ({ onBack }: any) => {
             onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
             initialPatientName={searchText}
           />
+
+          <TouchableOpacity
+            style={[styles.naRow, !selectedPatient && { opacity: 0.5 }]}
+            onPress={() => {
+              if (!selectedPatient) {
+                showAlert(
+                  'Patient Required',
+                  'Please select a patient first in the search bar.',
+                );
+              } else {
+                toggleNA();
+              }
+            }}
+          >
+            <Text
+              style={[
+                styles.naText,
+                !selectedPatient && { color: theme.textMuted },
+              ]}
+            >
+              Mark all as N/A
+            </Text>
+            <Icon
+              name={isNA ? 'check-box' : 'check-box-outline-blank'}
+              size={22}
+              color={selectedPatient ? theme.primary : theme.textMuted}
+            />
+          </TouchableOpacity>
+
+          <Text
+            style={[
+              styles.disabledTextAtBottom,
+              isNA && { color: theme.error },
+            ]}
+          >
+            {isNA
+              ? 'All fields below are disabled.'
+              : 'Checking this will disable all fields below.'}
+          </Text>
 
           <View style={styles.section}>
             <View style={styles.row}>
@@ -335,77 +413,155 @@ const ADLScreen = ({ onBack }: any) => {
           <ADLInputCard
             label="MOBILITY"
             value={formData.mobility}
-            disabled={!selectedPatient}
+            disabled={!selectedPatient || isNA}
             alertText={alerts.mobility_alert}
             onChangeText={t => setFormData({ ...formData, mobility: t })}
+            onDisabledPress={() => {
+              if (!selectedPatient) {
+                showAlert(
+                  'Patient Required',
+                  'Please select a patient first in the search bar.',
+                );
+              }
+            }}
           />
           <ADLInputCard
             label="HYGIENE"
             value={formData.hygiene}
-            disabled={!selectedPatient}
+            disabled={!selectedPatient || isNA}
             alertText={alerts.hygiene_alert}
             onChangeText={t => setFormData({ ...formData, hygiene: t })}
+            onDisabledPress={() => {
+              if (!selectedPatient) {
+                showAlert(
+                  'Patient Required',
+                  'Please select a patient first in the search bar.',
+                );
+              }
+            }}
           />
           <ADLInputCard
             label="TOILETING"
             value={formData.toileting}
-            disabled={!selectedPatient}
+            disabled={!selectedPatient || isNA}
             alertText={alerts.toileting_alert}
             onChangeText={t => setFormData({ ...formData, toileting: t })}
+            onDisabledPress={() => {
+              if (!selectedPatient) {
+                showAlert(
+                  'Patient Required',
+                  'Please select a patient first in the search bar.',
+                );
+              }
+            }}
           />
           <ADLInputCard
             label="FEEDING"
             value={formData.feeding}
-            disabled={!selectedPatient}
+            disabled={!selectedPatient || isNA}
             alertText={alerts.feeding_alert}
             onChangeText={t => setFormData({ ...formData, feeding: t })}
+            onDisabledPress={() => {
+              if (!selectedPatient) {
+                showAlert(
+                  'Patient Required',
+                  'Please select a patient first in the search bar.',
+                );
+              }
+            }}
           />
           <ADLInputCard
             label="HYDRATION"
             value={formData.hydration}
-            disabled={!selectedPatient}
+            disabled={!selectedPatient || isNA}
             alertText={alerts.hydration_alert}
             onChangeText={t => setFormData({ ...formData, hydration: t })}
+            onDisabledPress={() => {
+              if (!selectedPatient) {
+                showAlert(
+                  'Patient Required',
+                  'Please select a patient first in the search bar.',
+                );
+              }
+            }}
           />
           <ADLInputCard
             label="SLEEP PATTERN"
             value={formData.sleep_pattern}
-            disabled={!selectedPatient}
+            disabled={!selectedPatient || isNA}
             alertText={alerts.sleep_pattern_alert}
             onChangeText={t => setFormData({ ...formData, sleep_pattern: t })}
+            onDisabledPress={() => {
+              if (!selectedPatient) {
+                showAlert(
+                  'Patient Required',
+                  'Please select a patient first in the search bar.',
+                );
+              }
+            }}
           />
           <ADLInputCard
             label="PAIN LEVEL"
             value={formData.pain_level}
-            disabled={!selectedPatient}
+            disabled={!selectedPatient || isNA}
             alertText={alerts.pain_level_alert}
             onChangeText={t => setFormData({ ...formData, pain_level: t })}
+            onDisabledPress={() => {
+              if (!selectedPatient) {
+                showAlert(
+                  'Patient Required',
+                  'Please select a patient first in the search bar.',
+                );
+              }
+            }}
           />
 
           <View style={styles.footerRow}>
             <TouchableOpacity
               style={[
                 styles.cdssBtn,
-                Object.values(formData).some(v => v) && {
-                  backgroundColor: theme.buttonBg,
-                  borderColor: theme.buttonBorder,
+                (!selectedPatient ||
+                  (!Object.values(formData).some(v => v && v !== 'N/A') &&
+                    !isNA)) && {
+                  backgroundColor: theme.buttonDisabledBg,
+                  borderColor: theme.buttonDisabledBorder,
                 },
               ]}
               onPress={handleCDSSPress}
+              disabled={!selectedPatient}
             >
               <Text
                 style={[
                   styles.cdssText,
-                  Object.values(formData).some(v => v) && {
-                    color: theme.primary,
-                  },
+                  (!selectedPatient ||
+                    (!Object.values(formData).some(v => v && v !== 'N/A') &&
+                      !isNA))
+                    ? { color: theme.textMuted }
+                    : { color: theme.primary },
                 ]}
               >
                 CDSS
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.submitBtn} onPress={handleSave}>
-              <Text style={styles.submitText}>SUBMIT</Text>
+            <TouchableOpacity
+              style={[
+                styles.submitBtn,
+                !selectedPatient && {
+                  backgroundColor: theme.buttonDisabledBg,
+                  borderColor: theme.buttonDisabledBorder,
+                },
+              ]}
+              onPress={handleSave}
+              disabled={!selectedPatient}
+            >
+              <Text
+                style={[
+                  styles.submitText,
+                  !selectedPatient && { color: theme.textMuted },
+                ]}
+              >
+                SUBMIT
+              </Text>
             </TouchableOpacity>
           </View>
           <View style={{ height: 100 }} />
@@ -463,6 +619,26 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       color: theme.primary,
       marginBottom: 8,
     },
+    naRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      marginBottom: 5,
+      marginTop: 5,
+    },
+    naText: {
+      fontSize: 14,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      marginRight: 8,
+    },
+    disabledTextAtBottom: {
+      fontSize: 13,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.textMuted,
+      textAlign: 'right',
+      marginBottom: 15,
+    },
     footerRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -476,7 +652,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       borderRadius: 25,
       alignItems: 'center',
       marginHorizontal: 5,
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: theme.buttonBorder,
     },
     submitBtn: {
@@ -486,11 +662,19 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       borderRadius: 25,
       alignItems: 'center',
       marginHorizontal: 5,
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: theme.buttonBorder,
     },
-    cdssText: { color: theme.textMuted, fontWeight: 'bold' },
-    submitText: { color: theme.primary, fontWeight: 'bold' },
+    cdssText: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 16,
+    },
+    submitText: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 16,
+    },
     fadeBottom: {
       position: 'absolute',
       bottom: 0,

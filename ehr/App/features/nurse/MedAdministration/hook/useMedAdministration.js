@@ -61,9 +61,11 @@ export const useMedAdministration = () => {
   });
 
   const updateCurrentMed = (field, value) => {
-    const newMeds = [...formData.medications];
-    newMeds[step] = { ...newMeds[step], [field]: value };
-    setFormData(prev => ({ ...prev, medications: newMeds }));
+    setFormData(prev => {
+      const newMeds = [...prev.medications];
+      newMeds[step] = { ...newMeds[step], [field]: value };
+      return { ...prev, medications: newMeds };
+    });
   };
 
   const nextStep = () => {
