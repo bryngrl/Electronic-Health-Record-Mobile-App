@@ -61,8 +61,8 @@ const DoctorHomeScreen = ({ onBack = () => {}, onViewAll, onNavigate }: { onBack
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => setModalVisible(true)}>
-            <Icon name="keyboard-arrow-down" size={24} color="#333" />
+          <TouchableOpacity onPress={() => setModalVisible(true)} style={{ marginRight: 30 }}>
+            <Icon name="keyboard-arrow-down" size={24} color="#333"/>
           </TouchableOpacity>
         </View>
 
@@ -135,13 +135,13 @@ const DoctorHomeScreen = ({ onBack = () => {}, onViewAll, onNavigate }: { onBack
                         <View style={styles.avatarContainer}>
                             <Icon name="person" size={20} color="#035022" />
                         </View>
-                        <Text style={styles.patientName}>{item.name}</Text>
+                        <Text style={[styles.patientName, { fontFamily: item.status === 'Unread' ? 'AlteHaasGroteskBold' : 'AlteHaasGrotesk', marginLeft: 12 }]}>{item.name}</Text>
                     </View>
 
                     <View style={styles.patientRightContainer}>
                         <View style={styles.patientRight}>
                             <View style={styles.badge}>
-                                <Text style={styles.badgeText}>{item.type}</Text>
+                                <Text style={[styles.badgeText, { fontFamily: item.status === 'Unread' ? 'AlteHaasGroteskBold' : 'AlteHaasGrotesk' }]}>{item.type}</Text>
                             </View>
                             <Text style={styles.timeText}>{item.time}</Text>
                         </View>
@@ -187,7 +187,7 @@ const NavItem = ({ label, icon, active, onPress }: any) => (
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#FFF' },
   scrollContent: { paddingHorizontal: 40, paddingBottom: 150, paddingTop: 40 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 35, marginTop: 10 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 35, marginTop: 10 },
   welcome: { fontSize: 35, color: '#035022', fontFamily: 'MinionPro-SemiboldItalic' },
   date: { fontSize: 14, color: '#B2B2B2', marginTop: 4, fontWeight: 'bold' },
   searchContainer: { marginBottom: 25 },
@@ -209,26 +209,26 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 11, color: '#035022', fontWeight: 'bold', textAlign: 'center', marginBottom: 2 },
   statCount: { fontSize: 26, color: '#035022', fontWeight: 'bold' },
   filterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#858583' },
-  viewAll: { color: '#999696', fontSize: 13 },
+  sectionTitle: { fontSize: 24, fontFamily: 'MinionPro-SemiboldItalic', color: '#035022' },
+  viewAll: { color: '#999696', fontSize: 13, fontFamily: 'AlteHaasGrotesk' },
   chipsRow: { flexDirection: 'row', marginBottom: 20 },
-  chip: { paddingHorizontal: 25, paddingVertical: 8, borderRadius: 20, borderWidth: 1, marginRight: 10 },
-  activeChip: { backgroundColor: '#5EAE57', borderColor: '#5EAE57' },
-  inactiveChip: { backgroundColor: 'transparent', borderColor: '#5EAE57' },
-  chipText: { fontSize: 14, fontWeight: '500', color: '#5EAE57' },
+  chip: { paddingHorizontal: 20, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#5EAE57', marginRight: 10 },
+  activeChip: { backgroundColor: '#5EAE57' },
+  inactiveChip: { backgroundColor: 'transparent' },
+  chipText: { fontSize: 12, fontFamily: 'AlteHaasGroteskBold', color: '#5EAE57' },
   activeChipText: { color: '#FFF' },
   inactiveChipText: { color: '#5EAE57' },
   listContainer: { paddingBottom: 20 },
   patientRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
   patientLeft: { flexDirection: 'row', alignItems: 'center' },
-  statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 12 },
-  avatarContainer: { marginRight: 12 },
-  patientName: { fontSize: 16, color: '#000', fontWeight: '500' },
+  statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 10 },
+  avatarContainer: { marginRight: 0 },
+  patientName: { fontSize: 14, color: '#333', fontFamily: 'AlteHaasGroteskBold' },
   patientRightContainer: { flexDirection: 'row', alignItems: 'center' },
   patientRight: { alignItems: 'flex-end' },
-  badge: { backgroundColor: '#FFF4C3', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginBottom: 4 },
-  badgeText: { color: '#E6B93D', fontSize: 12, fontWeight: 'bold' },
-  timeText: { color: '#B2B2B2', fontSize: 12 },
+  badge: { backgroundColor: '#FFECBD', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginBottom: 4 },
+  badgeText: { color: '#EDB62C', fontSize: 10, fontFamily: 'AlteHaasGroteskBold' },
+  timeText: { color: '#999', fontSize: 10, fontFamily: 'AlteHaasGrotesk' },
   emptyState: { alignItems: 'center', marginTop: 50 },
   emptyTitle: { color: '#999696', fontWeight: 'bold', fontSize: 16, marginBottom: 5 },
   emptySubtitle: { color: '#999696', fontSize: 14 },

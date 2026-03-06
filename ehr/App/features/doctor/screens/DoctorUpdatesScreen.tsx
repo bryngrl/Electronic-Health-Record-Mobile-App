@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   chipsRow: { flexDirection: 'row' },
   chip: { paddingHorizontal: 20, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#5EAE57', marginRight: 10 },
   activeChip: { backgroundColor: '#5EAE57' },
-  chipText: { color: '#5EAE57', fontSize: 12, fontWeight: 'bold' },
+  chipText: { color: '#5EAE57', fontSize: 12, fontFamily: 'AlteHaasGroteskBold' },
   activeChipText: { color: '#FFF' },
   emptyState: { alignItems: 'center', marginTop: 50 },
   emptyTitle: { color: '#999696', fontWeight: 'bold', fontSize: 16, marginBottom: 5, textAlign: 'center' },
