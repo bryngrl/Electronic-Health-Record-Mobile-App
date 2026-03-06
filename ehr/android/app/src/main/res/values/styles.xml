@@ -1,5 +1,10 @@
 <resources>
 
+    <!-- Splash Screen Theme -->
+    <style name="SplashScreenTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+    </style>
+
     <!-- Base application theme. -->
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <!-- Customize your theme here. -->

@@ -62,7 +62,8 @@ export default function LoginScreen() {
           ]}
         >
           <Image
-            source={require('@assets/ehr-logo.png')}
+            source={require('@assets/icons/ehr_logo.png')}
+            fadeDuration={0}
             style={[
               styles.logo,
               isKeyboardVisible ? styles.logoSmall : styles.logoLarge,
