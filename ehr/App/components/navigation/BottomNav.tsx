@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -6,6 +6,7 @@ import {
   useWindowDimensions,
   Platform,
   Image,
+  Keyboard,
 } from 'react-native';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
@@ -35,7 +36,22 @@ const BottomNav = ({
 }: BottomNavProps) => {
   const { width } = useWindowDimensions();
   const { theme, isDarkMode } = useAppTheme();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const styles = useMemo(() => createStyles(theme, isDarkMode), [theme, isDarkMode]);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const renderNavIcon = (
     routeName: string,
@@ -64,7 +80,7 @@ const BottomNav = ({
   };
 
   return (
-    <View style={[styles.container, { width: width }]}>
+    <View style={[styles.container, { width: width, bottom: 0 - (keyboardHeight > 0 ? keyboardHeight : 0) }]}>
       <View style={styles.navBar}>
         {renderNavIcon('Home', 'home_active', 'home')}
         {renderNavIcon('Search', 'search_active', 'search')}

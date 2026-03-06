@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -35,8 +35,8 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
-    () => createStyles(theme, commonStyles),
-    [theme, commonStyles],
+    () => createStyles(theme, commonStyles, isDarkMode),
+    [theme, commonStyles, isDarkMode],
   );
 
   const {
@@ -66,6 +66,36 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [isNA, setIsNA] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const toggleNA = () => {
+    const newState = !isNA;
+    setIsNA(newState);
+    const fields = ['med', 'dose', 'route', 'freq', 'indication', 'extra'];
+    if (newState) {
+      fields.forEach(f => handleUpdate(f as any, 'N/A'));
+    } else {
+      fields.forEach(f => {
+        if ((values as any)[f] === 'N/A') {
+          handleUpdate(f as any, '');
+        }
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (patientId) {
+      const fields = ['med', 'dose', 'route', 'freq', 'indication', 'extra'];
+      const allNA = fields.every(f => {
+        if (stageIndex === 2 && f === 'indication') return true;
+        return (values as any)[f] === 'N/A';
+      });
+      setIsNA(allNA);
+    } else {
+      setIsNA(false);
+    }
+  }, [patientId, values, stageIndex]);
 
   const handleBackPress = useCallback(() => {
     if (isMenuVisible) {
@@ -127,11 +157,17 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
   const handleSelectStage = (index: number) => {
     setStageIndex(index);
     setIsMenuVisible(false);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const handlePatientSelect = (id: number | null, name: string) => {
     setPatientId(id);
     setPatientName(name);
+  };
+
+  const handleNextPress = () => {
+    handleNext();
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const fadeColors = isDarkMode
@@ -148,6 +184,11 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
 
   return (
     <SafeAreaView style={styles.root}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={{ zIndex: 10 }}>
         <View
           style={{
@@ -176,6 +217,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
 
       <View style={{ flex: 1, marginTop: -20 }}>
         <ScrollView
+          ref={scrollViewRef}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
@@ -188,64 +230,109 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
             onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
           />
 
+          <TouchableOpacity
+            style={[styles.naRow, !patientId && { opacity: 0.5 }]}
+            onPress={() => {
+              if (!patientId) {
+                triggerPatientAlert();
+              } else {
+                toggleNA();
+              }
+            }}
+          >
+            <Text
+              style={[
+                styles.naText,
+                !patientId && { color: theme.textMuted },
+              ]}
+            >
+              Mark all as N/A
+            </Text>
+            <Icon
+              name={isNA ? 'check-box' : 'check-box-outline-blank'}
+              size={22}
+              color={patientId ? theme.primary : theme.textMuted}
+            />
+          </TouchableOpacity>
+
+          <Text
+            style={[
+              styles.disabledTextAtBottom,
+              isNA && { color: theme.error },
+            ]}
+          >
+            {isNA
+              ? 'All fields below are disabled.'
+              : 'Checking this will disable all fields below.'}
+          </Text>
+
           {/* STAGE Indicator */}
           <View style={styles.stageTab}>
             <Text style={styles.stageText}>{currentStage}</Text>
           </View>
 
           {/* INPUT Cards Flow - Wrapped in Pressable for validation */}
-          <Pressable onPress={() => !patientId && triggerPatientAlert()}>
-            <View
-              pointerEvents={patientId ? 'auto' : 'none'}
-              style={{ opacity: patientId ? 1 : 0.6 }}
-            >
-              <MedicalReconCard
-                label="Medication"
-                value={values.med}
-                onChangeText={(v: string) => handleUpdate('med', v)}
-              />
-              <MedicalReconCard
-                label="Dose"
-                value={values.dose}
-                onChangeText={(v: string) => handleUpdate('dose', v)}
-              />
-              <MedicalReconCard
-                label="Route"
-                value={values.route}
-                onChangeText={(v: string) => handleUpdate('route', v)}
-              />
-              <MedicalReconCard
-                label="Frequency"
-                value={values.freq}
-                onChangeText={(v: string) => handleUpdate('freq', v)}
-              />
+          <View
+            style={{ opacity: patientId ? 1 : 0.6 }}
+          >
+            <MedicalReconCard
+              label="Medication"
+              value={values.med}
+              onChangeText={(v: string) => handleUpdate('med', v)}
+              disabled={!patientId || isNA}
+              onDisabledPress={triggerPatientAlert}
+            />
+            <MedicalReconCard
+              label="Dose"
+              value={values.dose}
+              onChangeText={(v: string) => handleUpdate('dose', v)}
+              disabled={!patientId || isNA}
+              onDisabledPress={triggerPatientAlert}
+            />
+            <MedicalReconCard
+              label="Route"
+              value={values.route}
+              onChangeText={(v: string) => handleUpdate('route', v)}
+              disabled={!patientId || isNA}
+              onDisabledPress={triggerPatientAlert}
+            />
+            <MedicalReconCard
+              label="Frequency"
+              value={values.freq}
+              onChangeText={(v: string) => handleUpdate('freq', v)}
+              disabled={!patientId || isNA}
+              onDisabledPress={triggerPatientAlert}
+            />
 
-              {/* Indication is hidden in Stage 3 */}
-              {stageIndex !== 2 && (
-                <MedicalReconCard
-                  label="Indication"
-                  value={values.indication}
-                  onChangeText={(v: string) => handleUpdate('indication', v)}
-                />
-              )}
-
+            {/* Indication is hidden in Stage 3 */}
+            {stageIndex !== 2 && (
               <MedicalReconCard
-                label={getExtraLabel()}
-                value={values.extra}
-                onChangeText={(v: string) => handleUpdate('extra', v)}
+                label="Indication"
+                value={values.indication}
+                onChangeText={(v: string) => handleUpdate('indication', v)}
+                disabled={!patientId || isNA}
+                onDisabledPress={triggerPatientAlert}
               />
-            </View>
-          </Pressable>
+            )}
+
+            <MedicalReconCard
+              label={getExtraLabel()}
+              value={values.extra}
+              onChangeText={(v: string) => handleUpdate('extra', v)}
+              disabled={!patientId || isNA}
+              onDisabledPress={triggerPatientAlert}
+            />
+          </View>
 
           {/* FOOTER: Disabled until data is entered or while submitting */}
           <TouchableOpacity
             style={[
               styles.actionBtn,
-              (!isDataEntered || isSubmitting || !patientId) &&
+              (isSubmitting || !patientId) &&
                 styles.btnDisabled,
             ]}
-            onPress={handleNext}
-            disabled={!isDataEntered || isSubmitting || !patientId}
+            onPress={handleNextPress}
+            disabled={isSubmitting || !patientId}
           >
             {isSubmitting ? (
               <ActivityIndicator size="small" color={theme.primary} />
@@ -254,7 +341,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
                 <Text
                   style={[
                     styles.btnText,
-                    (!isDataEntered || isSubmitting || !patientId) && {
+                    (isSubmitting || !patientId) && {
                       color: theme.textMuted,
                     },
                   ]}
@@ -265,9 +352,9 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
                   <Text
                     style={[
                       styles.chevron,
-                      (!isDataEntered || isSubmitting || !patientId) && {
+                      (isSubmitting || !patientId) && {
                         color: theme.textMuted,
-                    },
+                      },
                     ]}
                   >
                     ›
@@ -325,7 +412,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
         visible={alertConfig.visible}
         title={alertConfig.title}
         message={alertConfig.message}
-        type={alertConfig.type}
+        type={alertConfig.type as any}
         onConfirm={handleAlertConfirm}
       />
 
@@ -351,6 +438,26 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontFamily: 'AlteHaasGroteskBold',
       fontSize: 13,
     },
+    naRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      marginBottom: 5,
+      marginTop: 5,
+    },
+    naText: {
+      fontSize: 14,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      marginRight: 8,
+    },
+    disabledTextAtBottom: {
+      fontSize: 13,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.textMuted,
+      textAlign: 'right',
+      marginBottom: 15,
+    },
     stageTab: {
       backgroundColor: theme.tableHeader,
       paddingVertical: 12,
@@ -370,14 +477,14 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       flexDirection: 'row',
       justifyContent: 'center',
       alignItems: 'center',
-      marginTop: 10,
+      marginTop: 5,
+      marginBottom: 70,
       borderWidth: 1,
       borderColor: theme.buttonBorder,
     },
     btnDisabled: {
-      backgroundColor: theme.surface,
-      borderColor: theme.border,
-      opacity: 0.6,
+      backgroundColor: theme.buttonDisabledBg,
+      borderColor: theme.buttonDisabledBorder,
     },
     btnText: { color: theme.primary, fontWeight: 'bold', fontSize: 16 },
     chevron: { color: theme.primary, fontSize: 20, marginLeft: 10 },

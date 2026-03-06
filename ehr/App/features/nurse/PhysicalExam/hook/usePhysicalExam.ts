@@ -2,24 +2,37 @@ import { useCallback } from 'react';
 import apiClient from '@api/apiClient';
 
 export const usePhysicalExam = () => {
+  const sanitize = (data: any) => {
+    const sanitized = { ...data };
+    Object.keys(sanitized).forEach(key => {
+      if (typeof sanitized[key] === 'string' && sanitized[key].trim() === '') {
+        sanitized[key] = 'N/A';
+      }
+    });
+    return sanitized;
+  };
+
   // STEP 1: ASSESSMENT (POST)
   const saveAssessment = useCallback(async (payload: any) => {
-    const response = await apiClient.post('/physical-exam/', payload);
+    const sanitized = sanitize(payload);
+    const response = await apiClient.post('/physical-exam/', sanitized);
     return response.data; 
   }, []);
 
   // Real-time CDSS
   const checkAssessmentAlerts = useCallback(async (payload: any) => {
     try {
-      const response = await apiClient.post('/physical-exam/', payload);
+      const sanitized = sanitize(payload);
+      const response = await apiClient.post('/physical-exam/', sanitized);
       return response.data;
     } catch (err) { return null; }
   }, []);
 
   // STEPS 2-5: DPIE UPDATES (PUT)
   const updateDPIE = useCallback(async (examId: number, stepKey: string, text: string) => {
+    const sanitizedText = text.trim() === '' ? 'N/A' : text;
     const response = await apiClient.put(`/physical-exam/${examId}/${stepKey}`, {
-      [stepKey]: text
+      [stepKey]: sanitizedText
     });
     return response.data;
   }, []);
@@ -58,6 +71,6 @@ export const usePhysicalExam = () => {
     checkAssessmentAlerts, 
     updateDPIE, 
     fetchLatestPhysicalExam,
-    fetchExamHistoryForReading // Bagong function para sa reading
+    fetchExamHistoryForReading 
   };
 };

@@ -24,7 +24,10 @@ export const COLORS = {
     modalHandle: '#747474',
     buttonBg: '#E5FFE8',
     buttonBorder: '#035022',
+    buttonDisabledBg: '#F2F1EF',
+    buttonDisabledBorder: '#E0E0E0',
     avatarCard: 'rgba(144, 255, 158, 0.32)',
+    navActiveBg: '#E0FFDD',
   },
   dark: {
     primary: '#4ADE80',
@@ -38,8 +41,8 @@ export const COLORS = {
     border: '#3a5137',
 
     card: '#1E1E1E',
-    card2: '#F6FFF7', // features card bg color
-    cardBorder: '#7AF489',
+    card2: '#1A2E1C', // features card bg color
+    cardBorder: '#2D5A30',
 
     white: '#FFFFFF',
     inputBg: '#1E1E1E',
@@ -48,7 +51,10 @@ export const COLORS = {
     modalHandle: '#363535',
     buttonBg: '#E5FFE8',
     buttonBorder: '#4ADE80',
+    buttonDisabledBg: '#2b2b2b',
+    buttonDisabledBorder: '#3a5137',
     avatarCard: '#035022',
+    navActiveBg: '#1A2E1C',
   },
 };
 

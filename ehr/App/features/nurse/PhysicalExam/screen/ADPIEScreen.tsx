@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { usePhysicalExam } from '../hook/usePhysicalExam';
@@ -53,6 +54,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   const [alert, setAlert] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [allData, setAllData] = useState<any>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -112,7 +114,6 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
 
   const handleNext = async () => {
     if (readOnly) {
-        // Safe navigation for Doctor
         if (currentIdx < STEPS.length - 1) {
             setCurrentIdx(currentIdx + 1);
         } else {
@@ -121,7 +122,6 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
         return;
     }
 
-    // Submission logic for Nurse
     if (!text.trim()) {
         Alert.alert('Required', `Please document the ${STEPS[currentIdx].label}.`);
         return;
@@ -134,6 +134,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
         setCurrentIdx(currentIdx + 1);
         setText('');
         setAlert(null);
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       } else {
         showAlert('Complete', 'ADPIE Workflow Finished.', 'success', () => {
           onBack();
@@ -149,6 +150,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
       setCurrentIdx(currentIdx - 1);
       setAlert(null);
       setText('');
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } else {
       onBack();
     }
@@ -156,8 +158,22 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.container}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.header}>
             <TouchableOpacity onPress={onBack} style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Icon name="arrow-back" size={24} color={theme.primary} style={{ marginRight: 10 }} />

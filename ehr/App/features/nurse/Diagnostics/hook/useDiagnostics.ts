@@ -58,13 +58,12 @@ export const useDiagnostics = () => {
 
       setLoading(true);
 
-      // Axios in React Native sometimes needs the Content-Type header to be omitted
-      // so the browser/environment can set it with the correct boundary.
-      // But FastAPI requires it to be multipart/form-data.
+      // Reverting to the previous working configuration for multipart/form-data
       const response = await apiClient.post('/diagnostics/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 60000, // Increased timeout to 60 seconds for larger image uploads
       });
 
       await fetchDiagnostics(patientId);

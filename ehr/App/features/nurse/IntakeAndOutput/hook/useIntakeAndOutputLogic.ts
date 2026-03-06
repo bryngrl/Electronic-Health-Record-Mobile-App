@@ -26,15 +26,22 @@ export const useIntakeAndOutputLogic = () => {
 
   const ADPIE_STAGES = ['Assessment', 'Diagnosis', 'Planning', 'Intervention', 'Evaluation'];
 
-  const handleUpdateField = useCallback((field: keyof IntakeOutputData, value: string) => {
-    // Only allow numbers
-    const cleanValue = value.replace(/[^0-9]/g, '');
-    setIntakeOutput(prev => ({ ...prev, [field]: cleanValue }));
-  }, []);
+  const handleUpdateField = useCallback(
+    (field: keyof IntakeOutputData, value: string) => {
+      if (value === 'N/A') {
+        setIntakeOutput(prev => ({ ...prev, [field]: 'N/A' }));
+        return;
+      }
+      // Only allow numbers
+      const cleanValue = value.replace(/[^0-9]/g, '');
+      setIntakeOutput(prev => ({ ...prev, [field]: cleanValue }));
+    },
+    [],
+  );
 
   const isDataEntered = useMemo(() => {
-    return Object.values(intakeOutput).some(val => val.trim().length > 0);
-  }, [intakeOutput]);
+    return true; // Enable empty inputs as per requirement
+  }, []);
 
   const fetchLatestIntakeOutput = useCallback(async (patientId: number) => {
     try {
@@ -72,11 +79,13 @@ export const useIntakeAndOutputLogic = () => {
     
     setLoading(true);
     try {
+      const sanitize = (val: string) => (val.trim() === '' ? 'N/A' : val);
+
       const payload = {
         patient_id: parseInt(selectedPatientId, 10),
-        oral_intake: parseInt(intakeOutput.oral_intake, 10) || 0,
-        iv_fluids: parseInt(intakeOutput.iv_fluids, 10) || 0,
-        urine_output: parseInt(intakeOutput.urine_output, 10) || 0,
+        oral_intake: sanitize(intakeOutput.oral_intake),
+        iv_fluids: sanitize(intakeOutput.iv_fluids),
+        urine_output: sanitize(intakeOutput.urine_output),
       };
 
       const response = await apiClient.post('/intake-output/', payload);
@@ -143,5 +152,6 @@ export const useIntakeAndOutputLogic = () => {
     loading,
     recordId,
     ADPIE_STAGES,
+    setIntakeOutput,
   };
 };

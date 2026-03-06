@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  StatusBar,
   BackHandler,
   Platform,
 } from 'react-native';
@@ -140,6 +141,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
   );
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const prevPatientIdRef = useRef<number | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -163,6 +165,44 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
   };
 
   const [formData, setFormData] = useState(initialFormData);
+  const [isNAStep, setIsNAStep] = useState<Record<string, boolean>>({
+    present: false,
+    past: false,
+    allergies: false,
+    vaccination: false,
+    developmental: false,
+  });
+
+  const toggleNA = () => {
+    const currentKey = steps[step].key;
+    const newState = !isNAStep[currentKey];
+
+    setIsNAStep(prev => ({ ...prev, [currentKey]: newState }));
+
+    if (newState) {
+      // Set all fields in this step to "N/A"
+      const fields = STEP_FIELDS[currentKey];
+      const updatedSection = {
+        ...(formData[currentKey as keyof typeof formData] as any),
+      };
+      fields.forEach(f => {
+        updatedSection[f] = 'N/A';
+      });
+      setFormData(prev => ({ ...prev, [currentKey]: updatedSection }));
+    } else {
+      // Clear fields if they were "N/A"
+      const fields = STEP_FIELDS[currentKey];
+      const updatedSection = {
+        ...(formData[currentKey as keyof typeof formData] as any),
+      };
+      fields.forEach(f => {
+        if (updatedSection[f] === 'N/A') {
+          updatedSection[f] = '';
+        }
+      });
+      setFormData(prev => ({ ...prev, [currentKey]: updatedSection }));
+    }
+  };
 
   useEffect(() => {
     const backAction = () => {
@@ -185,7 +225,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
         // Helper to handle both object and single-element array responses
         const getFirst = (val: any) => (Array.isArray(val) ? val[0] : val);
 
-        setFormData({
+        const newFormData = {
           present: getFirst(data.present_illness) || initialFormData.present,
           past: getFirst(data.past_medical_surgical) || initialFormData.past,
           allergies: getFirst(data.allergies) || initialFormData.allergies,
@@ -194,9 +234,29 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
           developmental:
             getFirst(data.developmental_history) ||
             initialFormData.developmental,
+        };
+        setFormData(newFormData);
+
+        // Check for N/A state
+        const newISNA: Record<string, boolean> = {};
+        Object.keys(STEP_FIELDS).forEach(key => {
+          const section = newFormData[key as keyof typeof newFormData];
+          const fields = STEP_FIELDS[key];
+          const allNA =
+            fields.length > 0 &&
+            fields.every(f => (section as any)[f] === 'N/A');
+          newISNA[key] = allNA;
         });
+        setIsNAStep(newISNA);
       } else {
         setFormData(initialFormData);
+        setIsNAStep({
+          present: false,
+          past: false,
+          allergies: false,
+          vaccination: false,
+          developmental: false,
+        });
       }
     },
     [fetchMedicalHistory],
@@ -210,6 +270,13 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
         loadPatientData(selectedPatientId);
       } else {
         setFormData(initialFormData);
+        setIsNAStep({
+          present: false,
+          past: false,
+          allergies: false,
+          vaccination: false,
+          developmental: false,
+        });
       }
     }
   }, [selectedPatientId, loadPatientData]);
@@ -236,6 +303,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
 
       if (step < steps.length - 1) {
         setStep(step + 1);
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       } else {
         const isUpdate = !!(
           formData.present.medical_id ||
@@ -294,6 +362,11 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <View style={{ zIndex: 10 }}>
         <View
           style={{
@@ -318,6 +391,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
 
       <View style={{ flex: 1, marginTop: -20 }}>
         <ScrollView
+          ref={scrollViewRef}
           style={styles.container}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -328,6 +402,49 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
             onPatientSelect={id => setSelectedPatientId(id)}
             onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
           />
+
+          <TouchableOpacity
+            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+            onPress={() => {
+              if (!selectedPatientId) {
+                showAlert(
+                  'Patient Required',
+                  'Please select a patient first in the search bar.',
+                );
+              } else {
+                toggleNA();
+              }
+            }}
+          >
+            <Text
+              style={[
+                styles.naText,
+                !selectedPatientId && { color: theme.textMuted },
+              ]}
+            >
+              Mark all as N/A
+            </Text>
+            <Icon
+              name={
+                isNAStep[currentStepKey]
+                  ? 'check-box'
+                  : 'check-box-outline-blank'
+              }
+              size={22}
+              color={selectedPatientId ? theme.primary : theme.textMuted}
+            />
+          </TouchableOpacity>
+
+          <Text
+            style={[
+              styles.disabledTextAtBottom,
+              isNAStep[currentStepKey] && { color: theme.error },
+            ]}
+          >
+            {isNAStep[currentStepKey]
+              ? 'All fields below are disabled.'
+              : 'Checking this will disable all fields below.'}
+          </Text>
 
           <View style={styles.stepHeader}>
             <Text style={styles.stepHeaderText}>{steps[step].title}</Text>
@@ -345,13 +462,15 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
                 ] || ''
               }
               onChangeText={(val: string) => updateField(field, val)}
-              disabled={!selectedPatientId}
-              onDisabledPress={() =>
-                showAlert(
-                  'Patient Required',
-                  'Please select a patient first in the search bar.',
-                )
-              }
+              disabled={!selectedPatientId || isNAStep[currentStepKey]}
+              onDisabledPress={() => {
+                if (!selectedPatientId) {
+                  showAlert(
+                    'Patient Required',
+                    'Please select a patient first in the search bar.',
+                  );
+                }
+              }}
             />
           ))}
 
@@ -359,6 +478,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
             <Button
               title={step === steps.length - 1 ? 'SUBMIT' : 'NEXT'}
               onPress={handleNext}
+              disabled={!selectedPatientId}
             />
           </View>
           <View style={{ height: 100 }} />
@@ -405,6 +525,25 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       color: theme.secondary,
       fontFamily: 'AlteHaasGroteskBold',
       fontSize: 14,
+    },
+    naRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      marginBottom: 5,
+      marginTop: 5,
+    },
+    naText: {
+      fontSize: 14,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      marginRight: 8,
+    },
+    disabledTextAtBottom: {
+      fontSize: 13,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.textMuted,
+      textAlign: 'right',
     },
     btnContainer: { marginTop: 10 },
     fadeBottom: {

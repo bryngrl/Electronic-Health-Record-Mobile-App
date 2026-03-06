@@ -9,7 +9,6 @@ import {
   Image,
 } from 'react-native';
 import CDSSModal from '@components/CDSSModal';
-import SweetAlert from '@components/SweetAlert';
 
 const alert1 = require('@assets/icons/alert_bell_icon.png');
 
@@ -19,7 +18,8 @@ interface ExamInputProps {
   disabled: boolean;
   alertText?: string;
   onChangeText: (text: string) => void;
-  readOnly?: boolean; // ADDED PROP
+  readOnly?: boolean;
+  onDisabledPress?: () => void;
 }
 
 const LINE_HEIGHT = 28;
@@ -31,15 +31,15 @@ const ExamInputCard = ({
   disabled,
   alertText,
   onChangeText,
-  readOnly = false, // DEFAULT TO FALSE
+  readOnly = false,
+  onDisabledPress,
 }: ExamInputProps) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [showAlert, setShowAlert] = useState(false);
   const [inputHeight, setInputHeight] = useState(
     4 * LINE_HEIGHT + INPUT_PADDING_BOTTOM,
   );
 
-  const isAlertActive = value.trim().length > 0;
+  const isAlertActive = value.trim().length > 0 && value !== 'N/A';
   const hasBackendAlert = !!alertText && alertText.trim().length > 0;
 
   const visibleTypingHeight = Math.max(0, inputHeight - INPUT_PADDING_BOTTOM);
@@ -72,7 +72,7 @@ const ExamInputCard = ({
   };
 
   return (
-    <View style={[styles.card, disabled && { opacity: 0.7 }]}>
+    <View style={[styles.card, (disabled || readOnly) && { opacity: 0.8 }]}>
       <View style={styles.cardHeader}>
         <Text style={styles.headerText}>{label}</Text>
       </View>
@@ -85,8 +85,8 @@ const ExamInputCard = ({
         <Pressable
           style={styles.inputArea}
           onPress={() => {
-            if (disabled && !readOnly) {
-              setShowAlert(true);
+            if (disabled && onDisabledPress) {
+              onDisabledPress();
             }
           }}
         >
@@ -114,8 +114,8 @@ const ExamInputCard = ({
             { opacity: isAlertActive ? 1.0 : 0.3 },
             hasBackendAlert && styles.activeAlert,
           ]}
-          onPress={() => isAlertActive && setModalVisible(true)}
-          disabled={!isAlertActive}
+          onPress={() => isAlertActive && !disabled && setModalVisible(true)}
+          disabled={!isAlertActive || (disabled && !readOnly)}
         >
           <Image source={alert1} style={styles.alertImage} />
         </TouchableOpacity>
@@ -126,15 +126,6 @@ const ExamInputCard = ({
         onClose={() => setModalVisible(false)}
         category={label}
         alertText={alertText || 'Analyzing findings for potential risks...'}
-      />
-
-      <SweetAlert
-        visible={showAlert}
-        title="Patient Required"
-        message="Please select a patient first in the search bar before entering findings."
-        type="error"
-        onConfirm={() => setShowAlert(false)}
-        confirmText="OK"
       />
     </View>
   );

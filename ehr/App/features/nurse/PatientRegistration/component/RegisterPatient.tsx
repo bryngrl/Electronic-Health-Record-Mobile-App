@@ -11,6 +11,7 @@ import {
   SafeAreaView,
   BackHandler,
   useColorScheme,
+  StatusBar,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Dropdown } from 'react-native-element-dropdown';
@@ -211,6 +212,11 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
 
   return (
     <View style={styles.mainContainer}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <SweetAlert
         visible={alertConfig.visible}
         title={alertConfig.title}
