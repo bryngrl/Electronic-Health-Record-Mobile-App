@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TextInput, TouchableOpacity, Image, RefreshControl } from 'react-native';
 import PatientUpdateCard from '../components/PatientUpdateCard';
 import { useDoctorDashboardLogic } from '../hooks/useDoctorDashboardLogic';
@@ -6,7 +6,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { AccountModal } from '../../../components/AccountModal';
 import { useAuth } from '@features/Auth/AuthContext';
 
-const DoctorUpdatesScreen = ({ onBack, onNavigate }: { onBack?: () => void, onNavigate: (route: string) => void }) => {
+const DoctorUpdatesScreen = ({ onBack, onNavigate }: { onBack?: () => void, onNavigate: (route: string, params?: any) => void }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const { user } = useAuth();
   const { 
@@ -54,6 +54,36 @@ const DoctorUpdatesScreen = ({ onBack, onNavigate }: { onBack?: () => void, onNa
     }
   };
 
+  const handleUpdatePress = (item: any) => {
+    if (item.status === 'Unread') markAsRead(item.id);
+
+    // MAPPING: Convert update_type to category
+    let category = '';
+    const type = item.type.toLowerCase();
+
+    if (type.includes('vital')) category = 'vital_signs';
+    else if (type.includes('physical')) category = 'physical_exam';
+    else if (type.includes('lab')) category = 'lab_values';
+    else if (type.includes('intake') || type.includes('output')) category = 'intake_output';
+    else if (type.includes('adl')) category = 'adl';
+
+    if (category) {
+      if (category === 'vital_signs') {
+        onNavigate('VitalSigns', {
+            patientId: item.patient_id,
+            patientName: item.name
+        });
+      } else {
+        onNavigate('DoctorPatientDetail', {
+          patientId: item.patient_id,
+          category: category
+        });
+      }
+    } else {
+      console.log('Unmapped update type:', item.type);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView 
@@ -75,7 +105,6 @@ const DoctorUpdatesScreen = ({ onBack, onNavigate }: { onBack?: () => void, onNa
           </TouchableOpacity>
         </View>
 
-        {/* Search Bar with Icon */}
         <View style={styles.searchContainer}>
           <View style={styles.searchBarWrapper}>
             <Image 
@@ -112,7 +141,7 @@ const DoctorUpdatesScreen = ({ onBack, onNavigate }: { onBack?: () => void, onNa
           filteredUpdates.map(item => (
             <TouchableOpacity 
               key={item.id} 
-              onPress={() => item.status === 'Unread' && markAsRead(item.id)}
+              onPress={() => handleUpdatePress(item)}
               activeOpacity={0.7}
             >
               <PatientUpdateCard 
@@ -188,4 +217,4 @@ const styles = StyleSheet.create({
   navLabel: { fontSize: 10, color: '#999' }
 });
 
-export default DoctorUpdatesScreen; 
+export default DoctorUpdatesScreen;

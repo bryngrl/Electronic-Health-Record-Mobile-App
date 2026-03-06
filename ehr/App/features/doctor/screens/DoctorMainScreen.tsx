@@ -7,13 +7,19 @@ import DoctorHomeScreen from './DoctorHomeScreen';
 import DoctorPatientsScreen from './DoctorPatientsScreen';
 import DoctorReportsScreen from './DoctorReportsScreen';
 import DoctorUpdatesScreen from './DoctorUpdatesScreen';
+import DoctorPatientDetailScreen from './DoctorPatientDetailScreen';
+import VitalSignsScreen from '../../nurse/VitalSigns/screen/VitalSignsScreen';
 
 export default function DoctorMainScreen() {
   const { theme } = useAppTheme();
   const [activeTab, setActiveTab] = useState('DoctorHome');
   const [navigationHistory, setNavigationHistory] = useState<string[]>(['DoctorHome']);
+  const [selectedPatientData, setSelectedPatientData] = useState<{patientId: number, category: string, recordId?: number, patientName?: string} | null>(null);
 
-  const handleNavigation = useCallback((route: string) => {
+  const handleNavigation = useCallback((route: string, params?: any) => {
+    if ((route === 'DoctorPatientDetail' || route === 'VitalSigns') && params) {
+      setSelectedPatientData(params);
+    }
     setActiveTab(prevTab => {
       if (prevTab !== route) {
         setNavigationHistory(prev => [...prev, route]);
@@ -57,6 +63,24 @@ export default function DoctorMainScreen() {
         return <DoctorReportsScreen onNavigate={handleNavigation} />;
       case 'DoctorUpdates':
         return <DoctorUpdatesScreen onNavigate={handleNavigation} />;
+      case 'DoctorPatientDetail':
+        return selectedPatientData ? (
+          <DoctorPatientDetailScreen 
+            patientId={selectedPatientData.patientId}
+            category={selectedPatientData.category}
+            recordId={selectedPatientData.recordId}
+            onBack={handleBack}
+          />
+        ) : null;
+      case 'VitalSigns':
+        return selectedPatientData ? (
+          <VitalSignsScreen 
+            onBack={handleBack}
+            readOnly={true}
+            patientId={selectedPatientData.patientId}
+            initialPatientName={selectedPatientData.patientName}
+          />
+        ) : null;
       default:
         return (
           <DoctorHomeScreen 

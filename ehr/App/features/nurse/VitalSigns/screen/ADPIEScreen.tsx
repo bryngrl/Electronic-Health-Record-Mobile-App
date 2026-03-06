@@ -30,6 +30,7 @@ interface ADPIEScreenProps {
   recordId: number;
   patientName: string;
   feature?: 'vital-signs' | 'intake-output';
+  readOnly?: boolean;
 }
 
 const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
@@ -37,6 +38,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   recordId,
   patientName,
   feature = 'vital-signs',
+  readOnly = false,
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
@@ -49,11 +51,43 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   const [alert, setAlert] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [allData, setAllData] = useState<any>(null);
 
   const endpointPrefix =
     feature === 'vital-signs' ? '/vital-signs' : '/intake-output';
   const displayTitle =
     feature === 'vital-signs' ? 'Vital Signs' : 'Intake and Output';
+
+  // Fetch all data for readOnly mode
+  useEffect(() => {
+    const fetchRecord = async () => {
+      try {
+        setLoading(true);
+        const response = await apiClient.get(`${endpointPrefix}/${recordId}`);
+        setAllData(response.data);
+        // Set initial text for first step
+        if (response.data) {
+          setText(response.data[STEPS[0].key] || '');
+          setAlert(response.data[`${STEPS[0].key}_alert`] || null);
+        }
+      } catch (e) {
+        console.error('Error fetching record for ADPIE:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecord();
+  }, [recordId, endpointPrefix]);
+
+  // Update text when step changes in readOnly mode
+  useEffect(() => {
+    if (allData) {
+      const step = STEPS[currentIdx];
+      setText(allData[step.key] || '');
+      setAlert(allData[`${step.key}_alert`] || null);
+    }
+  }, [currentIdx, allData]);
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -79,6 +113,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   };
 
   const updateADPIE = async (id: number, step: string, value: string) => {
+    if (readOnly) return; // Prevent updates in read-only mode
     try {
       const response = await apiClient.put(`${endpointPrefix}/${id}/${step}`, {
         [step]: value,
@@ -91,7 +126,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   };
 
   useEffect(() => {
-    if (text.trim().length < 3) return;
+    if (readOnly || text.trim().length < 3) return;
     const timer = setTimeout(async () => {
       try {
         const step = STEPS[currentIdx];
@@ -102,9 +137,18 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [text, currentIdx, recordId]);
+  }, [text, currentIdx, recordId, readOnly]);
 
   const handleNext = async () => {
+    if (readOnly) {
+      if (currentIdx < 3) {
+        setCurrentIdx(currentIdx + 1);
+      } else {
+        onBack();
+      }
+      return;
+    }
+
     if (!text.trim()) {
       showAlert(
         'Input Required',
@@ -277,11 +321,12 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
               </View>
               <TextInput
                 multiline
-                style={styles.input}
+                style={[styles.input, readOnly && { color: theme.textMuted }]}
                 value={text}
                 onChangeText={setText}
                 scrollEnabled={false}
-                placeholder={`Enter ${STEPS[currentIdx].label}...`}
+                editable={!readOnly}
+                placeholder={readOnly ? 'No record available' : `Enter ${STEPS[currentIdx].label}...`}
                 placeholderTextColor={theme.textMuted}
               />
             </View>
@@ -304,7 +349,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
                 <ActivityIndicator size="small" color={theme.primary} />
               ) : (
                 <Text style={styles.nextText}>
-                  {currentIdx === 3 ? 'SUBMIT' : 'NEXT'}
+                  {readOnly ? (currentIdx === 3 ? 'CLOSE' : 'NEXT') : (currentIdx === 3 ? 'SUBMIT' : 'NEXT')}
                 </Text>
               )}
             </TouchableOpacity>

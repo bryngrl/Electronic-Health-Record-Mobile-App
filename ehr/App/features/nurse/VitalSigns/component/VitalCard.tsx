@@ -5,12 +5,14 @@ interface VitalCardProps {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
+  editable?: boolean;
 }
 
 const VitalCard: React.FC<VitalCardProps> = ({
   label,
   value,
   onChangeText,
+  editable = true,
 }) => (
   <View style={styles.cardContainer}>
     {/* Outer Box / Label Header Area */}
@@ -26,6 +28,7 @@ const VitalCard: React.FC<VitalCardProps> = ({
         keyboardType="numeric"
         placeholder="--"
         placeholderTextColor="#C7C7CD"
+        editable={editable}
       />
     </View>
   </View>

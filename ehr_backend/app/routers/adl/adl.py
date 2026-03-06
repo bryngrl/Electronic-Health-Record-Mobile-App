@@ -173,8 +173,9 @@ def create_adl(payload: AssessmentCreate, db: Session = Depends(get_db)):
             updated_at=now,
         )
         db.add(record)
+        db.flush()
 
-    create_doctor_update(db, payload.patient_id, "ADL")
+    create_doctor_update(db, payload.patient_id, "ADL", "adl", record.id)
     db.commit()
     db.refresh(record)
     return record

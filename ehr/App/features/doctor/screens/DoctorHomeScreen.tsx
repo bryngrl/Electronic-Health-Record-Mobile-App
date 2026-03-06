@@ -45,6 +45,37 @@ const DoctorHomeScreen = ({ onBack = () => {}, onViewAll, onNavigate }: { onBack
     );
   };
 
+  const handleUpdatePress = (item: any) => {
+    if (item.status === 'Unread') markAsRead(item.id);
+
+    // MAPPING: Convert update_type to category
+    let category = '';
+    const type = item.type.toLowerCase();
+
+    if (type.includes('vital')) category = 'vital_signs';
+    else if (type.includes('physical')) category = 'physical_exam';
+    else if (type.includes('lab')) category = 'lab_values';
+    else if (type.includes('intake') || type.includes('output')) category = 'intake_output';
+    else if (type.includes('adl')) category = 'adl';
+
+    if (category) {
+      if (category === 'vital_signs') {
+        onNavigate('VitalSigns', {
+            patientId: item.patient_id,
+            patientName: item.name
+        });
+      } else {
+        onNavigate('DoctorPatientDetail', {
+          patientId: item.patient_id,
+          category: category
+        });
+      }
+    } else {
+      // Fallback for types we haven't mapped yet
+      console.log('Unmapped update type:', item.type);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView 
@@ -116,17 +147,7 @@ const DoctorHomeScreen = ({ onBack = () => {}, onViewAll, onNavigate }: { onBack
             filteredUpdates.map((item, index) => (
                 <TouchableOpacity 
                     key={item.id || index} 
-                    onPress={() => {
-                        if (item.status === 'Unread') markAsRead(item.id);
-                        if (item.type === 'Vital Signs') {
-                          const dateOnly = item.created_at.split('T')[0];
-                          onNavigate('DoctorVitalSigns', { 
-                            patientId: item.patient_id, 
-                            patientName: item.patient_name,
-                            date: dateOnly
-                          });
-                        }
-                    }}
+                    onPress={() => handleUpdatePress(item)}
                     activeOpacity={0.7}
                     style={styles.patientRow}
                 >
