@@ -69,7 +69,7 @@ const patients = [
     birthplace: 'Jolo, Sulu',
     age: 40,
     sex: 'Female',
-    address: 'B8 L12, Golden Village, Zamboanga',     
+    address: 'B8 L12, Golden Village, Zamboanga',
     religion: 'Islam',
     ethnicity: 'Tausug',
     chief_complaints: 'Scheduled C-Section',
@@ -92,7 +92,7 @@ const patients = [
     address: 'Subic Bay Freeport Zone',
     religion: 'Protestant',
     ethnicity: 'Caucasian',
-    chief_complaints: 'Fractured leg from fall',      
+    chief_complaints: 'Fractured leg from fall',
     room_no: '205',
     bed_no: '02',
     user_id: 1,
@@ -112,7 +112,7 @@ const patients = [
     address: 'Binondo, Manila',
     religion: 'Buddhist',
     ethnicity: 'Chinese-Filipino',
-    chief_complaints: 'Abdominal pain and nausea',    
+    chief_complaints: 'Abdominal pain and nausea',
     room_no: '301',
     bed_no: '15',
     user_id: 1,
@@ -152,7 +152,7 @@ const patients = [
     address: 'Davao City, Proper',
     religion: 'Roman Catholic',
     ethnicity: 'Bisaya',
-    chief_complaints: 'High fever and joint pain',    
+    chief_complaints: 'High fever and joint pain',
     room_no: 'Pedia-05',
     bed_no: '12',
     user_id: 1,
@@ -172,7 +172,7 @@ const patients = [
     address: 'Cebu Business Park',
     religion: 'Roman Catholic',
     ethnicity: 'Chinese',
-    chief_complaints: 'Uncontrolled hypertension',    
+    chief_complaints: 'Uncontrolled hypertension',
     room_no: '505',
     bed_no: '05',
     user_id: 1,
@@ -292,7 +292,7 @@ const patients = [
     address: 'Sta. Rosa, Laguna',
     religion: 'Shinto',
     ethnicity: 'Japanese',
-    chief_complaints: 'Food poisoning/Salmonella',    
+    chief_complaints: 'Food poisoning/Salmonella',
     room_no: '108',
     bed_no: 'B2',
     user_id: 1,
@@ -312,7 +312,7 @@ const patients = [
     address: 'Naga City, Camarines Sur',
     religion: 'Roman Catholic',
     ethnicity: 'Bicolano',
-    chief_complaints: 'Dizziness and vertigo',        
+    chief_complaints: 'Dizziness and vertigo',
     room_no: '310',
     bed_no: '01',
     user_id: 1,
@@ -332,7 +332,7 @@ const patients = [
     address: 'Baguio City, Benguet',
     religion: 'Christian',
     ethnicity: 'Igorot',
-    chief_complaints: 'Influenza-like symptoms',      
+    chief_complaints: 'Influenza-like symptoms',
     room_no: 'Isolation-1',
     bed_no: '01',
     user_id: 1,
@@ -372,7 +372,7 @@ const patients = [
     address: 'Caloocan North',
     religion: 'Roman Catholic',
     ethnicity: 'Tagalog',
-    chief_complaints: 'Jaw pain and swelling',        
+    chief_complaints: 'Jaw pain and swelling',
     room_no: 'Dental-01',
     bed_no: 'N/A',
     user_id: 1,
@@ -392,7 +392,7 @@ const patients = [
     address: 'Intramuros, Manila',
     religion: 'Roman Catholic',
     ethnicity: 'Spanish-Filipino',
-    chief_complaints: 'Hyperemesis gravidarum',       
+    chief_complaints: 'Hyperemesis gravidarum',
     room_no: 'OB-Wait',
     bed_no: '05',
     user_id: 1,
@@ -403,7 +403,7 @@ const patients = [
   },
 ];
 
-const YOUR_IP = '192.168.1.13'; //change this to match your current ip (ipconfig in cmd prompt)
+const YOUR_IP = '192.168.1.14'; //change this to match your current ip (ipconfig in cmd prompt)
 const API_URL = 'http://' + YOUR_IP + ':8000/patients/';
 
 async function seedPatients() {
@@ -420,7 +420,7 @@ async function seedPatients() {
       );
     } catch (error) {
       console.error(
-        ` --[${i + 1}/${patients.length}] Failed: ${  
+        ` --[${i + 1}/${patients.length}] Failed: ${
           patients[i].first_name
         }. Error: ${error.message}`,
       );
