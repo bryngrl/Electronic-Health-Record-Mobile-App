@@ -280,6 +280,13 @@ const MedAdministrationScreen = ({ onBack }: any) => {
             onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
           />
 
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>DATE :</Text>
+            <View style={styles.pillInput}>
+              <Text style={styles.dateVal}>{formData.date}</Text>
+            </View>
+          </View>
+
           <TouchableOpacity
             style={[styles.naRow, !formData.patient_id && { opacity: 0.5 }]}
             onPress={() => {
@@ -315,13 +322,6 @@ const MedAdministrationScreen = ({ onBack }: any) => {
               ? 'All fields below are disabled.'
               : 'Checking this will disable all fields below.'}
           </Text>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>DATE :</Text>
-            <View style={styles.pillInput}>
-              <Text style={styles.dateVal}>{formData.date}</Text>
-            </View>
-          </View>
 
           {/* Time Progress Banner */}
           <View style={styles.timeBanner}>

@@ -346,6 +346,31 @@ const ADLScreen = ({ onBack }: any) => {
             initialPatientName={searchText}
           />
 
+          <View style={styles.section}>
+            <View style={styles.row}>
+              <View style={{ flex: 1, marginRight: 10 }}>
+                <Text style={styles.sectionLabel}>DATE :</Text>
+                <View style={styles.inputBox}>
+                  <Text style={styles.inputText}>
+                    {getCurrentDateFormatted()}
+                  </Text>
+                </View>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionLabel}>DAY NO. :</Text>
+                <View style={styles.inputBox}>
+                  <Text style={styles.inputText}>{calculateDayNumber()}</Text>
+                  <Icon
+                    name="arrow-drop-down"
+                    size={24}
+                    color={theme.primary}
+                    style={{ position: 'absolute', right: 10 }}
+                  />
+                </View>
+              </View>
+            </View>
+          </View>
+
           <TouchableOpacity
             style={[styles.naRow, !selectedPatient && { opacity: 0.5 }]}
             onPress={() => {
@@ -384,31 +409,6 @@ const ADLScreen = ({ onBack }: any) => {
               ? 'All fields below are disabled.'
               : 'Checking this will disable all fields below.'}
           </Text>
-
-          <View style={styles.section}>
-            <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 10 }}>
-                <Text style={styles.sectionLabel}>DATE :</Text>
-                <View style={styles.inputBox}>
-                  <Text style={styles.inputText}>
-                    {getCurrentDateFormatted()}
-                  </Text>
-                </View>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sectionLabel}>DAY NO. :</Text>
-                <View style={styles.inputBox}>
-                  <Text style={styles.inputText}>{calculateDayNumber()}</Text>
-                  <Icon
-                    name="arrow-drop-down"
-                    size={24}
-                    color={theme.primary}
-                    style={{ position: 'absolute', right: 10 }}
-                  />
-                </View>
-              </View>
-            </View>
-          </View>
 
           <ADLInputCard
             label="MOBILITY"
@@ -520,7 +520,7 @@ const ADLScreen = ({ onBack }: any) => {
             <TouchableOpacity
               style={[
                 styles.cdssBtn,
-                (!selectedPatient) && {
+                !selectedPatient && {
                   backgroundColor: theme.buttonDisabledBg,
                   borderColor: theme.buttonDisabledBorder,
                 },
@@ -531,7 +531,7 @@ const ADLScreen = ({ onBack }: any) => {
               <Text
                 style={[
                   styles.cdssText,
-                  (!selectedPatient)
+                  !selectedPatient
                     ? { color: theme.textMuted }
                     : { color: theme.primary },
                 ]}
@@ -633,7 +633,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontFamily: 'AlteHaasGroteskBold',
       color: theme.textMuted,
       textAlign: 'right',
-      marginBottom: 15,
+      marginBottom: 25,
     },
     footerRow: {
       flexDirection: 'row',

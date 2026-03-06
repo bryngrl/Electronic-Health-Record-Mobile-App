@@ -66,6 +66,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
   });
 
   const [isNA, setIsNA] = useState(false);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const toggleNA = () => {
@@ -212,6 +213,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="always"
+          scrollEnabled={scrollEnabled}
         >
           <View style={{ height: 20 }} />
           {/* Patient Name Section */}
@@ -221,6 +223,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
               setPatientName(name);
             }}
             initialPatientName={patientName}
+            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
           />
 
           <TouchableOpacity

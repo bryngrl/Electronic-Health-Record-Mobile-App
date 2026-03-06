@@ -346,42 +346,6 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
             initialPatientName={patientName}
           />
 
-          <TouchableOpacity
-            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
-            onPress={() => {
-              if (!selectedPatientId) {
-                setAlertVisible(true);
-              } else {
-                toggleNA();
-              }
-            }}
-          >
-            <Text
-              style={[
-                styles.naText,
-                !selectedPatientId && { color: theme.textMuted },
-              ]}
-            >
-              Mark all as N/A
-            </Text>
-            <Icon
-              name={isNA ? 'check-box' : 'check-box-outline-blank'}
-              size={22}
-              color={selectedPatientId ? theme.primary : theme.textMuted}
-            />
-          </TouchableOpacity>
-
-          <Text
-            style={[
-              styles.disabledTextAtBottom,
-              isNA && { color: theme.error },
-            ]}
-          >
-            {isNA
-              ? 'All fields below are disabled.'
-              : 'Checking this will disable all fields below.'}
-          </Text>
-
           <View style={styles.row}>
             <View style={{ flex: 1.2, marginRight: 10 }}>
               <Text style={styles.fieldLabel}>DATE :</Text>
@@ -401,7 +365,10 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
                 <Text style={styles.dateVal}>{calculateDayNumber()}</Text>
                 <Image
                   source={arrowIcon}
-                  style={[styles.arrowIconImage, { tintColor: theme.textMuted }]}
+                  style={[
+                    styles.arrowIconImage,
+                    { tintColor: theme.textMuted },
+                  ]}
                 />
               </View>
             </View>
@@ -464,14 +431,48 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
             )}
           </View>
 
+          <TouchableOpacity
+            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+            onPress={() => {
+              if (!selectedPatientId) {
+                setAlertVisible(true);
+              } else {
+                toggleNA();
+              }
+            }}
+          >
+            <Text
+              style={[
+                styles.naText,
+                !selectedPatientId && { color: theme.textMuted },
+              ]}
+            >
+              Mark all as N/A
+            </Text>
+            <Icon
+              name={isNA ? 'check-box' : 'check-box-outline-blank'}
+              size={22}
+              color={selectedPatientId ? theme.primary : theme.textMuted}
+            />
+          </TouchableOpacity>
+
+          <Text
+            style={[
+              styles.disabledTextAtBottom,
+              isNA && { color: theme.error },
+            ]}
+          >
+            {isNA
+              ? 'All fields below are disabled.'
+              : 'Checking this will disable all fields below.'}
+          </Text>
+
           <View style={styles.timeBanner}>
             <Text style={styles.timeText}>{currentTime}</Text>
           </View>
 
           {/* Vital Cards */}
-          <View
-            style={{ opacity: selectedPatientId ? 1 : 0.6 }}
-          >
+          <View style={{ opacity: selectedPatientId ? 1 : 0.6 }}>
             <VitalCard
               label="Temperature"
               value={vitals.temperature}
@@ -791,7 +792,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontFamily: 'AlteHaasGroteskBold',
       color: theme.textMuted,
       textAlign: 'right',
-      marginBottom: 15,
+      marginBottom: 25,
     },
     chartCarousel: { height: 210, marginVertical: 20, position: 'relative' },
     navArrow: {
@@ -821,7 +822,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       paddingVertical: 10,
       borderRadius: 20,
       alignItems: 'center',
-      marginBottom: 20,
+      marginBottom: 10,
     },
     timeText: {
       color: theme.secondary,
