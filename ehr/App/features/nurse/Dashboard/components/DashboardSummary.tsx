@@ -18,6 +18,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { AccountModal } from '@components/AccountModal';
 import apiClient from '@api/apiClient';
 import { useAppTheme } from '@App/theme/ThemeContext';
+import { useAuth } from '@features/Auth/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -64,6 +65,7 @@ const DashboardSummary = ({
   onPatientSelect: (id: number) => void;
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
+  const { user } = useAuth();
   const styles = createStyles(theme, commonStyles);
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -193,7 +195,7 @@ const DashboardSummary = ({
       >
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Hello, Jovilyn</Text>
+            <Text style={styles.greeting}>Hello, {user?.full_name?.split(' ')[0] || 'User'}</Text>
             <Text style={styles.dateText}>{formatDate()}</Text>
           </View>
           <TouchableOpacity

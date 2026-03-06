@@ -6,7 +6,17 @@ import { LoginForm } from '../components/LoginForm';
 const MOSAIC_SIZE = 170;
 
 export default function LoginScreen() {
-  const { username, setUsername, password, setPassword, width, height, isLandscape } = useLogin();
+  const { 
+    email, 
+    setEmail, 
+    password, 
+    setPassword, 
+    handleLogin,
+    isSubmitting,
+    width, 
+    height, 
+    isLandscape 
+  } = useLogin();
 
   const renderPortrait = () => (
     <View style={styles.container}>
@@ -41,10 +51,12 @@ export default function LoginScreen() {
             />
           </View>
           <LoginForm 
-            username={username} 
-            setUsername={setUsername} 
+            email={email} 
+            setEmail={setEmail} 
             password={password} 
             setPassword={setPassword} 
+            handleLogin={handleLogin}
+            isSubmitting={isSubmitting}
             containerStyle={{ width: '75%', alignSelf: 'center', marginTop: 20 }}
           />
         </View>
@@ -84,10 +96,12 @@ export default function LoginScreen() {
         </View>
         <View style={{ flex: 1, justifyContent: 'center', paddingRight: 10, marginLeft: 50 }}>
           <LoginForm 
-            username={username} 
-            setUsername={setUsername} 
+            email={email} 
+            setEmail={setEmail} 
             password={password} 
             setPassword={setPassword} 
+            handleLogin={handleLogin}
+            isSubmitting={isSubmitting}
             containerStyle={{ width: '90%', maxWidth: 300 }}
           />
         </View>

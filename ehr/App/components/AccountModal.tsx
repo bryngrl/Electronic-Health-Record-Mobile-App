@@ -12,13 +12,14 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAppTheme } from '@App/theme/ThemeContext';
+import { useAuth } from '@features/Auth/AuthContext';
 
 const { height } = Dimensions.get('window');
 
 interface AccountModalProps {
   visible: boolean;
   onClose: () => void;
-  onLogout: () => void;
+  onLogout?: () => void; // Optional if we use useAuth directly
 }
 
 export const AccountModal = ({
@@ -27,10 +28,18 @@ export const AccountModal = ({
   onLogout,
 }: AccountModalProps) => {
   const { theme, isDarkMode, toggleDarkMode } = useAppTheme();
+  const { user, logout } = useAuth();
+  
   const styles = useMemo(
     () => createStyles(theme, isDarkMode),
     [theme, isDarkMode],
   );
+
+  const handleLogout = async () => {
+    await logout();
+    if (onLogout) onLogout();
+    onClose();
+  };
 
   return (
     <Modal
@@ -45,15 +54,15 @@ export const AccountModal = ({
             <View style={styles.modalContainer}>
               <View style={styles.handle} />
 
-              <Text style={styles.titleText}>Accounts</Text>
+              <Text style={styles.titleText}>Account</Text>
 
               <View style={styles.profileSection}>
                 <View style={styles.avatarBox}>
-                  <Text style={styles.avatarText}>J</Text>
+                  <Text style={styles.avatarText}>{user?.full_name?.charAt(0) || 'U'}</Text>
                 </View>
                 <View style={styles.profileText}>
-                  <Text style={styles.userName}>Jovilyn</Text>
-                  <Text style={styles.userRole}>Nurse</Text>
+                  <Text style={styles.userName}>{user?.full_name || 'User'}</Text>
+                  <Text style={styles.userRole}>{user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1) || 'Role'}</Text>
                 </View>
               </View>
 
@@ -72,16 +81,10 @@ export const AccountModal = ({
 
                 <View style={styles.separator} />
 
-                <TouchableOpacity style={styles.menuItem}>
-                  <Text style={styles.menuText}>Switch Account</Text>
-                </TouchableOpacity>
-
-                <View style={styles.separator} />
-
-                <TouchableOpacity style={styles.menuItem} onPress={onLogout}>
+                <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
                   <View style={styles.logoutRow}>
                     <Icon
-                      name="close-circle-outline"
+                      name="log-out-outline"
                       size={24}
                       color={theme.error}
                     />
