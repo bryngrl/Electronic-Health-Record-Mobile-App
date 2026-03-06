@@ -26,9 +26,6 @@ const DoctorReportsScreen = ({ onNavigate }: { onNavigate: (route: string) => vo
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => setModalVisible(true)}>
-            <Icon name="keyboard-arrow-down" size={24} color="#333" />
-          </TouchableOpacity>
         </View>
 
         {/* Dynamic Search Bar with Dropdown */}

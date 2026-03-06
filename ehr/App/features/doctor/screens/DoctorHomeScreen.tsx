@@ -145,7 +145,6 @@ const DoctorHomeScreen = ({ onBack = () => {}, onViewAll, onNavigate }: { onBack
                             </View>
                             <Text style={styles.timeText}>{item.time}</Text>
                         </View>
-                        <Icon name="chevron-right" size={24} color="#035022" style={{ marginLeft: 10 }} />
                     </View>
                 </TouchableOpacity>
             ))

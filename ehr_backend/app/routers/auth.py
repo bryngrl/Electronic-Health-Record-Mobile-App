@@ -54,24 +54,38 @@ class LoginResponse(BaseModel):
     user_id: int
 
 
+class LoginRequest(BaseModel):
+    """Schema for login request"""
+    email: str
+    password: str
+
+
 # ──────────────── Authentication Endpoints ────────────────
 
 @router.post("/login", response_model=LoginResponse)
-def login(email: str, password: str, db: Session = Depends(get_db)):
+def login(request: Optional[LoginRequest] = None, email: Optional[str] = None, password: Optional[str] = None, db: Session = Depends(get_db)):
     """
     Login endpoint that returns user role for frontend redirection.
-    
-    Response includes:
-    - access_token: JWT token for API authentication
-    - role: Account type (nurse, doctor, or admin) - Use this to redirect to appropriate dashboard
-    - full_name: User's full name
-    - user_id: User's ID
+    Supports both JSON body and query parameters for compatibility.
     """
-    result = authenticate_user(db, email, password)
+    login_email = email
+    login_password = password
+
+    if request:
+        login_email = request.email
+        login_password = request.password
+
+    if not login_email or not login_password:
+        raise HTTPException(status_code=400, detail="Email and password are required")
+
+    print(f"DEBUG: Login attempt for email: {login_email}")
+    result = authenticate_user(db, login_email, login_password)
 
     if not result:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        print(f"DEBUG: Login failed for email: {login_email}")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
+    print(f"DEBUG: Login successful for email: {login_email}, role: {result['role']}")
     return result
 
 
