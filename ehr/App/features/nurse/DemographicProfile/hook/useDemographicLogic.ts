@@ -47,29 +47,34 @@ export const useDemographicLogic = (
       // Use redundant parameters to bypass various backend filters
       const url = `/patient?all=true&all=1&is_active=all&with_inactive=1&show_all=1&t=${timestamp}`;
       const response = await apiClient.get(url);
-      
+
       console.log(`[DEMOGRAPHIC FETCH] URL: ${url} Status: ${response.status}`);
-      
+
       let incomingData = [];
       if (Array.isArray(response.data)) {
         incomingData = response.data;
       } else if (response.data?.data && Array.isArray(response.data.data)) {
         incomingData = response.data.data;
-      } else if (response.data?.patients && Array.isArray(response.data.patients)) {
+      } else if (
+        response.data?.patients &&
+        Array.isArray(response.data.patients)
+      ) {
         incomingData = response.data.patients;
       } else if (response.data?.success && response.data?.data) {
-        incomingData = Array.isArray(response.data.data) ? response.data.data : [response.data.data];
+        incomingData = Array.isArray(response.data.data)
+          ? response.data.data
+          : [response.data.data];
       }
-      
+
       if (Array.isArray(incomingData)) {
         setPatients(prevPatients => {
           // MASTER LIST LOGIC:
           // We start with our current list. If a patient is in the new API data, we update it.
           // If a patient is MISSING from the API data, we assume it became inactive on the web.
           // We NEVER remove a patient from this list.
-          
+
           const patientMap = new Map();
-          
+
           // First, add all previous patients and mark them as inactive by default
           // (They will be overwritten with fresh status if present in incomingData)
           prevPatients.forEach(p => {
@@ -78,12 +83,17 @@ export const useDemographicLogic = (
               patientMap.set(id, { ...p, is_active: 0 });
             }
           });
-          
+
           // Second, merge/update with incoming data from API
           incomingData.forEach(p => {
             const id = p.patient_id || p.id;
             if (id) {
-              const isActiveValue = String(p.is_active) === '1' || p.is_active === true || p.is_active === 1 ? 1 : 0;
+              const isActiveValue =
+                String(p.is_active) === '1' ||
+                p.is_active === true ||
+                p.is_active === 1
+                  ? 1
+                  : 0;
               patientMap.set(id, { ...p, is_active: isActiveValue });
             }
           });
@@ -92,14 +102,15 @@ export const useDemographicLogic = (
           const finalData = Array.from(patientMap.values()).sort((a, b) => {
             const idA = a.patient_id || a.id || 0;
             const idB = b.patient_id || b.id || 0;
-            return idB - idA;
+            return idA - idB;
           });
 
           // Persist the master list to storage so it survives app restarts
-          AsyncStorage.setItem(PATIENTS_CACHE_KEY, JSON.stringify(finalData)).catch(e => 
-            console.error('Failed to save patients cache', e)
-          );
-          
+          AsyncStorage.setItem(
+            PATIENTS_CACHE_KEY,
+            JSON.stringify(finalData),
+          ).catch(e => console.error('Failed to save patients cache', e));
+
           return finalData;
         });
       }
@@ -114,11 +125,11 @@ export const useDemographicLogic = (
   // Use a very aggressive polling interval (2 seconds) to pick up website changes immediately.
   useEffect(() => {
     if (isSelectionMode) return;
-    
+
     const interval = setInterval(() => {
       loadPatients(false);
-    }, 2000); 
-    
+    }, 2000);
+
     return () => clearInterval(interval);
   }, [loadPatients, isSelectionMode]);
 
@@ -126,14 +137,21 @@ export const useDemographicLogic = (
   const updateStatus = useCallback(
     async (status: boolean) => {
       const targetValue = status ? 1 : 0;
-      
+
       // Filter only those who actually need an update
       const idsToUpdate = Array.from(selectedIds).filter(id => {
-        const p = (patients as any[]).find(ptr => (ptr.patient_id || ptr.id) === id);
+        const p = (patients as any[]).find(
+          ptr => (ptr.patient_id || ptr.id) === id,
+        );
         if (!p) return false;
-        const currentStatus = typeof p.is_active === 'number' 
-          ? p.is_active 
-          : (p.is_active === true || p.is_active === 'true' || p.is_active === '1' ? 1 : 0);
+        const currentStatus =
+          typeof p.is_active === 'number'
+            ? p.is_active
+            : p.is_active === true ||
+              p.is_active === 'true' ||
+              p.is_active === '1'
+            ? 1
+            : 0;
         return currentStatus !== targetValue;
       });
 
@@ -141,7 +159,9 @@ export const useDemographicLogic = (
         setAlertConfig({
           visible: true,
           title: 'No Changes',
-          message: `Selected patients are already ${status ? 'active' : 'inactive'}.`,
+          message: `Selected patients are already ${
+            status ? 'active' : 'inactive'
+          }.`,
           type: 'success',
         });
         setSelectedIds(new Set());
