@@ -1,8 +1,26 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import apiClient from '@api/apiClient';
 
 export const useLabValues = () => {
   const [alerts, setAlerts] = useState<any>({});
+  const [dataAlert, setDataAlert] = useState<string | null>(null);
+
+  const fetchDataAlert = useCallback(async (patientId: number) => {
+    try {
+      const response = await apiClient.get(`/lab-values/data-alert/patient/${patientId}`);
+      if (response.data) {
+        const alertMsg = typeof response.data === 'string' 
+          ? response.data 
+          : (response.data.lab_values || response.data.alert || response.data.message || null);
+        setDataAlert(alertMsg);
+      } else {
+        setDataAlert(null);
+      }
+    } catch (e) {
+      console.error('Failed to fetch lab values data alert:', e);
+      setDataAlert(null);
+    }
+  }, []);
 
   const sanitize = (data: any) => {
     const sanitized = { ...data };
@@ -71,5 +89,14 @@ const updateDPIE = async (examId: number, stepKey: string, text: string) => {
   };
   
 
-  return { alerts, setAlerts, checkLabAlerts, saveLabAssessment, updateDPIE, fetchLatestLabValues };
+  return { 
+    alerts, 
+    setAlerts, 
+    checkLabAlerts, 
+    saveLabAssessment, 
+    updateDPIE, 
+    fetchLatestLabValues,
+    dataAlert,
+    fetchDataAlert
+  };
 };

@@ -3,6 +3,24 @@ import apiClient from '@api/apiClient';
 
 export const useADL = () => {
   const [alerts, setAlerts] = useState<any>({});
+  const [dataAlert, setDataAlert] = useState<string | null>(null);
+
+  const fetchDataAlert = useCallback(async (patientId: number) => {
+    try {
+      const response = await apiClient.get(`/adl/data-alert/patient/${patientId}`);
+      if (response.data) {
+        const alertMsg = typeof response.data === 'string' 
+          ? response.data 
+          : (response.data.adl || response.data.alert || response.data.message || null);
+        setDataAlert(alertMsg);
+      } else {
+        setDataAlert(null);
+      }
+    } catch (e) {
+      console.error('Failed to fetch ADL data alert:', e);
+      setDataAlert(null);
+    }
+  }, []);
 
   const sanitize = (data: any) => {
     const sanitized = { ...data };
@@ -83,5 +101,14 @@ export const useADL = () => {
     }
   }, []);
 
-  return { alerts, setAlerts, saveADLAssessment, checkADLAlerts, updateADLStep, fetchLatestADL };
+  return { 
+    alerts, 
+    setAlerts, 
+    saveADLAssessment, 
+    checkADLAlerts, 
+    updateADLStep, 
+    fetchLatestADL,
+    dataAlert,
+    fetchDataAlert
+  };
 };

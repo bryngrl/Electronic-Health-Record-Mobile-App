@@ -30,7 +30,7 @@ import IntakeOutputCard from '../component/IntakeOutputCard';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useIntakeAndOutputLogic } from '../hook/useIntakeAndOutputLogic';
-import ADPIEScreen from '@nurse/VitalSigns/screen/ADPIEScreen';
+import ADPIEScreen from '@components/ADPIEScreen';
 import CDSSModal from '@components/CDSSModal';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
@@ -60,6 +60,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     checkRealTimeAlerts,
     assessmentAlert,
     currentAlert,
+    dataAlert,
     setBackendAlert,
     triggerPatientAlert,
     loading,
@@ -207,6 +208,8 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     }
   };
 
+  const [passedAlert, setPassedAlert] = useState<string | null>(null);
+
   const handleCDSSPress = async () => {
     if (!selectedPatientId) {
       triggerPatientAlert();
@@ -215,6 +218,9 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     }
     const res = await saveAssessment();
     if (res && res.id) {
+      if (res.assessment_alert || res.alert) {
+        setPassedAlert(res.assessment_alert || res.alert);
+      }
       setIsAdpieActive(true);
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } else if (recordId) {
@@ -252,24 +258,50 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
     : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
 
+  const generateFindingsSummary = () => {
+    const findings = Object.entries(intakeOutput)
+      .filter(([_, value]) => typeof value === 'string' && value.trim() !== '' && value !== 'N/A')
+      .map(([key, value]) => `${key.replace(/_/g, ' ').toUpperCase()}: ${value}`);
+    
+    if (assessmentAlert) {
+      findings.push(assessmentAlert);
+    }
+
+    if (dataAlert) {
+      findings.push(dataAlert);
+    }
+    
+    return findings.join('. ');
+  };
+
   if (isAdpieActive && recordId) {
     return (
       <ADPIEScreen
         recordId={recordId}
         patientName={patientName}
-        onBack={() => setIsAdpieActive(false)}
-        feature="intake-output"
+        onBack={() => {
+          setIsAdpieActive(false);
+          setPassedAlert(null);
+        }}
+        feature="intake-and-output"
+        findingsSummary={generateFindingsSummary()}
+        initialAlert={passedAlert || undefined}
       />
     );
   }
 
   // Frontend-only cleaning of the alert string
   const getCleanedAlertText = () => {
-    if (!assessmentAlert)
-      return 'Continue documenting to receive real-time support.';
+    let text = assessmentAlert || '';
+    if (dataAlert) {
+      text = `${dataAlert}${text ? '\n\n' + text : ''}`;
+    }
+
+    if (!text)
+      return 'No clinical findings found.';
 
     // 1. Remove emojis
-    let cleaned = assessmentAlert.replace(/[🔴🟠✓⚠️❌]/g, '').trim();
+    let cleaned = text.replace(/[🔴🟠✓⚠️❌]/g, '').trim();
 
     // 2. Remove square brackets from status prefixes (e.g., [CRITICAL] -> CRITICAL)
     cleaned = cleaned.replace(/\[(CRITICAL|WARNING|INFO)\]/gi, '$1');
@@ -277,7 +309,9 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     return cleaned;
   };
 
-  const hasRealAlert = assessmentAlert && assessmentAlert.trim() !== '';
+  const hasRealAlert =
+    (assessmentAlert && assessmentAlert.trim() !== '') ||
+    (dataAlert && dataAlert.trim() !== '');
 
   return (
     <SafeAreaView style={styles.root}>

@@ -15,15 +15,19 @@ import {
   StatusBar,
   BackHandler,
   Platform,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import ExamInputCard from '../components/PhysicalInputCard';
-import ADPIEScreen from './ADPIEScreen'; // Integrated Stepper
+import ADPIEScreen from '@components/ADPIEScreen';
+import CDSSModal from '@components/CDSSModal';
 import { usePhysicalExam } from '../hook/usePhysicalExam';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
+
+const alertIcon = require('@assets/icons/alert.png');
 
 const initialFormData = {
   general_appearance: '',
@@ -47,8 +51,13 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
     [theme, commonStyles, isDarkMode],
   );
 
-  const { saveAssessment, checkAssessmentAlerts, fetchLatestPhysicalExam } =
-    usePhysicalExam();
+  const {
+    saveAssessment,
+    checkAssessmentAlerts,
+    fetchLatestPhysicalExam,
+    dataAlert,
+    fetchDataAlert,
+  } = usePhysicalExam();
   const [searchText, setSearchText] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
     null,
@@ -61,7 +70,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
     visible: boolean;
     title: string;
     message: string;
-    type: 'success' | 'error';
+    type: 'success' | 'error' | 'warning';
   }>({
     visible: false,
     title: '',
@@ -72,13 +81,15 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
   const showAlert = (
     title: string,
     message: string,
-    type: 'success' | 'error' = 'error',
+    type: 'success' | 'error' | 'warning' = 'error',
   ) => {
     setAlertConfig({ visible: true, title, message, type });
   };
 
   const [examId, setExamId] = useState<number | null>(null);
   const [backendAlerts, setBackendAlerts] = useState<any>({});
+
+  const [assessmentAlert, setAssessmentAlert] = useState<string | null>(null);
 
   // Controls the view switch from Assessment to ADPIE Stepper
   const [isAdpieActive, setIsAdpieActive] = useState(false);
@@ -126,6 +137,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
 
   const loadPatientData = useCallback(
     async (patientId: number) => {
+      fetchDataAlert(patientId);
       const data = await fetchLatestPhysicalExam(patientId);
       if (data) {
         setExamId(data.id);
@@ -215,18 +227,31 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
 
     try {
       // Step 1: POST or PUT to /physical-exam/ to create or update the record
-      const result = await saveAssessment({
-        patient_id: selectedPatientId,
-        ...formData,
-      }, examId);
+      const result = await saveAssessment(
+        {
+          patient_id: selectedPatientId,
+          ...formData,
+        },
+        examId,
+      );
 
-      const id = result.id || result.physical_exam_id;
+      // Check both id and physical_exam_id based on common backend patterns
+      const id = result?.id || result?.physical_exam_id || examId;
       if (id) {
         setExamId(id);
+        
+        // Capture any assessment-wide alert (often from YAML rules)
+        if (result?.assessment_alert || result?.alert) {
+          setAssessmentAlert(result.assessment_alert || result.alert);
+        }
+        
         setIsAdpieActive(true); // Switch to ADPIE Stepper View
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      } else {
+        showAlert('Error', 'Could not retrieve assessment ID.');
       }
     } catch (e) {
+      console.error('CDSS Press Error:', e);
       showAlert('Error', 'Could not initiate clinical support.');
     }
   };
@@ -267,7 +292,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
     }
   };
 
-  const formatDate = () => {
+  const getCurrentDate = () => {
     return new Date().toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
@@ -295,15 +320,38 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
     ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
     : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
 
+  const generateFindingsSummary = () => {
+    const findings = Object.entries(formData)
+      .filter(([_, value]) => value && value.trim() !== '' && value !== 'N/A')
+      .map(([key, value]) => {
+        const label = key.replace(/_/g, ' ').toUpperCase();
+        return `${label}: ${value}`;
+      });
+    
+    // Also include alerts if they are critical
+    const alerts = Object.entries(backendAlerts)
+      .filter(([_, value]) => typeof value === 'string' && value.trim() !== '' && !value.toLowerCase().includes('normal'))
+      .map(([_, value]) => value);
+
+    const summary = [...findings, ...alerts];
+    if (dataAlert) summary.push(dataAlert);
+
+    return summary.join('. ');
+  };
+
   // Switch to ADPIE Screen if active
   if (isAdpieActive && examId && selectedPatientId) {
     return (
       <ADPIEScreen
-        examId={examId}
-        patientId={selectedPatientId}
+        recordId={typeof examId === 'string' ? parseInt(examId, 10) : examId}
         patientName={searchText}
-        assessmentAlerts={backendAlerts}
-        onBack={() => setIsAdpieActive(false)}
+        feature="physical-exam"
+        findingsSummary={generateFindingsSummary()}
+        initialAlert={assessmentAlert || undefined}
+        onBack={() => {
+          setIsAdpieActive(false);
+          setAssessmentAlert(null);
+        }}
       />
     );
   }
@@ -326,7 +374,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
           <View style={[styles.header, { marginBottom: 0 }]}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>Physical Exam</Text>
-              <Text style={styles.dateText}>{formatDate()}</Text>
+              <Text style={styles.subTitleDate}>{getCurrentDate()}</Text>
             </View>
           </View>
         </View>
@@ -404,6 +452,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
             value={formData.general_appearance}
             disabled={!selectedPatientId || isNA}
             alertText={backendAlerts.general_appearance_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('general_appearance', t)}
             onDisabledPress={() => {
               if (!selectedPatientId) {
@@ -419,6 +468,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
             value={formData.skin_condition}
             disabled={!selectedPatientId || isNA}
             alertText={backendAlerts.skin_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('skin_condition', t)}
             onDisabledPress={() => {
               if (!selectedPatientId) {
@@ -434,6 +484,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
             value={formData.eye_condition}
             disabled={!selectedPatientId || isNA}
             alertText={backendAlerts.eye_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('eye_condition', t)}
             onDisabledPress={() => {
               if (!selectedPatientId) {
@@ -449,6 +500,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
             value={formData.oral_condition}
             disabled={!selectedPatientId || isNA}
             alertText={backendAlerts.oral_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('oral_condition', t)}
             onDisabledPress={() => {
               if (!selectedPatientId) {
@@ -464,6 +516,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
             value={formData.cardiovascular}
             disabled={!selectedPatientId || isNA}
             alertText={backendAlerts.cardiovascular_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('cardiovascular', t)}
             onDisabledPress={() => {
               if (!selectedPatientId) {
@@ -479,6 +532,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
             value={formData.abdomen_condition}
             disabled={!selectedPatientId || isNA}
             alertText={backendAlerts.abdomen_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('abdomen_condition', t)}
             onDisabledPress={() => {
               if (!selectedPatientId) {
@@ -494,6 +548,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
             value={formData.extremities}
             disabled={!selectedPatientId || isNA}
             alertText={backendAlerts.extremities_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('extremities', t)}
             onDisabledPress={() => {
               if (!selectedPatientId) {
@@ -509,6 +564,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
             value={formData.neurological}
             disabled={!selectedPatientId || isNA}
             alertText={backendAlerts.neurological_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('neurological', t)}
             onDisabledPress={() => {
               if (!selectedPatientId) {
@@ -593,11 +649,20 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     container: commonStyles.container,
     header: commonStyles.header,
     title: commonStyles.title,
-    dateText: {
+    subTitleDate: {
       fontSize: 13,
       fontFamily: 'AlteHaasGroteskBold',
       color: theme.textMuted,
     },
+    alertIcon: {
+      width: 45,
+      height: 45,
+      borderRadius: 22.5,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+    },
+    fullImg: { width: '80%', height: '80%', resizeMode: 'contain' },
     sectionLabel: {
       fontSize: 12,
       fontWeight: 'bold',

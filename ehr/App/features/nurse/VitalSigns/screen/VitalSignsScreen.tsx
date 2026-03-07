@@ -31,7 +31,7 @@ import PreciseVitalChart from '@nurse/VitalSigns/component/VitalSignsChart';
 import { useVitalSignsLogic } from '@nurse/VitalSigns/hook/useVitalSignsLogic';
 import SweetAlert from '@components/SweetAlert';
 import CDSSModal from '@components/CDSSModal';
-import ADPIEScreen from '@nurse/VitalSigns/screen/ADPIEScreen';
+import ADPIEScreen from '@components/ADPIEScreen';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
@@ -72,6 +72,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
     isDataEntered,
     isDataComplete,
     currentAlert,
+    dataAlert,
     saveAssessment,
     isMenuVisible,
     setIsMenuVisible,
@@ -285,11 +286,30 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
     ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
     : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
 
+  const generateFindingsSummary = () => {
+    const findings = Object.entries(vitals)
+      .filter(([_, value]) => typeof value === 'string' && value.trim() !== '' && value !== 'N/A')
+      .map(([key, value]) => `${key.toUpperCase()}: ${value}`);
+    
+    if (currentAlert?.message) {
+      findings.push(currentAlert.message);
+    }
+
+    if (dataAlert) {
+      findings.push(dataAlert);
+    }
+    
+    return findings.join('. ');
+  };
+
   if (isAdpieActive && recordId) {
     return (
       <ADPIEScreen
         recordId={recordId}
         patientName={patientName}
+        feature="vital-signs"
+        findingsSummary={generateFindingsSummary()}
+        initialAlert={currentAlert?.message}
         onBack={() => {
           setIsAdpieActive(false);
           scrollViewRef.current?.scrollTo({ y: 0, animated: true });
@@ -663,14 +683,22 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
         title={
           !selectedPatientId
             ? 'Patient Required'
+            : dataAlert
+            ? 'CLINICAL ALERT'
             : currentAlert?.title || 'ALERT'
         }
         message={
           !selectedPatientId
             ? 'Please select a patient first in the search bar.'
+            : dataAlert
+            ? `${dataAlert}${
+                currentAlert?.message ? '\n\n' + currentAlert.message : ''
+              }`
             : currentAlert?.message || 'No alerts.'
         }
-        type={!selectedPatientId ? 'error' : currentAlert?.type || 'success'}
+        type={
+          !selectedPatientId ? 'error' : dataAlert ? 'error' : currentAlert?.type || 'success'
+        }
         onConfirm={() => setAlertVisible(false)}
         confirmText="OK"
       />
@@ -701,8 +729,9 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
         onClose={() => setCdssVisible(false)}
         category="VITAL SIGNS ASSESSMENT"
         alertText={
-          currentAlert?.message ||
-          'Analyzing vital signs for potential risks...'
+          dataAlert 
+            ? `${dataAlert}${currentAlert?.message ? '\n\n' + currentAlert.message : ''}`
+            : (currentAlert?.message || 'No clinical findings found.')
         }
       />
 

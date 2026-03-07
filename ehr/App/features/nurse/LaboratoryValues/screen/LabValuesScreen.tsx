@@ -19,7 +19,7 @@ import LabResultCard from '../components/LabResultCard';
 import apiClient from '@api/apiClient';
 import { useLabValues } from '../hook/useLabValues';
 import CDSSModal from '@components/CDSSModal';
-import ADPIEScreen from './ADPIEScreen';
+import ADPIEScreen from '@components/ADPIEScreen';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
@@ -47,7 +47,15 @@ const LabValuesScreen = ({ onBack }: any) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(() => createStyles(theme, commonStyles, isDarkMode), [theme, commonStyles, isDarkMode]);
 
-  const { alerts, checkLabAlerts, saveLabAssessment, fetchLatestLabValues, setAlerts } = useLabValues();
+  const {
+    alerts,
+    checkLabAlerts,
+    saveLabAssessment,
+    fetchLatestLabValues,
+    setAlerts,
+    dataAlert,
+    fetchDataAlert,
+  } = useLabValues();
   const [labId, setLabId] = useState<number | null>(null);
   const [selectedTest, setSelectedTest] = useState(LAB_TESTS[0]);
   const [result, setResult] = useState('');
@@ -133,6 +141,8 @@ const LabValuesScreen = ({ onBack }: any) => {
     return () => clearTimeout(timer);
   }, [result, normalRange, selectedTest, labId, selectedPatientId]);
 
+  const [passedAlert, setPassedAlert] = useState<string | null>(null);
+
   const handleCDSSPress = async () => {
     if (!selectedPatientId) {
       return showAlert(
@@ -150,6 +160,9 @@ const LabValuesScreen = ({ onBack }: any) => {
       const res = await saveLabAssessment(payload, labId);
       if (res && res.id) {
         setLabId(res.id);
+        if (res.assessment_alert || res.alert) {
+          setPassedAlert(res.assessment_alert || res.alert);
+        }
         setIsAdpieActive(true);
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
@@ -213,6 +226,7 @@ const LabValuesScreen = ({ onBack }: any) => {
     setSelectedPatientId(id ? id.toString() : null);
     setSearchText(name);
     if (id) {
+      fetchDataAlert(id);
       const data = await fetchLatestLabValues(id);
       if (data) {
         setLabId(data.id);
@@ -256,14 +270,32 @@ const LabValuesScreen = ({ onBack }: any) => {
     ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
     : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
 
+  const generateFindingsSummary = () => {
+    const findings = Object.entries(allLabData)
+      .filter(([key, value]) => key.endsWith('_result') && typeof value === 'string' && value.trim() !== '' && value !== 'N/A')
+      .map(([key, value]) => {
+          const test = key.replace('_result', '').toUpperCase();
+          return `${test}: ${value}`;
+      });
+    
+    if (dataAlert) {
+      findings.push(dataAlert);
+    }
+
+    return findings.join('. ');
+  };
+
   if (isAdpieActive && labId && selectedPatientId) {
     return (
       <ADPIEScreen
-        labId={labId}
-        patientId={selectedPatientId}
+        recordId={labId}
         patientName={searchText}
+        feature="lab-values"
+        findingsSummary={generateFindingsSummary()}
+        initialAlert={passedAlert || undefined}
         onBack={() => {
           setIsAdpieActive(false);
+          setPassedAlert(null);
           scrollViewRef.current?.scrollTo({ y: 0, animated: true });
         }}
       />
@@ -273,10 +305,10 @@ const LabValuesScreen = ({ onBack }: any) => {
   const currentAlert = alerts[`${getBackendPrefix(selectedTest)}_alert`];
   const hasInputData = result.trim() !== '' && normalRange.trim() !== '';
   const isClinicalAlert =
-    currentAlert &&
+    (currentAlert &&
     currentAlert !== 'Normal' &&
     !currentAlert.includes('No result') &&
-    !currentAlert.includes('Unable to compare');
+    !currentAlert.includes('Unable to compare')) || (dataAlert && dataAlert.trim() !== '');
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -530,7 +562,7 @@ const LabValuesScreen = ({ onBack }: any) => {
       <CDSSModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        alertText={currentAlert || ''}
+        alertText={dataAlert ? `${dataAlert}${currentAlert ? '\n\n' + currentAlert : ''}` : (currentAlert || 'No clinical findings found.')}
       />
 
       <SweetAlert

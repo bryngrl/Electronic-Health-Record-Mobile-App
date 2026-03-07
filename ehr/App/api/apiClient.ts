@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BACKEND_PORT = 8000;
-const YOUR_IP = '192.168.1.14'; // Matching the Laravel URL in SYNC_MOBILE_APP.md
+const YOUR_IP = '10.0.4.43';
 const host = YOUR_IP;
 
 export const BASE_URL = `http://${host}:${BACKEND_PORT}/api`;
@@ -33,7 +33,7 @@ apiClient.interceptors.request.use(
   },
   error => {
     return Promise.reject(error);
-  }
+  },
 );
 
 apiClient.interceptors.response.use(
@@ -54,7 +54,10 @@ apiClient.interceptors.response.use(
 
       // If we get a 403 (or 401) it might be because the interceptor token was stale
       // We can try to re-read from storage one time for specific requests
-      if ((error.response.status === 403 || error.response.status === 401) && !originalRequest._retry) {
+      if (
+        (error.response.status === 403 || error.response.status === 401) &&
+        !originalRequest._retry
+      ) {
         originalRequest._retry = true;
         const token = await AsyncStorage.getItem('token');
         if (token) {

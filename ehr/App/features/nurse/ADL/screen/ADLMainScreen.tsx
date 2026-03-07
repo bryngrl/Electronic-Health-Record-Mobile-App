@@ -15,15 +15,10 @@ import {
   BackHandler,
   Platform,
   StatusBar,
+  Image,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import LinearGradient from 'react-native-linear-gradient';
-import ADLInputCard from '../components/ADLInputCard';
-import ADLCDSSStepper from './ADPIEScreen';
-import { useADL } from '../hook/useADL';
-import SweetAlert from '@components/SweetAlert';
-import PatientSearchBar from '@components/PatientSearchBar';
-import { useAppTheme } from '@App/theme/ThemeContext';
+
+const alertIcon = require('@assets/icons/alert.png');
 
 const initialFormData = {
   mobility_assessment: '',
@@ -48,6 +43,8 @@ const ADLScreen = ({ onBack }: any) => {
     checkADLAlerts,
     saveADLAssessment,
     fetchLatestADL,
+    dataAlert,
+    fetchDataAlert,
   } = useADL();
 
   const [searchText, setSearchText] = useState('');
@@ -59,7 +56,7 @@ const ADLScreen = ({ onBack }: any) => {
     visible: boolean;
     title: string;
     message: string;
-    type: 'success' | 'error';
+    type: 'success' | 'error' | 'warning';
   }>({
     visible: false,
     title: '',
@@ -70,7 +67,7 @@ const ADLScreen = ({ onBack }: any) => {
   const showAlert = (
     title: string,
     message: string,
-    type: 'success' | 'error' = 'error',
+    type: 'success' | 'error' | 'warning' = 'error',
   ) => {
     setAlertConfig({ visible: true, title, message, type });
   };
@@ -121,6 +118,7 @@ const ADLScreen = ({ onBack }: any) => {
 
   const loadPatientData = useCallback(
     async (patientId: number) => {
+      fetchDataAlert(patientId);
       const data = await fetchLatestADL(patientId);
       if (data) {
         setAdlId(data.id);
@@ -279,12 +277,32 @@ const ADLScreen = ({ onBack }: any) => {
     ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
     : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
 
+  const generateFindingsSummary = () => {
+    const findings = Object.entries(formData)
+      .filter(([_, value]) => value && value.trim() !== '' && value !== 'N/A')
+      .map(([key, value]) => {
+        const label = key.replace(/_assessment/g, '').replace(/_/g, ' ').toUpperCase();
+        return `${label}: ${value}`;
+      });
+    
+    // Also include alerts if they are critical
+    const criticalAlerts = Object.entries(alerts)
+      .filter(([_, value]) => typeof value === 'string' && value.trim() !== '' && !value.toLowerCase().includes('normal'))
+      .map(([_, value]) => value as string);
+
+    const summary = [...findings, ...criticalAlerts];
+    if (dataAlert) summary.push(dataAlert);
+
+    return summary.join('. ');
+  };
+
   if (isAdpieActive && adlId && selectedPatient) {
     return (
-      <ADLCDSSStepper
-        adlId={adlId}
-        patientId={selectedPatient.id}
+      <ADPIEScreen
+        recordId={adlId}
         patientName={searchText}
+        feature="adl"
+        findingsSummary={generateFindingsSummary()}
         onBack={() => {
           setIsAdpieActive(false);
           scrollViewRef.current?.scrollTo({ y: 0, animated: true });
@@ -415,6 +433,7 @@ const ADLScreen = ({ onBack }: any) => {
             value={formData.mobility_assessment}
             disabled={!selectedPatient || isNA}
             alertText={alerts.mobility_assessment_alert}
+            dataAlert={dataAlert}
             onChangeText={t => setFormData({ ...formData, mobility_assessment: t })}
             onDisabledPress={() => {
               if (!selectedPatient) {
@@ -430,6 +449,7 @@ const ADLScreen = ({ onBack }: any) => {
             value={formData.hygiene_assessment}
             disabled={!selectedPatient || isNA}
             alertText={alerts.hygiene_assessment_alert}
+            dataAlert={dataAlert}
             onChangeText={t => setFormData({ ...formData, hygiene_assessment: t })}
             onDisabledPress={() => {
               if (!selectedPatient) {
@@ -445,6 +465,7 @@ const ADLScreen = ({ onBack }: any) => {
             value={formData.toileting_assessment}
             disabled={!selectedPatient || isNA}
             alertText={alerts.toileting_assessment_alert}
+            dataAlert={dataAlert}
             onChangeText={t => setFormData({ ...formData, toileting_assessment: t })}
             onDisabledPress={() => {
               if (!selectedPatient) {
@@ -460,6 +481,7 @@ const ADLScreen = ({ onBack }: any) => {
             value={formData.feeding_assessment}
             disabled={!selectedPatient || isNA}
             alertText={alerts.feeding_assessment_alert}
+            dataAlert={dataAlert}
             onChangeText={t => setFormData({ ...formData, feeding_assessment: t })}
             onDisabledPress={() => {
               if (!selectedPatient) {
@@ -475,6 +497,7 @@ const ADLScreen = ({ onBack }: any) => {
             value={formData.hydration_assessment}
             disabled={!selectedPatient || isNA}
             alertText={alerts.hydration_assessment_alert}
+            dataAlert={dataAlert}
             onChangeText={t => setFormData({ ...formData, hydration_assessment: t })}
             onDisabledPress={() => {
               if (!selectedPatient) {
@@ -490,6 +513,7 @@ const ADLScreen = ({ onBack }: any) => {
             value={formData.sleep_pattern_assessment}
             disabled={!selectedPatient || isNA}
             alertText={alerts.sleep_pattern_assessment_alert}
+            dataAlert={dataAlert}
             onChangeText={t => setFormData({ ...formData, sleep_pattern_assessment: t })}
             onDisabledPress={() => {
               if (!selectedPatient) {
@@ -505,6 +529,7 @@ const ADLScreen = ({ onBack }: any) => {
             value={formData.pain_level_assessment}
             disabled={!selectedPatient || isNA}
             alertText={alerts.pain_level_assessment_alert}
+            dataAlert={dataAlert}
             onChangeText={t => setFormData({ ...formData, pain_level_assessment: t })}
             onDisabledPress={() => {
               if (!selectedPatient) {
@@ -608,6 +633,15 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontFamily: 'AlteHaasGroteskBold',
       color: theme.textMuted,
     },
+    alertIcon: {
+      width: 45,
+      height: 45,
+      borderRadius: 22.5,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+    },
+    fullImg: { width: '80%', height: '80%', resizeMode: 'contain' },
     section: { marginBottom: 15, zIndex: 10 },
     sectionLabel: {
       fontSize: 14,

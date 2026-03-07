@@ -6,13 +6,14 @@ import {
   TouchableOpacity,
   TextInput,
   SafeAreaView,
+  ActivityIndicator,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useADL } from '../hook/useADL';
+import apiClient from '@api/apiClient';
 import LinearGradient from 'react-native-linear-gradient';
 import CDSSGuidanceModal from '@components/CDSSGuidanceModal';
 import SweetAlert from '@components/SweetAlert';
@@ -25,19 +26,56 @@ const STEPS = [
   { id: 4, label: 'Evaluation', key: 'evaluation' },
 ];
 
-const ADPIEScreen = ({ onBack, adlId, patientName }: any) => {
+export type ADPIEFeature = 
+  | 'vital-signs' 
+  | 'physical-exam' 
+  | 'adl' 
+  | 'intake-and-output' 
+  | 'lab-values';
+
+interface ADPIEScreenProps {
+  onBack: () => void;
+  recordId: number;
+  patientName: string;
+  feature: ADPIEFeature;
+  findingsSummary?: string;
+  initialAlert?: string;
+}
+
+const FEATURE_TITLES: Record<ADPIEFeature, string> = {
+  'vital-signs': 'Vital Signs',
+  'physical-exam': 'Physical Exam',
+  'adl': 'Activities of Daily Living',
+  'intake-and-output': 'Intake and Output',
+  'lab-values': 'Laboratory Values',
+};
+
+const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
+  onBack,
+  recordId,
+  patientName,
+  feature,
+  findingsSummary,
+  initialAlert: passedInitialAlert,
+}) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
     [theme, commonStyles, isDarkMode],
   );
 
-  const { updateADLStep: updateStep } = useADL();
   const [currentIdx, setCurrentIdx] = useState(0);
   const [text, setText] = useState('');
-  const [alert, setAlert] = useState<string | null>(null);
+  const [alert, setAlert] = useState<string | null>(passedInitialAlert || null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [initLoading, setInitLoading] = useState(true);
+  const [diagId, setDiagId] = useState<number | null>(null);
+  const [savedData, setSavedData] = useState<any>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const displayTitle = FEATURE_TITLES[feature] || 'Assessment';
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -62,50 +100,224 @@ const ADPIEScreen = ({ onBack, adlId, patientName }: any) => {
     setAlertConfig({ visible: true, title, message, type, onConfirm });
   };
 
-  // REAL-TIME CDSS: Debounced polling
-  useEffect(() => {
-    if (text.trim().length < 3) return;
-    const timer = setTimeout(async () => {
-      try {
+  const triggerAnalyze = async (finding: string) => {
+    if (!finding || finding.trim().length < 3) {
+        setAlert(null);
+        return;
+    }
+    
+    setIsAnalyzing(true);
+    try {
         const step = STEPS[currentIdx];
-        const res = await updateStep(adlId, step.key, text);
-        if (res) setAlert((res as any)[`${step.key}_alert`]);
+        const res = await apiClient.post('/adpie/analyze', {
+          fieldName: step.key,
+          finding: finding,
+          component: feature,
+        });
+        
+        if (res.data) {
+          const body = res.data.data || res.data;
+          let rec = body.message || 
+                    body.recommendation || 
+                    body.alert || 
+                    body.diagnosis_alert ||
+                    body.alert_text;
+          
+          if (typeof body === 'string') rec = body;
+          
+          if (Array.isArray(body) && body.length > 0) {
+              const first = body[0];
+              rec = first.message || first.recommendation || first.alert || (typeof first === 'string' ? first : rec);
+          }
+
+          if (rec && rec !== 'NO RECOMMENDATIONS' && rec !== 'NONE') {
+            setAlert(rec);
+          } else {
+            setAlert(null);
+          }
+        } else {
+            setAlert(null);
+        }
       } catch (e) {
-        console.error('Real-time CDSS Error:', e);
+        console.error('Analyze Error:', e);
+        setAlert(null);
+      } finally {
+        setIsAnalyzing(false);
       }
+  };
+
+  useEffect(() => {
+    const initADPIE = async () => {
+      try {
+        setInitLoading(true);
+        // Step 1: Initialize ADPIE record
+        // The recordId passed here is the ASSESSMENT record ID (e.g. physical exam id)
+        const response = await apiClient.get(`/adpie/${feature}/${recordId}`);
+        if (response.data) {
+          const data = response.data.data || response.data;
+          setDiagId(data.id);
+          setSavedData(data);
+          
+          const currentStep = STEPS[currentIdx].key;
+          if (data[currentStep]) {
+            setText(data[currentStep]);
+          }
+          
+          // Load any initial alert
+          let initRec = data.message || 
+                        data[`${currentStep}_alert`] || 
+                        data.alert || 
+                        data.assessment_alert ||
+                        data.recommendation;
+          
+          if (initRec && initRec !== 'NO RECOMMENDATIONS' && initRec !== 'NONE') {
+            setAlert(initRec);
+          } else {
+            // Step 3 (Batch Analysis)
+            const batchItems = STEPS.map(s => ({
+              fieldName: s.key,
+              finding: data[s.key] || (s.key === 'diagnosis' ? findingsSummary : '') || ''
+            })).filter(item => item.finding);
+
+            if (batchItems.length > 0) {
+              try {
+                const batchRes = await apiClient.post('/adpie/analyze-batch', {
+                  component: feature,
+                  batch: batchItems
+                });
+                
+                if (batchRes.data) {
+                  const recommendations = batchRes.data.data || batchRes.data;
+                  let batchRec = recommendations[currentStep] || 
+                                 recommendations[`${currentStep}_alert`] ||
+                                 recommendations.message || 
+                                 recommendations.alert ||
+                                 recommendations.recommendation;
+                  
+                  if (typeof recommendations === 'string') batchRec = recommendations;
+                  
+                  if (Array.isArray(recommendations)) {
+                      const found = recommendations.find(r => r.fieldName === currentStep);
+                      if (found) batchRec = found.message || found.recommendation || found.alert;
+                  }
+
+                  if (batchRec && batchRec !== 'NO RECOMMENDATIONS' && batchRec !== 'NONE') {
+                    setAlert(batchRec);
+                  } else if (currentIdx === 0 && findingsSummary) {
+                    triggerAnalyze(findingsSummary);
+                  }
+                }
+              } catch (batchErr) {
+                if (currentIdx === 0 && findingsSummary) triggerAnalyze(findingsSummary);
+              }
+            } else if (currentIdx === 0 && findingsSummary) {
+              triggerAnalyze(findingsSummary);
+            }
+          }
+        }
+      } catch (e: any) {
+        console.error('Failed to initialize ADPIE:', e.message || e);
+        showAlert('Error', `Failed to initialize ADPIE workflow: ${e.message || 'Server Error'}`);
+      } finally {
+        setInitLoading(false);
+      }
+    };
+    initADPIE();
+  }, [feature, recordId]);
+
+  // Sync text and alert when step changes
+  useEffect(() => {
+    if (savedData) {
+      const currentStep = STEPS[currentIdx].key;
+      setText(savedData[currentStep] || '');
+      
+      let currentAlert = savedData[`${currentStep}_alert`] || 
+                          savedData[`${currentStep}_recommendation`] ||
+                          savedData.message;
+      
+      if (currentAlert === 'NO RECOMMENDATIONS') {
+        currentAlert = null;
+      }
+
+      if (currentAlert) setAlert(currentAlert);
+    } else {
+      setText('');
+      setAlert(null);
+    }
+  }, [currentIdx, savedData]);
+
+  // Real-time CDSS recommendation (debounced)
+  useEffect(() => {
+    if (text.trim().length < 5) return;
+    const timer = setTimeout(async () => {
+      triggerAnalyze(text);
     }, 1000);
     return () => clearTimeout(timer);
-  }, [text, currentIdx, adlId, updateStep]);
+  }, [text, currentIdx, feature]);
 
   const handleNext = async () => {
+    if (!text.trim()) {
+      showAlert(
+        'Input Required',
+        `Please enter the ${STEPS[currentIdx].label} text.`,
+      );
+      return;
+    }
+
+    setLoading(true);
     try {
       const step = STEPS[currentIdx];
-      await updateStep(adlId, step.key, text);
+      const res = await apiClient.put(`/adpie/${diagId}/${step.key}`, {
+        [step.key]: text,
+        component: feature,
+      });
+      
+      const body = res.data?.data || res.data;
+      const latestAlert = body?.message || body?.[`${step.key}_alert`];
+      setSavedData((prev: any) => ({ 
+        ...prev, 
+        [step.key]: text,
+        [`${step.key}_alert`]: latestAlert
+      }));
+
       if (currentIdx < 3) {
         setCurrentIdx(currentIdx + 1);
-        setText('');
-        setAlert(null);
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       } else {
-        showAlert('Complete', 'ADL ADPIE Workflow Finished.', 'success', () => {
-          onBack();
-        });
+        showAlert(
+          'Complete',
+          `${displayTitle} ADPIE Workflow Finished.`,
+          'success',
+          () => {
+            onBack();
+          },
+        );
       }
     } catch (e: any) {
-      showAlert('Error', 'Workflow update failed.');
+      console.error('Workflow update error:', e);
+      showAlert('Error', `Workflow update failed: ${e.message || 'Server Error'}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleBack = () => {
     if (currentIdx > 0) {
       setCurrentIdx(currentIdx - 1);
-      setAlert(null);
-      setText('');
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } else {
       onBack();
     }
   };
+
+  if (initLoading) {
+    return (
+      <View style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={{ marginTop: 10, color: theme.text }}>Initializing ADPIE...</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -127,7 +339,7 @@ const ADPIEScreen = ({ onBack, adlId, patientName }: any) => {
         >
           <View style={styles.header}>
             <View>
-              <Text style={styles.title}>Activities of Daily Living</Text>
+              <Text style={styles.title}>{displayTitle}</Text>
               <Text style={styles.subtitle}>
                 CLINICAL DECISION SUPPORT SYSTEM
               </Text>
@@ -138,7 +350,7 @@ const ADPIEScreen = ({ onBack, adlId, patientName }: any) => {
             <Text style={styles.patientLabel}>PATIENT NAME :</Text>
             <View style={styles.patientDisplay}>
               <Text style={styles.patientNameText}>
-                {patientName || 'Select or type Patient name'}
+                {patientName || 'Patient Name'}
               </Text>
             </View>
           </View>
@@ -196,7 +408,7 @@ const ADPIEScreen = ({ onBack, adlId, patientName }: any) => {
           <LinearGradient
             colors={
               isDarkMode
-                ? ['#0A8219', '#065F46', '#047857']
+                ? ['#064E3B', '#065F46', '#047857']
                 : ['#0A8219', '#6CCA77', '#C8FFCF']
             }
             start={{ x: 0, y: 0.5 }}
@@ -210,7 +422,7 @@ const ADPIEScreen = ({ onBack, adlId, patientName }: any) => {
               <View style={styles.bannerTextContent}>
                 <Text style={styles.bannerTitle}>Clinical Support</Text>
                 <Text style={styles.bannerSubText}>
-                  {alert ? 'Recommendation ready' : 'Analyzing findings...'}
+                  {isAnalyzing ? 'Analyzing findings...' : alert ? 'Recommendation ready' : 'Continue documenting...'}
                 </Text>
               </View>
             </View>
@@ -246,22 +458,32 @@ const ADPIEScreen = ({ onBack, adlId, patientName }: any) => {
                 value={text}
                 onChangeText={setText}
                 scrollEnabled={false}
-                placeholder={`Document ${STEPS[
-                  currentIdx
-                ].label.toLowerCase()}...`}
+                placeholder={`Enter ${STEPS[currentIdx].label}...`}
                 placeholderTextColor={theme.textMuted}
               />
             </View>
           </View>
 
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={handleBack}
+              disabled={loading}
+            >
               <Icon name="arrow-back" size={24} color={theme.primary} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
-              <Text style={styles.nextText}>
-                {currentIdx === 3 ? 'SUBMIT' : 'NEXT'}
-              </Text>
+            <TouchableOpacity
+              style={[styles.nextBtn, loading && { opacity: 0.7 }]}
+              onPress={handleNext}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color={theme.primary} />
+              ) : (
+                <Text style={styles.nextText}>
+                  {currentIdx === 3 ? 'SUBMIT' : 'NEXT'}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -365,7 +587,6 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       borderRadius: 18,
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 0,
       zIndex: 3,
     },
     activeCircle: { backgroundColor: '#FDE68A' },
@@ -388,7 +609,11 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       shadowOpacity: 0.1,
       shadowRadius: 4,
     },
-    bannerLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+    bannerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
     iconCircle: {
       width: 38,
       height: 38,
@@ -397,9 +622,19 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       justifyContent: 'center',
       alignItems: 'center',
     },
-    bannerTextContent: { marginLeft: 12 },
-    bannerTitle: { color: '#fff', fontSize: 15, fontWeight: '700' },
-    bannerSubText: { color: '#fff', fontSize: 11, opacity: 0.95 },
+    bannerTextContent: {
+      marginLeft: 12,
+    },
+    bannerTitle: {
+      color: '#fff',
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    bannerSubText: {
+      color: '#fff',
+      fontSize: 11,
+      opacity: 0.95,
+    },
     viewBtn: {
       backgroundColor: 'rgba(255, 255, 255, 0.9)',
       borderRadius: 12,
@@ -452,7 +687,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     footer: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      paddingBottom: 120,
+      paddingBottom: 20,
       alignItems: 'center',
     },
     backBtn: {

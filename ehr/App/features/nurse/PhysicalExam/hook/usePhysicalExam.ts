@@ -1,7 +1,26 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import apiClient from '@api/apiClient';
 
 export const usePhysicalExam = () => {
+  const [dataAlert, setDataAlert] = useState<string | null>(null);
+
+  const fetchDataAlert = useCallback(async (patientId: number) => {
+    try {
+      const response = await apiClient.get(`/physical-exam/data-alert/patient/${patientId}`);
+      if (response.data) {
+        const alertMsg = typeof response.data === 'string' 
+          ? response.data 
+          : (response.data.physical_exam || response.data.alert || response.data.message || null);
+        setDataAlert(alertMsg);
+      } else {
+        setDataAlert(null);
+      }
+    } catch (e) {
+      console.error('Failed to fetch physical exam data alert:', e);
+      setDataAlert(null);
+    }
+  }, []);
+
   const sanitize = (data: any) => {
     const sanitized = { ...data };
     Object.keys(sanitized).forEach(key => {
@@ -81,5 +100,12 @@ export const usePhysicalExam = () => {
     }
   }, []);
 
-  return { saveAssessment, checkAssessmentAlerts, updateDPIE, fetchLatestPhysicalExam };
+  return { 
+    saveAssessment, 
+    checkAssessmentAlerts, 
+    updateDPIE, 
+    fetchLatestPhysicalExam,
+    dataAlert,
+    fetchDataAlert
+  };
 };

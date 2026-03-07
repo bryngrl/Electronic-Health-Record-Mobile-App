@@ -50,9 +50,27 @@ export const useVitalSignsLogic = () => {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   
   const [backendAlert, setBackendAlert] = useState<{ title: string, message: string, type: 'success' | 'error' } | null>(null);
+  const [dataAlert, setDataAlert] = useState<string | null>(null);
   const [existingRecords, setExistingRecords] = useState<any[]>([]);
 
   const currentTime = useMemo(() => TIME_SLOTS[currentTimeIndex], [currentTimeIndex]);
+
+  const fetchDataAlert = async (patientId: string) => {
+    try {
+      const response = await apiClient.get(`/vital-signs/data-alert/patient/${patientId}`);
+      if (response.data) {
+        const alertMsg = typeof response.data === 'string' 
+          ? response.data 
+          : (response.data.vital_signs || response.data.alert || response.data.message || null);
+        setDataAlert(alertMsg);
+      } else {
+        setDataAlert(null);
+      }
+    } catch (e) {
+      console.error('Failed to fetch vital signs data alert:', e);
+      setDataAlert(null);
+    }
+  };
 
   const isDataEntered = useMemo(() => {
     return true; 
@@ -64,6 +82,7 @@ export const useVitalSignsLogic = () => {
 
   const loadPatientData = async (patientId: string) => {
     try {
+      fetchDataAlert(patientId);
       const response = await apiClient.get(`/vital-signs/patient/${patientId}?patient_id=${patientId}`);
       const records = response.data || [];
       setExistingRecords(records);
@@ -284,6 +303,7 @@ export const useVitalSignsLogic = () => {
     TIME_SLOTS,
     chartData,
     currentAlert: backendAlert,
+    dataAlert,
     vitalKeys: Object.keys(initialVitals) as (keyof Vitals)[],
     existingRecords,
   };

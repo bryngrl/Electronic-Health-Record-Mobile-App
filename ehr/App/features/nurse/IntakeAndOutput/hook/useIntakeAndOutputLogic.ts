@@ -22,10 +22,28 @@ export const useIntakeAndOutputLogic = () => {
     type: 'success' | 'error' | 'warning';
   } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [dataAlert, setDataAlert] = useState<string | null>(null);
   const [recordId, setRecordId] = useState<number | null>(null);
   const [existingRecords, setExistingRecords] = useState<any[]>([]);
 
   const ADPIE_STAGES = ['Assessment', 'Diagnosis', 'Planning', 'Intervention', 'Evaluation'];
+
+  const fetchDataAlert = useCallback(async (patientId: number) => {
+    try {
+      const response = await apiClient.get(`/intake-and-output/data-alert/patient/${patientId}`);
+      if (response.data) {
+        const alertMsg = typeof response.data === 'string' 
+          ? response.data 
+          : (response.data.intake_and_output || response.data.alert || response.data.message || null);
+        setDataAlert(alertMsg);
+      } else {
+        setDataAlert(null);
+      }
+    } catch (e) {
+      console.error('Failed to fetch intake and output data alert:', e);
+      setDataAlert(null);
+    }
+  }, []);
 
   const handleUpdateField = useCallback(
     (field: keyof IntakeOutputData, value: string) => {
@@ -128,6 +146,7 @@ export const useIntakeAndOutputLogic = () => {
     setPatientName(name);
     
     if (id) {
+      fetchDataAlert(id);
       const data = await fetchLatestIntakeOutput(id);
       if (data) {
         setRecordId(data.id);
@@ -168,6 +187,7 @@ export const useIntakeAndOutputLogic = () => {
     checkRealTimeAlerts,
     assessmentAlert,
     currentAlert,
+    dataAlert,
     setBackendAlert,
     triggerPatientAlert,
     loading,
