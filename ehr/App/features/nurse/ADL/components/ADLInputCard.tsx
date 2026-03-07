@@ -9,7 +9,6 @@ import {
   Image,
 } from 'react-native';
 import CDSSModal from '@components/CDSSModal';
-import SweetAlert from '@components/SweetAlert';
 
 const alert1 = require('@assets/icons/alert_bell_icon.png');
 
@@ -19,6 +18,7 @@ interface ExamInputProps {
   disabled: boolean;
   alertText?: string;
   onChangeText: (text: string) => void;
+  readOnly?: boolean;
   onDisabledPress?: () => void;
 }
 
@@ -31,6 +31,7 @@ const ADLInputCard = ({
   disabled,
   alertText,
   onChangeText,
+  readOnly = false,
   onDisabledPress,
 }: ExamInputProps) => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -38,9 +39,7 @@ const ADLInputCard = ({
     4 * LINE_HEIGHT + INPUT_PADDING_BOTTOM,
   );
 
-  // LOGIC: The bell is only active if the input is not empty
   const isAlertActive = value.trim().length > 0 && value !== 'N/A';
-  // Keyword match: Backend found a specific clinical risk
   const hasBackendAlert = !!alertText && alertText.trim().length > 0;
 
   const visibleTypingHeight = Math.max(0, inputHeight - INPUT_PADDING_BOTTOM);
@@ -73,13 +72,12 @@ const ADLInputCard = ({
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, (disabled || readOnly) && { opacity: 0.9 }]}>
       <View style={styles.cardHeader}>
         <Text style={styles.headerText}>{label}</Text>
       </View>
 
       <View style={styles.content}>
-        {/* Badge is stacked above the input to allow full-width text below */}
         <View style={styles.badge}>
           <Text style={styles.badgeText}>Findings</Text>
         </View>
@@ -99,26 +97,25 @@ const ADLInputCard = ({
           <TextInput
             style={styles.input}
             value={value}
-            onChangeText={onChangeText}
+            onChangeText={(t) => { if (!readOnly) onChangeText(t); }}
             multiline
-            editable={!disabled}
-            placeholder="Type findings..."
-            pointerEvents={disabled ? 'none' : 'auto'}
+            editable={!disabled && !readOnly}
+            placeholder={readOnly ? "No findings recorded" : "Type findings..."}
+            placeholderTextColor="#999"
             onContentSizeChange={e => {
               setInputHeight(e.nativeEvent.contentSize.height);
             }}
           />
         </Pressable>
 
-        {/* The Alert Icon Button */}
         <TouchableOpacity
           style={[
             styles.alertIcon,
             { opacity: isAlertActive ? 1.0 : 0.3 },
             hasBackendAlert && styles.activeAlert,
           ]}
-          onPress={() => isAlertActive && !disabled && setModalVisible(true)}
-          disabled={!isAlertActive || disabled}
+          onPress={() => isAlertActive && setModalVisible(true)}
+          disabled={!isAlertActive}
         >
           <Image source={alert1} style={styles.alertImage} />
         </TouchableOpacity>
@@ -140,7 +137,6 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginBottom: 20,
     overflow: 'hidden',
-    elevation: 2,
     borderWidth: 1,
     borderColor: '#FEF3C7',
   },
@@ -152,7 +148,7 @@ const styles = StyleSheet.create({
   headerText: {
     color: '#EDB62C',
     fontFamily: 'AlteHaasGroteskBold',
-    fontSize: 14, // Copied from ExamInputCard
+    fontSize: 14,
   },
   content: {
     padding: 15,
@@ -170,7 +166,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: '#EDB62C',
-    fontSize: 13, // Copied from ExamInputCard
+    fontSize: 13,
     fontFamily: 'AlteHaasGroteskBold',
   },
   inputArea: {

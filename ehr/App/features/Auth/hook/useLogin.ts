@@ -50,12 +50,12 @@ export const useLogin = () => {
     setIsSubmitting(true);
     try {
       console.log('Attempting login with:', { email, password: '***' });
-      // Passing as query parameters to match the backend's expected state
-      const response = await apiClient.post(
-        `/auth/login?email=${encodeURIComponent(
-          email,
-        )}&password=${encodeURIComponent(password)}`,
-      );
+      
+      // Send as JSON body instead of query parameters for better security and reliability
+      const response = await apiClient.post('/auth/login', {
+        email: email.trim(),
+        password: password
+      });
 
       console.log('Login response:', response.data);
       const { access_token, role, full_name, user_id } = response.data;
@@ -64,7 +64,7 @@ export const useLogin = () => {
         {
           id: user_id,
           full_name,
-          email,
+          email: email.trim(),
           role,
         },
         access_token,
@@ -72,19 +72,25 @@ export const useLogin = () => {
 
       console.log('Login successful as', role);
     } catch (error: any) {
-      console.error('Login error full:', error);
+      console.error('Login error detail:', error);
       let errorMessage = 'Invalid email or password';
 
-      if (error.response?.data?.detail) {
-        const detail = error.response.data.detail;
-        if (Array.isArray(detail)) {
-          errorMessage = detail
-            .map((err: any) => `${err.loc.join('.')}: ${err.msg}`)
-            .join('\n');
-        } else if (typeof detail === 'string') {
-          errorMessage = detail;
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        if (error.response.status === 401) {
+          errorMessage = 'The email or password you entered is incorrect.';
+        } else if (error.response.status === 404) {
+          errorMessage = 'Login service not found. Please contact support.';
+        } else if (error.response.data?.detail) {
+          const detail = error.response.data.detail;
+          errorMessage = typeof detail === 'string' ? detail : JSON.stringify(detail);
         }
-      } else if (error.message) {
+      } else if (error.request) {
+        // The request was made but no response was received
+        errorMessage = 'Cannot connect to server. Please check your internet connection.';
+      } else {
+        // Something happened in setting up the request that triggered an Error
         errorMessage = error.message;
       }
 

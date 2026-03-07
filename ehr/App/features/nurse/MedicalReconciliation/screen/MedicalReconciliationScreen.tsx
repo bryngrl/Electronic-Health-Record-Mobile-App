@@ -26,12 +26,19 @@ import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
+// UPDATED INTERFACE
 interface MedicalReconciliationProps {
   onBack: () => void;
+  readOnly?: boolean;
+  patientId?: number;
+  initialPatientName?: string;
 }
 
 const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
   onBack,
+  readOnly = false,
+  patientId,
+  initialPatientName
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
@@ -45,7 +52,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
     values,
     patientName,
     setPatientName,
-    patientId,
+    patientId: logicPatientId,
     setPatientId,
     isLoading,
     isSubmitting,
@@ -69,7 +76,17 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
   const [isNA, setIsNA] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // --- DOCTOR VIEWING LOGIC ---
+  useEffect(() => {
+    if (readOnly && patientId) {
+      // Manually set patient ID to trigger data fetching in hook
+      setPatientId(patientId);
+      setPatientName(initialPatientName || '');
+    }
+  }, [readOnly, patientId, initialPatientName, setPatientId, setPatientName]);
+
   const toggleNA = () => {
+    if (readOnly) return; // Disable in read-only
     const newState = !isNA;
     setIsNA(newState);
     const fields = ['med', 'dose', 'route', 'freq', 'indication', 'extra'];
@@ -85,7 +102,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
   };
 
   useEffect(() => {
-    if (patientId) {
+    if (logicPatientId) {
       const fields = ['med', 'dose', 'route', 'freq', 'indication', 'extra'];
       const allNA = fields.every(f => {
         if (stageIndex === 2 && f === 'indication') return true;
@@ -95,7 +112,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
     } else {
       setIsNA(false);
     }
-  }, [patientId, values, stageIndex]);
+  }, [logicPatientId, values, stageIndex]);
 
   const handleBackPress = useCallback(() => {
     if (isMenuVisible) {
@@ -166,6 +183,19 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
   };
 
   const handleNextPress = () => {
+    // READ ONLY NAVIGATION
+    if (readOnly) {
+        if (isLastStage) {
+            onBack();
+        } else {
+            // Manually advance stage since handleNext might have save logic
+            setStageIndex(stageIndex + 1); 
+            scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        }
+        return;
+    }
+
+    // NORMAL LOGIC
     handleNext();
     scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
@@ -224,47 +254,62 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
           scrollEnabled={scrollEnabled}
         >
           <View style={{ height: 20 }} />
-          <PatientSearchBar
-            initialPatientName={patientName}
-            onPatientSelect={handlePatientSelect}
-            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-          />
-
-          <TouchableOpacity
-            style={[styles.naRow, !patientId && { opacity: 0.5 }]}
-            onPress={() => {
-              if (!patientId) {
-                triggerPatientAlert();
-              } else {
-                toggleNA();
-              }
-            }}
-          >
-            <Text
-              style={[
-                styles.naText,
-                !patientId && { color: theme.textMuted },
-              ]}
-            >
-              Mark all as N/A
-            </Text>
-            <Icon
-              name={isNA ? 'check-box' : 'check-box-outline-blank'}
-              size={22}
-              color={patientId ? theme.primary : theme.textMuted}
+          
+          {/* SEARCH BAR / STATIC PATIENT */}
+          {!readOnly ? (
+            <PatientSearchBar
+                initialPatientName={patientName}
+                onPatientSelect={handlePatientSelect}
+                onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
             />
-          </TouchableOpacity>
+          ) : (
+            <View style={styles.staticPatientContainer}>
+                <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+                <Text style={styles.staticPatientName}>{initialPatientName || "Unknown Patient"}</Text>
+            </View>
+          )}
 
-          <Text
-            style={[
-              styles.disabledTextAtBottom,
-              isNA && { color: theme.error },
-            ]}
-          >
-            {isNA
-              ? 'All fields below are disabled.'
-              : 'Checking this will disable all fields below.'}
-          </Text>
+          {/* HIDE MARK AS N/A IN READ ONLY */}
+          {!readOnly && (
+            <TouchableOpacity
+                style={[styles.naRow, !logicPatientId && { opacity: 0.5 }]}
+                onPress={() => {
+                if (!logicPatientId) {
+                    triggerPatientAlert();
+                } else {
+                    toggleNA();
+                }
+                }}
+            >
+                <Text
+                style={[
+                    styles.naText,
+                    !logicPatientId && { color: theme.textMuted },
+                ]}
+                >
+                Mark all as N/A
+                </Text>
+                <Icon
+                name={isNA ? 'check-box' : 'check-box-outline-blank'}
+                size={22}
+                color={logicPatientId ? theme.primary : theme.textMuted}
+                />
+            </TouchableOpacity>
+          )}
+
+          {/* HIDE WARNING TEXT IN READ ONLY */}
+          {!readOnly && (
+            <Text
+                style={[
+                styles.disabledTextAtBottom,
+                isNA && { color: theme.error },
+                ]}
+            >
+                {isNA
+                ? 'All fields below are disabled.'
+                : 'Checking this will disable all fields below.'}
+            </Text>
+          )}
 
           {/* STAGE Indicator */}
           <View style={styles.stageTab}>
@@ -273,34 +318,34 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
 
           {/* INPUT Cards Flow - Wrapped in Pressable for validation */}
           <View
-            style={{ opacity: patientId ? 1 : 0.6 }}
+            style={{ opacity: logicPatientId ? 1 : 0.6 }}
           >
             <MedicalReconCard
               label="Medication"
               value={values.med}
               onChangeText={(v: string) => handleUpdate('med', v)}
-              disabled={!patientId || isNA}
+              disabled={!logicPatientId || isNA || readOnly}
               onDisabledPress={triggerPatientAlert}
             />
             <MedicalReconCard
               label="Dose"
               value={values.dose}
               onChangeText={(v: string) => handleUpdate('dose', v)}
-              disabled={!patientId || isNA}
+              disabled={!logicPatientId || isNA || readOnly}
               onDisabledPress={triggerPatientAlert}
             />
             <MedicalReconCard
               label="Route"
               value={values.route}
               onChangeText={(v: string) => handleUpdate('route', v)}
-              disabled={!patientId || isNA}
+              disabled={!logicPatientId || isNA || readOnly}
               onDisabledPress={triggerPatientAlert}
             />
             <MedicalReconCard
               label="Frequency"
               value={values.freq}
               onChangeText={(v: string) => handleUpdate('freq', v)}
-              disabled={!patientId || isNA}
+              disabled={!logicPatientId || isNA || readOnly}
               onDisabledPress={triggerPatientAlert}
             />
 
@@ -310,7 +355,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
                 label="Indication"
                 value={values.indication}
                 onChangeText={(v: string) => handleUpdate('indication', v)}
-                disabled={!patientId || isNA}
+                disabled={!logicPatientId || isNA || readOnly}
                 onDisabledPress={triggerPatientAlert}
               />
             )}
@@ -319,20 +364,21 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
               label={getExtraLabel()}
               value={values.extra}
               onChangeText={(v: string) => handleUpdate('extra', v)}
-              disabled={!patientId || isNA}
+              disabled={!logicPatientId || isNA || readOnly}
               onDisabledPress={triggerPatientAlert}
             />
           </View>
 
-          {/* FOOTER: Disabled until data is entered or while submitting */}
+          {/* FOOTER BUTTON */}
           <TouchableOpacity
             style={[
               styles.actionBtn,
-              (isSubmitting || !patientId) &&
+              (isSubmitting || (!logicPatientId && !readOnly)) &&
                 styles.btnDisabled,
             ]}
             onPress={handleNextPress}
-            disabled={isSubmitting || !patientId}
+            // Allow press if readOnly (navigation) OR if logicPatientId exists (submit)
+            disabled={!readOnly && (isSubmitting || !logicPatientId)}
           >
             {isSubmitting ? (
               <ActivityIndicator size="small" color={theme.primary} />
@@ -341,18 +387,19 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
                 <Text
                   style={[
                     styles.btnText,
-                    (isSubmitting || !patientId) && {
+                    (isSubmitting || (!logicPatientId && !readOnly)) && {
                       color: theme.textMuted,
                     },
                   ]}
                 >
-                  {isLastStage ? 'SUBMIT' : 'NEXT'}
+                  {/* Logic: Last Stage + ReadOnly = CLOSE, Last Stage + Nurse = SUBMIT, Else = NEXT */}
+                  {isLastStage ? (readOnly ? 'CLOSE' : 'SUBMIT') : 'NEXT'}
                 </Text>
                 {!isLastStage && (
                   <Text
                     style={[
                       styles.chevron,
-                      (isSubmitting || !patientId) && {
+                      (isSubmitting || (!logicPatientId && !readOnly)) && {
                         color: theme.textMuted,
                       },
                     ]}
@@ -437,6 +484,29 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       color: theme.textMuted,
       fontFamily: 'AlteHaasGroteskBold',
       fontSize: 13,
+    },
+    // New Static Patient styles
+    staticPatientContainer: {
+        marginBottom: 20,
+        backgroundColor: theme.card,
+        padding: 15,
+        borderRadius: 15,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: theme.border
+    },
+    staticPatientLabel: {
+        fontFamily: 'AlteHaasGroteskBold',
+        color: theme.primary,
+        fontSize: 12,
+        marginRight: 10
+    },
+    staticPatientName: {
+        fontFamily: 'AlteHaasGrotesk',
+        color: theme.text,
+        fontSize: 16,
+        fontWeight: 'bold'
     },
     naRow: {
       flexDirection: 'row',

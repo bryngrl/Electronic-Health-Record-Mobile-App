@@ -79,13 +79,17 @@ export const useIntakeAndOutputLogic = () => {
     
     setLoading(true);
     try {
-      const sanitize = (val: string) => (val.trim() === '' ? 'N/A' : val);
+      const sanitizeInt = (val: string) => {
+        if (val.trim() === '' || val === 'N/A') return null;
+        const parsed = parseInt(val, 10);
+        return isNaN(parsed) ? null : parsed;
+      };
 
       const payload = {
         patient_id: parseInt(selectedPatientId, 10),
-        oral_intake: sanitize(intakeOutput.oral_intake),
-        iv_fluids: sanitize(intakeOutput.iv_fluids),
-        urine_output: sanitize(intakeOutput.urine_output),
+        oral_intake: sanitizeInt(intakeOutput.oral_intake),
+        iv_fluids: sanitizeInt(intakeOutput.iv_fluids),
+        urine_output: sanitizeInt(intakeOutput.urine_output),
       };
 
       const response = await apiClient.post('/intake-output/', payload);

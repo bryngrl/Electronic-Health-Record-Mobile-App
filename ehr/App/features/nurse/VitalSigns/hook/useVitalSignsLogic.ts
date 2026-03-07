@@ -55,14 +55,95 @@ export const useVitalSignsLogic = () => {
   const currentTime = useMemo(() => TIME_SLOTS[currentTimeIndex], [currentTimeIndex]);
 
   const isDataEntered = useMemo(() => {
-    return true; // Enable empty inputs as per requirement
-  }, []);
+    return Object.values(currentVitals).some(v => v !== '');
+  }, [currentVitals]);
 
   const isDataComplete = useMemo(() => {
-    return true; // Enable empty inputs as per requirement
-  }, []);
+    return Object.values(currentVitals).every(v => v !== '');
+  }, [currentVitals]);
 
-  const saveAssessment = async (dayNo?: number) => {
+  const loadPatientData = useCallback(async (patientId: string) => {
+    try {
+      const response = await apiClient.get(`/vital-signs/patient/${patientId}`);
+      const records = response.data || [];
+      setExistingRecords(records);
+      
+      if (records.length === 0) {
+        setVitalsHistory({});
+        setCurrentVitals(initialVitals);
+        return;
+      }
+
+      // Find the latest date in the records
+      const latestDate = records[0].date;
+      const history: Record<string, Vitals> = {};
+      
+      records.forEach((rec: any) => {
+        if (rec.date === latestDate) {
+          const slotLabel = formatTo12h(rec.time);
+          if (TIME_SLOTS.includes(slotLabel)) {
+            history[slotLabel] = {
+              temperature: rec.temperature || '',
+              hr: rec.hr || '',
+              rr: rec.rr || '',
+              bp: rec.bp || '',
+              spo2: rec.spo2 || '',
+            };
+          }
+        }
+      });
+      
+      setVitalsHistory(history);
+      
+      const currentSlot = TIME_SLOTS[currentTimeIndex];
+      if (history[currentSlot]) {
+        setCurrentVitals(history[currentSlot]);
+      } else {
+        // If no record for the current slot, but we have records for this date,
+        // we might want to stay on initialVitals or load the latest available slot.
+        setCurrentVitals(initialVitals);
+      }
+      
+    } catch (e) {
+      console.error('Failed to load patient data:', e);
+      setExistingRecords([]);
+      setVitalsHistory({});
+      setCurrentVitals(initialVitals);
+    }
+  }, [currentTimeIndex]);
+
+  const setSelectedPatient = useCallback((id: string | null, name: string) => {
+    if (id === selectedPatientId && name === patientName) return;
+    
+    setSelectedPatientId(id);
+    setPatientName(name);
+    if (id) {
+      loadPatientData(id);
+    } else {
+      setVitalsHistory({});
+      setCurrentVitals(initialVitals);
+      setExistingRecords([]);
+    }
+  }, [loadPatientData, selectedPatientId, patientName]);
+
+  const handleUpdateVital = useCallback((key: keyof Vitals, value: string) => {
+    setCurrentVitals(prev => ({ ...prev, [key]: value }));
+    if (backendAlert) setBackendAlert(null);
+  }, [backendAlert]);
+
+  const handleNextTime = useCallback(() => {
+    setVitalsHistory(prev => ({ ...prev, [currentTime]: currentVitals }));
+    
+    if (currentTimeIndex < TIME_SLOTS.length - 1) {
+      const nextIndex = currentTimeIndex + 1;
+      setCurrentTimeIndex(nextIndex);
+      const historyForNext = vitalsHistory[TIME_SLOTS[nextIndex]];
+      setCurrentVitals(historyForNext || initialVitals);
+      setBackendAlert(null); 
+    }
+  }, [currentTime, currentTimeIndex, currentVitals, vitalsHistory]);
+
+  const saveAssessment = useCallback(async (dayNo?: number) => {
     if (!selectedPatientId) return null;
 
     const sanitize = (data: any) => {
@@ -101,24 +182,40 @@ export const useVitalSignsLogic = () => {
       console.error('API Error saving vital signs:', e);
       return null;
     }
-  };
+  }, [selectedPatientId, currentTime, currentVitals]);
 
-  const handleUpdateVital = (key: keyof Vitals, value: string) => {
-    setCurrentVitals(prev => ({ ...prev, [key]: value }));
-    if (backendAlert) setBackendAlert(null);
-  };
-
-  const handleNextTime = () => {
-    setVitalsHistory(prev => ({ ...prev, [currentTime]: currentVitals }));
+  const selectTime = useCallback((index: number) => {
+    const oldTime = TIME_SLOTS[currentTimeIndex];
+    setVitalsHistory(prev => ({ ...prev, [oldTime]: currentVitals }));
     
-    if (currentTimeIndex < TIME_SLOTS.length - 1) {
-      const nextIndex = currentTimeIndex + 1;
-      setCurrentTimeIndex(nextIndex);
-      const historyForNext = vitalsHistory[TIME_SLOTS[nextIndex]];
-      setCurrentVitals(historyForNext || initialVitals);
-      setBackendAlert(null); 
+    setCurrentTimeIndex(index);
+    const newTime = TIME_SLOTS[index];
+    const historyForSlot = vitalsHistory[newTime];
+    setCurrentVitals(historyForSlot || initialVitals);
+  }, [currentTimeIndex, currentVitals, vitalsHistory]);
+
+  const reset = useCallback(() => {
+    setPatientName('');
+    setSelectedPatientId(null);
+    setVitalsHistory({});
+    setCurrentVitals(initialVitals);
+    setCurrentTimeIndex(0);
+    setBackendAlert(null);
+    setExistingRecords([]);
+  }, []);
+
+  const updateDPIE = useCallback(async (recordId: number, stepKey: string, text: string) => {
+    try {
+      const sanitizedText = text.trim() === '' ? 'N/A' : text;
+      const response = await apiClient.put(`/vital-signs/${recordId}/${stepKey}`, {
+        [stepKey]: sanitizedText
+      });
+      return response.data;
+    } catch (err) {
+      console.error(`Error updating Vital Signs ${stepKey}:`, err);
+      return null;
     }
-  };
+  }, []);
 
   const chartData = useMemo(() => {
     const keys: (keyof Vitals)[] = ['temperature', 'hr', 'rr', 'bp', 'spo2'];
@@ -143,91 +240,6 @@ export const useVitalSignsLogic = () => {
     });
     return result;
   }, [currentVitals, vitalsHistory, currentTime]);
-
-  const loadPatientData = async (patientId: string) => {
-    try {
-      const response = await apiClient.get(`/vital-signs/patient/${patientId}`);
-      const records = response.data || [];
-      setExistingRecords(records);
-      
-      const today = new Date().toLocaleDateString('en-CA');
-      const history: Record<string, Vitals> = {};
-      
-      records.forEach((rec: any) => {
-        if (rec.date === today) {
-          const slotLabel = formatTo12h(rec.time);
-          if (TIME_SLOTS.includes(slotLabel)) {
-            history[slotLabel] = {
-              temperature: rec.temperature || '',
-              hr: rec.hr || '',
-              rr: rec.rr || '',
-              bp: rec.bp || '',
-              spo2: rec.spo2 || '',
-            };
-          }
-        }
-      });
-      
-      setVitalsHistory(history);
-      
-      if (history[currentTime]) {
-        setCurrentVitals(history[currentTime]);
-      } else {
-        setCurrentVitals(initialVitals);
-      }
-      
-    } catch (e) {
-      console.error('Failed to load patient data:', e);
-      setExistingRecords([]);
-      setVitalsHistory({});
-      setCurrentVitals(initialVitals);
-    }
-  };
-
-  const setSelectedPatient = (id: string | null, name: string) => {
-    setSelectedPatientId(id);
-    setPatientName(name);
-    if (id) {
-      loadPatientData(id);
-    } else {
-      setVitalsHistory({});
-      setCurrentVitals(initialVitals);
-      setExistingRecords([]);
-    }
-  };
-
-  const selectTime = (index: number) => {
-    const oldTime = TIME_SLOTS[currentTimeIndex];
-    setVitalsHistory(prev => ({ ...prev, [oldTime]: currentVitals }));
-    
-    setCurrentTimeIndex(index);
-    const newTime = TIME_SLOTS[index];
-    const historyForSlot = vitalsHistory[newTime];
-    setCurrentVitals(historyForSlot || initialVitals);
-  };
-
-  const reset = () => {
-    setPatientName('');
-    setSelectedPatientId(null);
-    setVitalsHistory({});
-    setCurrentVitals(initialVitals);
-    setCurrentTimeIndex(0);
-    setBackendAlert(null);
-    setExistingRecords([]);
-  };
-
-  const updateDPIE = useCallback(async (recordId: number, stepKey: string, text: string) => {
-    try {
-      const sanitizedText = text.trim() === '' ? 'N/A' : text;
-      const response = await apiClient.put(`/vital-signs/${recordId}/${stepKey}`, {
-        [stepKey]: sanitizedText
-      });
-      return response.data;
-    } catch (err) {
-      console.error(`Error updating Vital Signs ${stepKey}:`, err);
-      return null;
-    }
-  }, []);
 
   return {
     patientName,

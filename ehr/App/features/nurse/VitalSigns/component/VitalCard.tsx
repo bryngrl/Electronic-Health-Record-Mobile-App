@@ -13,7 +13,7 @@ const VitalCard: React.FC<VitalCardProps> = ({
   label,
   value,
   onChangeText,
-  disabled,
+  disabled = false,
   onDisabledPress,
 }) => (
   <View style={styles.cardContainer}>

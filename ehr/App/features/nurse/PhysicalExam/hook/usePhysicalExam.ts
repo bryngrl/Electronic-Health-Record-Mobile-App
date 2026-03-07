@@ -14,24 +14,22 @@ export const usePhysicalExam = () => {
 
   // STEP 1: ASSESSMENT (POST)
   const saveAssessment = useCallback(async (payload: any) => {
-    // Matches @router.post("/")
     const sanitized = sanitize(payload);
     const response = await apiClient.post('/physical-exam/', sanitized);
-    return response.data; // Returns PhysicalExamRead with ID
+    return response.data; 
   }, []);
 
-  // Real-time CDSS: Keyword matching for Assessment
+  // Real-time CDSS
   const checkAssessmentAlerts = useCallback(async (payload: any) => {
     try {
       const sanitized = sanitize(payload);
-      const response = await apiClient.post('/physical-exam/', sanitized);
+      const response = await apiClient.post('/physical-exam/check-alerts', sanitized);
       return response.data;
     } catch (err) { return null; }
   }, []);
 
   // STEPS 2-5: DPIE UPDATES (PUT)
   const updateDPIE = useCallback(async (examId: number, stepKey: string, text: string) => {
-    // Matches @router.put("/{exam_id}/diagnosis"), /planning, etc.
     const sanitizedText = text.trim() === '' ? 'N/A' : text;
     const response = await apiClient.put(`/physical-exam/${examId}/${stepKey}`, {
       [stepKey]: sanitizedText
@@ -42,10 +40,8 @@ export const usePhysicalExam = () => {
   const fetchLatestPhysicalExam = useCallback(async (patientId: number) => {
     try {
       const response = await apiClient.get(`/physical-exam/patient/${patientId}`);
-      // records are sorted by created_at desc
       const records = response.data || [];
       if (records.length > 0) {
-        // Check if the latest record is from today
         const latest = records[0];
         const recordDate = new Date(latest.created_at).toDateString();
         const today = new Date().toDateString();
@@ -60,5 +56,21 @@ export const usePhysicalExam = () => {
     }
   }, []);
 
-  return { saveAssessment, checkAssessmentAlerts, updateDPIE, fetchLatestPhysicalExam };
+  // --- ADDED FOR READING ONLY (SAFE FOR DOCTORS) ---
+  const fetchExamHistoryForReading = useCallback(async (patientId: number) => {
+    try {
+      const response = await apiClient.get(`/physical-exam/patient/${patientId}`);
+      return response.data || [];
+    } catch (err) {
+      return [];
+    }
+  }, []);
+
+  return { 
+    saveAssessment, 
+    checkAssessmentAlerts, 
+    updateDPIE, 
+    fetchLatestPhysicalExam,
+    fetchExamHistoryForReading 
+  };
 };

@@ -1,10 +1,10 @@
 import axios from 'axios';
 
 const BACKEND_PORT = 8000;
-const YOUR_IP = '192.168.1.14'; //change this to match your current ip (ipconfig in cmd prompt)
+const YOUR_IP = '192.168.123.79'; //change this to match your current ip (ipconfig in cmd prompt)
 const host = YOUR_IP;
 
-export const BASE_URL = `http://${host}:${BACKEND_PORT}/api`;
+export const BASE_URL = `http://${host}:${BACKEND_PORT}/`;
 
 const apiClient = axios.create({
   baseURL: BASE_URL,

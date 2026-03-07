@@ -45,13 +45,9 @@ export const useADL = () => {
     try {
       const response = await apiClient.get(`/adl/patient/${patientId}`);
       const records = response.data || [];
+      // Always return the latest record regardless of the date
       if (records.length > 0) {
-        const latest = records[0];
-        const recordDate = new Date(latest.created_at).toDateString();
-        const today = new Date().toDateString();
-        if (recordDate === today) {
-          return latest;
-        }
+        return records[0];
       }
       return null;
     } catch (err) {

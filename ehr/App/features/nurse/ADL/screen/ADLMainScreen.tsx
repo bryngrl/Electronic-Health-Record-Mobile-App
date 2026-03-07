@@ -35,7 +35,19 @@ const initialFormData = {
   pain_level: '',
 };
 
-const ADLScreen = ({ onBack }: any) => {
+interface ADLScreenProps {
+  onBack: () => void;
+  readOnly?: boolean;
+  patientId?: number;
+  initialPatientName?: string;
+}
+
+const ADLScreen = ({ 
+  onBack,
+  readOnly = false,
+  patientId,
+  initialPatientName
+}: ADLScreenProps) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
@@ -54,7 +66,6 @@ const ADLScreen = ({ onBack }: any) => {
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const prevPatientIdRef = useRef<number | null>(null);
 
-  // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
     title: string;
@@ -82,19 +93,26 @@ const ADLScreen = ({ onBack }: any) => {
   const [isNA, setIsNA] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // --- DOCTOR VIEWING SETUP ---
+  useEffect(() => {
+    if (readOnly && patientId) {
+      setSelectedPatient({ id: patientId });
+      setSearchText(initialPatientName || '');
+    }
+  }, [readOnly, patientId, initialPatientName]);
+
   const toggleNA = () => {
+    if (readOnly) return; 
     const newState = !isNA;
     setIsNA(newState);
 
     if (newState) {
-      // Set all fields to "N/A"
       const updatedData = { ...formData };
       Object.keys(initialFormData).forEach(key => {
         (updatedData as any)[key] = 'N/A';
       });
       setFormData(updatedData);
     } else {
-      // Clear fields if they were "N/A"
       const updatedData = { ...formData };
       Object.keys(initialFormData).forEach(key => {
         if ((updatedData as any)[key] === 'N/A') {
@@ -110,18 +128,16 @@ const ADLScreen = ({ onBack }: any) => {
       onBack();
       return true;
     };
-
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
       backAction,
     );
-
     return () => backHandler.remove();
   }, [onBack]);
 
   const loadPatientData = useCallback(
-    async (patientId: number) => {
-      const data = await fetchLatestADL(patientId);
+    async (pid: number) => {
+      const data = await fetchLatestADL(pid);
       if (data) {
         setAdlId(data.id);
         const newFormData = {
@@ -135,7 +151,6 @@ const ADLScreen = ({ onBack }: any) => {
         };
         setFormData(newFormData);
 
-        // Check if all fields are N/A
         const allNA = Object.values(newFormData).every(v => v === 'N/A');
         setIsNA(allNA);
 
@@ -192,7 +207,7 @@ const ADLScreen = ({ onBack }: any) => {
   };
 
   useEffect(() => {
-    if (!selectedPatient?.id || isNA) return;
+    if (!selectedPatient?.id || isNA || readOnly) return; 
     const timer = setTimeout(async () => {
       const hasContent = Object.values(formData).some(
         v => v && v.trim().length > 0 && v !== 'N/A',
@@ -209,9 +224,21 @@ const ADLScreen = ({ onBack }: any) => {
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [formData, selectedPatient, checkADLAlerts, isNA]);
+  }, [formData, selectedPatient, checkADLAlerts, isNA, readOnly]);
 
   const handleCDSSPress = async () => {
+    // DOCTOR/VIEWING MODE: Just open the stepper if data exists
+    if (readOnly) {
+        if (adlId) {
+            setIsAdpieActive(true);
+            scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        } else {
+            showAlert('No Data', 'No ADL assessment found for this patient.');
+        }
+        return;
+    }
+
+    // NURSE/EDIT MODE
     if (!selectedPatient) {
       return showAlert(
         'Patient Required',
@@ -235,6 +262,12 @@ const ADLScreen = ({ onBack }: any) => {
   };
 
   const handleSave = async () => {
+    // If Read Only, this button acts as "Close"
+    if (readOnly) {
+        onBack();
+        return;
+    }
+
     if (!selectedPatient) {
       return showAlert(
         'Patient Required',
@@ -289,6 +322,7 @@ const ADLScreen = ({ onBack }: any) => {
           setIsAdpieActive(false);
           scrollViewRef.current?.scrollTo({ y: 0, animated: true });
         }}
+        readOnly={readOnly} // Pass readOnly to step
       />
     );
   }
@@ -337,14 +371,23 @@ const ADLScreen = ({ onBack }: any) => {
           scrollEnabled={scrollEnabled}
         >
           <View style={{ height: 20 }} />
-          <PatientSearchBar
-            onPatientSelect={(id, name, patientObj) => {
-              setSearchText(name);
-              setSelectedPatient(patientObj);
-            }}
-            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-            initialPatientName={searchText}
-          />
+          
+          {/* SEARCH BAR (Active for Nurse) / STATIC NAME (For Doctor) */}
+          {!readOnly ? (
+            <PatientSearchBar
+                onPatientSelect={(id, name, patientObj) => {
+                setSearchText(name);
+                setSelectedPatient(patientObj);
+                }}
+                onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+                initialPatientName={searchText}
+            />
+          ) : (
+            <View style={styles.staticPatientContainer}>
+                <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+                <Text style={styles.staticPatientName}>{initialPatientName || "Unknown Patient"}</Text>
+            </View>
+          )}
 
           <View style={styles.section}>
             <View style={styles.row}>
@@ -360,64 +403,70 @@ const ADLScreen = ({ onBack }: any) => {
                 <Text style={styles.sectionLabel}>DAY NO. :</Text>
                 <View style={styles.inputBox}>
                   <Text style={styles.inputText}>{calculateDayNumber()}</Text>
-                  <Icon
-                    name="arrow-drop-down"
-                    size={24}
-                    color={theme.primary}
-                    style={{ position: 'absolute', right: 10 }}
-                  />
+                  {!readOnly && (
+                    <Icon
+                        name="arrow-drop-down"
+                        size={24}
+                        color={theme.primary}
+                        style={{ position: 'absolute', right: 10 }}
+                    />
+                  )}
                 </View>
               </View>
             </View>
           </View>
 
-          <TouchableOpacity
-            style={[styles.naRow, !selectedPatient && { opacity: 0.5 }]}
-            onPress={() => {
-              if (!selectedPatient) {
-                showAlert(
-                  'Patient Required',
-                  'Please select a patient first in the search bar.',
-                );
-              } else {
-                toggleNA();
-              }
-            }}
-          >
-            <Text
-              style={[
-                styles.naText,
-                !selectedPatient && { color: theme.textMuted },
-              ]}
+          {!readOnly && (
+            <TouchableOpacity
+                style={[styles.naRow, !selectedPatient && { opacity: 0.5 }]}
+                onPress={() => {
+                if (!selectedPatient) {
+                    showAlert(
+                    'Patient Required',
+                    'Please select a patient first in the search bar.',
+                    );
+                } else {
+                    toggleNA();
+                }
+                }}
             >
-              Mark all as N/A
-            </Text>
-            <Icon
-              name={isNA ? 'check-box' : 'check-box-outline-blank'}
-              size={22}
-              color={selectedPatient ? theme.primary : theme.textMuted}
-            />
-          </TouchableOpacity>
+                <Text
+                style={[
+                    styles.naText,
+                    !selectedPatient && { color: theme.textMuted },
+                ]}
+                >
+                Mark all as N/A
+                </Text>
+                <Icon
+                name={isNA ? 'check-box' : 'check-box-outline-blank'}
+                size={22}
+                color={selectedPatient ? theme.primary : theme.textMuted}
+                />
+            </TouchableOpacity>
+          )}
 
-          <Text
-            style={[
-              styles.disabledTextAtBottom,
-              isNA && { color: theme.error },
-            ]}
-          >
-            {isNA
-              ? 'All fields below are disabled.'
-              : 'Checking this will disable all fields below.'}
-          </Text>
+          {!readOnly && (
+            <Text
+                style={[
+                styles.disabledTextAtBottom,
+                isNA && { color: theme.error },
+                ]}
+            >
+                {isNA
+                ? 'All fields below are disabled.'
+                : 'Checking this will disable all fields below.'}
+            </Text>
+          )}
 
           <ADLInputCard
             label="MOBILITY"
             value={formData.mobility}
-            disabled={!selectedPatient || isNA}
+            disabled={!selectedPatient || isNA || readOnly}
             alertText={alerts.mobility_alert}
             onChangeText={t => setFormData({ ...formData, mobility: t })}
             onDisabledPress={() => {
-              if (!selectedPatient) {
+              if (!readOnly && !selectedPatient) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -428,11 +477,11 @@ const ADLScreen = ({ onBack }: any) => {
           <ADLInputCard
             label="HYGIENE"
             value={formData.hygiene}
-            disabled={!selectedPatient || isNA}
+            disabled={!selectedPatient || isNA || readOnly}
             alertText={alerts.hygiene_alert}
             onChangeText={t => setFormData({ ...formData, hygiene: t })}
             onDisabledPress={() => {
-              if (!selectedPatient) {
+              if (!readOnly && !selectedPatient) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -443,11 +492,11 @@ const ADLScreen = ({ onBack }: any) => {
           <ADLInputCard
             label="TOILETING"
             value={formData.toileting}
-            disabled={!selectedPatient || isNA}
+            disabled={!selectedPatient || isNA || readOnly}
             alertText={alerts.toileting_alert}
             onChangeText={t => setFormData({ ...formData, toileting: t })}
             onDisabledPress={() => {
-              if (!selectedPatient) {
+              if (!readOnly && !selectedPatient) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -458,11 +507,11 @@ const ADLScreen = ({ onBack }: any) => {
           <ADLInputCard
             label="FEEDING"
             value={formData.feeding}
-            disabled={!selectedPatient || isNA}
+            disabled={!selectedPatient || isNA || readOnly}
             alertText={alerts.feeding_alert}
             onChangeText={t => setFormData({ ...formData, feeding: t })}
             onDisabledPress={() => {
-              if (!selectedPatient) {
+              if (!readOnly && !selectedPatient) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -473,11 +522,11 @@ const ADLScreen = ({ onBack }: any) => {
           <ADLInputCard
             label="HYDRATION"
             value={formData.hydration}
-            disabled={!selectedPatient || isNA}
+            disabled={!selectedPatient || isNA || readOnly}
             alertText={alerts.hydration_alert}
             onChangeText={t => setFormData({ ...formData, hydration: t })}
             onDisabledPress={() => {
-              if (!selectedPatient) {
+              if (!readOnly && !selectedPatient) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -488,11 +537,11 @@ const ADLScreen = ({ onBack }: any) => {
           <ADLInputCard
             label="SLEEP PATTERN"
             value={formData.sleep_pattern}
-            disabled={!selectedPatient || isNA}
+            disabled={!selectedPatient || isNA || readOnly}
             alertText={alerts.sleep_pattern_alert}
             onChangeText={t => setFormData({ ...formData, sleep_pattern: t })}
             onDisabledPress={() => {
-              if (!selectedPatient) {
+              if (!readOnly && !selectedPatient) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -503,11 +552,11 @@ const ADLScreen = ({ onBack }: any) => {
           <ADLInputCard
             label="PAIN LEVEL"
             value={formData.pain_level}
-            disabled={!selectedPatient || isNA}
+            disabled={!selectedPatient || isNA || readOnly}
             alertText={alerts.pain_level_alert}
             onChangeText={t => setFormData({ ...formData, pain_level: t })}
             onDisabledPress={() => {
-              if (!selectedPatient) {
+              if (!readOnly && !selectedPatient) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -517,47 +566,51 @@ const ADLScreen = ({ onBack }: any) => {
           />
 
           <View style={styles.footerRow}>
+            {/* CDSS Button: Always visible. Logic inside function handles ReadOnly vs Edit */}
             <TouchableOpacity
-              style={[
-                styles.cdssBtn,
-                !selectedPatient && {
-                  backgroundColor: theme.buttonDisabledBg,
-                  borderColor: theme.buttonDisabledBorder,
-                },
-              ]}
-              onPress={handleCDSSPress}
-              disabled={!selectedPatient}
-            >
-              <Text
                 style={[
-                  styles.cdssText,
-                  !selectedPatient
-                    ? { color: theme.textMuted }
-                    : { color: theme.primary },
+                    styles.cdssBtn,
+                    (!selectedPatient && !readOnly) && {
+                    backgroundColor: theme.buttonDisabledBg,
+                    borderColor: theme.buttonDisabledBorder,
+                    },
                 ]}
-              >
-                CDSS
-              </Text>
+                onPress={handleCDSSPress}
+                // Disabled if not selected patient AND not readOnly
+                disabled={!selectedPatient && !readOnly}
+            >
+                <Text
+                    style={[
+                    styles.cdssText,
+                    (!selectedPatient && !readOnly)
+                        ? { color: theme.textMuted }
+                        : { color: theme.primary },
+                    ]}
+                >
+                    CDSS
+                </Text>
             </TouchableOpacity>
+
+            {/* Second Button: SUBMIT (Nurse) or CLOSE (Doctor) */}
             <TouchableOpacity
-              style={[
-                styles.submitBtn,
-                !selectedPatient && {
-                  backgroundColor: theme.buttonDisabledBg,
-                  borderColor: theme.buttonDisabledBorder,
-                },
-              ]}
-              onPress={handleSave}
-              disabled={!selectedPatient}
-            >
-              <Text
                 style={[
-                  styles.submitText,
-                  !selectedPatient && { color: theme.textMuted },
+                    styles.submitBtn,
+                    (!selectedPatient && !readOnly) && {
+                    backgroundColor: theme.buttonDisabledBg,
+                    borderColor: theme.buttonDisabledBorder,
+                    },
                 ]}
-              >
-                SUBMIT
-              </Text>
+                onPress={handleSave} // handleSave handles navigation back if readOnly
+                disabled={!selectedPatient && !readOnly}
+            >
+                <Text
+                    style={[
+                    styles.submitText,
+                    (!selectedPatient && !readOnly) && { color: theme.textMuted },
+                    ]}
+                >
+                    {readOnly ? 'CLOSE' : 'SUBMIT'}
+                </Text>
             </TouchableOpacity>
           </View>
           <View style={{ height: 100 }} />
@@ -607,6 +660,29 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontSize: 13,
       fontFamily: 'AlteHaasGroteskBold',
       color: theme.textMuted,
+    },
+    // New Static Patient styles
+    staticPatientContainer: {
+        marginBottom: 20,
+        backgroundColor: theme.card,
+        padding: 15,
+        borderRadius: 15,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: theme.border
+    },
+    staticPatientLabel: {
+        fontFamily: 'AlteHaasGroteskBold',
+        color: theme.primary,
+        fontSize: 12,
+        marginRight: 10
+    },
+    staticPatientName: {
+        fontFamily: 'AlteHaasGrotesk',
+        color: theme.text,
+        fontSize: 16,
+        fontWeight: 'bold'
     },
     section: { marginBottom: 15, zIndex: 10 },
     sectionLabel: {

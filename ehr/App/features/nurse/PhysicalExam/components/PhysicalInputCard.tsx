@@ -9,7 +9,6 @@ import {
   Image,
 } from 'react-native';
 import CDSSModal from '@components/CDSSModal';
-import SweetAlert from '@components/SweetAlert';
 
 const alert1 = require('@assets/icons/alert_bell_icon.png');
 
@@ -19,6 +18,7 @@ interface ExamInputProps {
   disabled: boolean;
   alertText?: string;
   onChangeText: (text: string) => void;
+  readOnly?: boolean;
   onDisabledPress?: () => void;
 }
 
@@ -31,6 +31,7 @@ const ExamInputCard = ({
   disabled,
   alertText,
   onChangeText,
+  readOnly = false,
   onDisabledPress,
 }: ExamInputProps) => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -71,13 +72,12 @@ const ExamInputCard = ({
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, (disabled || readOnly) && { opacity: 0.8 }]}>
       <View style={styles.cardHeader}>
         <Text style={styles.headerText}>{label}</Text>
       </View>
 
       <View style={styles.content}>
-        {/* Badge is now stacked above the input to allow full-width text below */}
         <View style={styles.badge}>
           <Text style={styles.badgeText}>Findings</Text>
         </View>
@@ -97,11 +97,11 @@ const ExamInputCard = ({
           <TextInput
             style={styles.input}
             value={value}
-            onChangeText={onChangeText}
+            onChangeText={(t) => { if (!readOnly) onChangeText(t); }}
             multiline
-            editable={!disabled}
-            placeholder="Type findings..."
-            pointerEvents={disabled ? 'none' : 'auto'}
+            editable={!disabled && !readOnly}
+            placeholder={readOnly ? "No findings recorded" : "Type findings..."}
+            placeholderTextColor="#999"
             onContentSizeChange={e => {
               setInputHeight(e.nativeEvent.contentSize.height);
             }}
@@ -115,7 +115,7 @@ const ExamInputCard = ({
             hasBackendAlert && styles.activeAlert,
           ]}
           onPress={() => isAlertActive && !disabled && setModalVisible(true)}
-          disabled={!isAlertActive || disabled}
+          disabled={!isAlertActive || (disabled && !readOnly)}
         >
           <Image source={alert1} style={styles.alertImage} />
         </TouchableOpacity>
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 15,
-    position: 'relative', // Removed flexDirection: 'row' so elements stack vertically
+    position: 'relative',
   },
   badge: {
     backgroundColor: '#FFEEC2',
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     width: '100%',
     alignItems: 'center',
-    marginBottom: 8, // Adds breathing room before the lines start
+    marginBottom: 8,
   },
   badgeText: {
     color: '#EDB62C',
@@ -183,7 +183,6 @@ const styles = StyleSheet.create({
     paddingBottom: INPUT_PADDING_BOTTOM,
     lineHeight: LINE_HEIGHT,
     minHeight: 112,
-    // Removed marginLeft so text starts flush with the left side
     includeFontPadding: false,
   },
   linesContainer: {

@@ -186,6 +186,14 @@ def create_physical_exam(payload: AssessmentCreate, db: Session = Depends(get_db
     return record
 
 
+@router.post("/check-alerts")
+def check_assessment_alerts(payload: AssessmentCreate):
+    """Simulate CDSS alerts for Physical Exam without saving to DB (for real-time UI)."""
+    data = payload.model_dump()
+    alerts = _run_assessment_cdss(data)
+    return alerts
+
+
 @router.put("/{exam_id}/assessment", response_model=PhysicalExamRead)
 def update_assessment(exam_id: int, payload: AssessmentUpdate, db: Session = Depends(get_db)):
     """Update Assessment fields. CDSS alerts are re-generated."""

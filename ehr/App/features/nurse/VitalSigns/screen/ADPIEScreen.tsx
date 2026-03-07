@@ -31,6 +31,7 @@ interface ADPIEScreenProps {
   recordId: number;
   patientName: string;
   feature?: 'vital-signs' | 'intake-output';
+  readOnly?: boolean;
 }
 
 const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
@@ -38,6 +39,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   recordId,
   patientName,
   feature = 'vital-signs',
+  readOnly = false,
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
@@ -50,12 +52,44 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   const [alert, setAlert] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [allData, setAllData] = useState<any>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const endpointPrefix =
     feature === 'vital-signs' ? '/vital-signs' : '/intake-output';
   const displayTitle =
     feature === 'vital-signs' ? 'Vital Signs' : 'Intake and Output';
+
+  // Fetch all data for readOnly mode
+  useEffect(() => {
+    const fetchRecord = async () => {
+      try {
+        setLoading(true);
+        const response = await apiClient.get(`${endpointPrefix}/${recordId}`);
+        setAllData(response.data);
+        // Set initial text for first step
+        if (response.data) {
+          setText(response.data[STEPS[0].key] || '');
+          setAlert(response.data[`${STEPS[0].key}_alert`] || null);
+        }
+      } catch (e) {
+        console.error('Error fetching record for ADPIE:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecord();
+  }, [recordId, endpointPrefix]);
+
+  // Update text when step changes in readOnly mode
+  useEffect(() => {
+    if (allData) {
+      const step = STEPS[currentIdx];
+      setText(allData[step.key] || '');
+      setAlert(allData[`${step.key}_alert`] || null);
+    }
+  }, [currentIdx, allData]);
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -81,6 +115,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   };
 
   const updateADPIE = async (id: number, step: string, value: string) => {
+    if (readOnly) return; // Prevent updates in read-only mode
     try {
       const response = await apiClient.put(`${endpointPrefix}/${id}/${step}`, {
         [step]: value,
@@ -93,7 +128,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   };
 
   useEffect(() => {
-    if (text.trim().length < 3) return;
+    if (readOnly || text.trim().length < 3) return;
     const timer = setTimeout(async () => {
       try {
         const step = STEPS[currentIdx];
@@ -104,9 +139,18 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [text, currentIdx, recordId]);
+  }, [text, currentIdx, recordId, readOnly]);
 
   const handleNext = async () => {
+    if (readOnly) {
+      if (currentIdx < 3) {
+        setCurrentIdx(currentIdx + 1);
+      } else {
+        onBack();
+      }
+      return;
+    }
+
     if (!text.trim()) {
       showAlert(
         'Input Required',
@@ -287,11 +331,12 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
               </View>
               <TextInput
                 multiline
-                style={styles.input}
+                style={[styles.input, readOnly && { color: theme.textMuted }]}
                 value={text}
                 onChangeText={setText}
                 scrollEnabled={false}
-                placeholder={`Enter ${STEPS[currentIdx].label}...`}
+                editable={!readOnly}
+                placeholder={readOnly ? 'No record available' : `Enter ${STEPS[currentIdx].label}...`}
                 placeholderTextColor={theme.textMuted}
               />
             </View>
@@ -314,7 +359,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
                 <ActivityIndicator size="small" color={theme.primary} />
               ) : (
                 <Text style={styles.nextText}>
-                  {currentIdx === 3 ? 'SUBMIT' : 'NEXT'}
+                  {readOnly ? (currentIdx === 3 ? 'CLOSE' : 'NEXT') : (currentIdx === 3 ? 'SUBMIT' : 'NEXT')}
                 </Text>
               )}
             </TouchableOpacity>
@@ -448,99 +493,23 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       flex: 1,
     },
     iconCircle: {
-      width: 38,
-      height: 38,
-      borderRadius: 19,
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-      justifyContent: 'center',
-      alignItems: 'center',
+      width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255, 255, 255, 0.2)', justifyContent: 'center', alignItems: 'center',
     },
-    bannerTextContent: {
-      marginLeft: 12,
-    },
-    bannerTitle: {
-      color: '#fff',
-      fontSize: 15,
-      fontWeight: '700',
-    },
-    bannerSubText: {
-      color: '#fff',
-      fontSize: 11,
-      opacity: 0.95,
-    },
-    viewBtn: {
-      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-      borderRadius: 12,
-      paddingHorizontal: 14,
-      paddingVertical: 6,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    viewBtnText: {
-      color: '#059669',
-      fontSize: 11,
-      fontWeight: '800',
-      marginRight: 4,
-    },
-    notepad: {
-      minHeight: 250,
-      backgroundColor: isDarkMode ? '#1F2937' : '#FFFBEB',
-      borderRadius: 25,
-      borderWidth: 1,
-      borderColor: isDarkMode ? '#374151' : '#FEF3C7',
-      overflow: 'hidden',
-      marginBottom: 20,
-    },
-    notepadHeader: {
-      backgroundColor: isDarkMode ? '#374151' : '#FEF3C7',
-      paddingVertical: 8,
-      alignItems: 'center',
-    },
-    headerText: {
-      color: isDarkMode ? '#FDE68A' : '#B45309',
-      fontWeight: 'bold',
-      fontSize: 11,
-    },
+    bannerTextContent: { marginLeft: 12 },
+    bannerTitle: { color: '#fff', fontSize: 15, fontWeight: '700' },
+    bannerSubText: { color: '#fff', fontSize: 11, opacity: 0.95 },
+    viewBtn: { backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 6, flexDirection: 'row', alignItems: 'center' },
+    viewBtnText: { color: '#059669', fontSize: 11, fontWeight: '800', marginRight: 4 },
+    notepad: { minHeight: 250, backgroundColor: isDarkMode ? '#1F2937' : '#FFFBEB', borderRadius: 25, borderWidth: 1, borderColor: isDarkMode ? '#374151' : '#FEF3C7', overflow: 'hidden', marginBottom: 20 },
+    notepadHeader: { backgroundColor: isDarkMode ? '#374151' : '#FEF3C7', paddingVertical: 8, alignItems: 'center' },
+    headerText: { color: isDarkMode ? '#FDE68A' : '#B45309', fontWeight: 'bold', fontSize: 11 },
     inputArea: { flex: 1, position: 'relative' },
-    input: {
-      flex: 1,
-      padding: 20,
-      textAlignVertical: 'top',
-      fontSize: 15,
-      color: theme.text,
-      zIndex: 2,
-      minHeight: 200,
-    },
+    input: { flex: 1, padding: 20, textAlignVertical: 'top', fontSize: 15, color: theme.text, zIndex: 2, minHeight: 200 },
     linesContainer: { ...StyleSheet.absoluteFillObject, paddingTop: 40 },
-    line: {
-      height: 1,
-      backgroundColor: isDarkMode ? '#374151' : '#FEF3C7',
-      marginBottom: 30,
-    },
-    footer: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingBottom: 20,
-      alignItems: 'center',
-    },
-    backBtn: {
-      width: 50,
-      height: 50,
-      borderRadius: 25,
-      backgroundColor: theme.buttonBg,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: theme.primary,
-    },
-    nextBtn: {
-      backgroundColor: theme.buttonBg,
-      paddingHorizontal: 65,
-      paddingVertical: 15,
-      borderRadius: 28,
-      borderWidth: 1,
-      borderColor: theme.buttonBorder,
-    },
+    line: { height: 1, backgroundColor: isDarkMode ? '#374151' : '#FEF3C7', marginBottom: 30 },
+    footer: { flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 20, alignItems: 'center' },
+    backBtn: { width: 50, height: 50, borderRadius: 25, backgroundColor: theme.buttonBg, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: theme.primary },
+    nextBtn: { backgroundColor: theme.buttonBg, paddingHorizontal: 65, paddingVertical: 15, borderRadius: 28, borderWidth: 1, borderColor: theme.buttonBorder },
     nextText: { color: theme.primary, fontWeight: 'bold', fontSize: 14 },
   });
 

@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import apiClient from '@api/apiClient';
 
 export const useLabValues = () => {
   const [alerts, setAlerts] = useState<any>({});
 
-  const sanitize = (data: any) => {
+  const sanitize = useCallback((data: any) => {
     const sanitized = { ...data };
     Object.keys(sanitized).forEach(key => {
       if (typeof sanitized[key] === 'string' && sanitized[key].trim() === '') {
@@ -12,38 +12,37 @@ export const useLabValues = () => {
       }
     });
     return sanitized;
-  };
+  }, []);
 
   // STEP 1: Create initial record
-  const saveLabAssessment = async (payload: any) => {
+  const saveLabAssessment = useCallback(async (payload: any) => {
     const sanitized = sanitize(payload);
     const response = await apiClient.post('/lab-values/', sanitized);
-    return response.data; // Returns record with ID
-  };
+    return response.data;
+  }, [sanitize]);
 
   // STEP 2: Update specific tests & fetch real-time CDSS comparison
-  const checkLabAlerts = async (recordId: number, payload: any) => {
+  const checkLabAlerts = useCallback(async (recordId: number, payload: any) => {
+    if (!recordId) return null;
     try {
-      // Matches @router.put("/{record_id}/assessment")
       const sanitized = sanitize(payload);
       const response = await apiClient.put(`/lab-values/${recordId}/assessment`, sanitized);
       if (response.data) {
-        setAlerts(response.data); // Stores wbc_alert, rbc_alert, etc.
+        setAlerts(response.data);
       }
       return response.data;
     } catch (err) {
       return null;
     }
-  };
-const updateDPIE = async (examId: number, stepKey: string, text: string) => {
-    // Matches @router.put("/{exam_id}/diagnosis"), /planning, etc.
+  }, [sanitize]);
+
+  const updateDPIE = useCallback(async (examId: number, stepKey: string, text: string) => {
     const sanitizedText = text.trim() === '' ? 'N/A' : text;
     const response = await apiClient.put(`/lab-values/${examId}/${stepKey}`, {
       [stepKey]: sanitizedText
     });
     return response.data;
-  };
-  
+  }, []);
 
-  return { alerts, checkLabAlerts, saveLabAssessment,updateDPIE };
+  return { alerts, checkLabAlerts, saveLabAssessment, updateDPIE };
 };

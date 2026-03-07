@@ -43,7 +43,20 @@ const LAB_TESTS = [
   'Basophils (%)',
 ];
 
-const LabValuesScreen = ({ onBack }: any) => {
+// UPDATED INTERFACE
+interface LabValuesScreenProps {
+  onBack: () => void;
+  readOnly?: boolean;
+  patientId?: number;
+  initialPatientName?: string;
+}
+
+const LabValuesScreen = ({ 
+  onBack, 
+  readOnly = false, 
+  patientId, 
+  initialPatientName 
+}: LabValuesScreenProps) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(() => createStyles(theme, commonStyles, isDarkMode), [theme, commonStyles, isDarkMode]);
 
@@ -65,7 +78,60 @@ const LabValuesScreen = ({ onBack }: any) => {
   const [isNA, setIsNA] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  const getBackendPrefix = (label: string) => label.split(' ')[0].toLowerCase();
+
+  // --- DOCTOR VIEWING LOGIC ---
+  // Initialize with passed props if in readOnly mode
+  useEffect(() => {
+    if (readOnly && patientId) {
+      setSelectedPatientId(patientId.toString());
+      setSearchText(initialPatientName || '');
+    }
+  }, [readOnly, patientId, initialPatientName]);
+
+  // Fetch data when test changes in Read Only mode
+  useEffect(() => {
+    if (readOnly && selectedPatientId) {
+      // Helper to fetch data for the selected test
+      const fetchTestData = async () => {
+        try {
+          // Assuming endpoint /lab-values/patient/:id returns list of records
+          // We will fetch the latest one and extract the specific test data
+          const prefix = getBackendPrefix(selectedTest);
+          const response = await apiClient.get(`/lab-values/patient/${selectedPatientId}`);
+          
+          if (response.data && response.data.length > 0) {
+            // Get the latest record (assuming sorted desc or first item)
+            const latest = response.data[0];
+            const resVal = latest[`${prefix}_result`];
+            const rangeVal = latest[`${prefix}_normal_range`];
+            
+            setResult(resVal || '');
+            setNormalRange(rangeVal || '');
+            
+            if (resVal === 'N/A' && rangeVal === 'N/A') {
+                setIsNA(true);
+            } else {
+                setIsNA(false);
+            }
+          } else {
+             setResult('');
+             setNormalRange('');
+          }
+        } catch (error) {
+          console.log("Error fetching lab data:", error);
+          // Fallback if fetch fails
+          setResult('');
+          setNormalRange('');
+        }
+      };
+      fetchTestData();
+    }
+  }, [selectedTest, selectedPatientId, readOnly]);
+
+
   const toggleNA = () => {
+    if (readOnly) return;
     const newState = !isNA;
     setIsNA(newState);
     if (newState) {
@@ -112,9 +178,9 @@ const LabValuesScreen = ({ onBack }: any) => {
     setAlertConfig({ visible: true, title, message, type });
   };
 
-  const getBackendPrefix = (label: string) => label.split(' ')[0].toLowerCase();
-
+  // CDSS Check - Disable in Read Only to avoid unnecessary API calls
   useEffect(() => {
+    if (readOnly) return; 
     if (!selectedPatientId || !result.trim() || !normalRange.trim()) return;
 
     const prefix = getBackendPrefix(selectedTest);
@@ -130,9 +196,11 @@ const LabValuesScreen = ({ onBack }: any) => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [result, normalRange, selectedTest, labId, selectedPatientId]);
+  }, [result, normalRange, selectedTest, labId, selectedPatientId, readOnly]);
 
   const handleCDSSPress = async () => {
+    if (readOnly) return;
+
     if (!selectedPatientId) {
       return showAlert(
         'Patient Required',
@@ -158,6 +226,19 @@ const LabValuesScreen = ({ onBack }: any) => {
   };
 
   const handleNextOrSave = async () => {
+    // READ ONLY NAVIGATION LOGIC
+    if (readOnly) {
+        if (selectedTest === LAB_TESTS[LAB_TESTS.length - 1]) {
+            onBack(); // Exit on last item
+        } else {
+            const idx = LAB_TESTS.indexOf(selectedTest);
+            setSelectedTest(LAB_TESTS[idx + 1]);
+            scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        }
+        return;
+    }
+
+    // NORMAL LOGIC
     if (!selectedPatientId) {
       return showAlert(
         'Patient Required',
@@ -223,19 +304,19 @@ const LabValuesScreen = ({ onBack }: any) => {
           setIsAdpieActive(false);
           scrollViewRef.current?.scrollTo({ y: 0, animated: true });
         }}
+        readOnly={readOnly} // Pass readOnly if supported by ADPIE
       />
     );
   }
 
   const currentAlert = alerts[`${getBackendPrefix(selectedTest)}_alert`];
+  // In read only, we rely on fetched data
   const hasInputData = result.trim() !== '' && normalRange.trim() !== '';
   const isClinicalAlert =
     currentAlert &&
     currentAlert !== 'Normal' &&
     !currentAlert.includes('No result') &&
     !currentAlert.includes('Unable to compare');
-
-  const isFormValid = !!selectedPatientId;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -307,50 +388,63 @@ const LabValuesScreen = ({ onBack }: any) => {
             </View>
           )}
 
-          <PatientSearchBar
-            initialPatientName={searchText}
-            onPatientSelect={handlePatientSelect}
-            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-          />
-
-          <TouchableOpacity
-            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
-            onPress={() => {
-              if (!selectedPatientId) {
-                showAlert(
-                  'Patient Required',
-                  'Please select a patient first in the search bar.',
-                );
-              } else {
-                toggleNA();
-              }
-            }}
-          >
-            <Text
-              style={[
-                styles.naText,
-                !selectedPatientId && { color: theme.textMuted },
-              ]}
-            >
-              Mark all as N/A
-            </Text>
-            <Icon
-              name={isNA ? 'check-box' : 'check-box-outline-blank'}
-              size={22}
-              color={selectedPatientId ? theme.primary : theme.textMuted}
+          {/* PATIENT SEARCH BAR TOGGLE */}
+          {!readOnly ? (
+            <PatientSearchBar
+                initialPatientName={searchText}
+                onPatientSelect={handlePatientSelect}
+                onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
             />
-          </TouchableOpacity>
+          ) : (
+             <View style={styles.staticPatientContainer}>
+                <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+                <Text style={styles.staticPatientName}>{initialPatientName || "Unknown Patient"}</Text>
+             </View>
+          )}
 
-          <Text
-            style={[
-              styles.disabledTextAtBottom,
-              isNA && { color: theme.error },
-            ]}
-          >
-            {isNA
-              ? 'All fields below are disabled.'
-              : 'Checking this will disable all fields below.'}
-          </Text>
+          {/* HIDE MARK AS N/A IN READ ONLY */}
+          {!readOnly && (
+            <TouchableOpacity
+                style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+                onPress={() => {
+                if (!selectedPatientId) {
+                    showAlert(
+                    'Patient Required',
+                    'Please select a patient first in the search bar.',
+                    );
+                } else {
+                    toggleNA();
+                }
+                }}
+            >
+                <Text
+                style={[
+                    styles.naText,
+                    !selectedPatientId && { color: theme.textMuted },
+                ]}
+                >
+                Mark all as N/A
+                </Text>
+                <Icon
+                name={isNA ? 'check-box' : 'check-box-outline-blank'}
+                size={22}
+                color={selectedPatientId ? theme.primary : theme.textMuted}
+                />
+            </TouchableOpacity>
+          )}
+
+          {!readOnly && (
+            <Text
+                style={[
+                styles.disabledTextAtBottom,
+                isNA && { color: theme.error },
+                ]}
+            >
+                {isNA
+                ? 'All fields below are disabled.'
+                : 'Checking this will disable all fields below.'}
+            </Text>
+          )}
 
           <LabResultCard
             testLabel={selectedTest}
@@ -358,9 +452,10 @@ const LabValuesScreen = ({ onBack }: any) => {
             rangeValue={normalRange}
             onResultChange={setResult}
             onRangeChange={setNormalRange}
-            disabled={!selectedPatientId || isNA}
+            // Disable inputs in Read Only
+            disabled={!selectedPatientId || isNA || readOnly}
             onDisabledPress={() => {
-              if (!selectedPatientId) {
+              if (!readOnly && !selectedPatientId) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -370,42 +465,50 @@ const LabValuesScreen = ({ onBack }: any) => {
           />
 
           <View style={styles.footerRow}>
-            <TouchableOpacity
-              style={[
-                styles.alertIcon,
-                {
-                  backgroundColor: isClinicalAlert
-                    ? isDarkMode
-                      ? '#78350F'
-                      : '#FFECBD'
-                    : selectedPatientId
-                    ? isDarkMode
-                      ? '#78350F'
-                      : '#FFECBD'
-                    : isDarkMode
-                    ? '#333'
-                    : '#EBEBEB',
-                  borderColor:
-                    isClinicalAlert || selectedPatientId
-                      ? '#EDB62C'
-                      : theme.border,
-                },
-              ]}
-              disabled={!selectedPatientId}
-              onPress={() => setModalVisible(true)}
-            >
-              <Image
-                source={alertIcon}
+            {/* HIDE ALERT BUTTON IN READ ONLY */}
+            {!readOnly && (
+                <TouchableOpacity
                 style={[
-                  styles.fullImg,
-                  isClinicalAlert || selectedPatientId
-                    ? { tintColor: '#EDB62C', opacity: 1 }
-                    : { tintColor: theme.textMuted, opacity: 0.5 },
+                    styles.alertIcon,
+                    {
+                    backgroundColor: isClinicalAlert
+                        ? isDarkMode
+                        ? '#78350F'
+                        : '#FFECBD'
+                        : selectedPatientId
+                        ? isDarkMode
+                        ? '#78350F'
+                        : '#FFECBD'
+                        : isDarkMode
+                        ? '#333'
+                        : '#EBEBEB',
+                    borderColor:
+                        isClinicalAlert || selectedPatientId
+                        ? '#EDB62C'
+                        : theme.border,
+                    },
                 ]}
-              />
-            </TouchableOpacity>
+                disabled={!selectedPatientId}
+                onPress={() => setModalVisible(true)}
+                >
+                <Image
+                    source={alertIcon}
+                    style={[
+                    styles.fullImg,
+                    isClinicalAlert || selectedPatientId
+                        ? { tintColor: '#EDB62C', opacity: 1 }
+                        : { tintColor: theme.textMuted, opacity: 0.5 },
+                    ]}
+                />
+                </TouchableOpacity>
+            )}
 
-            {selectedTest === 'Basophils (%)' ? (
+            {/* BUTTON LOGIC: 
+                - In Read Only: Always show NEXT (until last item which becomes FINISH)
+                - In Nurse Mode: Show CDSS/SUBMIT for last item, NEXT for others
+            */}
+            
+            {!readOnly && selectedTest === 'Basophils (%)' ? (
               <View style={styles.buttonGroup}>
                 <TouchableOpacity
                   style={[
@@ -451,6 +554,7 @@ const LabValuesScreen = ({ onBack }: any) => {
                 </TouchableOpacity>
               </View>
             ) : (
+              // READ ONLY or NOT LAST ITEM
               <TouchableOpacity
                 style={[
                   styles.nextBtn,
@@ -468,10 +572,10 @@ const LabValuesScreen = ({ onBack }: any) => {
                     !selectedPatientId && { color: theme.textMuted },
                   ]}
                 >
-                  NEXT
+                  {readOnly && selectedTest === LAB_TESTS[LAB_TESTS.length - 1] ? 'FINISH' : 'NEXT'}
                 </Text>
                 <Icon
-                  name="chevron-right"
+                  name={readOnly && selectedTest === LAB_TESTS[LAB_TESTS.length - 1] ? "check" : "chevron-right"}
                   size={20}
                   color={selectedPatientId ? theme.primary : theme.textMuted}
                 />
@@ -511,6 +615,29 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) => Sty
   header: commonStyles.header,
   title: commonStyles.title,
   dateText: { fontSize: 13, fontFamily: 'AlteHaasGroteskBold', color: theme.textMuted },
+  // Static Patient Styles
+  staticPatientContainer: {
+    marginBottom: 20,
+    backgroundColor: theme.card,
+    padding: 15,
+    borderRadius: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.border
+  },
+  staticPatientLabel: {
+    fontFamily: 'AlteHaasGroteskBold',
+    color: theme.primary,
+    fontSize: 12,
+    marginRight: 10
+  },
+  staticPatientName: {
+    fontFamily: 'AlteHaasGrotesk',
+    color: theme.text,
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
   naRow: {
     flexDirection: 'row',
     alignItems: 'center',

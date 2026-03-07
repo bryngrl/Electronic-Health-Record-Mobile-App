@@ -20,7 +20,7 @@ import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import Ionicon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 
-const CARD_GAP = 20; // Kept the gap constant
+const CARD_GAP = 20;
 
 import DiagnosticCard from '../components/DiagnosticCard';
 import SweetAlert from '@components/SweetAlert';
@@ -34,11 +34,20 @@ const nextArrow = require('@assets/icons/next_arrow.png');
 
 export type ViewMode = 'grid' | 'list';
 
+// UPDATED INTERFACE
 interface DiagnosticsProps {
   onBack: () => void;
+  readOnly?: boolean;
+  patientId?: number;
+  initialPatientName?: string;
 }
 
-const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
+const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ 
+  onBack,
+  readOnly = false,
+  patientId,
+  initialPatientName
+}) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
@@ -53,8 +62,15 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // --- DYNAMIC WIDTH CALCULATION ---
   const dynamicCardWidth = windowWidth - 80;
+
+  // --- DOCTOR VIEWING LOGIC ---
+  useEffect(() => {
+    if (readOnly && patientId) {
+      setSelectedPatientId(patientId.toString());
+      setSearchText(initialPatientName || '');
+    }
+  }, [readOnly, patientId, initialPatientName]);
 
   useEffect(() => {
     const backAction = () => {
@@ -78,14 +94,12 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
     }
   }, [windowWidth]);
 
-  // Patient Search State
   const [searchText, setSearchText] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
     null,
   );
   const [scrollEnabled, setScrollEnabled] = useState(true);
 
-  // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
     title: string;
@@ -126,7 +140,6 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
     setAlertConfig(prev => ({ ...prev, visible: false }));
   };
 
-  // Fetch diagnostics when patient is selected
   useEffect(() => {
     if (selectedPatientId) {
       fetchDiagnostics(selectedPatientId);
@@ -134,6 +147,8 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
   }, [selectedPatientId, fetchDiagnostics]);
 
   const handleImport = async (imageType: string) => {
+    if (readOnly) return; // Block in read-only
+
     if (!selectedPatientId) {
       showAlert(
         'Patient Required',
@@ -155,6 +170,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
   };
 
   const handleDelete = async (diagnosticId: number) => {
+    if (readOnly) return; // Block in read-only
     if (!selectedPatientId) return;
 
     showAlert(
@@ -291,11 +307,20 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
           scrollEnabled={scrollEnabled}
         >
           <View style={{ height: 20 }} />
-          <PatientSearchBar
-            initialPatientName={searchText}
-            onPatientSelect={handlePatientSelect}
-            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-          />
+          
+          {/* SEARCH BAR TOGGLE */}
+          {!readOnly ? (
+            <PatientSearchBar
+                initialPatientName={searchText}
+                onPatientSelect={handlePatientSelect}
+                onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+            />
+          ) : (
+            <View style={styles.staticPatientContainer}>
+                <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+                <Text style={styles.staticPatientName}>{initialPatientName || "Unknown Patient"}</Text>
+            </View>
+          )}
 
           {loading && diagnostics.length === 0 && (
             <ActivityIndicator
@@ -305,7 +330,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
             />
           )}
 
-          {/* DIAGNOSTIC CARDS GRID/LIST */}
+          {/* DIAGNOSTIC CARDS */}
           {viewMode === 'list' ? (
             <View style={styles.carouselContainer}>
               {currentIndex > 0 && (
@@ -356,7 +381,8 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
                         images={images}
                         onImport={() => handleImport(item.id)}
                         onDelete={handleDelete}
-                        disabled={loading}
+                        // Disable interactions if readOnly
+                        disabled={loading || readOnly}
                       />
                     </View>
                   );
@@ -390,22 +416,25 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
                       images={images}
                       onImport={() => handleImport(item.id)}
                       onDelete={handleDelete}
-                      disabled={loading}
+                      disabled={loading || readOnly}
                     />
                   </View>
                 );
               })}
             </View>
           )}
-          {/* SUBMIT BUTTON */}
+          
+          {/* BUTTON: SUBMIT (Nurse) / CLOSE (Doctor) */}
           <TouchableOpacity
             style={[
               styles.submitButton,
-              !selectedPatientId && styles.disabledButton,
+              (!selectedPatientId && !readOnly) && styles.disabledButton,
             ]}
-            disabled={!selectedPatientId}
+            disabled={!selectedPatientId && !readOnly}
             onPress={() => {
-              if (selectedPatientId) {
+              if (readOnly) {
+                  onBack();
+              } else if (selectedPatientId) {
                 showAlert(
                   'Success',
                   'Diagnostic records have been saved successfully.',
@@ -417,10 +446,10 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
             <Text
               style={[
                 styles.submitText,
-                !selectedPatientId && { color: theme.textMuted },
+                (!selectedPatientId && !readOnly) && { color: theme.textMuted },
               ]}
             >
-              SUBMIT
+              {readOnly ? 'CLOSE' : 'SUBMIT'}
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -460,6 +489,29 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontFamily: 'AlteHaasGroteskBold',
       color: theme.textMuted,
       marginTop: 0,
+    },
+    // New Static Patient styles
+    staticPatientContainer: {
+        marginBottom: 20,
+        backgroundColor: theme.card,
+        padding: 15,
+        borderRadius: 15,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: theme.border
+    },
+    staticPatientLabel: {
+        fontFamily: 'AlteHaasGroteskBold',
+        color: theme.primary,
+        fontSize: 12,
+        marginRight: 10
+    },
+    staticPatientName: {
+        fontFamily: 'AlteHaasGrotesk',
+        color: theme.text,
+        fontSize: 16,
+        fontWeight: 'bold'
     },
     toggleContainer: {
       flexDirection: 'row',

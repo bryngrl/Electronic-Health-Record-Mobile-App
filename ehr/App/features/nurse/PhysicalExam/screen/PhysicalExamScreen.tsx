@@ -36,11 +36,20 @@ const initialFormData = {
   neurological: '',
 };
 
+// UPDATED INTERFACE
 interface PhysicalExamProps {
   onBack: () => void;
+  readOnly?: boolean;
+  patientId?: number;
+  initialPatientName?: string;
 }
 
-const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
+const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ 
+  onBack,
+  readOnly = false,
+  patientId,
+  initialPatientName
+}) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
@@ -56,7 +65,6 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const prevPatientIdRef = useRef<string | null>(null);
 
-  // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
     title: string;
@@ -79,27 +87,31 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
 
   const [examId, setExamId] = useState<number | null>(null);
   const [backendAlerts, setBackendAlerts] = useState<any>({});
-
-  // Controls the view switch from Assessment to ADPIE Stepper
   const [isAdpieActive, setIsAdpieActive] = useState(false);
-
   const [formData, setFormData] = useState(initialFormData);
   const [isNA, setIsNA] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // --- DOCTOR VIEWING LOGIC ---
+  useEffect(() => {
+    if (readOnly && patientId) {
+      setSelectedPatientId(patientId.toString());
+      setSearchText(initialPatientName || '');
+    }
+  }, [readOnly, patientId, initialPatientName]);
+
   const toggleNA = () => {
+    if (readOnly) return;
     const newState = !isNA;
     setIsNA(newState);
 
     if (newState) {
-      // Set all fields to "N/A"
       const updatedData = { ...formData };
       Object.keys(initialFormData).forEach(key => {
         (updatedData as any)[key] = 'N/A';
       });
       setFormData(updatedData);
     } else {
-      // Clear fields if they were "N/A"
       const updatedData = { ...formData };
       Object.keys(initialFormData).forEach(key => {
         if ((updatedData as any)[key] === 'N/A') {
@@ -115,18 +127,16 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
       onBack();
       return true;
     };
-
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
       backAction,
     );
-
     return () => backHandler.remove();
   }, [onBack]);
 
   const loadPatientData = useCallback(
-    async (patientId: number) => {
-      const data = await fetchLatestPhysicalExam(patientId);
+    async (pid: number) => {
+      const data = await fetchLatestPhysicalExam(pid);
       if (data) {
         setExamId(data.id);
         const newFormData = {
@@ -141,11 +151,9 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
         };
         setFormData(newFormData);
 
-        // Check if all fields are N/A
         const allNA = Object.values(newFormData).every(v => v === 'N/A');
         setIsNA(allNA);
 
-        // Also update alerts if they exist in the loaded data
         setBackendAlerts({
           general_appearance_alert: data.general_appearance_alert,
           skin_alert: data.skin_alert,
@@ -180,9 +188,9 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
     }
   }, [selectedPatientId, loadPatientData]);
 
-  // REAL-TIME CDSS: Debounced polling to update bells as you type
+  // REAL-TIME CDSS: Disabled in Read Only
   useEffect(() => {
-    if (!selectedPatientId || isNA) return;
+    if (!selectedPatientId || isNA || readOnly) return;
 
     const timer = setTimeout(async () => {
       const hasContent = Object.values(formData).some(
@@ -202,10 +210,21 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [formData, selectedPatientId, checkAssessmentAlerts, isNA]);
+  }, [formData, selectedPatientId, checkAssessmentAlerts, isNA, readOnly]);
 
-  // NEW: CDSS Button Handler to trigger ADPIE Workflow
   const handleCDSSPress = async () => {
+    // READ ONLY LOGIC
+    if (readOnly) {
+        if (examId) {
+            setIsAdpieActive(true);
+            scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        } else {
+            showAlert('No Data', 'No Physical Exam record found for this patient.');
+        }
+        return;
+    }
+
+    // NURSE LOGIC
     if (!selectedPatientId) {
       return showAlert(
         'Patient Required',
@@ -214,7 +233,6 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
     }
 
     try {
-      // Step 1: POST to /physical-exam/ to create or update the record
       const result = await saveAssessment({
         patient_id: selectedPatientId,
         ...formData,
@@ -223,7 +241,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
       const id = result.id || result.physical_exam_id;
       if (id) {
         setExamId(id);
-        setIsAdpieActive(true); // Switch to ADPIE Stepper View
+        setIsAdpieActive(true); 
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
     } catch (e) {
@@ -232,6 +250,12 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
   };
 
   const handleSave = async () => {
+    // READ ONLY LOGIC (Close button)
+    if (readOnly) {
+        onBack();
+        return;
+    }
+
     if (!selectedPatientId) {
       return showAlert(
         'Patient Required',
@@ -245,7 +269,6 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
       });
 
       const newId = result.id || result.physical_exam_id;
-      // Check if it was an update or a new submission
       const isUpdate = !!examId || result.updated_at !== result.created_at;
 
       if (newId) {
@@ -260,7 +283,6 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
         'success',
       );
 
-      // Refresh to get latest state
       loadPatientData(parseInt(selectedPatientId, 10));
     } catch (e) {
       showAlert('Error', 'Submission failed. Please check your connection.');
@@ -295,15 +317,14 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
     ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
     : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
 
-  // Switch to ADPIE Screen if active
   if (isAdpieActive && examId && selectedPatientId) {
     return (
       <ADPIEScreen
         examId={examId}
-        patientId={selectedPatientId}
         patientName={searchText}
         assessmentAlerts={backendAlerts}
         onBack={() => setIsAdpieActive(false)}
+        readOnly={readOnly} // Pass readOnly if ADPIE supports it
       />
     );
   }
@@ -346,53 +367,67 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
           scrollEnabled={scrollEnabled}
         >
           <View style={{ height: 20 }} />
-          <PatientSearchBar
-            onPatientSelect={(id, name) => {
-              setSelectedPatientId(id ? id.toString() : null);
-              setSearchText(name);
-            }}
-            initialPatientName={searchText}
-            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-          />
-
-          <TouchableOpacity
-            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
-            onPress={() => {
-              if (!selectedPatientId) {
-                showAlert(
-                  'Patient Required',
-                  'Please select a patient first in the search bar.',
-                );
-              } else {
-                toggleNA();
-              }
-            }}
-          >
-            <Text
-              style={[
-                styles.naText,
-                !selectedPatientId && { color: theme.textMuted },
-              ]}
-            >
-              Mark all as N/A
-            </Text>
-            <Icon
-              name={isNA ? 'check-box' : 'check-box-outline-blank'}
-              size={22}
-              color={selectedPatientId ? theme.primary : theme.textMuted}
+          
+          {/* SEARCH BAR / STATIC PATIENT */}
+          {!readOnly ? (
+            <PatientSearchBar
+                onPatientSelect={(id, name) => {
+                setSelectedPatientId(id ? id.toString() : null);
+                setSearchText(name);
+                }}
+                initialPatientName={searchText}
+                onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
             />
-          </TouchableOpacity>
+          ) : (
+            <View style={styles.staticPatientContainer}>
+                <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+                <Text style={styles.staticPatientName}>{initialPatientName || "Unknown Patient"}</Text>
+            </View>
+          )}
 
-          <Text
-            style={[
-              styles.disabledTextAtBottom,
-              isNA && { color: theme.error },
-            ]}
-          >
-            {isNA
-              ? 'All fields below are disabled.'
-              : 'Checking this will disable all fields below.'}
-          </Text>
+          {/* HIDE TOGGLE IN READ ONLY */}
+          {!readOnly && (
+            <TouchableOpacity
+                style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+                onPress={() => {
+                if (!selectedPatientId) {
+                    showAlert(
+                    'Patient Required',
+                    'Please select a patient first in the search bar.',
+                    );
+                } else {
+                    toggleNA();
+                }
+                }}
+            >
+                <Text
+                style={[
+                    styles.naText,
+                    !selectedPatientId && { color: theme.textMuted },
+                ]}
+                >
+                Mark all as N/A
+                </Text>
+                <Icon
+                name={isNA ? 'check-box' : 'check-box-outline-blank'}
+                size={22}
+                color={selectedPatientId ? theme.primary : theme.textMuted}
+                />
+            </TouchableOpacity>
+          )}
+
+          {!readOnly && (
+            <Text
+                style={[
+                styles.disabledTextAtBottom,
+                isNA && { color: theme.error },
+                ]}
+            >
+                {isNA
+                ? 'All fields below are disabled.'
+                : 'Checking this will disable all fields below.'}
+            </Text>
+          )}
 
           <View style={styles.banner}>
             <Text style={styles.bannerText}>PHYSICAL EXAMINATION</Text>
@@ -402,11 +437,11 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
           <ExamInputCard
             label="GENERAL APPEARANCE"
             value={formData.general_appearance}
-            disabled={!selectedPatientId || isNA}
+            disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.general_appearance_alert}
             onChangeText={t => updateField('general_appearance', t)}
             onDisabledPress={() => {
-              if (!selectedPatientId) {
+              if (!selectedPatientId && !readOnly) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -417,11 +452,11 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
           <ExamInputCard
             label="SKIN"
             value={formData.skin_condition}
-            disabled={!selectedPatientId || isNA}
+            disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.skin_alert}
             onChangeText={t => updateField('skin_condition', t)}
             onDisabledPress={() => {
-              if (!selectedPatientId) {
+              if (!selectedPatientId && !readOnly) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -432,11 +467,11 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
           <ExamInputCard
             label="EYES"
             value={formData.eye_condition}
-            disabled={!selectedPatientId || isNA}
+            disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.eye_alert}
             onChangeText={t => updateField('eye_condition', t)}
             onDisabledPress={() => {
-              if (!selectedPatientId) {
+              if (!selectedPatientId && !readOnly) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -447,11 +482,11 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
           <ExamInputCard
             label="ORAL CAVITY"
             value={formData.oral_condition}
-            disabled={!selectedPatientId || isNA}
+            disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.oral_alert}
             onChangeText={t => updateField('oral_condition', t)}
             onDisabledPress={() => {
-              if (!selectedPatientId) {
+              if (!selectedPatientId && !readOnly) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -462,11 +497,11 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
           <ExamInputCard
             label="CARDIOVASCULAR"
             value={formData.cardiovascular}
-            disabled={!selectedPatientId || isNA}
+            disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.cardiovascular_alert}
             onChangeText={t => updateField('cardiovascular', t)}
             onDisabledPress={() => {
-              if (!selectedPatientId) {
+              if (!selectedPatientId && !readOnly) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -477,11 +512,11 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
           <ExamInputCard
             label="ABDOMEN"
             value={formData.abdomen_condition}
-            disabled={!selectedPatientId || isNA}
+            disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.abdomen_alert}
             onChangeText={t => updateField('abdomen_condition', t)}
             onDisabledPress={() => {
-              if (!selectedPatientId) {
+              if (!selectedPatientId && !readOnly) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -492,11 +527,11 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
           <ExamInputCard
             label="EXTREMITIES"
             value={formData.extremities}
-            disabled={!selectedPatientId || isNA}
+            disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.extremities_alert}
             onChangeText={t => updateField('extremities', t)}
             onDisabledPress={() => {
-              if (!selectedPatientId) {
+              if (!selectedPatientId && !readOnly) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -507,11 +542,11 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
           <ExamInputCard
             label="NEUROLOGICAL"
             value={formData.neurological}
-            disabled={!selectedPatientId || isNA}
+            disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.neurological_alert}
             onChangeText={t => updateField('neurological', t)}
             onDisabledPress={() => {
-              if (!selectedPatientId) {
+              if (!selectedPatientId && !readOnly) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -521,22 +556,22 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
           />
 
           <View style={styles.footerRow}>
-            {/* CDSS Button: Triggers Nursing Process Stepper */}
+            {/* CDSS Button: Always Visible. ReadOnly -> View CDSS. Nurse -> Create CDSS */}
             <TouchableOpacity
               style={[
                 styles.cdssBtn,
-                (!selectedPatientId || (!isDataEntered && !isNA)) && {
+                (!selectedPatientId && !readOnly) && {
                   backgroundColor: theme.buttonDisabledBg,
                   borderColor: theme.buttonDisabledBorder,
                 },
               ]}
               onPress={handleCDSSPress}
-              disabled={!selectedPatientId}
+              disabled={!selectedPatientId && !readOnly}
             >
               <Text
                 style={[
                   styles.cdssText,
-                  (!selectedPatientId || (!isDataEntered && !isNA))
+                  (!selectedPatientId && !readOnly)
                     ? { color: theme.textMuted }
                     : { color: theme.primary },
                 ]}
@@ -544,24 +579,26 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack }) => {
                 CDSS
               </Text>
             </TouchableOpacity>
+
+            {/* Second Button: SUBMIT (Nurse) or CLOSE (Doctor) */}
             <TouchableOpacity
               style={[
                 styles.submitBtn,
-                !selectedPatientId && {
+                (!selectedPatientId && !readOnly) && {
                   backgroundColor: theme.buttonDisabledBg,
                   borderColor: theme.buttonDisabledBorder,
                 },
               ]}
               onPress={handleSave}
-              disabled={!selectedPatientId}
+              disabled={!selectedPatientId && !readOnly}
             >
               <Text
                 style={[
                   styles.submitText,
-                  !selectedPatientId && { color: theme.textMuted },
+                  (!selectedPatientId && !readOnly) && { color: theme.textMuted },
                 ]}
               >
-                SUBMIT
+                {readOnly ? 'CLOSE' : 'SUBMIT'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -597,6 +634,29 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontSize: 13,
       fontFamily: 'AlteHaasGroteskBold',
       color: theme.textMuted,
+    },
+    // New Static Patient styles
+    staticPatientContainer: {
+        marginBottom: 20,
+        backgroundColor: theme.card,
+        padding: 15,
+        borderRadius: 15,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: theme.border
+    },
+    staticPatientLabel: {
+        fontFamily: 'AlteHaasGroteskBold',
+        color: theme.primary,
+        fontSize: 12,
+        marginRight: 10
+    },
+    staticPatientName: {
+        fontFamily: 'AlteHaasGrotesk',
+        color: theme.text,
+        fontSize: 16,
+        fontWeight: 'bold'
     },
     sectionLabel: {
       fontSize: 12,

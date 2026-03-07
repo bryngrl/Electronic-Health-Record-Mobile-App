@@ -38,10 +38,16 @@ const alertIcon = require('@assets/icons/alert.png');
 
 interface IntakeAndOutputScreenProps {
   onBack: () => void;
+  readOnly?: boolean;
+  patientId?: number;
+  initialPatientName?: string;
 }
 
 const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   onBack,
+  readOnly = false,
+  patientId,
+  initialPatientName,
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
@@ -82,7 +88,16 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   const [isNA, setIsNA] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // --- DOCTOR VIEWING LOGIC ---
+  useEffect(() => {
+    if (readOnly && patientId) {
+      // Trigger selection logic in hook to load data
+      handleSelectPatient(patientId, initialPatientName || '');
+    }
+  }, [readOnly, patientId, initialPatientName, handleSelectPatient]);
+
   const toggleNA = () => {
+    if (readOnly) return; // Disable in read-only
     const newState = !isNA;
     setIsNA(newState);
     if (newState) {
@@ -162,9 +177,9 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     );
   }, []);
 
-  // REAL-TIME CDSS: Debounced polling
+  // REAL-TIME CDSS: Disabled in Read Only
   useEffect(() => {
-    if (!selectedPatientId) return;
+    if (!selectedPatientId || readOnly) return;
 
     const timer = setTimeout(async () => {
       if (isDataEntered) {
@@ -182,9 +197,15 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [intakeOutput, selectedPatientId, isDataEntered, checkRealTimeAlerts]);
+  }, [intakeOutput, selectedPatientId, isDataEntered, checkRealTimeAlerts, readOnly]);
 
   const handleSubmit = async () => {
+    // READ ONLY LOGIC (Close)
+    if (readOnly) {
+        onBack();
+        return;
+    }
+
     if (!selectedPatientId) {
       triggerPatientAlert();
       setAlertVisible(true);
@@ -208,6 +229,16 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   };
 
   const handleCDSSPress = async () => {
+    // READ ONLY LOGIC (View Only)
+    if (readOnly) {
+        if (recordId) {
+            setIsAdpieActive(true);
+            scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        }
+        return;
+    }
+
+    // NURSE LOGIC
     if (!selectedPatientId) {
       triggerPatientAlert();
       setAlertVisible(true);
@@ -226,6 +257,8 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   };
 
   const handleAlertPress = async () => {
+    if (readOnly) return; // Disable alert tap in readOnly (optional)
+
     if (!selectedPatientId) {
       triggerPatientAlert();
       return setAlertVisible(true);
@@ -259,6 +292,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
         patientName={patientName}
         onBack={() => setIsAdpieActive(false)}
         feature="intake-output"
+        readOnly={readOnly} // Pass readOnly to ADPIE if supported
       />
     );
   }
@@ -319,48 +353,62 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
           scrollEnabled={scrollEnabled}
         >
           <View style={{ height: 20 }} />
-          <PatientSearchBar
-            initialPatientName={patientName}
-            onPatientSelect={handleSelectPatient}
-            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-          />
-
-          <TouchableOpacity
-            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
-            onPress={() => {
-              if (!selectedPatientId) {
-                triggerPatientAlert();
-                setAlertVisible(true);
-              } else {
-                toggleNA();
-              }
-            }}
-          >
-            <Text
-              style={[
-                styles.naText,
-                !selectedPatientId && { color: theme.textMuted },
-              ]}
-            >
-              Mark all as N/A
-            </Text>
-            <Icon
-              name={isNA ? 'check-box' : 'check-box-outline-blank'}
-              size={22}
-              color={selectedPatientId ? theme.primary : theme.textMuted}
+          
+          {/* SEARCH BAR / STATIC PATIENT */}
+          {!readOnly ? (
+            <PatientSearchBar
+                initialPatientName={patientName}
+                onPatientSelect={handleSelectPatient}
+                onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
             />
-          </TouchableOpacity>
+          ) : (
+            <View style={styles.staticPatientContainer}>
+                <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+                <Text style={styles.staticPatientName}>{initialPatientName || "Unknown Patient"}</Text>
+            </View>
+          )}
 
-          <Text
-            style={[
-              styles.disabledTextAtBottom,
-              isNA && { color: theme.error },
-            ]}
-          >
-            {isNA
-              ? 'All fields below are disabled.'
-              : 'Checking this will disable all fields below.'}
-          </Text>
+          {/* HIDE MARK AS N/A IN READ ONLY */}
+          {!readOnly && (
+            <TouchableOpacity
+                style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+                onPress={() => {
+                if (!selectedPatientId) {
+                    triggerPatientAlert();
+                    setAlertVisible(true);
+                } else {
+                    toggleNA();
+                }
+                }}
+            >
+                <Text
+                style={[
+                    styles.naText,
+                    !selectedPatientId && { color: theme.textMuted },
+                ]}
+                >
+                Mark all as N/A
+                </Text>
+                <Icon
+                name={isNA ? 'check-box' : 'check-box-outline-blank'}
+                size={22}
+                color={selectedPatientId ? theme.primary : theme.textMuted}
+                />
+            </TouchableOpacity>
+          )}
+
+          {!readOnly && (
+            <Text
+                style={[
+                styles.disabledTextAtBottom,
+                isNA && { color: theme.error },
+                ]}
+            >
+                {isNA
+                ? 'All fields below are disabled.'
+                : 'Checking this will disable all fields below.'}
+            </Text>
+          )}
 
           <View
             pointerEvents={selectedPatientId ? 'auto' : 'none'}
@@ -370,9 +418,9 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
               label="ORAL INTAKE"
               value={intakeOutput.oral_intake}
               onChangeText={text => handleUpdateField('oral_intake', text)}
-              disabled={!selectedPatientId || isNA}
+              disabled={!selectedPatientId || isNA || readOnly}
               onDisabledPress={() => {
-                if (!selectedPatientId) {
+                if (!readOnly && !selectedPatientId) {
                   triggerPatientAlert();
                   setAlertVisible(true);
                 }
@@ -383,9 +431,9 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
               label="IV FLUIDS"
               value={intakeOutput.iv_fluids}
               onChangeText={text => handleUpdateField('iv_fluids', text)}
-              disabled={!selectedPatientId || isNA}
+              disabled={!selectedPatientId || isNA || readOnly}
               onDisabledPress={() => {
-                if (!selectedPatientId) {
+                if (!readOnly && !selectedPatientId) {
                   triggerPatientAlert();
                   setAlertVisible(true);
                 }
@@ -396,9 +444,9 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
               label="URINE OUTPUT"
               value={intakeOutput.urine_output}
               onChangeText={text => handleUpdateField('urine_output', text)}
-              disabled={!selectedPatientId || isNA}
+              disabled={!selectedPatientId || isNA || readOnly}
               onDisabledPress={() => {
-                if (!selectedPatientId) {
+                if (!readOnly && !selectedPatientId) {
                   triggerPatientAlert();
                   setAlertVisible(true);
                 }
@@ -407,54 +455,58 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
           </View>
 
           <View style={styles.footerAction}>
-            <TouchableOpacity
-              style={[
-                styles.alertIcon,
-                {
-                  backgroundColor: hasRealAlert
-                    ? isDarkMode
-                      ? '#78350F'
-                      : '#FFECBD'
-                    : isDataEntered && selectedPatientId
-                    ? theme.surface
-                    : isDarkMode
-                    ? '#333'
-                    : '#EBEBEB',
-                  borderColor: theme.border,
-                },
-              ]}
-              disabled={!isDataEntered || !selectedPatientId}
-              onPress={handleAlertPress}
-            >
-              <Image
-                source={alertIcon}
+            {/* ALERT ICON: Hide in ReadOnly to reduce clutter unless desired */}
+            {!readOnly && (
+                <TouchableOpacity
                 style={[
-                  styles.fullImg,
-                  hasRealAlert
-                    ? { tintColor: '#EDB62C', opacity: 1 }
-                    : isDataEntered && selectedPatientId
-                    ? { tintColor: '#EDB62C', opacity: 0.8 }
-                    : { tintColor: theme.textMuted, opacity: 0.5 },
+                    styles.alertIcon,
+                    {
+                    backgroundColor: hasRealAlert
+                        ? isDarkMode
+                        ? '#78350F'
+                        : '#FFECBD'
+                        : isDataEntered && selectedPatientId
+                        ? theme.surface
+                        : isDarkMode
+                        ? '#333'
+                        : '#EBEBEB',
+                    borderColor: theme.border,
+                    },
                 ]}
-              />
-            </TouchableOpacity>
+                disabled={!isDataEntered || !selectedPatientId}
+                onPress={handleAlertPress}
+                >
+                <Image
+                    source={alertIcon}
+                    style={[
+                    styles.fullImg,
+                    hasRealAlert
+                        ? { tintColor: '#EDB62C', opacity: 1 }
+                        : isDataEntered && selectedPatientId
+                        ? { tintColor: '#EDB62C', opacity: 0.8 }
+                        : { tintColor: theme.textMuted, opacity: 0.5 },
+                    ]}
+                />
+                </TouchableOpacity>
+            )}
 
             <View style={styles.buttonGroup}>
               <TouchableOpacity
                 style={[
                   styles.cdssButton,
-                  (!selectedPatientId || (!isDataEntered && !isNA)) && {
+                  (!selectedPatientId || (!isDataEntered && !isNA)) && !readOnly && {
                     backgroundColor: theme.buttonDisabledBg,
                     borderColor: theme.buttonDisabledBorder,
                   },
                 ]}
                 onPress={handleCDSSPress}
-                disabled={!selectedPatientId}
+                // Allow press in ReadOnly if data exists
+                disabled={!selectedPatientId && !readOnly}
               >
                 <Text
                   style={[
                     styles.cdssBtnText,
-                    (!selectedPatientId || (!isDataEntered && !isNA))
+                    (!selectedPatientId || (!isDataEntered && !isNA)) && !readOnly
                       ? { color: theme.textMuted }
                       : { color: theme.primary },
                   ]}
@@ -462,16 +514,18 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                   CDSS
                 </Text>
               </TouchableOpacity>
+
+              {/* SUBMIT (Nurse) vs CLOSE (Doctor) */}
               <TouchableOpacity
                 style={[
                   styles.submitButton,
-                  !selectedPatientId && {
+                  !selectedPatientId && !readOnly && {
                     backgroundColor: theme.buttonDisabledBg,
                     borderColor: theme.buttonDisabledBorder,
                   },
                 ]}
                 onPress={handleSubmit}
-                disabled={!selectedPatientId || loading}
+                disabled={(!selectedPatientId && !readOnly) || loading}
               >
                 {loading ? (
                   <ActivityIndicator size="small" color={theme.primary} />
@@ -479,10 +533,10 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                   <Text
                     style={[
                       styles.submitBtnText,
-                      !selectedPatientId && { color: theme.textMuted },
+                      !selectedPatientId && !readOnly && { color: theme.textMuted },
                     ]}
                   >
-                    SUBMIT
+                    {readOnly ? 'CLOSE' : 'SUBMIT'}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -544,6 +598,29 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       color: theme.textMuted,
       fontFamily: 'AlteHaasGroteskBold',
       fontSize: 13,
+    },
+    // New Static Patient styles
+    staticPatientContainer: {
+        marginBottom: 20,
+        backgroundColor: theme.card,
+        padding: 15,
+        borderRadius: 15,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: theme.border
+    },
+    staticPatientLabel: {
+        fontFamily: 'AlteHaasGroteskBold',
+        color: theme.primary,
+        fontSize: 12,
+        marginRight: 10
+    },
+    staticPatientName: {
+        fontFamily: 'AlteHaasGrotesk',
+        color: theme.text,
+        fontSize: 16,
+        fontWeight: 'bold'
     },
     naRow: {
       flexDirection: 'row',

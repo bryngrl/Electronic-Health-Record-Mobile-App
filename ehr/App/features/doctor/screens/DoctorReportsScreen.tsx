@@ -1,14 +1,33 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, Linking, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { AccountModal } from '../../../components/AccountModal';
 import PatientSearchBar from '../../../components/PatientSearchBar';
+import { BASE_URL } from '../../../api/apiClient';
 
 const DoctorReportsScreen = ({ onNavigate }: { onNavigate: (route: string) => void }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
   const [patientName, setPatientName] = useState('');
   const [scrollEnabled, setScrollEnabled] = useState(true);
+
+  const handleGeneratePDF = async () => {
+    if (!selectedPatientId) return;
+
+    const reportUrl = `${BASE_URL}/reports/patient/${selectedPatientId}`;
+    console.log("Attempting to open report URL:", reportUrl);
+    
+    try {
+      // Direct openURL is more reliable on modern Android versions
+      await Linking.openURL(reportUrl);
+    } catch (error) {
+      console.error("Error generating report:", error);
+      Alert.alert(
+        "Report Error", 
+        `Could not open report.\n\nURL: ${reportUrl}\n\nPlease check if your backend is running and reachable.`
+      );
+    }
+  };
 
   return (
     <SafeAreaView style={styles.root}>
@@ -26,9 +45,6 @@ const DoctorReportsScreen = ({ onNavigate }: { onNavigate: (route: string) => vo
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => setModalVisible(true)}>
-            <Icon name="keyboard-arrow-down" size={24} color="#333" />
-          </TouchableOpacity>
         </View>
 
         {/* Dynamic Search Bar with Dropdown */}
@@ -53,7 +69,7 @@ const DoctorReportsScreen = ({ onNavigate }: { onNavigate: (route: string) => vo
         ) : (
           <TouchableOpacity 
             style={styles.generateButton}
-            onPress={() => console.log('Generating PDF for:', selectedPatientId)}
+            onPress={handleGeneratePDF}
             activeOpacity={0.7}
           >
             <Text style={styles.generateText}>GENERATE PDF</Text>
@@ -88,14 +104,29 @@ const NavItem = ({ label, icon, active, onPress }: any) => (
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#FFF' },
-  scrollContent: { paddingHorizontal: 25, paddingBottom: 150, paddingTop: 40 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  scrollContent: { paddingHorizontal: 40, paddingBottom: 150, paddingTop: 40 },
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start', 
+    marginBottom: 35,
+    marginTop: 10
+  },
   welcome: { fontSize: 35, color: '#035022', fontFamily: 'MinionPro-SemiboldItalic' },
   date: { fontSize: 14, color: '#B2B2B2', marginTop: 4, fontWeight: 'bold' },
   searchBarContainer: { marginBottom: 10, zIndex: 999 },
   searchBarWrapper: {
-    backgroundColor: '#FFF', borderRadius: 25, paddingHorizontal: 15, borderWidth: 1, borderColor: '#EBEBEB',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2, height: 48,
+    backgroundColor: '#FFF', 
+    borderRadius: 30, 
+    paddingHorizontal: 15, 
+    borderWidth: 1, 
+    borderColor: '#F0F0F0',
+    height: 50,
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 10, 
+    elevation: 3, 
   },
   instructionContainer: { marginBottom: 25 },
   instructionText: { fontSize: 14, color: '#858583', marginLeft: 5, fontWeight: '500' },

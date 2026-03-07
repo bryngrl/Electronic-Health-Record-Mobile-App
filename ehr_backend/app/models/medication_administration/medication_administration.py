@@ -12,7 +12,7 @@ class MedicationAdministration(Base):
     Tracks: what medication, dose, route, frequency, time, and date it was given.
     """
     
-    __tablename__ = "medication_administrations"
+    __tablename__ = "medical_administrations"
     
     id = Column(BIGINT(unsigned=True), primary_key=True, autoincrement=True)
     patient_id = Column(
