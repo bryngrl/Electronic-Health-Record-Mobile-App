@@ -175,13 +175,10 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <TouchableOpacity onPress={onBack} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Icon name="arrow-back" size={24} color={theme.primary} style={{ marginRight: 10 }} />
-                <View>
-                    <Text style={styles.title}>Physical Exam {readOnly ? '(View)' : ''}</Text>
-                    <Text style={styles.subtitle}>CLINICAL DECISION SUPPORT SYSTEM</Text>
-                </View>
-            </TouchableOpacity>
+            <View>
+                <Text style={styles.title}>Physical Exam {readOnly ? '(View)' : ''}</Text>
+                <Text style={styles.subtitle}>CLINICAL DECISION SUPPORT SYSTEM</Text>
+            </View>
           </View>
 
           <View style={styles.patientSection}>
