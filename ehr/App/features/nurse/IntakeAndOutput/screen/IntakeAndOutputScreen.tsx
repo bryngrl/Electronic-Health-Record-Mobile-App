@@ -257,7 +257,10 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   };
 
   const handleAlertPress = async () => {
-    if (readOnly) return; // Disable alert tap in readOnly (optional)
+    if (readOnly) {
+        setCdssModalVisible(true);
+        return;
+    }
 
     if (!selectedPatientId) {
       triggerPatientAlert();
@@ -455,40 +458,38 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
           </View>
 
           <View style={styles.footerAction}>
-            {/* ALERT ICON: Hide in ReadOnly to reduce clutter unless desired */}
-            {!readOnly && (
-                <TouchableOpacity
+            {/* ALERT ICON: Visible in both Edit and ReadOnly */}
+            <TouchableOpacity
+              style={[
+                styles.alertIcon,
+                {
+                  backgroundColor: hasRealAlert
+                    ? isDarkMode
+                      ? '#78350F'
+                      : '#FFECBD'
+                    : (isDataEntered || readOnly) && selectedPatientId
+                    ? theme.surface
+                    : isDarkMode
+                    ? '#333'
+                    : '#EBEBEB',
+                  borderColor: theme.border,
+                },
+              ]}
+              disabled={!selectedPatientId}
+              onPress={handleAlertPress}
+            >
+              <Image
+                source={alertIcon}
                 style={[
-                    styles.alertIcon,
-                    {
-                    backgroundColor: hasRealAlert
-                        ? isDarkMode
-                        ? '#78350F'
-                        : '#FFECBD'
-                        : isDataEntered && selectedPatientId
-                        ? theme.surface
-                        : isDarkMode
-                        ? '#333'
-                        : '#EBEBEB',
-                    borderColor: theme.border,
-                    },
+                  styles.fullImg,
+                  hasRealAlert
+                    ? { tintColor: '#EDB62C', opacity: 1 }
+                    : (isDataEntered || readOnly) && selectedPatientId
+                    ? { tintColor: '#EDB62C', opacity: 0.8 }
+                    : { tintColor: theme.textMuted, opacity: 0.5 },
                 ]}
-                disabled={!isDataEntered || !selectedPatientId}
-                onPress={handleAlertPress}
-                >
-                <Image
-                    source={alertIcon}
-                    style={[
-                    styles.fullImg,
-                    hasRealAlert
-                        ? { tintColor: '#EDB62C', opacity: 1 }
-                        : isDataEntered && selectedPatientId
-                        ? { tintColor: '#EDB62C', opacity: 0.8 }
-                        : { tintColor: theme.textMuted, opacity: 0.5 },
-                    ]}
-                />
-                </TouchableOpacity>
-            )}
+              />
+            </TouchableOpacity>
 
             <View style={styles.buttonGroup}>
               <TouchableOpacity

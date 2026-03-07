@@ -465,43 +465,41 @@ const LabValuesScreen = ({
           />
 
           <View style={styles.footerRow}>
-            {/* HIDE ALERT BUTTON IN READ ONLY */}
-            {!readOnly && (
-                <TouchableOpacity
-                style={[
-                    styles.alertIcon,
-                    {
-                    backgroundColor: isClinicalAlert
-                        ? isDarkMode
-                        ? '#78350F'
-                        : '#FFECBD'
-                        : selectedPatientId
-                        ? isDarkMode
-                        ? '#78350F'
-                        : '#FFECBD'
-                        : isDarkMode
-                        ? '#333'
-                        : '#EBEBEB',
-                    borderColor:
-                        isClinicalAlert || selectedPatientId
-                        ? '#EDB62C'
-                        : theme.border,
-                    },
-                ]}
-                disabled={!selectedPatientId}
-                onPress={() => setModalVisible(true)}
-                >
-                <Image
-                    source={alertIcon}
-                    style={[
-                    styles.fullImg,
+            {/* ALERT BUTTON: Visible in both Edit and ReadOnly */}
+            <TouchableOpacity
+              style={[
+                styles.alertIcon,
+                {
+                  backgroundColor: isClinicalAlert
+                    ? isDarkMode
+                      ? '#78350F'
+                      : '#FFECBD'
+                    : selectedPatientId
+                    ? isDarkMode
+                      ? '#78350F'
+                      : '#FFECBD'
+                    : isDarkMode
+                    ? '#333'
+                    : '#EBEBEB',
+                  borderColor:
                     isClinicalAlert || selectedPatientId
-                        ? { tintColor: '#EDB62C', opacity: 1 }
-                        : { tintColor: theme.textMuted, opacity: 0.5 },
-                    ]}
-                />
-                </TouchableOpacity>
-            )}
+                      ? '#EDB62C'
+                      : theme.border,
+                },
+              ]}
+              disabled={!selectedPatientId}
+              onPress={() => setModalVisible(true)}
+            >
+              <Image
+                source={alertIcon}
+                style={[
+                  styles.fullImg,
+                  isClinicalAlert || selectedPatientId
+                    ? { tintColor: '#EDB62C', opacity: 1 }
+                    : { tintColor: theme.textMuted, opacity: 0.5 },
+                ]}
+              />
+            </TouchableOpacity>
 
             {/* BUTTON LOGIC: 
                 - In Read Only: Always show NEXT (until last item which becomes FINISH)

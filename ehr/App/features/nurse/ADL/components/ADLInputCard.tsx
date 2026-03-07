@@ -111,11 +111,11 @@ const ADLInputCard = ({
         <TouchableOpacity
           style={[
             styles.alertIcon,
-            { opacity: isAlertActive ? 1.0 : 0.3 },
+            { opacity: (isAlertActive || hasBackendAlert) ? 1.0 : 0.3 },
             hasBackendAlert && styles.activeAlert,
           ]}
-          onPress={() => isAlertActive && setModalVisible(true)}
-          disabled={!isAlertActive}
+          onPress={() => (isAlertActive || hasBackendAlert) && setModalVisible(true)}
+          disabled={!isAlertActive && !hasBackendAlert}
         >
           <Image source={alert1} style={styles.alertImage} />
         </TouchableOpacity>
