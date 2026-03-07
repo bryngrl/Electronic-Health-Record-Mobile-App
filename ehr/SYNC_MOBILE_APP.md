@@ -1,12 +1,22 @@
 # 📱 Master Sync Guide: Mobile App API Reference
 
-This document is the complete reference for connecting your React Native app to the Laravel EHR backend.
+---
+
+## Instructions (run this) !!!:
+
+- **STEP 1: Laravel (Website Project):** `php artisan serve --host=0.0.0.0 --port=8000` (run localhost server)
+- **STEP 2: React Native (Mobile Project):** `cd ehr, npm run android` (start android app)
+- **Note:** (Make sure to input your current IP Adress in apiClient.ts)
+
+---
+
+This document is the complete reference for connecting this React Native app to the Laravel EHR backend.
 
 ---
 
 ## 1. 🔗 Connection & Auth
 
-- **Base URL:** `http://192.168.1.14:8000/api`
+- **Base URL:** `http://(YOUR IP):8000/api`
 - **Login:** `POST /auth/login?email={username}&password={pass}`
 - **Auth Mode:** Bearer Token (Laravel Sanctum). Add `Authorization: Bearer {token}` to all requests.
 
