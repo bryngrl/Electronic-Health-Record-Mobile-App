@@ -4,7 +4,8 @@ import apiClient from '@api/apiClient';
 export const usePatients = () => {
   const getPatients = useCallback(async () => {
     try {
-      const response = await apiClient.get('/patients/');
+      // Use multiple parameters to ensure we get inactive patients as well across different backend versions
+      const response = await apiClient.get('/patient?all=true&all=1&is_active=all');
       return response.data;
     } catch (err: any) {
       const message = err?.response?.data || err?.message || 'Network Error';
@@ -16,7 +17,8 @@ export const usePatients = () => {
 
   const getPatientById = useCallback(async (id: string | number) => {
     try {
-      const response = await apiClient.get(`/patients/${id}/`);
+      // Use ?all=true to bypass active filter on backend when fetching specific patient
+      const response = await apiClient.get(`/patient/${id}?all=true`);
       return response.data;
     } catch (err: any) {
       const message =

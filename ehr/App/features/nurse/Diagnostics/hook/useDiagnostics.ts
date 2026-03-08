@@ -4,7 +4,8 @@ import apiClient from '@api/apiClient';
 import * as ImagePicker from 'react-native-image-picker';
 
 export interface DiagnosticRecord {
-  diagnostic_id: number;
+  id?: number;
+  diagnostic_id?: number;
   patient_id: number;
   image_type: string;
   file_path: string;
@@ -19,8 +20,15 @@ export const useDiagnostics = () => {
   const fetchDiagnostics = useCallback(async (patientId: string) => {
     setLoading(true);
     try {
-      const response = await apiClient.get(`/diagnostics/patient/${patientId}`);
-      setDiagnostics(response.data || []);
+      const response = await apiClient.get(`/diagnostics/patient/${patientId}?patient_id=${patientId}`);
+      const data = response.data || [];
+      // Ensure each record has an id field for consistency
+      const mappedData = (Array.isArray(data) ? data : (data.data || [])).map((d: any) => ({
+        ...d,
+        id: d.id || d.diagnostic_id,
+        diagnostic_id: d.diagnostic_id || d.id
+      }));
+      setDiagnostics(mappedData);
     } catch (error) {
       console.error('Error fetching diagnostics:', error);
       setDiagnostics([]);
@@ -45,7 +53,7 @@ export const useDiagnostics = () => {
       if (!asset.uri) return null;
 
       const formData = new FormData();
-      formData.append('patient_id', patientId);
+      formData.append('patient_id', String(patientId));
       formData.append('image_type', imageType);
 
       const fileData = {
@@ -58,12 +66,12 @@ export const useDiagnostics = () => {
 
       setLoading(true);
 
-      // Reverting to the previous working configuration for multipart/form-data
-      const response = await apiClient.post('/diagnostics/', formData, {
+      const response = await apiClient.post('/diagnostics', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 60000, // Increased timeout to 60 seconds for larger image uploads
+        transformRequest: (data) => data, // Essential for multipart/form-data in some axios versions
+        timeout: 60000,
       });
 
       await fetchDiagnostics(patientId);

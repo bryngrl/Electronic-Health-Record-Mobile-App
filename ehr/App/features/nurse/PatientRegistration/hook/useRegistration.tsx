@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import apiClient from '@api/apiClient';
 
 export const useRegistration = () => {
@@ -22,44 +22,74 @@ export const useRegistration = () => {
     user_id: 1,
   });
 
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [contacts, setContacts] = useState([
     { name: '', relationship: '', number: '' },
   ]);
-  const [contactErrors, setContactErrors] = useState<string[]>([]);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
-    if (!form.first_name) errors.first_name = 'First name is required';
-    if (!form.middle_name) errors.middle_name = 'Middle name is required';
-    if (!form.last_name) errors.last_name = 'Last name is required';
-    if (!form.birthdate) errors.birthdate = 'Birthdate is required';
-    if (!form.sex) errors.sex = 'Sex is required';
-    if (!form.address) errors.address = 'Address is required';
-    if (!form.birthplace) errors.birthplace = 'Birthplace is required';
-    if (!form.religion) errors.religion = 'Religion is required';
-    if (form.religion === 'Other' && !form.other_religion)
-      errors.other_religion = 'Please specify religion';
-    if (!form.ethnicity) errors.ethnicity = 'Ethnicity is required';
-    if (form.ethnicity === 'Other' && !form.other_ethnicity)
-      errors.other_ethnicity = 'Please specify ethnicity';
-    if (!form.chief_complaints)
-      errors.chief_complaints = 'Chief of complaints is required';
-    if (!form.room_no) errors.room_no = 'Room number is required';
-    if (!form.bed_no) errors.bed_no = 'Bed number is required';
-
-    contacts.forEach((contact, index) => {
-      if (!contact.name) errors[`contact_name_${index}`] = 'Contact name is required';
-      if (!contact.relationship) errors[`contact_relationship_${index}`] = 'Relationship is required';
-      if (!contact.number) errors[`contact_number_${index}`] = 'Contact number is required';
-    });
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+  const [contactErrors, setContactErrors] = useState<string[]>(['']);
 
   const capitalize = (str: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+
+  const validateStep1 = useCallback(() => {
+    const errors: Record<string, string> = {};
+    const requiredFields = [
+      'first_name',
+      'middle_name',
+      'last_name',
+      'birthdate',
+      'sex',
+      'address',
+      'birthplace',
+      'religion',
+      'ethnicity',
+      'chief_complaints',
+      'room_no',
+      'bed_no',
+    ];
+
+    requiredFields.forEach(field => {
+      if (!form[field as keyof typeof form]?.toString().trim()) {
+        errors[field] = 'This field is required';
+      }
+    });
+
+    if (form.religion === 'Other' && !form.other_religion.trim()) {
+      errors.other_religion = 'Please specify religion';
+    }
+    if (form.ethnicity === 'Other' && !form.other_ethnicity.trim()) {
+      errors.other_ethnicity = 'Please specify ethnicity';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [form]);
+
+  const validateStep2 = useCallback(() => {
+    const errors: string[] = [];
+    let hasError = false;
+
+    contacts.forEach((contact, index) => {
+      if (!contact.name.trim() || !contact.relationship.trim() || !contact.number.trim()) {
+        errors[index] = 'All contact fields are required';
+        hasError = true;
+      } else if (contact.number.length !== 11) {
+        errors[index] = 'Number must be 11 digits';
+        hasError = true;
+      } else {
+        errors[index] = '';
+      }
+    });
+
+    setContactErrors(errors);
+    return !hasError;
+  }, [contacts]);
+
+  const validateForm = useCallback(() => {
+    const step1Valid = validateStep1();
+    const step2Valid = validateStep2();
+    return step1Valid && step2Valid;
+  }, [validateStep1, validateStep2]);
 
   const formatNameOnBlur = (field: keyof typeof form) => {
     setForm(prev => ({ ...prev, [field]: capitalize(prev[field] as string) }));
@@ -76,16 +106,16 @@ export const useRegistration = () => {
 
     // Clear error while typing
     const errors = [...contactErrors];
-    errors[index] = '';
-    setContactErrors(errors);
-    setFormErrors(prev => ({ ...prev, [`contact_number_${index}`]: '' }));
+    if (errors[index]) {
+        errors[index] = '';
+        setContactErrors(errors);
+    }
   };
 
   const validateNumberOnBlur = (index: number) => {
     const updated = [...contacts];
     let num = updated[index].number;
 
-    // Logic: If user typed 10 digits starting with 9, add the 0
     if (num.length === 10 && num.startsWith('9')) {
       num = '0' + num;
       updated[index].number = num;
@@ -102,13 +132,6 @@ export const useRegistration = () => {
   };
 
   const registerPatient = async () => {
-    if (!validateForm()) {
-      throw new Error('Please fill in all required fields.');
-    }
-    if (contactErrors.some(e => e !== '')) {
-      throw new Error('Please correct the contact number errors.');
-    }
-
     // Explicitly define payload to match FastAPI PatientCreate schema
     const payload = {
       first_name: form.first_name,
@@ -129,11 +152,11 @@ export const useRegistration = () => {
       contact_relationship: contacts[0].relationship,
       contact_number: contacts[0].number,
       user_id: form.user_id,
-      is_active: true,
+      is_active: 1,
     };
 
     try {
-      const response = await apiClient.post('/patients/', payload);
+      const response = await apiClient.post('/patients', payload);
       return response;
     } catch (error: any) {
       console.error('Registration error details:', error.response?.data);
@@ -146,14 +169,16 @@ export const useRegistration = () => {
     setStep,
     form,
     setForm,
+    formErrors,
+    setFormErrors,
     contacts,
     setContacts,
     contactErrors,
     formatNameOnBlur,
     handleNumberChange,
     validateNumberOnBlur,
-    setFormErrors,
-    formErrors,
+    validateStep1,
+    validateStep2,
     validateForm,
     registerPatient,
     capitalize,

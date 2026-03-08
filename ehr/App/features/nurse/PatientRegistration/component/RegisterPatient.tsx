@@ -89,42 +89,20 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
     setStep,
     form,
     setForm,
+    formErrors,
+    setFormErrors,
     contacts,
     setContacts,
     contactErrors,
+    setContactErrors,
     formatNameOnBlur,
     handleNumberChange,
     validateNumberOnBlur,
-    setFormErrors,
-    formErrors,
-    validateForm,
+    validateStep1,
+    validateStep2,
     registerPatient,
     capitalize,
   } = useRegistration();
-
-  const validateStep1 = () => {
-    const errors: Record<string, string> = {};
-    if (!form.first_name) errors.first_name = 'First name is required';
-    if (!form.middle_name) errors.middle_name = 'Middle name is required';
-    if (!form.last_name) errors.last_name = 'Last name is required';
-    if (!form.birthdate) errors.birthdate = 'Birthdate is required';
-    if (!form.sex) errors.sex = 'Sex is required';
-    if (!form.address) errors.address = 'Address is required';
-    if (!form.birthplace) errors.birthplace = 'Birthplace is required';
-    if (!form.religion) errors.religion = 'Religion is required';
-    if (form.religion === 'Other' && !form.other_religion)
-      errors.other_religion = 'Please specify religion';
-    if (!form.ethnicity) errors.ethnicity = 'Ethnicity is required';
-    if (form.ethnicity === 'Other' && !form.other_ethnicity)
-      errors.other_ethnicity = 'Please specify ethnicity';
-    if (!form.chief_complaints)
-      errors.chief_complaints = 'Chief of complaints is required';
-    if (!form.room_no) errors.room_no = 'Room number is required';
-    if (!form.bed_no) errors.bed_no = 'Bed number is required';
-
-    setFormErrors(prev => ({ ...prev, ...errors }));
-    return Object.keys(errors).length === 0;
-  };
 
   const [birthParts, setBirthParts] = useState({
     month: '',
@@ -194,7 +172,16 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
     }
   }, [birthParts, setForm]);
 
+  const handleNextStep = () => {
+    if (validateStep1()) {
+      setStep(2);
+    }
+  };
+
   const handleFinalRegister = async () => {
+    if (!validateStep2()) {
+      return;
+    }
     try {
       const response = await registerPatient();
       if (response.status === 200 || response.status === 201) {
@@ -318,50 +305,76 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 </Text>
 
                 <TextInput
-                  style={[styles.input, formErrors.first_name ? styles.inputError : null]}
+                  style={[
+                    styles.input,
+                    formErrors.first_name ? styles.inputError : null,
+                  ]}
                   placeholder="Enter First Name"
                   placeholderTextColor={theme.textMuted}
                   value={form.first_name}
                   onChangeText={v => {
                     setForm({ ...form, first_name: v });
-                    if (v) setFormErrors({ ...formErrors, first_name: '' });
+                    if (formErrors.first_name)
+                      setFormErrors({ ...formErrors, first_name: '' });
                   }}
                   onBlur={() => formatNameOnBlur('first_name')}
                   returnKeyType="next"
                   onSubmitEditing={() => middleNameRef.current?.focus()}
                 />
-                {formErrors.first_name ? <Text style={styles.errorText}>{formErrors.first_name}</Text> : null}
+                {formErrors.first_name ? (
+                  <Text style={styles.errorTextSmall}>
+                    {formErrors.first_name}
+                  </Text>
+                ) : null}
 
                 <TextInput
                   ref={middleNameRef}
-                  style={[styles.input, { marginTop: 12 }, formErrors.middle_name ? styles.inputError : null]}
+                  style={[
+                    styles.input,
+                    { marginTop: 12 },
+                    formErrors.middle_name ? styles.inputError : null,
+                  ]}
                   placeholder="Enter Middle Name"
                   placeholderTextColor={theme.textMuted}
                   value={form.middle_name}
                   onChangeText={v => {
                     setForm({ ...form, middle_name: v });
-                    if (v) setFormErrors({ ...formErrors, middle_name: '' });
+                    if (formErrors.middle_name)
+                      setFormErrors({ ...formErrors, middle_name: '' });
                   }}
                   onBlur={() => formatNameOnBlur('middle_name')}
                   returnKeyType="next"
                   onSubmitEditing={() => lastNameRef.current?.focus()}
                 />
-                {formErrors.middle_name ? <Text style={styles.errorText}>{formErrors.middle_name}</Text> : null}
+                {formErrors.middle_name ? (
+                  <Text style={styles.errorTextSmall}>
+                    {formErrors.middle_name}
+                  </Text>
+                ) : null}
 
                 <TextInput
                   ref={lastNameRef}
-                  style={[styles.input, { marginTop: 12 }, formErrors.last_name ? styles.inputError : null]}
+                  style={[
+                    styles.input,
+                    { marginTop: 12 },
+                    formErrors.last_name ? styles.inputError : null,
+                  ]}
                   placeholder="Enter Last Name"
                   placeholderTextColor={theme.textMuted}
                   value={form.last_name}
                   onChangeText={v => {
                     setForm({ ...form, last_name: v });
-                    if (v) setFormErrors({ ...formErrors, last_name: '' });
+                    if (formErrors.last_name)
+                      setFormErrors({ ...formErrors, last_name: '' });
                   }}
                   onBlur={() => formatNameOnBlur('last_name')}
                   returnKeyType="done"
                 />
-                {formErrors.last_name ? <Text style={styles.errorText}>{formErrors.last_name}</Text> : null}
+                {formErrors.last_name ? (
+                  <Text style={styles.errorTextSmall}>
+                    {formErrors.last_name}
+                  </Text>
+                ) : null}
               </View>
 
               <View style={[styles.inputGroup, { zIndex: 5000 }]}>
@@ -370,7 +383,11 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 </Text>
                 <View style={styles.row}>
                   <Dropdown
-                    style={[styles.dropdown, { flex: 2 }, formErrors.birthdate ? styles.inputError : null]}
+                    style={[
+                      styles.dropdown,
+                      { flex: 2 },
+                      formErrors.birthdate ? styles.inputError : null,
+                    ]}
                     data={months}
                     labelField="label"
                     valueField="value"
@@ -383,11 +400,16 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     value={birthParts.month}
                     onChange={item => {
                       setBirthParts({ ...birthParts, month: item.value });
-                      if (item.value && birthParts.day && birthParts.year) setFormErrors({ ...formErrors, birthdate: '' });
+                      if (formErrors.birthdate)
+                        setFormErrors({ ...formErrors, birthdate: '' });
                     }}
                   />
                   <Dropdown
-                    style={[styles.dropdown, { flex: 1, marginHorizontal: 8 }, formErrors.birthdate ? styles.inputError : null]}
+                    style={[
+                      styles.dropdown,
+                      { flex: 1, marginHorizontal: 8 },
+                      formErrors.birthdate ? styles.inputError : null,
+                    ]}
                     data={days}
                     labelField="label"
                     valueField="value"
@@ -400,11 +422,16 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     value={birthParts.day}
                     onChange={item => {
                       setBirthParts({ ...birthParts, day: item.value });
-                      if (item.value && birthParts.month && birthParts.year) setFormErrors({ ...formErrors, birthdate: '' });
+                      if (formErrors.birthdate)
+                        setFormErrors({ ...formErrors, birthdate: '' });
                     }}
                   />
                   <Dropdown
-                    style={[styles.dropdown, { flex: 1.5 }, formErrors.birthdate ? styles.inputError : null]}
+                    style={[
+                      styles.dropdown,
+                      { flex: 1.5 },
+                      formErrors.birthdate ? styles.inputError : null,
+                    ]}
                     data={years}
                     labelField="label"
                     valueField="value"
@@ -417,11 +444,16 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     value={birthParts.year}
                     onChange={item => {
                       setBirthParts({ ...birthParts, year: item.value });
-                      if (item.value && birthParts.month && birthParts.day) setFormErrors({ ...formErrors, birthdate: '' });
+                      if (formErrors.birthdate)
+                        setFormErrors({ ...formErrors, birthdate: '' });
                     }}
                   />
                 </View>
-                {formErrors.birthdate ? <Text style={styles.errorText}>{formErrors.birthdate}</Text> : null}
+                {formErrors.birthdate ? (
+                  <Text style={styles.errorTextSmall}>
+                    {formErrors.birthdate}
+                  </Text>
+                ) : null}
               </View>
 
               <View style={[styles.row, styles.inputGroup, { zIndex: 4000 }]}>
@@ -438,7 +470,10 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     Sex <Text style={styles.required}>*</Text>
                   </Text>
                   <Dropdown
-                    style={[styles.dropdown, formErrors.sex ? styles.inputError : null]}
+                    style={[
+                      styles.dropdown,
+                      formErrors.sex ? styles.inputError : null,
+                    ]}
                     data={sexData}
                     labelField="label"
                     valueField="value"
@@ -451,10 +486,13 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     value={form.sex}
                     onChange={item => {
                       setForm({ ...form, sex: item.value });
-                      if (item.value) setFormErrors({ ...formErrors, sex: '' });
+                      if (formErrors.sex)
+                        setFormErrors({ ...formErrors, sex: '' });
                     }}
                   />
-                  {formErrors.sex ? <Text style={styles.errorText}>{formErrors.sex}</Text> : null}
+                  {formErrors.sex ? (
+                    <Text style={styles.errorTextSmall}>{formErrors.sex}</Text>
+                  ) : null}
                 </View>
               </View>
 
@@ -463,18 +501,26 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   Address <Text style={styles.required}>*</Text>
                 </Text>
                 <TextInput
-                  style={[styles.input, formErrors.address ? styles.inputError : null]}
+                  style={[
+                    styles.input,
+                    formErrors.address ? styles.inputError : null,
+                  ]}
                   placeholder="Enter Address"
                   placeholderTextColor={theme.textMuted}
                   value={form.address}
                   onChangeText={v => {
                     setForm({ ...form, address: v });
-                    if (v) setFormErrors({ ...formErrors, address: '' });
+                    if (formErrors.address)
+                      setFormErrors({ ...formErrors, address: '' });
                   }}
                   returnKeyType="next"
                   onSubmitEditing={() => birthplaceRef.current?.focus()}
                 />
-                {formErrors.address ? <Text style={styles.errorText}>{formErrors.address}</Text> : null}
+                {formErrors.address ? (
+                  <Text style={styles.errorTextSmall}>
+                    {formErrors.address}
+                  </Text>
+                ) : null}
               </View>
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>
@@ -482,17 +528,25 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 </Text>
                 <TextInput
                   ref={birthplaceRef}
-                  style={[styles.input, formErrors.birthplace ? styles.inputError : null]}
+                  style={[
+                    styles.input,
+                    formErrors.birthplace ? styles.inputError : null,
+                  ]}
                   placeholder="Enter Birth Place"
                   placeholderTextColor={theme.textMuted}
                   value={form.birthplace}
                   onChangeText={v => {
                     setForm({ ...form, birthplace: v });
-                    if (v) setFormErrors({ ...formErrors, birthplace: '' });
+                    if (formErrors.birthplace)
+                      setFormErrors({ ...formErrors, birthplace: '' });
                   }}
                   returnKeyType="done"
                 />
-                {formErrors.birthplace ? <Text style={styles.errorText}>{formErrors.birthplace}</Text> : null}
+                {formErrors.birthplace ? (
+                  <Text style={styles.errorTextSmall}>
+                    {formErrors.birthplace}
+                  </Text>
+                ) : null}
               </View>
 
               <View style={[styles.row, styles.inputGroup, { zIndex: 3000 }]}>
@@ -501,7 +555,10 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     Religion <Text style={styles.required}>*</Text>
                   </Text>
                   <Dropdown
-                    style={[styles.dropdown, formErrors.religion ? styles.inputError : null]}
+                    style={[
+                      styles.dropdown,
+                      formErrors.religion ? styles.inputError : null,
+                    ]}
                     data={religionData}
                     labelField="label"
                     valueField="value"
@@ -514,15 +571,25 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     value={form.religion}
                     onChange={item => {
                       setForm({ ...form, religion: item.value });
-                      if (item.value) setFormErrors({ ...formErrors, religion: '' });
+                      if (formErrors.religion)
+                        setFormErrors({ ...formErrors, religion: '' });
                     }}
                   />
-                  {formErrors.religion ? <Text style={styles.errorText}>{formErrors.religion}</Text> : null}
+                  {formErrors.religion ? (
+                    <Text style={styles.errorTextSmall}>
+                      {formErrors.religion}
+                    </Text>
+                  ) : null}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>Ethnicity <Text style={styles.required}>*</Text></Text>
+                  <Text style={styles.inputLabel}>
+                    Ethnicity <Text style={styles.required}>*</Text>
+                  </Text>
                   <Dropdown
-                    style={[styles.dropdown, formErrors.ethnicity ? styles.inputError : null]}
+                    style={[
+                      styles.dropdown,
+                      formErrors.ethnicity ? styles.inputError : null,
+                    ]}
                     data={ethnicityData}
                     labelField="label"
                     valueField="value"
@@ -535,10 +602,15 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     value={form.ethnicity}
                     onChange={item => {
                       setForm({ ...form, ethnicity: item.value });
-                      if (item.value) setFormErrors({ ...formErrors, ethnicity: '' });
+                      if (formErrors.ethnicity)
+                        setFormErrors({ ...formErrors, ethnicity: '' });
                     }}
                   />
-                  {formErrors.ethnicity ? <Text style={styles.errorText}>{formErrors.ethnicity}</Text> : null}
+                  {formErrors.ethnicity ? (
+                    <Text style={styles.errorTextSmall}>
+                      {formErrors.ethnicity}
+                    </Text>
+                  ) : null}
                 </View>
               </View>
 
@@ -554,10 +626,10 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     value={form.other_religion}
                     onChangeText={v => {
                       setForm({ ...form, other_religion: v });
-                      if (v) setFormErrors({ ...formErrors, other_religion: '' });
+                      if (formErrors.other_religion) setFormErrors({ ...formErrors, other_religion: '' });
                     }}
                   />
-                  {formErrors.other_religion ? <Text style={styles.errorText}>{formErrors.other_religion}</Text> : null}
+                  {formErrors.other_religion ? <Text style={styles.errorTextSmall}>{formErrors.other_religion}</Text> : null}
                 </View>
               )}
 
@@ -573,26 +645,36 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     value={form.other_ethnicity}
                     onChangeText={v => {
                       setForm({ ...form, other_ethnicity: v });
-                      if (v) setFormErrors({ ...formErrors, other_ethnicity: '' });
+                      if (formErrors.other_ethnicity) setFormErrors({ ...formErrors, other_ethnicity: '' });
                     }}
                   />
-                  {formErrors.other_ethnicity ? <Text style={styles.errorText}>{formErrors.other_ethnicity}</Text> : null}
+                  {formErrors.other_ethnicity ? <Text style={styles.errorTextSmall}>{formErrors.other_ethnicity}</Text> : null}
                 </View>
               )}
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Chief of Complaints</Text>
+                <Text style={styles.inputLabel}>
+                  Chief of Complaints <Text style={styles.required}>*</Text>
+                </Text>
                 <TextInput
-                  style={[styles.input, formErrors.chief_complaints ? styles.inputError : null]}
+                  style={[
+                    styles.input,
+                    formErrors.chief_complaints ? styles.inputError : null,
+                  ]}
                   placeholder="Enter Chief of Complaints"
                   placeholderTextColor={theme.textMuted}
                   value={form.chief_complaints}
                   onChangeText={v => {
                     setForm({ ...form, chief_complaints: v });
-                    if (v) setFormErrors({ ...formErrors, chief_complaints: '' });
+                    if (formErrors.chief_complaints)
+                      setFormErrors({ ...formErrors, chief_complaints: '' });
                   }}
                 />
-                {formErrors.chief_complaints ? <Text style={styles.errorText}>{formErrors.chief_complaints}</Text> : null}
+                {formErrors.chief_complaints ? (
+                  <Text style={styles.errorTextSmall}>
+                    {formErrors.chief_complaints}
+                  </Text>
+                ) : null}
               </View>
 
               <View
@@ -607,7 +689,10 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     Room No. <Text style={styles.required}>*</Text>
                   </Text>
                   <Dropdown
-                    style={[styles.dropdown, formErrors.room_no ? styles.inputError : null]}
+                    style={[
+                      styles.dropdown,
+                      formErrors.room_no ? styles.inputError : null,
+                    ]}
                     data={roomData}
                     labelField="label"
                     valueField="value"
@@ -620,17 +705,25 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     value={form.room_no}
                     onChange={item => {
                       setForm({ ...form, room_no: item.value });
-                      if (item.value) setFormErrors({ ...formErrors, room_no: '' });
+                      if (formErrors.room_no)
+                        setFormErrors({ ...formErrors, room_no: '' });
                     }}
                   />
-                  {formErrors.room_no ? <Text style={styles.errorText}>{formErrors.room_no}</Text> : null}
+                  {formErrors.room_no ? (
+                    <Text style={styles.errorTextSmall}>
+                      {formErrors.room_no}
+                    </Text>
+                  ) : null}
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.inputLabel}>
                     Bed No. <Text style={styles.required}>*</Text>
                   </Text>
                   <Dropdown
-                    style={[styles.dropdown, formErrors.bed_no ? styles.inputError : null]}
+                    style={[
+                      styles.dropdown,
+                      formErrors.bed_no ? styles.inputError : null,
+                    ]}
                     data={bedData}
                     labelField="label"
                     valueField="value"
@@ -643,20 +736,21 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     value={form.bed_no}
                     onChange={item => {
                       setForm({ ...form, bed_no: item.value });
-                      if (item.value) setFormErrors({ ...formErrors, bed_no: '' });
+                      if (formErrors.bed_no)
+                        setFormErrors({ ...formErrors, bed_no: '' });
                     }}
                   />
-                  {formErrors.bed_no ? <Text style={styles.errorText}>{formErrors.bed_no}</Text> : null}
+                  {formErrors.bed_no ? (
+                    <Text style={styles.errorTextSmall}>
+                      {formErrors.bed_no}
+                    </Text>
+                  ) : null}
                 </View>
               </View>
 
               <TouchableOpacity
                 style={styles.submitBtn}
-                onPress={() => {
-                  if (validateStep1()) {
-                    setStep(2);
-                  }
-                }}
+                onPress={handleNextStep}
               >
                 <Text style={styles.submitText}>NEXT</Text>
                 <Icon name="chevron-right" size={22} color={theme.primary} />
@@ -686,7 +780,10 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                       Name <Text style={styles.required}>*</Text>
                     </Text>
                     <TextInput
-                      style={[styles.input, formErrors[`contact_name_${index}`] ? styles.inputError : null]}
+                      style={[
+                        styles.input,
+                        contactErrors[index] ? styles.inputError : null,
+                      ]}
                       placeholder="Enter Full Name"
                       placeholderTextColor={theme.textMuted}
                       value={contact.name}
@@ -694,13 +791,21 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                         const updated = [...contacts];
                         updated[index].name = v;
                         setContacts(updated);
-                        if (v) setFormErrors({ ...formErrors, [`contact_name_${index}`]: '' });
+                        if (contactErrors[index]) {
+                          const errors = [...contactErrors];
+                          errors[index] = '';
+                          setContactErrors(errors);
+                        }
                       }}
                       onBlur={() => formatContactNameOnBlur(index)}
                       returnKeyType="next"
                       onSubmitEditing={() => contactRelRef.current?.focus()}
                     />
-                    {formErrors[`contact_name_${index}`] ? <Text style={styles.errorText}>{formErrors[`contact_name_${index}`]}</Text> : null}
+                    {contactErrors[index] ? (
+                      <Text style={styles.errorTextSmall}>
+                        {contactErrors[index]}
+                      </Text>
+                    ) : null}
                   </View>
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>
@@ -708,7 +813,10 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     </Text>
                     <TextInput
                       ref={contactRelRef}
-                      style={[styles.input, formErrors[`contact_relationship_${index}`] ? styles.inputError : null]}
+                      style={[
+                        styles.input,
+                        contactErrors[index] ? styles.inputError : null,
+                      ]}
                       placeholder="Enter Relationship"
                       placeholderTextColor={theme.textMuted}
                       value={contact.relationship}
@@ -716,12 +824,20 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                         const updated = [...contacts];
                         updated[index].relationship = v;
                         setContacts(updated);
-                        if (v) setFormErrors({ ...formErrors, [`contact_relationship_${index}`]: '' });
+                        if (contactErrors[index]) {
+                          const errors = [...contactErrors];
+                          errors[index] = '';
+                          setContactErrors(errors);
+                        }
                       }}
                       returnKeyType="next"
                       onSubmitEditing={() => contactNumRef.current?.focus()}
                     />
-                    {formErrors[`contact_relationship_${index}`] ? <Text style={styles.errorText}>{formErrors[`contact_relationship_${index}`]}</Text> : null}
+                    {contactErrors[index] ? (
+                      <Text style={styles.errorTextSmall}>
+                        {contactErrors[index]}
+                      </Text>
+                    ) : null}
                   </View>
 
                   {/* CONTACT NUMBER WITH +63 PREFIX */}
@@ -732,7 +848,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                     <View
                       style={[
                         styles.phoneInputRow,
-                        (contactErrors[index] || formErrors[`contact_number_${index}`]) ? styles.inputError : null,
+                        contactErrors[index] ? styles.inputError : null,
                       ]}
                     >
                       <View style={styles.prefixContainer}>
@@ -752,12 +868,8 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                       />
                     </View>
                     {contactErrors[index] ? (
-                      <Text style={styles.errorText}>
+                      <Text style={styles.errorTextSmall}>
                         {contactErrors[index]}
-                      </Text>
-                    ) : formErrors[`contact_number_${index}`] ? (
-                      <Text style={styles.errorText}>
-                        {formErrors[`contact_number_${index}`]}
                       </Text>
                     ) : null}
                   </View>
@@ -862,6 +974,13 @@ const createStyles = (theme: any, commonStyles: any) =>
       fontSize: 12,
       marginTop: 5,
       fontFamily: 'AlteHaasGrotesk',
+    },
+    errorTextSmall: {
+      color: theme.error,
+      fontSize: 10,
+      marginTop: 2,
+      fontFamily: 'AlteHaasGrotesk',
+      marginLeft: 5,
     },
     placeholderStyle: {
       fontSize: 14,

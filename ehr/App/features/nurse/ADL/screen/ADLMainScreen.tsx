@@ -15,24 +15,27 @@ import {
   BackHandler,
   Platform,
   StatusBar,
+  Image,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import ADLInputCard from '../components/ADLInputCard';
-import ADLCDSSStepper from './ADPIEScreen';
-import { useADL } from '../hook/useADL';
+import ADPIEScreen from '@components/ADPIEScreen';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
+import { useADL } from '../hook/useADL';
+
+const alertIcon = require('@assets/icons/alert.png');
 
 const initialFormData = {
-  mobility: '',
-  hygiene: '',
-  toileting: '',
-  feeding: '',
-  hydration: '',
-  sleep_pattern: '',
-  pain_level: '',
+  mobility_assessment: '',
+  hygiene_assessment: '',
+  toileting_assessment: '',
+  feeding_assessment: '',
+  hydration_assessment: '',
+  sleep_pattern_assessment: '',
+  pain_level_assessment: '',
 };
 
 interface ADLScreenProps {
@@ -60,6 +63,8 @@ const ADLScreen = ({
     checkADLAlerts,
     saveADLAssessment,
     fetchLatestADL,
+    dataAlert,
+    fetchDataAlert,
   } = useADL();
 
   const [searchText, setSearchText] = useState('');
@@ -70,7 +75,7 @@ const ADLScreen = ({
     visible: boolean;
     title: string;
     message: string;
-    type: 'success' | 'error';
+    type: 'success' | 'error' | 'warning';
   }>({
     visible: false,
     title: '',
@@ -81,7 +86,7 @@ const ADLScreen = ({
   const showAlert = (
     title: string,
     message: string,
-    type: 'success' | 'error' = 'error',
+    type: 'success' | 'error' | 'warning' = 'error',
   ) => {
     setAlertConfig({ visible: true, title, message, type });
   };
@@ -136,18 +141,19 @@ const ADLScreen = ({
   }, [onBack]);
 
   const loadPatientData = useCallback(
-    async (pid: number) => {
-      const data = await fetchLatestADL(pid);
+    async (pId: number) => {
+      fetchDataAlert(pId);
+      const data = await fetchLatestADL(pId);
       if (data) {
         setAdlId(data.id);
         const newFormData = {
-          mobility: data.mobility || '',
-          hygiene: data.hygiene || '',
-          toileting: data.toileting || '',
-          feeding: data.feeding || '',
-          hydration: data.hydration || '',
-          sleep_pattern: data.sleep_pattern || '',
-          pain_level: data.pain_level || '',
+          mobility_assessment: data.mobility_assessment || data.mobility || '',
+          hygiene_assessment: data.hygiene_assessment || data.hygiene || '',
+          toileting_assessment: data.toileting_assessment || data.toileting || '',
+          feeding_assessment: data.feeding_assessment || data.feeding || '',
+          hydration_assessment: data.hydration_assessment || data.hydration || '',
+          sleep_pattern_assessment: data.sleep_pattern_assessment || data.sleep_pattern || '',
+          pain_level_assessment: data.pain_level_assessment || data.pain_level || '',
         };
         setFormData(newFormData);
 
@@ -155,13 +161,13 @@ const ADLScreen = ({
         setIsNA(allNA);
 
         setAlerts({
-          mobility_alert: data.mobility_alert,
-          hygiene_alert: data.hygiene_alert,
-          toileting_alert: data.toileting_alert,
-          feeding_alert: data.feeding_alert,
-          hydration_alert: data.hydration_alert,
-          sleep_pattern_alert: data.sleep_pattern_alert,
-          pain_level_alert: data.pain_level_alert,
+          mobility_assessment_alert: data.mobility_assessment_alert || data.mobility_alert,
+          hygiene_assessment_alert: data.hygiene_assessment_alert || data.hygiene_alert,
+          toileting_assessment_alert: data.toileting_assessment_alert || data.toileting_alert,
+          feeding_assessment_alert: data.feeding_assessment_alert || data.feeding_alert,
+          hydration_assessment_alert: data.hydration_assessment_alert || data.hydration_alert,
+          sleep_pattern_assessment_alert: data.sleep_pattern_assessment_alert || data.sleep_pattern_alert,
+          pain_level_assessment_alert: data.pain_level_assessment_alert || data.pain_level_alert,
         });
       } else {
         setAdlId(null);
@@ -170,7 +176,7 @@ const ADLScreen = ({
         setAlerts({});
       }
     },
-    [fetchLatestADL, setAlerts],
+    [fetchLatestADL, setAlerts, fetchDataAlert],
   );
 
   useEffect(() => {
@@ -217,14 +223,14 @@ const ADLScreen = ({
           await checkADLAlerts({
             patient_id: selectedPatient.id,
             ...formData,
-          });
+          }, adlId);
         } catch (e) {
           console.error('ADL CDSS Error:', e);
         }
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [formData, selectedPatient, checkADLAlerts, isNA, readOnly]);
+  }, [formData, selectedPatient, checkADLAlerts, isNA, adlId, readOnly]);
 
   const handleCDSSPress = async () => {
     // DOCTOR/VIEWING MODE: Just open the stepper if data exists
@@ -249,7 +255,7 @@ const ADLScreen = ({
       const result = await saveADLAssessment({
         patient_id: selectedPatient.id,
         ...formData,
-      });
+      }, adlId);
       const id = result.id || result.adl_id;
       if (id) {
         setAdlId(id);
@@ -278,7 +284,7 @@ const ADLScreen = ({
       const result = await saveADLAssessment({
         patient_id: selectedPatient.id,
         ...formData,
-      });
+      }, adlId);
 
       const newId = result.id || result.adl_id;
       const isUpdate = !!adlId || result.updated_at !== result.created_at;
@@ -312,12 +318,32 @@ const ADLScreen = ({
     ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
     : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
 
+  const generateFindingsSummary = () => {
+    const findings = Object.entries(formData)
+      .filter(([_, value]) => value && value.trim() !== '' && value !== 'N/A')
+      .map(([key, value]) => {
+        const label = key.replace(/_assessment/g, '').replace(/_/g, ' ').toUpperCase();
+        return `${label}: ${value}`;
+      });
+    
+    // Also include alerts if they are critical
+    const criticalAlerts = Object.entries(alerts)
+      .filter(([_, value]) => typeof value === 'string' && value.trim() !== '' && !value.toLowerCase().includes('normal'))
+      .map(([_, value]) => value as string);
+
+    const summary = [...findings, ...criticalAlerts];
+    if (dataAlert) summary.push(dataAlert);
+
+    return summary.join('. ');
+  };
+
   if (isAdpieActive && adlId && selectedPatient) {
     return (
-      <ADLCDSSStepper
-        adlId={adlId}
-        patientId={selectedPatient.id}
+      <ADPIEScreen
+        recordId={adlId}
         patientName={searchText}
+        feature="adl"
+        findingsSummary={generateFindingsSummary()}
         onBack={() => {
           setIsAdpieActive(false);
           scrollViewRef.current?.scrollTo({ y: 0, animated: true });
@@ -461,10 +487,11 @@ const ADLScreen = ({
 
           <ADLInputCard
             label="MOBILITY"
-            value={formData.mobility}
+            value={formData.mobility_assessment}
             disabled={!selectedPatient || isNA || readOnly}
-            alertText={alerts.mobility_alert}
-            onChangeText={t => setFormData({ ...formData, mobility: t })}
+            alertText={alerts.mobility_assessment_alert}
+            dataAlert={dataAlert}
+            onChangeText={t => setFormData({ ...formData, mobility_assessment: t })}
             onDisabledPress={() => {
               if (!readOnly && !selectedPatient) {
                 showAlert(
@@ -476,10 +503,11 @@ const ADLScreen = ({
           />
           <ADLInputCard
             label="HYGIENE"
-            value={formData.hygiene}
+            value={formData.hygiene_assessment}
             disabled={!selectedPatient || isNA || readOnly}
-            alertText={alerts.hygiene_alert}
-            onChangeText={t => setFormData({ ...formData, hygiene: t })}
+            alertText={alerts.hygiene_assessment_alert}
+            dataAlert={dataAlert}
+            onChangeText={t => setFormData({ ...formData, hygiene_assessment: t })}
             onDisabledPress={() => {
               if (!readOnly && !selectedPatient) {
                 showAlert(
@@ -491,10 +519,11 @@ const ADLScreen = ({
           />
           <ADLInputCard
             label="TOILETING"
-            value={formData.toileting}
+            value={formData.toileting_assessment}
             disabled={!selectedPatient || isNA || readOnly}
-            alertText={alerts.toileting_alert}
-            onChangeText={t => setFormData({ ...formData, toileting: t })}
+            alertText={alerts.toileting_assessment_alert}
+            dataAlert={dataAlert}
+            onChangeText={t => setFormData({ ...formData, toileting_assessment: t })}
             onDisabledPress={() => {
               if (!readOnly && !selectedPatient) {
                 showAlert(
@@ -506,10 +535,11 @@ const ADLScreen = ({
           />
           <ADLInputCard
             label="FEEDING"
-            value={formData.feeding}
+            value={formData.feeding_assessment}
             disabled={!selectedPatient || isNA || readOnly}
-            alertText={alerts.feeding_alert}
-            onChangeText={t => setFormData({ ...formData, feeding: t })}
+            alertText={alerts.feeding_assessment_alert}
+            dataAlert={dataAlert}
+            onChangeText={t => setFormData({ ...formData, feeding_assessment: t })}
             onDisabledPress={() => {
               if (!readOnly && !selectedPatient) {
                 showAlert(
@@ -521,10 +551,11 @@ const ADLScreen = ({
           />
           <ADLInputCard
             label="HYDRATION"
-            value={formData.hydration}
+            value={formData.hydration_assessment}
             disabled={!selectedPatient || isNA || readOnly}
-            alertText={alerts.hydration_alert}
-            onChangeText={t => setFormData({ ...formData, hydration: t })}
+            alertText={alerts.hydration_assessment_alert}
+            dataAlert={dataAlert}
+            onChangeText={t => setFormData({ ...formData, hydration_assessment: t })}
             onDisabledPress={() => {
               if (!readOnly && !selectedPatient) {
                 showAlert(
@@ -536,10 +567,11 @@ const ADLScreen = ({
           />
           <ADLInputCard
             label="SLEEP PATTERN"
-            value={formData.sleep_pattern}
+            value={formData.sleep_pattern_assessment}
             disabled={!selectedPatient || isNA || readOnly}
-            alertText={alerts.sleep_pattern_alert}
-            onChangeText={t => setFormData({ ...formData, sleep_pattern: t })}
+            alertText={alerts.sleep_pattern_assessment_alert}
+            dataAlert={dataAlert}
+            onChangeText={t => setFormData({ ...formData, sleep_pattern_assessment: t })}
             onDisabledPress={() => {
               if (!readOnly && !selectedPatient) {
                 showAlert(
@@ -551,10 +583,11 @@ const ADLScreen = ({
           />
           <ADLInputCard
             label="PAIN LEVEL"
-            value={formData.pain_level}
+            value={formData.pain_level_assessment}
             disabled={!selectedPatient || isNA || readOnly}
-            alertText={alerts.pain_level_alert}
-            onChangeText={t => setFormData({ ...formData, pain_level: t })}
+            alertText={alerts.pain_level_assessment_alert}
+            dataAlert={dataAlert}
+            onChangeText={t => setFormData({ ...formData, pain_level_assessment: t })}
             onDisabledPress={() => {
               if (!readOnly && !selectedPatient) {
                 showAlert(
@@ -684,6 +717,15 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
         fontSize: 16,
         fontWeight: 'bold'
     },
+    alertIcon: {
+      width: 45,
+      height: 45,
+      borderRadius: 22.5,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+    },
+    fullImg: { width: '80%', height: '80%', resizeMode: 'contain' },
     section: { marginBottom: 15, zIndex: 10 },
     sectionLabel: {
       fontSize: 14,

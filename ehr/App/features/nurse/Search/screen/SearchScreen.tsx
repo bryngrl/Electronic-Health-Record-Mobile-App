@@ -106,7 +106,7 @@ export default function SearchScreen({
   const fetchPatients = async () => {
     setLoading(true);
     try {
-      const response = await apiClient.get('/patients/');
+      const response = await apiClient.get('/patient?all=true');
       let raw = [];
       if (Array.isArray(response.data)) {
         raw = response.data;
@@ -123,11 +123,12 @@ export default function SearchScreen({
           type: 'Patient',
           icon: 'person',
           isPatient: true,
+          isActive: String(p.is_active) === '1' || p.is_active === true || p.is_active === 1,
           createdAt: p.admission_date
             ? new Date(p.admission_date).getTime()
             : 0,
         }))
-        .filter((p: any) => p.id !== null);
+        .filter((p: any) => p.id !== null && p.isActive);
 
       setPatients(normalized);
     } catch (err) {

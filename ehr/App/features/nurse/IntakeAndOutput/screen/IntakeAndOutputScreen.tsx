@@ -30,7 +30,7 @@ import IntakeOutputCard from '../component/IntakeOutputCard';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useIntakeAndOutputLogic } from '../hook/useIntakeAndOutputLogic';
-import ADPIEScreen from '@nurse/VitalSigns/screen/ADPIEScreen';
+import ADPIEScreen from '@components/ADPIEScreen';
 import CDSSModal from '@components/CDSSModal';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
@@ -66,6 +66,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     checkRealTimeAlerts,
     assessmentAlert,
     currentAlert,
+    dataAlert,
     setBackendAlert,
     triggerPatientAlert,
     loading,
@@ -103,13 +104,13 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     if (newState) {
       setIntakeOutput({
         oral_intake: 'N/A',
-        iv_fluids: 'N/A',
+        iv_fluids_volume: 'N/A',
         urine_output: 'N/A',
       });
     } else {
       setIntakeOutput(prev => ({
         oral_intake: prev.oral_intake === 'N/A' ? '' : prev.oral_intake,
-        iv_fluids: prev.iv_fluids === 'N/A' ? '' : prev.iv_fluids,
+        iv_fluids_volume: prev.iv_fluids_volume === 'N/A' ? '' : prev.iv_fluids_volume,
         urine_output: prev.urine_output === 'N/A' ? '' : prev.urine_output,
       }));
     }
@@ -117,7 +118,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
 
   useEffect(() => {
     if (selectedPatientId) {
-      const fields = ['oral_intake', 'iv_fluids', 'urine_output'];
+      const fields = ['oral_intake', 'iv_fluids_volume', 'urine_output'];
       const allNA = fields.every(f => (intakeOutput as any)[f] === 'N/A');
       setIsNA(allNA);
     } else {
@@ -187,7 +188,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
           await checkRealTimeAlerts({
             patient_id: parseInt(selectedPatientId, 10),
             oral_intake: parseInt(intakeOutput.oral_intake, 10) || 0,
-            iv_fluids: parseInt(intakeOutput.iv_fluids, 10) || 0,
+            iv_fluids_volume: parseInt(intakeOutput.iv_fluids_volume, 10) || 0,
             urine_output: parseInt(intakeOutput.urine_output, 10) || 0,
           });
         } catch (e) {
@@ -228,6 +229,8 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     }
   };
 
+  const [passedAlert, setPassedAlert] = useState<string | null>(null);
+
   const handleCDSSPress = async () => {
     // READ ONLY LOGIC (View Only)
     if (readOnly) {
@@ -246,6 +249,9 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     }
     const res = await saveAssessment();
     if (res && res.id) {
+      if (res.assessment_alert || res.alert) {
+        setPassedAlert(res.assessment_alert || res.alert);
+      }
       setIsAdpieActive(true);
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } else if (recordId) {
@@ -288,25 +294,51 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
     : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
 
+  const generateFindingsSummary = () => {
+    const findings = Object.entries(intakeOutput)
+      .filter(([_, value]) => typeof value === 'string' && value.trim() !== '' && value !== 'N/A')
+      .map(([key, value]) => `${key.replace(/_/g, ' ').toUpperCase()}: ${value}`);
+    
+    if (assessmentAlert) {
+      findings.push(assessmentAlert);
+    }
+
+    if (dataAlert) {
+      findings.push(dataAlert);
+    }
+    
+    return findings.join('. ');
+  };
+
   if (isAdpieActive && recordId) {
     return (
       <ADPIEScreen
         recordId={recordId}
         patientName={patientName}
-        onBack={() => setIsAdpieActive(false)}
-        feature="intake-output"
-        readOnly={readOnly} // Pass readOnly to ADPIE if supported
+        onBack={() => {
+          setIsAdpieActive(false);
+          setPassedAlert(null);
+        }}
+        feature="intake-and-output"
+        findingsSummary={generateFindingsSummary()}
+        initialAlert={passedAlert || undefined}
+        readOnly={readOnly}
       />
     );
   }
 
   // Frontend-only cleaning of the alert string
   const getCleanedAlertText = () => {
-    if (!assessmentAlert)
-      return 'Continue documenting to receive real-time support.';
+    let text = assessmentAlert || '';
+    if (dataAlert) {
+      text = `${dataAlert}${text ? '\n\n' + text : ''}`;
+    }
+
+    if (!text)
+      return 'No clinical findings found.';
 
     // 1. Remove emojis
-    let cleaned = assessmentAlert.replace(/[🔴🟠✓⚠️❌]/g, '').trim();
+    let cleaned = text.replace(/[🔴🟠✓⚠️❌]/g, '').trim();
 
     // 2. Remove square brackets from status prefixes (e.g., [CRITICAL] -> CRITICAL)
     cleaned = cleaned.replace(/\[(CRITICAL|WARNING|INFO)\]/gi, '$1');
@@ -314,7 +346,9 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     return cleaned;
   };
 
-  const hasRealAlert = assessmentAlert && assessmentAlert.trim() !== '';
+  const hasRealAlert =
+    (assessmentAlert && assessmentAlert.trim() !== '') ||
+    (dataAlert && dataAlert.trim() !== '');
 
   return (
     <SafeAreaView style={styles.root}>
@@ -432,8 +466,8 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
 
             <IntakeOutputCard
               label="IV FLUIDS"
-              value={intakeOutput.iv_fluids}
-              onChangeText={text => handleUpdateField('iv_fluids', text)}
+              value={intakeOutput.iv_fluids_volume}
+              onChangeText={text => handleUpdateField('iv_fluids_volume', text)}
               disabled={!selectedPatientId || isNA || readOnly}
               onDisabledPress={() => {
                 if (!readOnly && !selectedPatientId) {

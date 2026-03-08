@@ -17,6 +17,7 @@ interface ExamInputProps {
   value: string;
   disabled: boolean;
   alertText?: string;
+  dataAlert?: string | null;
   onChangeText: (text: string) => void;
   readOnly?: boolean;
   onDisabledPress?: () => void;
@@ -30,6 +31,7 @@ const ADLInputCard = ({
   value,
   disabled,
   alertText,
+  dataAlert,
   onChangeText,
   readOnly = false,
   onDisabledPress,
@@ -39,8 +41,10 @@ const ADLInputCard = ({
     4 * LINE_HEIGHT + INPUT_PADDING_BOTTOM,
   );
 
-  const isAlertActive = value.trim().length > 0 && value !== 'N/A';
-  const hasBackendAlert = !!alertText && alertText.trim().length > 0;
+  // LOGIC: The bell is only active if the input is not empty OR there's a clinical data alert
+  const isAlertActive = (value.trim().length > 0 && value !== 'N/A') || !!dataAlert;
+  // Keyword match: Backend found a specific clinical risk OR clinical data alert
+  const hasBackendAlert = (!!alertText && alertText.trim().length > 0) || !!dataAlert;
 
   const visibleTypingHeight = Math.max(0, inputHeight - INPUT_PADDING_BOTTOM);
   const numLines = Math.max(
@@ -69,6 +73,15 @@ const ADLInputCard = ({
       );
     }
     return lines;
+  };
+
+  const getAlertText = () => {
+    const parts = [];
+    if (dataAlert) parts.push(dataAlert);
+    if (alertText && alertText.trim() !== '') parts.push(alertText);
+    
+    if (parts.length === 0) return 'No clinical findings found.';
+    return parts.join('\n\n');
   };
 
   return (
@@ -125,7 +138,7 @@ const ADLInputCard = ({
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         category={label}
-        alertText={alertText || 'Analyzing findings for potential risks...'}
+        alertText={getAlertText()}
       />
     </View>
   );

@@ -26,20 +26,41 @@ const STEPS = [
   { id: 4, label: 'Evaluation', key: 'evaluation' },
 ];
 
+export type ADPIEFeature = 
+  | 'vital-signs' 
+  | 'physical-exam' 
+  | 'adl' 
+  | 'intake-and-output' 
+  | 'intake-output'
+  | 'lab-values';
+
 interface ADPIEScreenProps {
   onBack: () => void;
   recordId: number;
   patientName: string;
-  feature?: 'vital-signs' | 'intake-output';
+  feature: ADPIEFeature;
   readOnly?: boolean;
+  findingsSummary?: string;
+  initialAlert?: string;
 }
+
+const FEATURE_TITLES: Record<string, string> = {
+  'vital-signs': 'Vital Signs',
+  'physical-exam': 'Physical Exam',
+  'adl': 'Activities of Daily Living',
+  'intake-and-output': 'Intake and Output',
+  'intake-output': 'Intake and Output',
+  'lab-values': 'Laboratory Values',
+};
 
 const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   onBack,
   recordId,
   patientName,
-  feature = 'vital-signs',
+  feature,
   readOnly = false,
+  findingsSummary,
+  initialAlert: passedInitialAlert,
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
@@ -49,25 +70,38 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
 
   const [currentIdx, setCurrentIdx] = useState(0);
   const [text, setText] = useState('');
-  const [alert, setAlert] = useState<string | null>(null);
+  const [alert, setAlert] = useState<string | null>(passedInitialAlert || null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [allData, setAllData] = useState<any>(null);
+  const [initLoading, setInitLoading] = useState(true);
+  const [diagId, setDiagId] = useState<number | null>(null);
+  const [savedData, setSavedData] = useState<any>(null);
+  const [allData, setAllData] = useState<any>(null); 
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const endpointPrefix =
-    feature === 'vital-signs' ? '/vital-signs' : '/intake-output';
-  const displayTitle =
-    feature === 'vital-signs' ? 'Vital Signs' : 'Intake and Output';
+  const displayTitle = FEATURE_TITLES[feature] || 'Assessment';
+
+  const endpointPrefix = useMemo(() => {
+    switch (feature) {
+      case 'vital-signs': return '/vital-signs';
+      case 'intake-output':
+      case 'intake-and-output': return '/intake-output';
+      case 'physical-exam': return '/physical-exam';
+      case 'adl': return '/adl';
+      case 'lab-values': return '/lab-values';
+      default: return '/adpie';
+    }
+  }, [feature]);
 
   // Fetch all data for readOnly mode
   useEffect(() => {
+    if (!readOnly) return;
     const fetchRecord = async () => {
       try {
         setLoading(true);
         const response = await apiClient.get(`${endpointPrefix}/${recordId}`);
         setAllData(response.data);
-        // Set initial text for first step
         if (response.data) {
           setText(response.data[STEPS[0].key] || '');
           setAlert(response.data[`${STEPS[0].key}_alert`] || null);
@@ -76,20 +110,21 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
         console.error('Error fetching record for ADPIE:', e);
       } finally {
         setLoading(false);
+        setInitLoading(false);
       }
     };
 
     fetchRecord();
-  }, [recordId, endpointPrefix]);
+  }, [recordId, endpointPrefix, readOnly]);
 
   // Update text when step changes in readOnly mode
   useEffect(() => {
-    if (allData) {
+    if (readOnly && allData) {
       const step = STEPS[currentIdx];
       setText(allData[step.key] || '');
       setAlert(allData[`${step.key}_alert`] || null);
     }
-  }, [currentIdx, allData]);
+  }, [currentIdx, allData, readOnly]);
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -114,37 +149,162 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
     setAlertConfig({ visible: true, title, message, type, onConfirm });
   };
 
-  const updateADPIE = async (id: number, step: string, value: string) => {
-    if (readOnly) return; // Prevent updates in read-only mode
-    try {
-      const response = await apiClient.put(`${endpointPrefix}/${id}/${step}`, {
-        [step]: value,
-      });
-      return response.data;
-    } catch (e) {
-      console.error(`Error updating ${step}:`, e);
-      throw e;
+  const triggerAnalyze = async (finding: string) => {
+    if (!finding || finding.trim().length < 3) {
+        setAlert(null);
+        return;
     }
+    
+    setIsAnalyzing(true);
+    try {
+        const step = STEPS[currentIdx];
+        const res = await apiClient.post('/adpie/analyze', {
+          fieldName: step.key,
+          finding: finding,
+          component: feature,
+        });
+        
+        if (res.data) {
+          const body = res.data.data || res.data;
+          let rec = body.message || 
+                    body.recommendation || 
+                    body.alert || 
+                    body.diagnosis_alert ||
+                    body.alert_text;
+          
+          if (typeof body === 'string') rec = body;
+          
+          if (Array.isArray(body) && body.length > 0) {
+              const first = body[0];
+              rec = first.message || first.recommendation || first.alert || (typeof first === 'string' ? first : rec);
+          }
+
+          if (rec && rec !== 'NO RECOMMENDATIONS' && rec !== 'NONE') {
+            setAlert(rec);
+          } else {
+            setAlert(null);
+          }
+        } else {
+            setAlert(null);
+        }
+      } catch (e) {
+        console.error('Analyze Error:', e);
+        setAlert(null);
+      } finally {
+        setIsAnalyzing(false);
+      }
   };
 
   useEffect(() => {
-    if (readOnly || text.trim().length < 3) return;
-    const timer = setTimeout(async () => {
+    if (readOnly) return;
+    const initADPIE = async () => {
       try {
-        const step = STEPS[currentIdx];
-        const res = await updateADPIE(recordId, step.key, text);
-        if (res) setAlert(res[`${step.key}_alert`]);
-      } catch (e) {
-        console.error('Real-time Error:', e);
+        setInitLoading(true);
+        const response = await apiClient.get(`/adpie/${feature}/${recordId}`);
+        if (response.data) {
+          const data = response.data.data || response.data;
+          setDiagId(data.id);
+          setSavedData(data);
+          
+          const currentStep = STEPS[currentIdx].key;
+          if (data[currentStep]) {
+            setText(data[currentStep]);
+          }
+          
+          let initRec = data.message || 
+                        data[`${currentStep}_alert`] || 
+                        data.alert || 
+                        data.assessment_alert ||
+                        data.recommendation;
+          
+          if (initRec && initRec !== 'NO RECOMMENDATIONS' && initRec !== 'NONE') {
+            setAlert(initRec);
+          } else {
+            const batchItems = STEPS.map(s => ({
+              fieldName: s.key,
+              finding: data[s.key] || (s.key === 'diagnosis' ? findingsSummary : '') || ''
+            })).filter(item => item.finding);
+
+            if (batchItems.length > 0) {
+              try {
+                const batchRes = await apiClient.post('/adpie/analyze-batch', {
+                  component: feature,
+                  batch: batchItems
+                });
+                
+                if (batchRes.data) {
+                  const recommendations = batchRes.data.data || batchRes.data;
+                  let batchRec = recommendations[currentStep] || 
+                                 recommendations[`${currentStep}_alert`] ||
+                                 recommendations.message || 
+                                 recommendations.alert ||
+                                 recommendations.recommendation;
+                  
+                  if (typeof recommendations === 'string') batchRec = recommendations;
+                  
+                  if (Array.isArray(recommendations)) {
+                      const found = recommendations.find(r => r.fieldName === currentStep);
+                      if (found) batchRec = found.message || found.recommendation || found.alert;
+                  }
+
+                  if (batchRec && batchRec !== 'NO RECOMMENDATIONS' && batchRec !== 'NONE') {
+                    setAlert(batchRec);
+                  } else if (currentIdx === 0 && findingsSummary) {
+                    triggerAnalyze(findingsSummary);
+                  }
+                }
+              } catch (batchErr) {
+                if (currentIdx === 0 && findingsSummary) triggerAnalyze(findingsSummary);
+              }
+            } else if (currentIdx === 0 && findingsSummary) {
+              triggerAnalyze(findingsSummary);
+            }
+          }
+        }
+      } catch (e: any) {
+        console.error('Failed to initialize ADPIE:', e.message || e);
+        showAlert('Error', `Failed to initialize ADPIE workflow: ${e.message || 'Server Error'}`);
+      } finally {
+        setInitLoading(false);
       }
+    };
+    initADPIE();
+  }, [feature, recordId, readOnly]);
+
+  useEffect(() => {
+    if (readOnly) return;
+    if (savedData) {
+      const currentStep = STEPS[currentIdx].key;
+      setText(savedData[currentStep] || '');
+      
+      let currentAlert = savedData[`${currentStep}_alert`] || 
+                          savedData[`${currentStep}_recommendation`] ||
+                          savedData.message;
+      
+      if (currentAlert === 'NO RECOMMENDATIONS') {
+        currentAlert = null;
+      }
+
+      if (currentAlert) setAlert(currentAlert);
+    } else {
+      setText('');
+      setAlert(null);
+    }
+  }, [currentIdx, savedData, readOnly]);
+
+  useEffect(() => {
+    if (readOnly || text.trim().length < 5) return;
+    const timer = setTimeout(async () => {
+      triggerAnalyze(text);
     }, 1000);
     return () => clearTimeout(timer);
-  }, [text, currentIdx, recordId, readOnly]);
+  }, [text, currentIdx, feature, readOnly]);
 
   const handleNext = async () => {
     if (readOnly) {
       if (currentIdx < 3) {
         setCurrentIdx(currentIdx + 1);
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       } else {
         onBack();
       }
@@ -162,11 +322,21 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
     setLoading(true);
     try {
       const step = STEPS[currentIdx];
-      await updateADPIE(recordId, step.key, text);
+      const res = await apiClient.put(`/adpie/${diagId}/${step.key}`, {
+        [step.key]: text,
+        component: feature,
+      });
+      
+      const body = res.data?.data || res.data;
+      const latestAlert = body?.message || body?.[`${step.key}_alert`];
+      setSavedData((prev: any) => ({ 
+        ...prev, 
+        [step.key]: text,
+        [`${step.key}_alert`]: latestAlert
+      }));
+
       if (currentIdx < 3) {
         setCurrentIdx(currentIdx + 1);
-        setText('');
-        setAlert(null);
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       } else {
         showAlert(
@@ -179,7 +349,8 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
         );
       }
     } catch (e: any) {
-      showAlert('Error', 'Workflow update failed.');
+      console.error('Workflow update error:', e);
+      showAlert('Error', `Workflow update failed: ${e.message || 'Server Error'}`);
     } finally {
       setLoading(false);
     }
@@ -188,13 +359,20 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   const handleBack = () => {
     if (currentIdx > 0) {
       setCurrentIdx(currentIdx - 1);
-      setAlert(null);
-      setText('');
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } else {
       onBack();
     }
   };
+
+  if (initLoading) {
+    return (
+      <View style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={{ marginTop: 10, color: theme.text }}>Initializing ADPIE...</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -299,7 +477,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
               <View style={styles.bannerTextContent}>
                 <Text style={styles.bannerTitle}>Clinical Support</Text>
                 <Text style={styles.bannerSubText}>
-                  {alert ? 'Recommendation ready' : 'Analyzing findings...'}
+                  {isAnalyzing ? 'Analyzing findings...' : alert ? 'Recommendation ready' : 'Continue documenting...'}
                 </Text>
               </View>
             </View>

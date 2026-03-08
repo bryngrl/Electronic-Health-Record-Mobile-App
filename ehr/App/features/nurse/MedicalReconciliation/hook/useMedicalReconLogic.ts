@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import apiClient from '@api/apiClient';
 
 export const RECON_STAGES = [
@@ -13,31 +13,19 @@ export interface ReconEntry {
   route: string;
   freq: string;
   indication: string;
-  extra: string; // Administered stay? / Discontinued? / Reason for change
-}
-
-export interface Patient {
-  patient_id: number;
-  first_name: string;
-  last_name: string;
+  extra: string; 
 }
 
 const initialEntry: ReconEntry = { med: '', dose: '', route: '', freq: '', indication: '', extra: '' };
 
 export const useMedicalReconLogic = () => {
-  const [stageIndex, setStageIndex] = useState(0);
+  const [stageIndex, setStepIndex] = useState(0);
   const [patientId, setPatientId] = useState<number | null>(null);
   const [patientName, setPatientName] = useState('');
   
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const [existingIds, setExistingIds] = useState<{
-    current: number | null;
-    home: number | null;
-    changes: number | null;
-  }>({ current: null, home: null, changes: null });
-
   const [reconData, setReconData] = useState<Record<number, ReconEntry>>({
     0: { ...initialEntry },
     1: { ...initialEntry },
@@ -60,50 +48,43 @@ export const useMedicalReconLogic = () => {
   const currentStage = RECON_STAGES[stageIndex];
   const values = reconData[stageIndex];
 
-  // Fetch existing medications for selected patient
   const fetchPatientMedications = useCallback(async (id: number) => {
+    if (!id) return;
     setIsLoading(true);
     try {
-      const [homeRes, currentRes, changesRes] = await Promise.all([
-        apiClient.get(`/medication-reconciliation/home-medication/patient/${id}/`),
-        apiClient.get(`/medication-reconciliation/current-medication/patient/${id}/`),
-        apiClient.get(`/medication-reconciliation/changes-in-medication/patient/${id}/`),
-      ]);
+      console.log(`[MedicalRecon] Fetching for patient ${id}`);
+      const response = await apiClient.get(`/medical-reconciliation/patient/${id}`);
+      const { current: currentList, home: homeList, changes: changesList } = response.data;
 
-      const home = homeRes.data[0] || {};
-      const current = currentRes.data[0] || {};
-      const changes = changesRes.data[0] || {};
-
-      setExistingIds({
-        current: current.id || null,
-        home: home.id || null,
-        changes: changes.id || null
-      });
+      // Extract the first item (most recent in many Laravel setups)
+      const current = (Array.isArray(currentList) && currentList.length > 0) ? currentList[0] : {};
+      const home = (Array.isArray(homeList) && homeList.length > 0) ? homeList[0] : {};
+      const changes = (Array.isArray(changesList) && changesList.length > 0) ? changesList[0] : {};
 
       setReconData({
         0: {
-          med: current.current_med || '',
-          dose: current.current_dose || '',
-          route: current.current_route || '',
-          freq: current.current_frequency || '',
-          indication: current.current_indication || '',
-          extra: current.current_text || ''
+          med: current.current_med === 'N/A' ? '' : current.current_med || '',
+          dose: current.current_dose === 'N/A' ? '' : current.current_dose || '',
+          route: current.current_route === 'N/A' ? '' : current.current_route || '',
+          freq: current.current_frequency === 'N/A' ? '' : current.current_frequency || '',
+          indication: current.current_indication === 'N/A' ? '' : current.current_indication || '',
+          extra: current.current_text === 'N/A' ? '' : current.current_text || ''
         },
         1: {
-          med: home.home_med || '',
-          dose: home.home_dose || '',
-          route: home.home_route || '',
-          freq: home.home_frequency || '',
-          indication: home.home_indication || '',
-          extra: home.home_text || ''
+          med: home.home_med === 'N/A' ? '' : home.home_med || '',
+          dose: home.home_dose === 'N/A' ? '' : home.home_dose || '',
+          route: home.home_route === 'N/A' ? '' : home.home_route || '',
+          freq: home.home_frequency === 'N/A' ? '' : home.home_frequency || '',
+          indication: home.home_indication === 'N/A' ? '' : home.home_indication || '',
+          extra: home.home_text === 'N/A' ? '' : home.home_text || ''
         },
         2: {
-          med: changes.change_med || '',
-          dose: changes.change_dose || '',
-          route: changes.change_route || '',
-          freq: changes.change_frequency || '',
+          med: changes.change_med === 'N/A' ? '' : changes.change_med || '',
+          dose: changes.change_dose === 'N/A' ? '' : changes.change_dose || '',
+          route: changes.change_route === 'N/A' ? '' : changes.change_route || '',
+          freq: changes.change_frequency === 'N/A' ? '' : changes.change_frequency || '',
           indication: '',
-          extra: changes.change_text || ''
+          extra: changes.change_text === 'N/A' ? '' : changes.change_text || ''
         }
       });
     } catch (error) {
@@ -113,12 +94,10 @@ export const useMedicalReconLogic = () => {
     }
   }, []);
 
-  // Fetch data when patientId changes
-  useMemo(() => {
+  useEffect(() => {
     if (patientId) {
       fetchPatientMedications(patientId);
     } else {
-      setExistingIds({ current: null, home: null, changes: null });
       setReconData({
         0: { ...initialEntry },
         1: { ...initialEntry },
@@ -126,11 +105,6 @@ export const useMedicalReconLogic = () => {
       });
     }
   }, [patientId, fetchPatientMedications]);
-
-  // VALIDATION: Hindi makaka-next kung walang maski isang input
-  const isDataEntered = useMemo(() => {
-    return true; // Enable empty inputs as per requirement
-  }, []);
 
   const handleUpdate = (field: keyof ReconEntry, value: string) => {
     setReconData(prev => ({
@@ -140,94 +114,71 @@ export const useMedicalReconLogic = () => {
   };
 
   const submitReconciliation = async () => {
-    if (!patientId) {
-      setAlertConfig({
-        visible: true,
-        title: 'Patient Required',
-        message: 'Please select a patient first in the search bar.',
-        type: 'error'
-      });
-      return;
-    }
+    if (!patientId) return;
 
     setIsSubmitting(true);
-    const isUpdate = !!(existingIds.current || existingIds.home || existingIds.changes);
-
-    const sanitize = (val: string) => (val.trim() === '' ? 'N/A' : val);
+    const sanitize = (val: string) => (val && val.trim() === '' ? 'N/A' : val || 'N/A');
+    const pid = parseInt(patientId.toString(), 10);
 
     try {
-      const newIds = { ...existingIds };
+      console.log(`[MedicalRecon] Pattern-matched submission for patient ${pid}...`);
+      
+      const cMed = reconData[0];
+      const hMed = reconData[1];
+      const chMed = reconData[2];
 
-      // Stage 0: Current Medication
-      const currentMed = reconData[0];
+      // Logic: EXACTLY like Medical History - no ID, just POST with patient_id.
+      // The backend uses updateOrCreate logic based on patient_id.
+      
       const payload0 = {
-        patient_id: patientId,
-        current_med: sanitize(currentMed.med),
-        current_dose: sanitize(currentMed.dose),
-        current_route: sanitize(currentMed.route),
-        current_frequency: sanitize(currentMed.freq),
-        current_indication: sanitize(currentMed.indication),
-        current_text: sanitize(currentMed.extra)
+        patient_id: pid,
+        current_med: sanitize(cMed.med),
+        current_dose: sanitize(cMed.dose),
+        current_route: sanitize(cMed.route),
+        current_frequency: sanitize(cMed.freq),
+        current_indication: sanitize(cMed.indication),
+        current_text: sanitize(cMed.extra)
       };
 
-      if (existingIds.current) {
-        await apiClient.put(`/medication-reconciliation/current-medication/${existingIds.current}/`, payload0);
-      } else {
-        const res = await apiClient.post('/medication-reconciliation/current-medication/', payload0);
-        if (res.data?.id) newIds.current = res.data.id;
-      }
-
-      // Stage 1: Home Medication
-      const homeMed = reconData[1];
       const payload1 = {
-        patient_id: patientId,
-        home_med: sanitize(homeMed.med),
-        home_dose: sanitize(homeMed.dose),
-        home_route: sanitize(homeMed.route),
-        home_frequency: sanitize(homeMed.freq),
-        home_indication: sanitize(homeMed.indication),
-        home_text: sanitize(homeMed.extra)
+        patient_id: pid,
+        home_med: sanitize(hMed.med),
+        home_dose: sanitize(hMed.dose),
+        home_route: sanitize(hMed.route),
+        home_frequency: sanitize(hMed.freq),
+        home_indication: sanitize(hMed.indication),
+        home_text: sanitize(hMed.extra)
       };
 
-      if (existingIds.home) {
-        await apiClient.put(`/medication-reconciliation/home-medication/${existingIds.home}/`, payload1);
-      } else {
-        const res = await apiClient.post('/medication-reconciliation/home-medication/', payload1);
-        if (res.data?.id) newIds.home = res.data.id;
-      }
-
-      // Stage 2: Changes in Medication
-      const changeMed = reconData[2];
       const payload2 = {
-        patient_id: patientId,
-        change_med: sanitize(changeMed.med),
-        change_dose: sanitize(changeMed.dose),
-        change_route: sanitize(changeMed.route),
-        change_frequency: sanitize(changeMed.freq),
-        change_text: sanitize(changeMed.extra)
+        patient_id: pid,
+        change_med: sanitize(chMed.med),
+        change_dose: sanitize(chMed.dose),
+        change_route: sanitize(chMed.route),
+        change_frequency: sanitize(chMed.freq),
+        change_text: sanitize(chMed.extra)
       };
 
-      if (existingIds.changes) {
-        await apiClient.put(`/medication-reconciliation/changes-in-medication/${existingIds.changes}/`, payload2);
-      } else {
-        const res = await apiClient.post('/medication-reconciliation/changes-in-medication/', payload2);
-        if (res.data?.id) newIds.changes = res.data.id;
-      }
-
-      setExistingIds(newIds);
+      // Sequential POSTs to match Medical History's reliable flow
+      await apiClient.post('/medical-reconciliation/current', payload0);
+      await apiClient.post('/medical-reconciliation/home', payload1);
+      await apiClient.post('/medical-reconciliation/changes', payload2);
 
       setSuccessMessage({
-        title: isUpdate ? 'Successully Updated' : 'Successfully Submitted',
-        message: `Medication Reconciliation ${isUpdate ? 'updated' : 'submitted'} successfully!`,
+        title: 'Success',
+        message: 'Medication Reconciliation saved successfully!',
       });
       setSuccessVisible(true);
+      
+      // Refresh to pull the updated values back into the form
+      await fetchPatientMedications(pid);
 
-    } catch (error) {
-      console.error('Error submitting reconciliation:', error);
+    } catch (error: any) {
+      console.error('Error submitting reconciliation:', error?.response?.data || error.message);
       setAlertConfig({
         visible: true,
-        title: 'Error',
-        message: `Failed to ${isUpdate ? 'update' : 'submit'} medication reconciliation`,
+        title: 'Submission Error',
+        message: error?.response?.data?.message || 'Failed to save edits.',
         type: 'error'
       });
     } finally {
@@ -236,18 +187,14 @@ export const useMedicalReconLogic = () => {
   };
 
   const handleNext = () => {
-    if (isDataEntered) {
-      if (stageIndex < RECON_STAGES.length - 1) {
-        setStageIndex(prev => prev + 1);
-      } else {
-        submitReconciliation();
-      }
+    if (stageIndex < RECON_STAGES.length - 1) {
+      setStepIndex(prev => prev + 1);
+    } else {
+      submitReconciliation();
     }
   };
 
-  const closeAlert = () => {
-    setAlertConfig(prev => ({ ...prev, visible: false }));
-  };
+  const closeAlert = () => setAlertConfig(prev => ({ ...prev, visible: false }));
 
   const triggerPatientAlert = useCallback(() => {
     setAlertConfig({
@@ -259,10 +206,9 @@ export const useMedicalReconLogic = () => {
   }, []);
 
   const resetForm = useCallback(() => {
-    setStageIndex(0);
+    setStepIndex(0);
     setPatientId(null);
     setPatientName('');
-    setExistingIds({ current: null, home: null, changes: null });
     setReconData({
       0: { ...initialEntry },
       1: { ...initialEntry },
@@ -282,13 +228,12 @@ export const useMedicalReconLogic = () => {
     isSubmitting,
     handleUpdate,
     handleNext,
-    isDataEntered,
     isLastStage: stageIndex === RECON_STAGES.length - 1,
     alertConfig,
     closeAlert,
     triggerPatientAlert,
     resetForm,
-    setStageIndex,
+    setStageIndex: setStepIndex,
     RECON_STAGES,
     successMessage,
     successVisible,

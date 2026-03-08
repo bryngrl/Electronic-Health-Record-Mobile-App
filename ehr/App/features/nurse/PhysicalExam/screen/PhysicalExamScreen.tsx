@@ -15,15 +15,18 @@ import {
   StatusBar,
   BackHandler,
   Platform,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import ExamInputCard from '../components/PhysicalInputCard';
-import ADPIEScreen from './ADPIEScreen'; // Integrated Stepper
+import ADPIEScreen from '@components/ADPIEScreen';
 import { usePhysicalExam } from '../hook/usePhysicalExam';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
+
+const alertIcon = require('@assets/icons/alert.png');
 
 const initialFormData = {
   general_appearance: '',
@@ -36,7 +39,6 @@ const initialFormData = {
   neurological: '',
 };
 
-// UPDATED INTERFACE
 interface PhysicalExamProps {
   onBack: () => void;
   readOnly?: boolean;
@@ -56,8 +58,13 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
     [theme, commonStyles, isDarkMode],
   );
 
-  const { saveAssessment, checkAssessmentAlerts, fetchLatestPhysicalExam } =
-    usePhysicalExam();
+  const {
+    saveAssessment,
+    checkAssessmentAlerts,
+    fetchLatestPhysicalExam,
+    dataAlert,
+    fetchDataAlert,
+  } = usePhysicalExam();
   const [searchText, setSearchText] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
     null,
@@ -69,7 +76,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
     visible: boolean;
     title: string;
     message: string;
-    type: 'success' | 'error';
+    type: 'success' | 'error' | 'warning';
   }>({
     visible: false,
     title: '',
@@ -80,13 +87,14 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
   const showAlert = (
     title: string,
     message: string,
-    type: 'success' | 'error' = 'error',
+    type: 'success' | 'error' | 'warning' = 'error',
   ) => {
     setAlertConfig({ visible: true, title, message, type });
   };
 
   const [examId, setExamId] = useState<number | null>(null);
   const [backendAlerts, setBackendAlerts] = useState<any>({});
+  const [assessmentAlert, setAssessmentAlert] = useState<string | null>(null);
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
   const [isNA, setIsNA] = useState(false);
@@ -136,6 +144,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
 
   const loadPatientData = useCallback(
     async (pid: number) => {
+      fetchDataAlert(pid);
       const data = await fetchLatestPhysicalExam(pid);
       if (data) {
         setExamId(data.id);
@@ -171,7 +180,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
         setBackendAlerts({});
       }
     },
-    [fetchLatestPhysicalExam],
+    [fetchLatestPhysicalExam, fetchDataAlert],
   );
 
   useEffect(() => {
@@ -201,7 +210,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
           const result = await checkAssessmentAlerts({
             patient_id: selectedPatientId,
             ...formData,
-          });
+          }, examId);
           if (result) setBackendAlerts(result);
         } catch (e) {
           console.error('CDSS Real-time Error:', e);
@@ -210,10 +219,9 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [formData, selectedPatientId, checkAssessmentAlerts, isNA, readOnly]);
+  }, [formData, selectedPatientId, checkAssessmentAlerts, isNA, examId, readOnly]);
 
   const handleCDSSPress = async () => {
-    // READ ONLY LOGIC
     if (readOnly) {
         if (examId) {
             setIsAdpieActive(true);
@@ -224,7 +232,6 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
         return;
     }
 
-    // NURSE LOGIC
     if (!selectedPatientId) {
       return showAlert(
         'Patient Required',
@@ -233,24 +240,32 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
     }
 
     try {
-      const result = await saveAssessment({
-        patient_id: selectedPatientId,
-        ...formData,
-      });
+      const result = await saveAssessment(
+        {
+          patient_id: selectedPatientId,
+          ...formData,
+        },
+        examId,
+      );
 
-      const id = result.id || result.physical_exam_id;
+      const id = result?.id || result?.physical_exam_id || examId;
       if (id) {
         setExamId(id);
-        setIsAdpieActive(true); 
+        if (result?.assessment_alert || result?.alert) {
+          setAssessmentAlert(result.assessment_alert || result.alert);
+        }
+        setIsAdpieActive(true);
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      } else {
+        showAlert('Error', 'Could not retrieve assessment ID.');
       }
     } catch (e) {
+      console.error('CDSS Press Error:', e);
       showAlert('Error', 'Could not initiate clinical support.');
     }
   };
 
   const handleSave = async () => {
-    // READ ONLY LOGIC (Close button)
     if (readOnly) {
         onBack();
         return;
@@ -266,14 +281,12 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
       const result = await saveAssessment({
         patient_id: selectedPatientId,
         ...formData,
-      });
+      }, examId);
 
       const newId = result.id || result.physical_exam_id;
       const isUpdate = !!examId || result.updated_at !== result.created_at;
 
-      if (newId) {
-        setExamId(newId);
-      }
+      if (newId) setExamId(newId);
 
       showAlert(
         isUpdate ? 'SUCCESSFULLY UPDATED' : 'SUCCESSFULLY SUBMITTED',
@@ -289,7 +302,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
     }
   };
 
-  const formatDate = () => {
+  const getCurrentDate = () => {
     return new Date().toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
@@ -300,10 +313,6 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
   const updateField = (field: string, val: string) => {
     setFormData(prev => ({ ...prev, [field]: val }));
   };
-
-  const isDataEntered = Object.values(formData).some(
-    v => v && v.trim().length > 0 && v !== 'N/A',
-  );
 
   const fadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
@@ -317,14 +326,37 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
     ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
     : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
 
+  const generateFindingsSummary = () => {
+    const findings = Object.entries(formData)
+      .filter(([_, value]) => value && value.trim() !== '' && value !== 'N/A')
+      .map(([key, value]) => {
+        const label = key.replace(/_/g, ' ').toUpperCase();
+        return `${label}: ${value}`;
+      });
+    
+    const alerts = Object.entries(backendAlerts)
+      .filter(([_, value]) => typeof value === 'string' && value.trim() !== '' && !value.toLowerCase().includes('normal'))
+      .map(([_, value]) => value as string);
+
+    const summary = [...findings, ...alerts];
+    if (dataAlert) summary.push(dataAlert);
+
+    return summary.join('. ');
+  };
+
   if (isAdpieActive && examId && selectedPatientId) {
     return (
       <ADPIEScreen
-        examId={examId}
+        recordId={examId}
         patientName={searchText}
-        assessmentAlerts={backendAlerts}
-        onBack={() => setIsAdpieActive(false)}
-        readOnly={readOnly} // Pass readOnly if ADPIE supports it
+        feature="physical-exam"
+        findingsSummary={generateFindingsSummary()}
+        initialAlert={assessmentAlert || undefined}
+        onBack={() => {
+          setIsAdpieActive(false);
+          setAssessmentAlert(null);
+        }}
+        readOnly={readOnly}
       />
     );
   }
@@ -347,7 +379,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
           <View style={[styles.header, { marginBottom: 0 }]}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>Physical Exam</Text>
-              <Text style={styles.dateText}>{formatDate()}</Text>
+              <Text style={styles.subTitleDate}>{getCurrentDate()}</Text>
             </View>
           </View>
         </View>
@@ -368,7 +400,6 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
         >
           <View style={{ height: 20 }} />
           
-          {/* SEARCH BAR / STATIC PATIENT */}
           {!readOnly ? (
             <PatientSearchBar
                 onPatientSelect={(id, name) => {
@@ -385,7 +416,6 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
             </View>
           )}
 
-          {/* HIDE TOGGLE IN READ ONLY */}
           {!readOnly && (
             <TouchableOpacity
                 style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
@@ -433,12 +463,12 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
             <Text style={styles.bannerText}>PHYSICAL EXAMINATION</Text>
           </View>
 
-          {/* Assessment Notepad Cards */}
           <ExamInputCard
             label="GENERAL APPEARANCE"
             value={formData.general_appearance}
             disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.general_appearance_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('general_appearance', t)}
             onDisabledPress={() => {
               if (!selectedPatientId && !readOnly) {
@@ -454,6 +484,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
             value={formData.skin_condition}
             disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.skin_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('skin_condition', t)}
             onDisabledPress={() => {
               if (!selectedPatientId && !readOnly) {
@@ -469,6 +500,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
             value={formData.eye_condition}
             disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.eye_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('eye_condition', t)}
             onDisabledPress={() => {
               if (!selectedPatientId && !readOnly) {
@@ -484,6 +516,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
             value={formData.oral_condition}
             disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.oral_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('oral_condition', t)}
             onDisabledPress={() => {
               if (!selectedPatientId && !readOnly) {
@@ -499,6 +532,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
             value={formData.cardiovascular}
             disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.cardiovascular_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('cardiovascular', t)}
             onDisabledPress={() => {
               if (!selectedPatientId && !readOnly) {
@@ -514,6 +548,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
             value={formData.abdomen_condition}
             disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.abdomen_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('abdomen_condition', t)}
             onDisabledPress={() => {
               if (!selectedPatientId && !readOnly) {
@@ -529,6 +564,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
             value={formData.extremities}
             disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.extremities_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('extremities', t)}
             onDisabledPress={() => {
               if (!selectedPatientId && !readOnly) {
@@ -544,6 +580,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
             value={formData.neurological}
             disabled={!selectedPatientId || isNA || readOnly}
             alertText={backendAlerts.neurological_alert}
+            dataAlert={dataAlert}
             onChangeText={t => updateField('neurological', t)}
             onDisabledPress={() => {
               if (!selectedPatientId && !readOnly) {
@@ -556,7 +593,6 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
           />
 
           <View style={styles.footerRow}>
-            {/* CDSS Button: Always Visible. ReadOnly -> View CDSS. Nurse -> Create CDSS */}
             <TouchableOpacity
               style={[
                 styles.cdssBtn,
@@ -580,7 +616,6 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({
               </Text>
             </TouchableOpacity>
 
-            {/* Second Button: SUBMIT (Nurse) or CLOSE (Doctor) */}
             <TouchableOpacity
               style={[
                 styles.submitBtn,
@@ -630,12 +665,11 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     container: commonStyles.container,
     header: commonStyles.header,
     title: commonStyles.title,
-    dateText: {
+    subTitleDate: {
       fontSize: 13,
       fontFamily: 'AlteHaasGroteskBold',
       color: theme.textMuted,
     },
-    // New Static Patient styles
     staticPatientContainer: {
         marginBottom: 20,
         backgroundColor: theme.card,
@@ -658,6 +692,15 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
         fontSize: 16,
         fontWeight: 'bold'
     },
+    alertIcon: {
+      width: 45,
+      height: 45,
+      borderRadius: 22.5,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+    },
+    fullImg: { width: '80%', height: '80%', resizeMode: 'contain' },
     sectionLabel: {
       fontSize: 12,
       fontWeight: 'bold',

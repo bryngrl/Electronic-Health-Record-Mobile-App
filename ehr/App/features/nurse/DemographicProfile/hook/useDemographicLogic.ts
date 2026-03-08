@@ -1,6 +1,9 @@
 // App/features/DemographicProfile/hook/useDemographicLogic.ts
 import { useState, useCallback, useEffect } from 'react';
 import apiClient from '@api/apiClient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const PATIENTS_CACHE_KEY = '@demographic_patients_cache';
 
 export const useDemographicLogic = (
   onSelectionChange: (isSelecting: boolean) => void,
@@ -18,6 +21,21 @@ export const useDemographicLogic = (
 
   const isSelectionMode = selectedIds.size > 0;
 
+  // 1. Load cached patients on mount to ensure "sticky" list
+  useEffect(() => {
+    const loadCache = async () => {
+      try {
+        const cached = await AsyncStorage.getItem(PATIENTS_CACHE_KEY);
+        if (cached) {
+          setPatients(JSON.parse(cached));
+        }
+      } catch (e) {
+        console.error('Failed to load patients cache', e);
+      }
+    };
+    loadCache();
+  }, []);
+
   useEffect(() => {
     onSelectionChange(isSelectionMode);
   }, [isSelectionMode, onSelectionChange]);
@@ -25,16 +43,84 @@ export const useDemographicLogic = (
   const loadPatients = useCallback(async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
     try {
-      // Matches the pluralized path based on your registration code
-      const response = await apiClient.get('/patients/');
-      setPatients(response.data || []);
+      const timestamp = new Date().getTime();
+      // Use redundant parameters to bypass various backend filters
+      const url = `/patient?all=true&all=1&is_active=all&with_inactive=1&show_all=1&t=${timestamp}`;
+      const response = await apiClient.get(url);
+      
+      console.log(`[DEMOGRAPHIC FETCH] URL: ${url} Status: ${response.status}`);
+      
+      let incomingData = [];
+      if (Array.isArray(response.data)) {
+        incomingData = response.data;
+      } else if (response.data?.data && Array.isArray(response.data.data)) {
+        incomingData = response.data.data;
+      } else if (response.data?.patients && Array.isArray(response.data.patients)) {
+        incomingData = response.data.patients;
+      } else if (response.data?.success && response.data?.data) {
+        incomingData = Array.isArray(response.data.data) ? response.data.data : [response.data.data];
+      }
+      
+      if (Array.isArray(incomingData)) {
+        setPatients(prevPatients => {
+          // MASTER LIST LOGIC:
+          // We start with our current list. If a patient is in the new API data, we update it.
+          // If a patient is MISSING from the API data, we assume it became inactive on the web.
+          // We NEVER remove a patient from this list.
+          
+          const patientMap = new Map();
+          
+          // First, add all previous patients and mark them as inactive by default
+          // (They will be overwritten with fresh status if present in incomingData)
+          prevPatients.forEach(p => {
+            const id = p.patient_id || p.id;
+            if (id) {
+              patientMap.set(id, { ...p, is_active: 0 });
+            }
+          });
+          
+          // Second, merge/update with incoming data from API
+          incomingData.forEach(p => {
+            const id = p.patient_id || p.id;
+            if (id) {
+              const isActiveValue = String(p.is_active) === '1' || p.is_active === true || p.is_active === 1 ? 1 : 0;
+              patientMap.set(id, { ...p, is_active: isActiveValue });
+            }
+          });
+
+          // Convert back to array and sort by ID Descending
+          const finalData = Array.from(patientMap.values()).sort((a, b) => {
+            const idA = a.patient_id || a.id || 0;
+            const idB = b.patient_id || b.id || 0;
+            return idB - idA;
+          });
+
+          // Persist the master list to storage so it survives app restarts
+          AsyncStorage.setItem(PATIENTS_CACHE_KEY, JSON.stringify(finalData)).catch(e => 
+            console.error('Failed to save patients cache', e)
+          );
+          
+          return finalData;
+        });
+      }
     } catch (error) {
-      console.error('Profile Fetch Error:', error);
+      console.error('Demographic Profile Sync Error:', error);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
   }, []);
+
+  // Use a very aggressive polling interval (2 seconds) to pick up website changes immediately.
+  useEffect(() => {
+    if (isSelectionMode) return;
+    
+    const interval = setInterval(() => {
+      loadPatients(false);
+    }, 2000); 
+    
+    return () => clearInterval(interval);
+  }, [loadPatients, isSelectionMode]);
 
   // NEW: Function to handle Active/Inactive status updates
   const updateStatus = useCallback(
@@ -43,11 +129,11 @@ export const useDemographicLogic = (
       
       // Filter only those who actually need an update
       const idsToUpdate = Array.from(selectedIds).filter(id => {
-        const p = (patients as any[]).find(ptr => ptr.patient_id === id);
+        const p = (patients as any[]).find(ptr => (ptr.patient_id || ptr.id) === id);
         if (!p) return false;
         const currentStatus = typeof p.is_active === 'number' 
           ? p.is_active 
-          : (p.is_active ? 1 : 0);
+          : (p.is_active === true || p.is_active === 'true' || p.is_active === '1' ? 1 : 0);
         return currentStatus !== targetValue;
       });
 
@@ -65,20 +151,10 @@ export const useDemographicLogic = (
       setIsLoading(true);
       try {
         const updatePromises = idsToUpdate.map(id => {
-          const existingPatient = (patients as any[]).find(
-            p => p.patient_id === id,
-          );
-
-          const updatedData = {
-            ...existingPatient,
+          // Use the specific toggle-status endpoint as per SYNC_MOBILE_APP.md section 2
+          return apiClient.post(`/patient/${id}/toggle-status`, {
             is_active: targetValue,
-          };
-
-          delete updatedData.patient_id;
-          delete updatedData.created_at;
-          delete updatedData.updated_at;
-
-          return apiClient.put(`/patients/${id}`, updatedData);
+          });
         });
 
         await Promise.all(updatePromises);

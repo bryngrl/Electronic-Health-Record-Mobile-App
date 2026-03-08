@@ -1,10 +1,11 @@
-import axios from 'axios';
+﻿import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BACKEND_PORT = 8000;
 const YOUR_IP = '192.168.47.251'; //change this to match your current ip (ipconfig in cmd prompt)
 const host = YOUR_IP;
 
-export const BASE_URL = `http://${host}:${BACKEND_PORT}/`;
+export const BASE_URL = `http://${host}:${BACKEND_PORT}/api`;
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -15,17 +16,34 @@ const apiClient = axios.create({
   timeout: 15000,
 });
 
-apiClient.interceptors.request.use(request => {
-  console.log('Starting Request to:', request.baseURL, request.url);
-  return request;
-});
+// Interceptor to add Authorization header
+apiClient.interceptors.request.use(
+  async config => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        // Use the common headers object to ensure compatibility across axios versions
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error('Error fetching token from storage', error);
+    }
+    console.log('Starting Request to:', config.baseURL, config.url);
+    return config;
+  },
+  error => {
+    return Promise.reject(error);
+  },
+);
 
 apiClient.interceptors.response.use(
   response => {
     console.log('Response received:', response.status);
     return response;
   },
-  error => {
+  async error => {
+    const originalRequest = error.config;
+
     if (error.response) {
       // Server responded with error status
       console.error(
@@ -33,6 +51,20 @@ apiClient.interceptors.response.use(
         error.response.status,
         error.response.data,
       );
+
+      // If we get a 403 (or 401) it might be because the interceptor token was stale
+      // We can try to re-read from storage one time for specific requests
+      if (
+        (error.response.status === 403 || error.response.status === 401) &&
+        !originalRequest._retry
+      ) {
+        originalRequest._retry = true;
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return apiClient(originalRequest);
+        }
+      }
     } else if (error.request) {
       // Request made but no response received
       console.error(

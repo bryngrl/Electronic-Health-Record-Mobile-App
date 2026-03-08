@@ -30,7 +30,7 @@ import PreciseVitalChart from '@nurse/VitalSigns/component/VitalSignsChart';
 import { useVitalSignsLogic } from '@nurse/VitalSigns/hook/useVitalSignsLogic';
 import SweetAlert from '@components/SweetAlert';
 import CDSSModal from '@components/CDSSModal';
-import ADPIEScreen from '@nurse/VitalSigns/screen/ADPIEScreen';
+import ADPIEScreen from '@components/ADPIEScreen';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
 import apiClient from '@api/apiClient';
@@ -82,9 +82,12 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     isDataEntered,
     isDataComplete,
     currentAlert,
+    dataAlert,
     saveAssessment,
     isMenuVisible,
     setIsMenuVisible,
+    reset,
+    existingRecords,
   } = useVitalSignsLogic();
 
   const [chartIndex, setChartIndex] = useState(0);
@@ -93,6 +96,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
   const [cdssVisible, setCdssVisible] = useState(false);
   const [alertVisible, setAlertVisible] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [selectedPatient, setSelectedPatientFull] = useState<any | null>(null);
 
@@ -117,7 +121,6 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
 
   useEffect(() => {
     if (patientId) {
-      // Set the patient in the logic hook - this will trigger loadPatientData
       setSelectedPatient(patientId.toString(), initialPatientName || '');
       
       apiClient.get(`/patients/${patientId}`).then(res => {
@@ -128,8 +131,6 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
         apiClient.get(`/vital-signs/patient/${patientId}`).then(res => {
           if (res.data && res.data.length > 0) {
             setRecordId(res.data[0].id);
-            // If we are in read-only mode, we might want to see THIS specific record's data
-            // even if it's not from today.
           }
         });
       } else {
@@ -199,13 +200,29 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
         else handleNextTime();
         return;
     }
+
     if (!selectedPatientId) return setAlertVisible(true);
+
     if (isDataEntered || isNA) {
-      const dayNo = parseInt(calculateDayNumber(), 10);
+      const dayNo = parseInt(calculateDayNumber(), 10) || 1;
       const res = await saveAssessment(dayNo);
-      if (res && res.id) {
-        setRecordId(res.id);
+      
+      const actualData = res?.data || res;
+      const id = actualData?.id || actualData?.vital_id;
+
+      if (id) {
+        setRecordId(id);
+
         if (currentTimeIndex === TIME_SLOTS.length - 1) {
+          const isUpdate = (actualData.updated_at !== actualData.created_at) || 
+                           existingRecords.some(r => r.id === id);
+          
+          setSuccessMessage({
+            title: isUpdate ? 'Successfully Updated' : 'Successfully Submitted',
+            message: isUpdate
+              ? 'Vital signs updated successfully.'
+              : 'Vital signs submitted successfully.',
+          });
           setSuccessVisible(true);
           return;
         }
@@ -213,6 +230,22 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     }
     handleNextTime();
     scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const generateFindingsSummary = () => {
+    const findings = Object.entries(vitals)
+      .filter(([_, value]) => typeof value === 'string' && value.trim() !== '' && value !== 'N/A')
+      .map(([key, value]) => `${key.toUpperCase()}: ${value}`);
+    
+    if (currentAlert?.message) {
+      findings.push(currentAlert.message);
+    }
+
+    if (dataAlert) {
+      findings.push(dataAlert);
+    }
+    
+    return findings.join('. ');
   };
 
   const handleCDSSPress = async () => {
@@ -257,11 +290,14 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
       <ADPIEScreen
         recordId={recordId}
         patientName={patientName}
-        readOnly={readOnly}
+        feature="vital-signs"
+        findingsSummary={generateFindingsSummary()}
+        initialAlert={currentAlert?.message}
         onBack={() => {
           setIsAdpieActive(false);
           scrollViewRef.current?.scrollTo({ y: 0, animated: true });
         }}
+        readOnly={readOnly}
       />
     );
   }
@@ -289,16 +325,22 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
       <View style={{ flex: 1, marginTop: -20 }}>
         <ScrollView ref={scrollViewRef} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} scrollEnabled={scrollEnabled}>
           <View style={{ height: 20 }} />
-          <PatientSearchBar
-            onPatientSelect={(id, name, patientObj) => {
-              if (!readOnly) {
+          
+          {!readOnly ? (
+            <PatientSearchBar
+                onPatientSelect={(id, name, patientObj) => {
                 setSelectedPatient(id ? id.toString() : null, name);
                 setSelectedPatientFull(patientObj);
-              }
-            }}
-            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-            initialPatientName={patientName}
-          />
+                }}
+                onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+                initialPatientName={patientName}
+            />
+          ) : (
+            <View style={styles.staticPatientContainer}>
+                <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+                <Text style={styles.staticPatientName}>{initialPatientName || "Unknown Patient"}</Text>
+            </View>
+          )}
 
           <View style={styles.row}>
             <View style={{ flex: 1.2, marginRight: 10 }}>
@@ -405,9 +447,61 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
         <LinearGradient colors={fadeColors} style={styles.fadeBottom} pointerEvents="none" />
       </View>
 
-      <SweetAlert visible={alertVisible} title="Alert" message="Please select a patient first." type="error" onConfirm={() => setAlertVisible(false)} />
-      <SweetAlert visible={successVisible} title="Success" message="Vital Signs saved successfully." type="success" onConfirm={() => { setSuccessVisible(false); onBack(); }} />
-      <CDSSModal visible={cdssVisible} onClose={() => setCdssVisible(false)} category="VITAL SIGNS ASSESSMENT" alertText={currentAlert?.message || 'Stable findings.'} />
+      <SweetAlert
+        visible={alertVisible}
+        title={
+          !selectedPatientId
+            ? 'Patient Required'
+            : dataAlert
+            ? 'CLINICAL ALERT'
+            : currentAlert?.title || 'ALERT'
+        }
+        message={
+          !selectedPatientId
+            ? 'Please select a patient first in the search bar.'
+            : dataAlert
+            ? `${dataAlert}${
+                currentAlert?.message ? '\n\n' + currentAlert.message : ''
+              }`
+            : currentAlert?.message || 'No alerts.'
+        }
+        type={
+          !selectedPatientId ? 'error' : dataAlert ? 'error' : currentAlert?.type || 'success'
+        }
+        onConfirm={() => setAlertVisible(false)}
+        confirmText="OK"
+      />
+
+      <SweetAlert
+        visible={successVisible}
+        title={successMessage.title || 'SUCCESS'}
+        message={
+          successMessage.message ||
+          'Vital Signs Assessment has been saved successfully.'
+        }
+        type="success"
+        onConfirm={() => {
+          setSuccessVisible(false);
+          if (currentTimeIndex === TIME_SLOTS.length - 1) {
+            setRecordId(null);
+            reset();
+            setSelectedPatientFull(null);
+            onBack();
+          }
+        }}
+        confirmText="OK"
+      />
+
+      <CDSSModal
+        visible={cdssVisible}
+        onClose={() => setCdssVisible(false)}
+        category="VITAL SIGNS ASSESSMENT"
+        alertText={
+          dataAlert 
+            ? `${dataAlert}${currentAlert?.message ? '\n\n' + currentAlert.message : ''}`
+            : (currentAlert?.message || 'No clinical findings found.')
+        }
+      />
 
       <Modal transparent visible={isMenuVisible} animationType="fade">
         <View style={styles.modalOverlay}>
@@ -462,6 +556,28 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     submitButton: { flex: 1, height: 48, backgroundColor: theme.buttonBg, borderRadius: 25, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: theme.buttonBorder, marginLeft: 5 },
     submitBtnText: { color: theme.primary, fontFamily: 'AlteHaasGroteskBold', fontSize: 14 },
     disabledButton: { backgroundColor: theme.surface, borderColor: theme.border, opacity: 0.6 },
+    staticPatientContainer: {
+        marginBottom: 20,
+        backgroundColor: theme.card,
+        padding: 15,
+        borderRadius: 15,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: theme.border
+    },
+    staticPatientLabel: {
+        fontFamily: 'AlteHaasGroteskBold',
+        color: theme.primary,
+        fontSize: 12,
+        marginRight: 10
+    },
+    staticPatientName: {
+        fontFamily: 'AlteHaasGrotesk',
+        color: theme.text,
+        fontSize: 16,
+        fontWeight: 'bold'
+    },
     modalOverlay: { flex: 1, backgroundColor: theme.overlay, justifyContent: 'center', alignItems: 'center' },
     menuContainer: { width: '85%', backgroundColor: theme.card, borderRadius: 25, padding: 25, maxHeight: '80%' },
     menuTitle: { fontSize: 18, fontWeight: 'bold', color: theme.primary, marginBottom: 20, textAlign: 'center' },

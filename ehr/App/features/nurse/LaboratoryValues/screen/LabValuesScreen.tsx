@@ -19,7 +19,7 @@ import LabResultCard from '../components/LabResultCard';
 import apiClient from '@api/apiClient';
 import { useLabValues } from '../hook/useLabValues';
 import CDSSModal from '@components/CDSSModal';
-import ADPIEScreen from './ADPIEScreen';
+import ADPIEScreen from '@components/ADPIEScreen';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
@@ -60,11 +60,20 @@ const LabValuesScreen = ({
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(() => createStyles(theme, commonStyles, isDarkMode), [theme, commonStyles, isDarkMode]);
 
-  const { alerts, checkLabAlerts, saveLabAssessment } = useLabValues();
+  const {
+    alerts,
+    checkLabAlerts,
+    saveLabAssessment,
+    fetchLatestLabValues,
+    setAlerts,
+    dataAlert,
+    fetchDataAlert,
+  } = useLabValues();
   const [labId, setLabId] = useState<number | null>(null);
   const [selectedTest, setSelectedTest] = useState(LAB_TESTS[0]);
   const [result, setResult] = useState('');
   const [normalRange, setNormalRange] = useState('');
+  const [allLabData, setAllLabData] = useState<any>({});
 
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -198,6 +207,8 @@ const LabValuesScreen = ({
     return () => clearTimeout(timer);
   }, [result, normalRange, selectedTest, labId, selectedPatientId, readOnly]);
 
+  const [passedAlert, setPassedAlert] = useState<string | null>(null);
+
   const handleCDSSPress = async () => {
     if (readOnly) return;
 
@@ -214,9 +225,12 @@ const LabValuesScreen = ({
       [`${prefix}_normal_range`]: normalRange,
     };
     try {
-      const res = await saveLabAssessment(payload);
+      const res = await saveLabAssessment(payload, labId);
       if (res && res.id) {
         setLabId(res.id);
+        if (res.assessment_alert || res.alert) {
+          setPassedAlert(res.assessment_alert || res.alert);
+        }
         setIsAdpieActive(true);
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
@@ -252,14 +266,21 @@ const LabValuesScreen = ({
       [`${prefix}_normal_range`]: normalRange,
     };
     try {
+      let finalRes;
       if (!labId) {
-        const res = await saveLabAssessment(payload);
-        if (res && res.id) setLabId(res.id);
+        finalRes = await saveLabAssessment(payload, labId);
+        if (finalRes && finalRes.id) setLabId(finalRes.id);
       } else {
+        finalRes = await saveLabAssessment(payload, labId);
         await checkLabAlerts(labId, {
           [`${prefix}_result`]: result,
           [`${prefix}_normal_range`]: normalRange,
         });
+      }
+
+      // Update local storage of all results
+      if (finalRes) {
+          setAllLabData(finalRes);
       }
 
       if (selectedTest === 'Basophils (%)') {
@@ -267,9 +288,14 @@ const LabValuesScreen = ({
         setTimeout(() => onBack(), 1500);
       } else {
         const idx = LAB_TESTS.indexOf(selectedTest);
-        setSelectedTest(LAB_TESTS[idx + 1]);
-        setResult(isNA ? 'N/A' : '');
-        setNormalRange(isNA ? 'N/A' : '');
+        const nextTest = LAB_TESTS[idx + 1];
+        setSelectedTest(nextTest);
+        
+        // Load data for NEXT test if it exists
+        const nextPrefix = getBackendPrefix(nextTest);
+        setResult(allLabData[`${nextPrefix}_result`] || (isNA ? 'N/A' : ''));
+        setNormalRange(allLabData[`${nextPrefix}_normal_range`] || (isNA ? 'N/A' : ''));
+        
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
     } catch (e) {
@@ -277,10 +303,41 @@ const LabValuesScreen = ({
     }
   };
 
-  const handlePatientSelect = (id: number | null, name: string) => {
+  const handlePatientSelect = async (id: number | null, name: string) => {
     setSelectedPatientId(id ? id.toString() : null);
     setSearchText(name);
+    if (id) {
+      fetchDataAlert(id);
+      const data = await fetchLatestLabValues(id);
+      if (data) {
+        setLabId(data.id);
+        setAllLabData(data);
+        const prefix = getBackendPrefix(selectedTest);
+        setResult(data[`${prefix}_result`] || '');
+        setNormalRange(data[`${prefix}_normal_range`] || '');
+        setAlerts(data);
+      } else {
+        setLabId(null);
+        setAllLabData({});
+        setResult('');
+        setNormalRange('');
+        setAlerts({});
+      }
+    } else {
+      setLabId(null);
+      setAllLabData({});
+      setResult('');
+      setNormalRange('');
+      setAlerts({});
+    }
   };
+
+  // Sync inputs when test changes
+  useEffect(() => {
+      const prefix = getBackendPrefix(selectedTest);
+      setResult(allLabData[`${prefix}_result`] || (isNA ? 'N/A' : ''));
+      setNormalRange(allLabData[`${prefix}_normal_range`] || (isNA ? 'N/A' : ''));
+  }, [selectedTest]);
 
   const fadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
@@ -294,14 +351,32 @@ const LabValuesScreen = ({
     ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
     : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
 
+  const generateFindingsSummary = () => {
+    const findings = Object.entries(allLabData)
+      .filter(([key, value]) => key.endsWith('_result') && typeof value === 'string' && value.trim() !== '' && value !== 'N/A')
+      .map(([key, value]) => {
+          const test = key.replace('_result', '').toUpperCase();
+          return `${test}: ${value}`;
+      });
+    
+    if (dataAlert) {
+      findings.push(dataAlert);
+    }
+
+    return findings.join('. ');
+  };
+
   if (isAdpieActive && labId && selectedPatientId) {
     return (
       <ADPIEScreen
-        labId={labId}
-        patientId={selectedPatientId}
+        recordId={labId}
         patientName={searchText}
+        feature="lab-values"
+        findingsSummary={generateFindingsSummary()}
+        initialAlert={passedAlert || undefined}
         onBack={() => {
           setIsAdpieActive(false);
+          setPassedAlert(null);
           scrollViewRef.current?.scrollTo({ y: 0, animated: true });
         }}
         readOnly={readOnly} // Pass readOnly if supported by ADPIE
@@ -313,10 +388,10 @@ const LabValuesScreen = ({
   // In read only, we rely on fetched data
   const hasInputData = result.trim() !== '' && normalRange.trim() !== '';
   const isClinicalAlert =
-    currentAlert &&
+    (currentAlert &&
     currentAlert !== 'Normal' &&
     !currentAlert.includes('No result') &&
-    !currentAlert.includes('Unable to compare');
+    !currentAlert.includes('Unable to compare')) || (dataAlert && dataAlert.trim() !== '');
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -591,7 +666,7 @@ const LabValuesScreen = ({
       <CDSSModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        alertText={currentAlert || ''}
+        alertText={dataAlert ? `${dataAlert}${currentAlert ? '\n\n' + currentAlert : ''}` : (currentAlert || 'No clinical findings found.')}
       />
 
       <SweetAlert

@@ -85,7 +85,8 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
       setLoading(true);
       setError(null);
       try {
-        const response = await apiClient.get('/patients/');
+        // Use all=true to ensure we get both active and inactive patients.
+        const response = await apiClient.get('/patient?all=true');
         let raw = [];
         if (Array.isArray(response.data)) {
           raw = response.data;

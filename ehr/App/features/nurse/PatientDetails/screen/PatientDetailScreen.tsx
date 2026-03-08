@@ -23,6 +23,7 @@ interface PatientDetailsScreenProps {
   route?: any;
   navigation?: any;
   patientId?: number;
+  patientData?: any;
   onBack?: () => void;
   onEdit?: (patientId: number) => void;
 }
@@ -31,6 +32,7 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
   route,
   navigation,
   patientId: propPatientId,
+  patientData: propPatientData,
   onBack,
   onEdit,
 }) => {
@@ -43,24 +45,31 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
   const patientId = propPatientId || route?.params?.patientId || 1;
   const { getPatientById } = usePatients();
 
-  const [patient, setPatient] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [patient, setPatient] = useState<any>(propPatientData || null);
+  const [isLoading, setIsLoading] = useState(!propPatientData);
 
   useEffect(() => {
     const fetchDetails = async () => {
+      // If we already have full patient data (from Demographic Profile),
+      // we don't need to fetch from the API and risk a "No query results" error.
+      if (propPatientData && propPatientData.first_name) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        setIsLoading(true);
+        if (!patient) setIsLoading(true);
         const data = await getPatientById(patientId);
-        setPatient(data);
+        if (data) setPatient(data);
       } catch (error) {
-        console.error('Error fetching patient:', error);
+        console.error('Error fetching patient details:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchDetails();
-  }, [patientId, getPatientById]);
+  }, [patientId, getPatientById, propPatientData]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '';

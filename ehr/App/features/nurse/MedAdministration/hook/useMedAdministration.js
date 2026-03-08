@@ -53,19 +53,14 @@ export const useMedAdministration = () => {
     try {
       const response = await apiClient.get(`/medication-administration/patient/${patientId}`);
       const records = response.data || [];
-      if (records.length === 0) return;
-
-      // Find records for the requested date, or fallback to the latest date
+      
       const rawDate = toRawDate(dateStr);
       let targetRecords = records.filter(r => r.date === rawDate);
       
-      if (targetRecords.length === 0) {
-        const latestDate = records[0].date;
-        targetRecords = records.filter(r => r.date === latestDate);
-        // Update display date to match the loaded data
-        const d = new Date(latestDate);
-        const formatted = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-        setFormData(prev => ({ ...prev, date: formatted }));
+      if (targetRecords.length === 0 && records.length > 0) {
+        // If no records for today, but there are records, maybe show latest? 
+        // Or just show empty for today. The screen seems to want to show today's.
+        // I'll stick to rawDate.
       }
 
       const newMeds = [
@@ -79,11 +74,11 @@ export const useMedAdministration = () => {
         if (timeIndex !== -1) {
           newMeds[timeIndex] = {
             id: record.id,
-            medication: record.medication || '',
-            dose: record.dose || '',
-            route: record.route || '',
-            frequency: record.frequency || '',
-            comments: record.comments || '',
+            medication: record.medication === 'N/A' ? '' : (record.medication || ''),
+            dose: record.dose === 'N/A' ? '' : (record.dose || ''),
+            route: record.route === 'N/A' ? '' : (record.route || ''),
+            frequency: record.frequency === 'N/A' ? '' : (record.frequency || ''),
+            comments: record.comments === 'N/A' ? '' : (record.comments || ''),
           };
         }
       });
@@ -94,7 +89,7 @@ export const useMedAdministration = () => {
         patient_id: patientId,
       }));
     } catch (error) {
-      console.error('Error fetching patient med data:', error);
+      console.error('Error in fetchPatientData:', error);
     }
   }, []);
 
@@ -102,35 +97,43 @@ export const useMedAdministration = () => {
     if (!formData.patient_id) throw new Error('Patient is required');
     const sanitize = val => (val === null || (typeof val === 'string' && val.trim() === '')) ? 'N/A' : val;
     const rawDate = toRawDate(formData.date);
-    const errors = [];
     
-    for (let i = 0; i <= step; i++) {
-      const med = formData.medications[i];
-      if (med.medication === '' && !med.id) continue;
+    const med = formData.medications[step];
+    // If medication is empty and no record exists, we might skip but usually we save N/A
+    
+    const payload = {
+      patient_id: parseInt(formData.patient_id, 10),
+      medication: sanitize(med.medication),
+      dose: sanitize(med.dose),
+      route: sanitize(med.route),
+      frequency: sanitize(med.frequency),
+      comments: sanitize(med.comments),
+      time: rawTimeSlots[step],
+      date: rawDate,
+    };
 
-      const payload = {
-        patient_id: parseInt(formData.patient_id, 10),
-        medication: sanitize(med.medication),
-        dose: sanitize(med.dose),
-        route: sanitize(med.route),
-        frequency: sanitize(med.frequency),
-        comments: sanitize(med.comments),
-        time: rawTimeSlots[i],
-        date: rawDate,
-      };
-
-      try {
-        if (med.id) {
-          await apiClient.put(`/medication-administration/${med.id}`, payload);
-        } else {
-          await apiClient.post('/medication-administration/', payload);
-        }
-      } catch (err) {
-        errors.push(`${displayTimeSlots[i]}: ${err?.response?.data?.detail || err.message}`);
+    try {
+      let response;
+      if (med.id) {
+        response = await apiClient.put(`/medication-administration/${med.id}`, payload);
+      } else {
+        response = await apiClient.post('/medication-administration/', payload);
       }
+      
+      const savedData = response.data?.data || response.data;
+      if (savedData?.id) {
+        setFormData(prev => {
+          const newMeds = [...prev.medications];
+          newMeds[step] = { ...newMeds[step], id: savedData.id };
+          return { ...prev, medications: newMeds };
+        });
+      }
+      return savedData;
+    } catch (err) {
+      console.error(`Error saving med step ${step}:`, err?.response?.data || err.message);
+      const serverMsg = err?.response?.data?.message || err?.response?.data?.detail;
+      throw new Error(serverMsg || err.message || 'Failed to save');
     }
-
-    if (errors.length > 0) throw new Error(`Failed to save some records:\n${errors.join('\n')}`);
   };
 
   return {

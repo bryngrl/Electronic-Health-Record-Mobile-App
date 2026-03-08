@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+// MedAdministration/screen/MedAdministrationScreen.tsx
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,16 +8,11 @@ import {
   SafeAreaView,
   StatusBar,
   TouchableOpacity,
-  TextInput,
-  Pressable,
   BackHandler,
-  Platform,
-  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MedAdministrationInputCard from '../components/MedAdministrationInputCard';
 import { useMedAdministration } from '../hook/useMedAdministration';
-import apiClient from '@api/apiClient';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import LinearGradient from 'react-native-linear-gradient';
@@ -44,6 +40,7 @@ const MedAdministrationScreen = ({
 
   const {
     step,
+    setStep,
     timeSlots,
     formData,
     setFormData,
@@ -56,15 +53,16 @@ const MedAdministrationScreen = ({
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [isNA, setIsNA] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
-  const lastFetched = useRef<{ id: number | null; date: string }>({
-    id: null,
-    date: '',
-  });
+  
+  // Dedicated state for selected patient ID to trigger fetching properly
+  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
+  const lastFetchedRef = useRef<{ id: number | null; date: string }>({ id: null, date: '' });
 
   // --- DOCTOR VIEWING LOGIC ---
   useEffect(() => {
     if (readOnly && patientId) {
-      // Manually set patient info to trigger fetchPatientData
+      // Trigger selection logic in hook to load data
+      setSelectedPatientId(patientId);
       setFormData(prev => ({
         ...prev,
         patient_id: patientId,
@@ -101,16 +99,15 @@ const MedAdministrationScreen = ({
   };
 
   useEffect(() => {
-    if (formData.patient_id) {
+    if (selectedPatientId || (readOnly && patientId)) {
       const currentMed = formData.medications[step];
-      const allNA = Object.keys(currentMed)
-        .filter(k => k !== 'id')
+      const allNA = ['medication', 'dose', 'route', 'frequency', 'comments']
         .every(k => (currentMed as any)[k] === 'N/A');
       setIsNA(allNA);
     } else {
       setIsNA(false);
     }
-  }, [formData.patient_id, step, formData.medications]);
+  }, [selectedPatientId, patientId, readOnly, step, formData.medications]);
 
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
@@ -146,18 +143,17 @@ const MedAdministrationScreen = ({
     setAlertConfig({ visible: true, title, message, type });
   };
 
+  // Robust fetching logic matching Medical History pattern
   useEffect(() => {
-    if (
-      formData.patient_id &&
-      (formData.patient_id !== lastFetched.current.id ||
-        formData.date !== lastFetched.current.date)
-    ) {
-      lastFetched.current = { id: formData.patient_id, date: formData.date };
-      fetchPatientData(formData.patient_id, formData.date);
+    const pid = selectedPatientId || (readOnly ? patientId : null);
+    if (pid && (pid !== lastFetchedRef.current.id || formData.date !== lastFetchedRef.current.date)) {
+        lastFetchedRef.current = { id: pid, date: formData.date };
+        fetchPatientData(pid, formData.date);
     }
-  }, [formData.patient_id, formData.date, fetchPatientData]);
+  }, [selectedPatientId, patientId, readOnly, formData.date, fetchPatientData]);
 
   const handlePatientSelect = (id: number | null, name: string) => {
+    setSelectedPatientId(id);
     if (id) {
       setFormData(prev => ({
         ...prev,
@@ -165,42 +161,22 @@ const MedAdministrationScreen = ({
         patientName: name,
       }));
     } else {
+      lastFetchedRef.current = { id: null, date: '' };
       setFormData(prev => ({
         ...prev,
         patient_id: null,
         patientName: '',
         medications: [
-          {
-            id: null,
-            medication: '',
-            dose: '',
-            route: '',
-            frequency: '',
-            comments: '',
-          },
-          {
-            id: null,
-            medication: '',
-            dose: '',
-            route: '',
-            frequency: '',
-            comments: '',
-          },
-          {
-            id: null,
-            medication: '',
-            dose: '',
-            route: '',
-            frequency: '',
-            comments: '',
-          },
+          { medication: '', dose: '', route: '', frequency: '', comments: '' },
+          { medication: '', dose: '', route: '', frequency: '', comments: '' },
+          { medication: '', dose: '', route: '', frequency: '', comments: '' },
         ],
       }));
     }
   };
 
   const currentMed = formData.medications[step];
-  const isFormValid = !!formData.patient_id;
+  const isFormValid = !!selectedPatientId || (readOnly && !!patientId);
 
   const handleAction = async () => {
     // DOCTOR/VIEWING NAVIGATION
@@ -222,24 +198,28 @@ const MedAdministrationScreen = ({
       );
     }
 
-    if (step === 2) {
-      try {
-        await saveMedAdministration();
+    try {
+      // Save current step data
+      await saveMedAdministration();
+
+      if (step === 2) {
         showAlert(
           'Success',
           'Medication Administration records saved successfully.',
           'success',
         );
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-      } catch (error: any) {
-        showAlert(
-          'Error',
-          error.message || 'Failed to save medication administration.',
-        );
+        // Refresh data to show what was saved
+        fetchPatientData(formData.patient_id, formData.date);
+      } else {
+        nextStep();
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
-    } else {
-      nextStep();
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    } catch (error: any) {
+      showAlert(
+        'Error',
+        error.message || 'Failed to save medication administration.',
+      );
     }
   };
 
@@ -384,38 +364,38 @@ const MedAdministrationScreen = ({
           {/* Input Cards */}
           <MedAdministrationInputCard
             label="Medication"
-            value={currentMed.medication}
+            value={currentMed?.medication || ''}
             onChangeText={t => updateCurrentMed('medication', t)}
-            editable={!!formData.patient_id && !isNA && !readOnly}
+            editable={!!isFormValid && !isNA && !readOnly}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
             label="Dose"
-            value={currentMed.dose}
+            value={currentMed?.dose || ''}
             onChangeText={t => updateCurrentMed('dose', t)}
-            editable={!!formData.patient_id && !isNA && !readOnly}
+            editable={!!isFormValid && !isNA && !readOnly}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
             label="Route"
-            value={currentMed.route}
+            value={currentMed?.route || ''}
             onChangeText={t => updateCurrentMed('route', t)}
-            editable={!!formData.patient_id && !isNA && !readOnly}
+            editable={!!isFormValid && !isNA && !readOnly}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
             label="Frequency"
-            value={currentMed.frequency}
+            value={currentMed?.frequency || ''}
             onChangeText={t => updateCurrentMed('frequency', t)}
-            editable={!!formData.patient_id && !isNA && !readOnly}
+            editable={!!isFormValid && !isNA && !readOnly}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
             label="Comments"
-            value={currentMed.comments}
+            value={currentMed?.comments || ''}
             onChangeText={t => updateCurrentMed('comments', t)}
             multiline
-            editable={!!formData.patient_id && !isNA && !readOnly}
+            editable={!!isFormValid && !isNA && !readOnly}
             onDisabledPress={onDisabledPress}
           />
 
@@ -423,26 +403,21 @@ const MedAdministrationScreen = ({
           <TouchableOpacity
             style={[
               styles.actionBtn,
-              (!formData.patient_id && !readOnly) && {
+              (!isFormValid && !readOnly) && {
                 backgroundColor: theme.buttonDisabledBg,
                 borderColor: theme.buttonDisabledBorder,
               },
             ]}
             onPress={handleAction}
             // Allow press if readOnly (for navigation) OR if form valid (for submit)
-            disabled={!readOnly && (!isFormValid || (isFormValid && currentMed.medication === '' && !isNA))}
+            disabled={!readOnly && (!isFormValid || (isFormValid && currentMed?.medication === '' && !isNA))}
           >
             <Text
               style={[
                 styles.actionBtnText,
-                (!formData.patient_id && !readOnly) && { color: theme.textMuted },
+                (!isFormValid && !readOnly) && { color: theme.textMuted },
               ]}
             >
-              {/* Logic: 
-                  - Step 2 + ReadOnly = CLOSE
-                  - Step 2 + Not ReadOnly = SUBMIT
-                  - Step < 2 = NEXT
-              */}
               {step === 2 ? (readOnly ? 'CLOSE' : 'SUBMIT') : 'NEXT'}
             </Text>
             
@@ -451,7 +426,7 @@ const MedAdministrationScreen = ({
               <Icon
                 name="chevron-right"
                 size={24}
-                color={formData.patient_id || readOnly ? theme.primary : theme.textMuted}
+                color={isFormValid || readOnly ? theme.primary : theme.textMuted}
               />
             )}
           </TouchableOpacity>

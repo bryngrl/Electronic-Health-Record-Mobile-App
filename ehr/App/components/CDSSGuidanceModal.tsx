@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
+import { Modal, View, Text, StyleSheet, TouchableOpacity, Pressable, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 // Theme constants aligned with PhysicalExamScreen
@@ -22,6 +22,75 @@ const CDSSGuidanceModal: React.FC<CDSSModalProps> = ({
   category, 
   alertText 
 }) => {
+  const renderFormattedText = (text: string | null) => {
+    if (!text || typeof text !== 'string') return null;
+    // Split by " | " or newlines in case there are multiple concatenated alerts
+    const lines = text.split(/ \| |\n/);
+
+    return lines.map((line, index) => {
+      if (!line.trim()) return null;
+
+      const upperLine = line.toUpperCase();
+      let titleColor = '#374151'; // Default gray for text
+      let alertTitle = '';
+      let alertDesc = line;
+
+      // 1. Identify Severity and set Title Color
+      if (
+        line.includes('🔴') ||
+        upperLine.includes('CRITICAL') ||
+        upperLine.includes('SEVERE')
+      ) {
+        titleColor = '#C62828'; // Deep Red
+      } else if (
+        line.includes('🟠') ||
+        upperLine.includes('WARNING') ||
+        upperLine.includes('LOW')
+      ) {
+        titleColor = '#E65100'; // Deep Orange
+      } else if (
+        line.includes('✓') ||
+        upperLine.includes('NORMAL') ||
+        upperLine.includes('INFO') ||
+        upperLine.includes('SUCCESS')
+      ) {
+        titleColor = '#2E7D32'; // Deep Green
+      }
+
+      // 2. Try to split into Title and Description at the colon
+      const splitIndex = line.indexOf(':');
+      if (splitIndex !== -1) {
+        alertTitle = line.substring(0, splitIndex + 1);
+        alertDesc = line.substring(splitIndex + 1);
+      } else {
+        // Fallback: If no colon, try to color the first part if it has an emoji
+        const words = line.split(' ');
+        if (
+          words.length > 1 &&
+          (line.includes('🔴') || line.includes('🟠') || line.includes('✓'))
+        ) {
+          alertTitle = words[0] + ' ' + (words[1] || '') + ' ';
+          alertDesc = words.slice(2).join(' ');
+        } else {
+          alertTitle = line;
+          alertDesc = '';
+        }
+      }
+
+      return (
+        <View key={index} style={styles.alertLineContainer}>
+          <Text style={styles.alertContent}>
+            <Text style={{ color: titleColor, fontWeight: 'bold' }}>
+              {alertTitle}
+            </Text>
+            <Text style={{ color: '#374151' }}>{alertDesc}</Text>
+          </Text>
+          {index < lines.length - 1 ? <View style={{ height: 10 }} /> : null}
+        </View>
+      );
+    });
+  };
+
   return (
     <Modal
       animationType="fade"
@@ -33,16 +102,22 @@ const CDSSGuidanceModal: React.FC<CDSSModalProps> = ({
         <View style={styles.container}>
           {/* Header section with Psychology/AI icon */}
           <View style={styles.header}>
-            <Icon name="info-outline" size={24} color={THEME_GREEN} />
+            <Icon name="psychology" size={24} color={THEME_GREEN} />
             <Text style={styles.modalTitle}>{title}</Text>
           </View>
 
           <View style={styles.body}>
             {/* Phase indicator (Diagnosis, Planning, etc.) */}
             {category && <Text style={styles.categoryText}>{category.toUpperCase()} PHASE</Text>}
-            <Text style={styles.alertContent}>
-              {alertText || "No specific risks detected. Continue documenting findings to receive real-time support."}
-            </Text>
+            <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
+              {alertText ? (
+                renderFormattedText(alertText)
+              ) : (
+                <Text style={styles.alertContent}>
+                  No specific risks detected. Continue documenting findings to receive real-time support.
+                </Text>
+              )}
+            </ScrollView>
           </View>
 
           {/* Action button styled to match your NEXT/SUBMIT buttons */}
@@ -93,6 +168,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold', 
     letterSpacing: 1, 
     marginBottom: 5 
+  },
+  alertLineContainer: {
+    marginBottom: 5
   },
   alertContent: { 
     color: '#374151', 
