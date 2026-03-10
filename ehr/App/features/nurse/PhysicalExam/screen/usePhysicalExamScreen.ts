@@ -159,6 +159,12 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
         val,
         alertKey!,
       );
+
+      if (result?.examId && !examIdRef.current) {
+        examIdRef.current = result.examId;
+        setExamId(result.examId);
+      }
+
       if (alertKey) {
         setBackendAlerts(prev => ({ ...prev, [alertKey]: result?.alert ?? null }));
       }
@@ -176,7 +182,7 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
         examIdRef.current,
       );
       const record = result?.data || result;
-      const id = record?.id || record?.physical_exam_id || examIdRef.current;
+      const id = record?.id || examIdRef.current;
       if (id) {
         setExamId(id);
         examIdRef.current = id;
@@ -207,8 +213,8 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
         examIdRef.current,
       );
       const record = result?.data || result;
-      const newId = record?.id || record?.physical_exam_id;
-      const isUpdate = !!examId || record?.updated_at !== record?.created_at;
+      const newId = record?.id;
+      const isUpdate = !!examIdRef.current; // examIdRef was set → this was an update
       if (newId) {
         setExamId(newId);
         examIdRef.current = newId;
@@ -223,7 +229,7 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
         setBackendAlerts(updated);
       }
       showAlert(
-        isUpdate ? 'SUCCESSFULLY UPDATED' : 'SUCCESSFULLY SUBMITTED',
+        isUpdate ? 'Successfully Updated' : 'Successfully Submitted',
         `Physical Exam has been ${isUpdate ? 'updated' : 'submitted'} successfully.`,
         'success',
       );

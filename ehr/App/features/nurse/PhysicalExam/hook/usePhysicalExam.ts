@@ -34,7 +34,7 @@ export const usePhysicalExam = () => {
     fieldName: string,
     finding: string,
     alertKey: string,
-  ): Promise<{ alert: string; severity: string } | null> => {
+  ): Promise<{ alert: string | null; severity: string | null; examId: number | null } | null> => {
     if (!finding || finding.trim().length < 3 || finding === 'N/A') return null;
     try {
       let response;
@@ -49,19 +49,47 @@ export const usePhysicalExam = () => {
           [fieldName]: finding,
         });
       }
-      // Top-level alerts object has all _alert keys
-      const alerts = response.data?.alerts || response.data?.data || {};
-      const alertText: string = (alerts[alertKey] || '').toString().trim();
-      if (!alertText || alertText === 'No Findings') return null;
-      // Severity is not returned by this endpoint — infer from alert text
+
+      console.log(`[CDSS][${fieldName}] raw response:`, JSON.stringify(response.data, null, 2));
+
+      // Response: { message, data: { id, ...fields, ...alert_columns }, alerts: { alertKey: value } }
+      const alerts = response.data?.alerts || {};
+      const record = response.data?.data || {};
+
+      // Capture the record id so subsequent calls update, not create
+      const returnedExamId: number | null = record?.id || null;
+
+      // alerts object is preferred; fall back to the data record
+      const alertText: string = (alerts[alertKey] || record[alertKey] || '').toString().trim();
+      console.log(`[CDSS][${fieldName}] alertKey="${alertKey}" → alertText="${alertText}"`);
+
+      if (!alertText || alertText === 'No Findings') return { alert: null, severity: null, examId: returnedExamId };
+
+      // Infer severity from alert text keywords from YAML rules
       const upper = alertText.toUpperCase();
-      const severity = upper.includes('URGENT') || upper.includes('CRITICAL') || upper.includes('IMMEDIATELY')
-        ? 'CRITICAL'
-        : upper.includes('EVALUATE') || upper.includes('MONITOR') || upper.includes('CONSIDER')
-          ? 'WARNING'
-          : 'INFO';
-      return { alert: alertText, severity };
+      let severity = 'INFO';
+      if (
+        upper.includes('URGENT') || upper.includes('CRITICAL') ||
+        upper.includes('IMMEDIATELY') || upper.includes('EMERGENCY') ||
+        upper.includes('PERITONITIS') || upper.includes('SEPSIS')
+      ) {
+        severity = 'CRITICAL';
+      } else if (
+        upper.includes('EVALUATE') || upper.includes('MONITOR') ||
+        upper.includes('ASSESS') || upper.includes('REFER') ||
+        upper.includes('DISEASE') || upper.includes('INFECTION') ||
+        upper.includes('ABNORMAL') || upper.includes('SUSPECTED') ||
+        upper.includes('LIVER') || upper.includes('HEMOLYSIS') ||
+        upper.includes('JAUNDICE') || upper.includes('PALLOR') ||
+        upper.includes('TREAT') || upper.includes('ELEVATED')
+      ) {
+        severity = 'WARNING';
+      }
+
+      console.log(`[CDSS][${fieldName}] severity="${severity}"`);
+      return { alert: alertText, severity, examId: returnedExamId };
     } catch (e) {
+      console.error(`[CDSS][${fieldName}] error:`, e);
       return null;
     }
   }, []);
@@ -82,15 +110,15 @@ export const usePhysicalExam = () => {
       patient_id: parseInt(payload.patient_id, 10)
     };
     const sanitized = sanitize(body);
-    
-    const targetId = existingId || payload.id || payload.physical_exam_id;
+    const targetId = existingId || payload.id;
     let response;
     if (targetId) {
-      response = await apiClient.put('/physical-exam', { ...sanitized, id: targetId });
+      // Update existing record by ID — same endpoint used for real-time CDSS
+      response = await apiClient.put(`/physical-exam/${targetId}/assessment`, sanitized);
     } else {
+      // No existing record — create new
       response = await apiClient.post('/physical-exam', sanitized);
     }
-    // Return full response body — callers read .data and .alerts
     return response.data;
   }, []);
 
