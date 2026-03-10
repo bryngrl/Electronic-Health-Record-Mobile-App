@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '@App/theme/ThemeContext';
 import { Shadow } from 'react-native-shadow-2';
 
@@ -34,8 +35,9 @@ const NurseBottomNav = ({
   onAddPatient,
 }: NurseBottomNavProps) => {
   const { theme, isDarkMode } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
-  const styles = React.useMemo(() => createStyles(theme, isDarkMode), [theme, isDarkMode]);
+  const styles = React.useMemo(() => createStyles(theme, isDarkMode, insets.bottom), [theme, isDarkMode, insets.bottom]);
 
   const NavItem = ({ label, route, iconKey, onPress }: any) => {
     const isActive = activeRoute === route;
@@ -95,10 +97,10 @@ const NurseBottomNav = ({
   );
 };
 
-const createStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
+const createStyles = (theme: any, isDarkMode: boolean, bottomInset: number) => StyleSheet.create({
   shadowContainer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: Math.max(bottomInset, 16) + 8,
     left: 20,
     right: 20,
     justifyContent: 'center',
