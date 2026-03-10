@@ -19,6 +19,7 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
   const fieldTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const formDataRef = useRef(initialFormData);
   const examIdRef = useRef<number | null>(null);
+  const preNASnapshotRef = useRef<typeof initialFormData | null>(null);
 
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
@@ -58,20 +59,26 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
     Object.values(fieldTimers.current).forEach(clearTimeout);
     fieldTimers.current = {};
     if (newState) {
-      const updated = { ...formData };
-      Object.keys(initialFormData).forEach(key => { (updated as any)[key] = 'N/A'; });
-      setFormData(updated);
+      // Save current form before overwriting with N/A
+      preNASnapshotRef.current = { ...formData };
+      const allNA = { ...formData };
+      Object.keys(initialFormData).forEach(key => { (allNA as any)[key] = 'N/A'; });
+      setFormData(allNA);
+      formDataRef.current = allNA;
     } else {
-      const updated = { ...formData };
-      Object.keys(initialFormData).forEach(key => {
-        if ((updated as any)[key] === 'N/A') (updated as any)[key] = '';
-      });
-      setFormData(updated);
+      // Restore snapshot if available, otherwise clear to empty
+      const restored = preNASnapshotRef.current
+        ? { ...preNASnapshotRef.current }
+        : { ...initialFormData };
+      preNASnapshotRef.current = null;
+      setFormData(restored);
+      formDataRef.current = restored;
     }
   };
 
   const loadPatientData = useCallback(
     async (patientId: number) => {
+      preNASnapshotRef.current = null; // Clear any stale snapshot on patient change
       fetchDataAlert(patientId);
       const data = await fetchLatestPhysicalExam(patientId);
       if (data) {
@@ -88,6 +95,7 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
           neurological: data.neurological || '',
         };
         setFormData(newFormData);
+        formDataRef.current = newFormData;
         setIsNA(Object.values(newFormData).every(v => v === 'N/A'));
         // Load alerts from saved record using ALERT_KEY_MAP (DB column names)
         const loaded: Record<string, string | null> = {};
@@ -100,6 +108,7 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
         setExamId(null);
         examIdRef.current = null;
         setFormData(initialFormData);
+        formDataRef.current = initialFormData;
         setIsNA(false);
         setBackendAlerts({});
         Object.values(fieldTimers.current).forEach(clearTimeout);

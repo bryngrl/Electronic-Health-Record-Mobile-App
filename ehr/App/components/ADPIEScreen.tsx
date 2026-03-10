@@ -256,18 +256,24 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   useEffect(() => {
     if (savedData) {
       const currentStep = STEPS[currentIdx].key;
-      setText(savedData[currentStep] || '');
+      const stepText = savedData[currentStep] || '';
+      setText(stepText);
 
       let currentAlert =
         savedData[`${currentStep}_alert`] ||
         savedData[`${currentStep}_recommendation`] ||
         savedData.message;
 
-      if (currentAlert === 'NO RECOMMENDATIONS') {
+      if (
+        !currentAlert ||
+        currentAlert === 'NO RECOMMENDATIONS' ||
+        !stepText ||
+        stepText === 'N/A'
+      ) {
         currentAlert = null;
       }
 
-      if (currentAlert) setAlert(currentAlert);
+      setAlert(currentAlert ?? null);
     } else {
       setText('');
       setAlert(null);
@@ -276,7 +282,10 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
 
   // Real-time CDSS recommendation (debounced)
   useEffect(() => {
-    if (text.trim().length < 5) return;
+    if (!text || text.trim().length < 5) {
+      setAlert(null);
+      return;
+    }
     const timer = setTimeout(async () => {
       triggerAnalyze(text);
     }, 1000);

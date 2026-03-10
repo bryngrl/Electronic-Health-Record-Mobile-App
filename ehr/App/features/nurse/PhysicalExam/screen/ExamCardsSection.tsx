@@ -68,18 +68,18 @@ const ExamCardsSection: React.FC<ExamCardsSectionProps> = ({
         <TouchableOpacity
           style={[
             styles.cdssBtn,
-            (!selectedPatientId || (!isDataEntered && !isNA)) && {
+            (!selectedPatientId || !isDataEntered) && {
               backgroundColor: theme.buttonDisabledBg,
               borderColor: theme.buttonDisabledBorder,
             },
           ]}
           onPress={handleCDSSPress}
-          disabled={!selectedPatientId}
+          disabled={!selectedPatientId || !isDataEntered}
         >
           <Text
             style={[
               styles.cdssText,
-              (!selectedPatientId || (!isDataEntered && !isNA)) && { color: theme.textMuted },
+              (!selectedPatientId || !isDataEntered) && { color: theme.textMuted },
             ]}
           >
             CDSS
