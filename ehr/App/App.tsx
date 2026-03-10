@@ -13,10 +13,20 @@ const MainApp = () => {
   const { theme } = useAppTheme();
   const [splashFinished, setSplashFinished] = useState(Platform.OS !== 'android');
 
+  // Wait for auth to resolve so splash knows which animation to play
+  const nextScreen = !user ? 'Login' : 'Home';
+
   if (!splashFinished) {
+    // Hold splash until auth state is known
+    if (isLoading) {
+      return <View style={{ flex: 1, backgroundColor: '#035022' }} />;
+    }
     return (
       <View style={{ flex: 1, backgroundColor: '#035022' }}>
-        <SplashScreen onAnimationFinish={() => setSplashFinished(true)} />
+        <SplashScreen
+          onAnimationFinish={() => setSplashFinished(true)}
+          nextScreen={nextScreen}
+        />
       </View>
     );
   }
