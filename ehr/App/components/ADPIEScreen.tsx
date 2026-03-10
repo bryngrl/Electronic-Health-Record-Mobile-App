@@ -26,11 +26,11 @@ const STEPS = [
   { id: 4, label: 'Evaluation', key: 'evaluation' },
 ];
 
-export type ADPIEFeature = 
-  | 'vital-signs' 
-  | 'physical-exam' 
-  | 'adl' 
-  | 'intake-and-output' 
+export type ADPIEFeature =
+  | 'vital-signs'
+  | 'physical-exam'
+  | 'adl'
+  | 'intake-and-output'
   | 'lab-values';
 
 interface ADPIEScreenProps {
@@ -45,7 +45,7 @@ interface ADPIEScreenProps {
 const FEATURE_TITLES: Record<ADPIEFeature, string> = {
   'vital-signs': 'Vital Signs',
   'physical-exam': 'Physical Exam',
-  'adl': 'Activities of Daily Living',
+  adl: 'Activities of Daily Living',
   'intake-and-output': 'Intake and Output',
   'lab-values': 'Laboratory Values',
 };
@@ -102,48 +102,53 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
 
   const triggerAnalyze = async (finding: string) => {
     if (!finding || finding.trim().length < 3) {
-        setAlert(null);
-        return;
+      setAlert(null);
+      return;
     }
-    
+
     setIsAnalyzing(true);
     try {
-        const step = STEPS[currentIdx];
-        const res = await apiClient.post('/adpie/analyze', {
-          fieldName: step.key,
-          finding: finding,
-          component: feature,
-        });
-        
-        if (res.data) {
-          const body = res.data.data || res.data;
-          let rec = body.message || 
-                    body.recommendation || 
-                    body.alert || 
-                    body.diagnosis_alert ||
-                    body.alert_text;
-          
-          if (typeof body === 'string') rec = body;
-          
-          if (Array.isArray(body) && body.length > 0) {
-              const first = body[0];
-              rec = first.message || first.recommendation || first.alert || (typeof first === 'string' ? first : rec);
-          }
+      const step = STEPS[currentIdx];
+      const res = await apiClient.post('/adpie/analyze', {
+        fieldName: step.key,
+        finding: finding,
+        component: feature,
+      });
 
-          if (rec && rec !== 'NO RECOMMENDATIONS' && rec !== 'NONE') {
-            setAlert(rec);
-          } else {
-            setAlert(null);
-          }
-        } else {
-            setAlert(null);
+      if (res.data) {
+        const body = res.data.data || res.data;
+        let rec =
+          body.message ||
+          body.recommendation ||
+          body.alert ||
+          body.diagnosis_alert ||
+          body.alert_text;
+
+        if (typeof body === 'string') rec = body;
+
+        if (Array.isArray(body) && body.length > 0) {
+          const first = body[0];
+          rec =
+            first.message ||
+            first.recommendation ||
+            first.alert ||
+            (typeof first === 'string' ? first : rec);
         }
-      } catch (e) {
-        console.error('Analyze Error:', e);
+
+        if (rec && rec !== 'NO RECOMMENDATIONS' && rec !== 'NONE') {
+          setAlert(rec);
+        } else {
+          setAlert(null);
+        }
+      } else {
         setAlert(null);
-      } finally {
-        setIsAnalyzing(false);
       }
+    } catch (e) {
+      console.error('Analyze Error:', e);
+      setAlert(null);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   useEffect(() => {
@@ -157,58 +162,77 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
           const data = response.data.data || response.data;
           setDiagId(data.id);
           setSavedData(data);
-          
+
           const currentStep = STEPS[currentIdx].key;
           if (data[currentStep]) {
             setText(data[currentStep]);
           }
-          
+
           // Load any initial alert
-          let initRec = data.message || 
-                        data[`${currentStep}_alert`] || 
-                        data.alert || 
-                        data.assessment_alert ||
-                        data.recommendation;
-          
-          if (initRec && initRec !== 'NO RECOMMENDATIONS' && initRec !== 'NONE') {
+          let initRec =
+            data.message ||
+            data[`${currentStep}_alert`] ||
+            data.alert ||
+            data.assessment_alert ||
+            data.recommendation;
+
+          if (
+            initRec &&
+            initRec !== 'NO RECOMMENDATIONS' &&
+            initRec !== 'NONE'
+          ) {
             setAlert(initRec);
           } else {
             // Step 3 (Batch Analysis)
             const batchItems = STEPS.map(s => ({
               fieldName: s.key,
-              finding: data[s.key] || (s.key === 'diagnosis' ? findingsSummary : '') || ''
+              finding:
+                data[s.key] ||
+                (s.key === 'diagnosis' ? findingsSummary : '') ||
+                '',
             })).filter(item => item.finding);
 
             if (batchItems.length > 0) {
               try {
                 const batchRes = await apiClient.post('/adpie/analyze-batch', {
                   component: feature,
-                  batch: batchItems
+                  batch: batchItems,
                 });
-                
+
                 if (batchRes.data) {
                   const recommendations = batchRes.data.data || batchRes.data;
-                  let batchRec = recommendations[currentStep] || 
-                                 recommendations[`${currentStep}_alert`] ||
-                                 recommendations.message || 
-                                 recommendations.alert ||
-                                 recommendations.recommendation;
-                  
-                  if (typeof recommendations === 'string') batchRec = recommendations;
-                  
+                  let batchRec =
+                    recommendations[currentStep] ||
+                    recommendations[`${currentStep}_alert`] ||
+                    recommendations.message ||
+                    recommendations.alert ||
+                    recommendations.recommendation;
+
+                  if (typeof recommendations === 'string')
+                    batchRec = recommendations;
+
                   if (Array.isArray(recommendations)) {
-                      const found = recommendations.find(r => r.fieldName === currentStep);
-                      if (found) batchRec = found.message || found.recommendation || found.alert;
+                    const found = recommendations.find(
+                      r => r.fieldName === currentStep,
+                    );
+                    if (found)
+                      batchRec =
+                        found.message || found.recommendation || found.alert;
                   }
 
-                  if (batchRec && batchRec !== 'NO RECOMMENDATIONS' && batchRec !== 'NONE') {
+                  if (
+                    batchRec &&
+                    batchRec !== 'NO RECOMMENDATIONS' &&
+                    batchRec !== 'NONE'
+                  ) {
                     setAlert(batchRec);
                   } else if (currentIdx === 0 && findingsSummary) {
                     triggerAnalyze(findingsSummary);
                   }
                 }
               } catch (batchErr) {
-                if (currentIdx === 0 && findingsSummary) triggerAnalyze(findingsSummary);
+                if (currentIdx === 0 && findingsSummary)
+                  triggerAnalyze(findingsSummary);
               }
             } else if (currentIdx === 0 && findingsSummary) {
               triggerAnalyze(findingsSummary);
@@ -217,7 +241,10 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
         }
       } catch (e: any) {
         console.error('Failed to initialize ADPIE:', e.message || e);
-        showAlert('Error', `Failed to initialize ADPIE workflow: ${e.message || 'Server Error'}`);
+        showAlert(
+          'Error',
+          `Failed to initialize ADPIE workflow: ${e.message || 'Server Error'}`,
+        );
       } finally {
         setInitLoading(false);
       }
@@ -230,11 +257,12 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
     if (savedData) {
       const currentStep = STEPS[currentIdx].key;
       setText(savedData[currentStep] || '');
-      
-      let currentAlert = savedData[`${currentStep}_alert`] || 
-                          savedData[`${currentStep}_recommendation`] ||
-                          savedData.message;
-      
+
+      let currentAlert =
+        savedData[`${currentStep}_alert`] ||
+        savedData[`${currentStep}_recommendation`] ||
+        savedData.message;
+
       if (currentAlert === 'NO RECOMMENDATIONS') {
         currentAlert = null;
       }
@@ -271,13 +299,13 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
         [step.key]: text,
         component: feature,
       });
-      
+
       const body = res.data?.data || res.data;
       const latestAlert = body?.message || body?.[`${step.key}_alert`];
-      setSavedData((prev: any) => ({ 
-        ...prev, 
+      setSavedData((prev: any) => ({
+        ...prev,
         [step.key]: text,
-        [`${step.key}_alert`]: latestAlert
+        [`${step.key}_alert`]: latestAlert,
       }));
 
       if (currentIdx < 3) {
@@ -295,7 +323,10 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
       }
     } catch (e: any) {
       console.error('Workflow update error:', e);
-      showAlert('Error', `Workflow update failed: ${e.message || 'Server Error'}`);
+      showAlert(
+        'Error',
+        `Workflow update failed: ${e.message || 'Server Error'}`,
+      );
     } finally {
       setLoading(false);
     }
@@ -312,9 +343,16 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
 
   if (initLoading) {
     return (
-      <View style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View
+        style={[
+          styles.safeArea,
+          { justifyContent: 'center', alignItems: 'center' },
+        ]}
+      >
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={{ marginTop: 10, color: theme.text }}>Initializing ADPIE...</Text>
+        <Text style={{ marginTop: 10, color: theme.text }}>
+          Initializing ADPIE...
+        </Text>
       </View>
     );
   }
@@ -422,7 +460,11 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
               <View style={styles.bannerTextContent}>
                 <Text style={styles.bannerTitle}>Clinical Support</Text>
                 <Text style={styles.bannerSubText}>
-                  {isAnalyzing ? 'Analyzing findings...' : alert ? 'Recommendation ready' : 'Continue documenting...'}
+                  {isAnalyzing
+                    ? 'Analyzing findings...'
+                    : alert
+                    ? 'Recommendation ready'
+                    : 'Continue documenting...'}
                 </Text>
               </View>
             </View>
@@ -554,8 +596,8 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     progressLineTrack: {
       position: 'absolute',
       top: 18,
-      left: 40,
-      right: 40,
+      left: 28,
+      right: 28,
       height: 2,
       zIndex: 0,
     },
