@@ -282,10 +282,16 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     );
   }
 
+  const isValidDataAlert = (v: string | null | undefined): v is string =>
+    !!v &&
+    !v.toLowerCase().includes('no findings') &&
+    !v.toLowerCase().includes('no result') &&
+    v.trim() !== '';
+
   const getCleanedAlertText = () => {
-    const combined = [backendAlert, assessmentAlert, dataAlert].filter(Boolean).join('\n\n');
-    if (!combined) return 'No clinical findings found.';
-    return combined.replace(/[🔴🟠✓⚠️❌]/g, '').replace(/\[(CRITICAL|WARNING|INFO)\]/gi, '$1').trim();
+    const parts = [backendAlert, assessmentAlert, isValidDataAlert(dataAlert) ? dataAlert : null].filter(Boolean);
+    if (!parts.length) return 'No clinical findings found.';
+    return parts.join('\n\n').replace(/[🔴🟠✓⚠️❌]/g, '').replace(/\[(CRITICAL|WARNING|INFO)\]/gi, '$1').trim();
   };
 
   return (

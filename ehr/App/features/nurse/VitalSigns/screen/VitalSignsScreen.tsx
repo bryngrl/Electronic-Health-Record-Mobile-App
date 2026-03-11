@@ -751,11 +751,16 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
         visible={cdssVisible}
         onClose={() => setCdssVisible(false)}
         category="VITAL SIGNS ASSESSMENT"
-        alertText={
-          realtimeAlert || dataAlert
-            ? [realtimeAlert, dataAlert].filter(Boolean).join('\n\n')
-            : (currentAlert?.message || 'No clinical findings found.')
-        }
+        alertText={(() => {
+          const validDataAlert =
+            dataAlert &&
+            !dataAlert.toLowerCase().includes('no findings') &&
+            !dataAlert.toLowerCase().includes('no result')
+              ? dataAlert
+              : null;
+          const parts = [realtimeAlert, validDataAlert, currentAlert?.message].filter(Boolean);
+          return parts.length ? parts.join('\n\n') : 'No clinical findings found.';
+        })()}
         severity={realtimeSeverity || backendSeverity || undefined}
       />
 
