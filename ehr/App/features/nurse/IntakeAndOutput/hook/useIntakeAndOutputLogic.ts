@@ -17,6 +17,7 @@ const inferSeverity = (text: string): string => {
 export const useIntakeAndOutputLogic = () => {
   const [patientName, setPatientName] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [selectedPatient, setSelectedPatientObj] = useState<any | null>(null);
   const [intakeOutput, setIntakeOutput] = useState<IntakeOutputData>({
     oral_intake: '',
     iv_fluids_volume: '',
@@ -111,17 +112,18 @@ export const useIntakeAndOutputLogic = () => {
     }
   }, []);
 
-  const saveAssessment = useCallback(async () => {
+  const saveAssessment = useCallback(async (dayNo?: number) => {
     if (!selectedPatientId) return null;
     setLoading(true);
     try {
-      const sanitize = (val: string) => (val.trim() === '' ? 'N/A' : val);
+      const toInt = (val: string) => { const n = parseInt(val, 10); return isNaN(n) ? null : n; };
       const today = new Date().toLocaleDateString('en-CA');
       const payload = {
         patient_id: parseInt(selectedPatientId, 10),
-        oral_intake: sanitize(intakeOutput.oral_intake),
-        iv_fluids_volume: sanitize(intakeOutput.iv_fluids_volume),
-        urine_output: sanitize(intakeOutput.urine_output),
+        day_no: dayNo || 1,
+        oral_intake: toInt(intakeOutput.oral_intake),
+        iv_fluids_volume: toInt(intakeOutput.iv_fluids_volume),
+        urine_output: toInt(intakeOutput.urine_output),
       };
       const existingToday = existingRecords.find(r => {
         const recDate = (r.date || r.created_at).split('T')[0];
@@ -152,9 +154,10 @@ export const useIntakeAndOutputLogic = () => {
     }
   }, [selectedPatientId, intakeOutput, existingRecords, fetchLatestIntakeOutput]);
 
-  const handleSelectPatient = useCallback(async (id: number | null, name: string) => {
+  const handleSelectPatient = useCallback(async (id: number | null, name: string, patientObj?: any) => {
     setSelectedPatientId(id ? id.toString() : null);
     setPatientName(name);
+    setSelectedPatientObj(patientObj || null);
     setIsExistingRecord(false);
     recordIdRef.current = null;
     setRecordId(null);
@@ -196,6 +199,7 @@ export const useIntakeAndOutputLogic = () => {
   return {
     patientName,
     selectedPatientId,
+    selectedPatient,
     handleSelectPatient,
     intakeOutput,
     handleUpdateField,
