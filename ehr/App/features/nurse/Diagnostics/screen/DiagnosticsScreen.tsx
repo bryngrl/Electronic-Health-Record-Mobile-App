@@ -144,7 +144,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
     }
     const result = await uploadDiagnostic(selectedPatientId, imageType);
     if (result && result.success) {
-      showAlert('Success', 'Image uploaded successfully', 'success');
+      showAlert('Success', 'Image added successfully.', 'success');
     } else if (result && result.error) {
       const msg =
         typeof result.error === 'string'
@@ -180,18 +180,20 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ onBack }) => {
   };
 
   const diagnosticTypes = [
-    { id: 'X-RAY', label: 'X-RAY' },
-    { id: 'ULTRASOUND', label: 'ULTRASOUND' },
-    { id: 'CT SCAN', label: 'CT SCAN' },
-    { id: 'ECHOCARDIOGRAM', label: 'ECHOCARDIOGRAM' },
+    { id: 'xray', label: 'X-RAY' },
+    { id: 'ultrasound', label: 'ULTRASOUND' },
+    { id: 'ct_scan', label: 'CT SCAN' },
+    { id: 'echocardiogram', label: 'ECHOCARDIOGRAM' },
   ];
 
   const getDiagnosticsForType = (type: string) => {
+    // Build URL from path + app's BASE_URL to avoid server-computed image_url using wrong host (e.g. 127.0.0.1)
+    const storageBase = BASE_URL.replace('/api', '/storage');
     return diagnostics
-      .filter(d => d.image_type === type)
+      .filter(d => d.type === type)
       .map(d => ({
-        id: d.id,
-        url: `${BASE_URL}/diagnostics/${d.id}/file`,
+        id: d.id as number,
+        url: d.path ? `${storageBase}/${d.path}` : d.image_url,
       }));
   };
 
