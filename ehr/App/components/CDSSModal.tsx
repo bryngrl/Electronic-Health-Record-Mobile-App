@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
@@ -16,6 +17,8 @@ interface CDSSModalProps {
   category?: string;
   alertText: string;
   severity?: string;
+  loading?: boolean;
+  bulletFormat?: boolean;
 }
 
 const CDSSModal: React.FC<CDSSModalProps> = ({
@@ -25,6 +28,8 @@ const CDSSModal: React.FC<CDSSModalProps> = ({
   category,
   alertText,
   severity,
+  loading = false,
+  bulletFormat = false,
 }) => {
   const getSeverityStyle = (sev?: string) => {
     switch ((sev || '').toUpperCase()) {
@@ -120,14 +125,23 @@ const CDSSModal: React.FC<CDSSModalProps> = ({
             {category && (
               <Text style={styles.categoryText}>{category.toUpperCase()}</Text>
             )}
-            {severityStyle && (
-              <View style={[styles.severityBadge, { backgroundColor: severityStyle.bg }]}>
-                <Text style={[styles.severityText, { color: severityStyle.text }]}>
-                  [{severityStyle.label}]
-                </Text>
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#B45309" />
+                <Text style={styles.loadingText}>Analyzing...</Text>
               </View>
+            ) : (
+              <>
+                {severityStyle && (
+                  <View style={[styles.severityBadge, { backgroundColor: severityStyle.bg }]}>
+                    <Text style={[styles.severityText, { color: severityStyle.text }]}>
+                      [{severityStyle.label}]
+                    </Text>
+                  </View>
+                )}
+                <View>{renderFormattedText(alertText)}</View>
+              </>
             )}
-            <View>{renderFormattedText(alertText)}</View>
           </View>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
             <Text style={styles.closeBtnText}>DISMISS</Text>
@@ -169,6 +183,16 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   body: { marginBottom: 20 },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    color: '#B45309',
+    marginTop: 10,
+    fontSize: 14,
+    fontWeight: '600',
+  },
   categoryText: {
     color: '#D97706',
     fontSize: 10,
