@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import CDSSModal from '@components/CDSSModal';
 import SweetAlert from '@components/SweetAlert';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 const alert1 = require('@assets/icons/alert_bell_icon.png');
 
@@ -35,14 +36,13 @@ const ADLInputCard = ({
   onChangeText,
   onDisabledPress,
 }: ExamInputProps) => {
+  const { theme } = useAppTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const [inputHeight, setInputHeight] = useState(
     4 * LINE_HEIGHT + INPUT_PADDING_BOTTOM,
   );
 
-  // LOGIC: The bell is only active if the input is not empty OR there's a clinical data alert
   const isAlertActive = (value.trim().length > 0 && value !== 'N/A') || !!dataAlert;
-  // Keyword match: Backend found a specific clinical risk OR clinical data alert
   const hasBackendAlert = (!!alertText && alertText.trim().length > 0) || !!dataAlert;
 
   const visibleTypingHeight = Math.max(0, inputHeight - INPUT_PADDING_BOTTOM);
@@ -90,7 +90,6 @@ const ADLInputCard = ({
       </View>
 
       <View style={styles.content}>
-        {/* Badge is stacked above the input to allow full-width text below */}
         <View style={styles.badge}>
           <Text style={styles.badgeText}>Findings</Text>
         </View>
@@ -121,12 +120,15 @@ const ADLInputCard = ({
           />
         </Pressable>
 
-        {/* The Alert Icon Button */}
         <TouchableOpacity
           style={[
             styles.alertIcon,
-            { opacity: isAlertActive ? 1.0 : 0.3 },
-            hasBackendAlert && styles.activeAlert,
+            {
+              backgroundColor: hasBackendAlert
+                ? theme.alertBellOnBg
+                : theme.alertBellOffBg,
+              opacity: hasBackendAlert ? 1.0 : 0.3,
+            },
           ]}
           onPress={() => isAlertActive && !disabled && setModalVisible(true)}
           disabled={!isAlertActive || disabled}
@@ -163,7 +165,7 @@ const styles = StyleSheet.create({
   headerText: {
     color: '#EDB62C',
     fontFamily: 'AlteHaasGroteskBold',
-    fontSize: 14, // Copied from ExamInputCard
+    fontSize: 14,
   },
   content: {
     padding: 15,
@@ -181,7 +183,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: '#EDB62C',
-    fontSize: 13, // Copied from ExamInputCard
+    fontSize: 13,
     fontFamily: 'AlteHaasGroteskBold',
   },
   inputArea: {
@@ -213,7 +215,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 10,
     right: 15,
-    backgroundColor: '#FEF3C7',
     borderRadius: 22,
     width: 44,
     height: 44,

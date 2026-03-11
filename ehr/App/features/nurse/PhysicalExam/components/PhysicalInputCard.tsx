@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import CDSSModal from '@components/CDSSModal';
 import SweetAlert from '@components/SweetAlert';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 const alert1 = require('@assets/icons/alert_bell_icon.png');
 
@@ -37,6 +38,7 @@ const ExamInputCard = ({
   onChangeText,
   onDisabledPress,
 }: ExamInputProps) => {
+  const { theme } = useAppTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const [inputHeight, setInputHeight] = useState(
     4 * LINE_HEIGHT + INPUT_PADDING_BOTTOM,
@@ -123,8 +125,12 @@ const ExamInputCard = ({
         <TouchableOpacity
           style={[
             styles.alertIcon,
-            { opacity: isAlertActive ? 1.0 : 0.3 },
-            isAlertActive && styles.activeAlert,
+            {
+              backgroundColor: isAlertActive
+                ? theme.alertBellOnBg
+                : theme.alertBellOffBg,
+              opacity: isAlertActive ? 1.0 : 0.3,
+            },
           ]}
           onPress={() => isAlertActive && setModalVisible(true)}
           disabled={!isAlertActive}
@@ -211,7 +217,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 10,
     right: 15,
-    backgroundColor: '#FEF3C7',
     borderRadius: 22,
     width: 44,
     height: 44,

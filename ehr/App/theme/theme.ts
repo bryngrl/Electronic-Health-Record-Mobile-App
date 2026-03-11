@@ -12,7 +12,7 @@ export const COLORS = {
     textMuted: '#999696',
     border: '#E0E0E0',
 
-    card: '#FFFFFF', //nagamit na sa ibang components e nakakatamad irename
+    card: '#FFFFFF',
     card2: '#F6FFF7', // features card bg color
     cardBorder: '#7AF489',
 
@@ -28,6 +28,11 @@ export const COLORS = {
     buttonDisabledBorder: '#E0E0E0',
     avatarCard: 'rgba(144, 255, 158, 0.32)',
     navActiveBg: '#E0FFDD',
+
+    // Alert Bell Icon states
+    alertBellDisabledBg: '#F2F1EF', // no patient selected
+    alertBellOffBg: '#FEF3C7',      // patient selected, no findings / unmatched alert
+    alertBellOnBg: '#FDE68A',       // patient selected, alert triggered
   },
   dark: {
     primary: '#4ADE80',
@@ -55,6 +60,11 @@ export const COLORS = {
     buttonDisabledBorder: '#3a5137',
     avatarCard: '#035022',
     navActiveBg: '#1A2E1C',
+
+    // Alert Bell Icon states
+    alertBellDisabledBg: '#2b2b2b', // no patient selected
+    alertBellOffBg: '#3D2800',      // patient selected, no findings / unmatched alert
+    alertBellOnBg: '#78350F',       // patient selected, alert triggered
   },
 };
 
@@ -68,7 +78,6 @@ export const LAYOUT = {
   headerMarginBottom: 35,
 };
 
-// Common styles that depend on the theme can be generated via a function
 export const getCommonStyles = (isDark: boolean) => {
   const theme = getTheme(isDark);
   return {

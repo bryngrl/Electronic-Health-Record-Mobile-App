@@ -86,7 +86,6 @@ const LabValuesScreen = ({ onBack }: any) => {
     }
   };
 
-  // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
     title: string;
@@ -447,21 +446,15 @@ const LabValuesScreen = ({ onBack }: any) => {
               style={[
                 styles.alertIcon,
                 {
-                  backgroundColor: isClinicalAlert
-                    ? isDarkMode
-                      ? '#78350F'
-                      : '#FFECBD'
-                    : selectedPatientId
-                    ? isDarkMode
-                      ? '#78350F'
-                      : '#FFECBD'
-                    : isDarkMode
-                    ? '#333'
-                    : '#EBEBEB',
-                  borderColor:
-                    isClinicalAlert || selectedPatientId
-                      ? '#EDB62C'
-                      : theme.border,
+                  backgroundColor: !selectedPatientId
+                    ? theme.alertBellDisabledBg
+                    : isClinicalAlert
+                    ? theme.alertBellOnBg
+                    : theme.alertBellOffBg,
+                  borderColor: !selectedPatientId
+                    ? theme.border
+                    : '#EDB62C',
+                  opacity: !selectedPatientId ? 1 : isClinicalAlert ? 1 : 0.3,
                 },
               ]}
               disabled={!selectedPatientId}
@@ -471,9 +464,11 @@ const LabValuesScreen = ({ onBack }: any) => {
                 source={alertIcon}
                 style={[
                   styles.fullImg,
-                  isClinicalAlert || selectedPatientId
-                    ? { tintColor: '#EDB62C', opacity: 1 }
-                    : { tintColor: theme.textMuted, opacity: 0.5 },
+                  !selectedPatientId
+                    ? { tintColor: theme.textMuted }
+                    : isClinicalAlert
+                    ? { tintColor: '#EDB62C' }
+                    : { tintColor: '#EDB62C' },
                 ]}
               />
             </TouchableOpacity>

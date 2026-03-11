@@ -566,22 +566,15 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
                 style={[
                   styles.alertIcon,
                   {
-                    backgroundColor:
-                      currentAlert || isDataComplete
-                        ? isDarkMode
-                          ? '#78350F'
-                          : '#FFECBD'
-                        : isDataEntered
-                        ? '#FFECBD'
-                        : isDarkMode
-                        ? '#333'
-                        : '#EBEBEB',
-                    borderColor:
-                      currentAlert || isDataComplete
-                        ? '#EDB62C'
-                        : isDataEntered
-                        ? '#EDB62C'
-                        : theme.border,
+                    backgroundColor: !selectedPatientId
+                      ? theme.alertBellDisabledBg
+                      : currentAlert || isDataComplete
+                      ? theme.alertBellOnBg
+                      : theme.alertBellOffBg,
+                    borderColor: !selectedPatientId
+                      ? theme.border
+                      : '#EDB62C',
+                    opacity: !selectedPatientId ? 1 : currentAlert || isDataComplete ? 1 : 0.3,
                   },
                 ]}
                 disabled={!isDataEntered}
@@ -591,11 +584,9 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
                   source={alertIcon}
                   style={[
                     styles.fullImg,
-                    currentAlert || isDataComplete
-                      ? { tintColor: '#EDB62C', opacity: 1 }
-                      : isDataEntered
-                      ? { tintColor: '#EDB62C', opacity: 1 }
-                      : { tintColor: theme.textMuted, opacity: 1 },
+                    !selectedPatientId
+                      ? { tintColor: theme.textMuted }
+                      : { tintColor: '#EDB62C' },
                   ]}
                 />
               </TouchableOpacity>

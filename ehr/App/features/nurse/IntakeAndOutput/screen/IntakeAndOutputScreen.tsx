@@ -445,16 +445,13 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
               style={[
                 styles.alertIcon,
                 {
-                  backgroundColor: hasRealAlert
-                    ? isDarkMode
-                      ? '#78350F'
-                      : '#FFECBD'
-                    : isDataEntered && selectedPatientId
-                    ? theme.surface
-                    : isDarkMode
-                    ? '#333'
-                    : '#EBEBEB',
+                  backgroundColor: !selectedPatientId
+                    ? theme.alertBellDisabledBg
+                    : hasRealAlert
+                    ? theme.alertBellOnBg
+                    : theme.alertBellOffBg,
                   borderColor: theme.border,
+                  opacity: !selectedPatientId ? 1 : hasRealAlert ? 1 : 0.3,
                 },
               ]}
               disabled={!isDataEntered || !selectedPatientId}
@@ -465,10 +462,10 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                 style={[
                   styles.fullImg,
                   hasRealAlert
-                    ? { tintColor: '#EDB62C', opacity: 1 }
-                    : isDataEntered && selectedPatientId
-                    ? { tintColor: '#EDB62C', opacity: 0.8 }
-                    : { tintColor: theme.textMuted, opacity: 0.5 },
+                    ? { tintColor: '#EDB62C' }
+                    : !selectedPatientId
+                    ? { tintColor: theme.textMuted }
+                    : { tintColor: '#EDB62C' },
                 ]}
               />
             </TouchableOpacity>
