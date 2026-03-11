@@ -26,7 +26,7 @@ const inferSeverity = (text: string): string => {
   return 'INFO';
 };
 
-const convertTo24h = (timeStr: string) => {
+export const convertTo24h = (timeStr: string) => {
   const [time, modifier] = timeStr.split(' ');
   let [hours, minutes] = time.split(':');
   if (hours === '12') {
@@ -149,7 +149,12 @@ export const useVitalSignsLogic = () => {
 
   const analyzeField = useCallback(async (payload: any): Promise<{ alert: string | null; severity: string | null } | null> => {
     try {
-      const targetId = recordIdRef.current;
+      const today = new Date().toLocaleDateString('en-CA');
+      const existingRecord = existingRecords.find(r => {
+        const recDate = (r.date || r.created_at).split('T')[0];
+        return recDate === today && r.time === payload.time;
+      });
+      const targetId = existingRecord?.id || recordIdRef.current;
       let response;
       if (targetId) {
         response = await apiClient.put(`/vital-signs/${targetId}/assessment`, payload);
@@ -161,14 +166,19 @@ export const useVitalSignsLogic = () => {
         recordIdRef.current = data.id;
       }
       const alertText: string = (data?.assessment_alert || data?.alert || '').toString().trim();
-      if (!alertText || alertText === 'No findings.' || alertText === 'No Findings') {
+      if (
+        !alertText ||
+        alertText.toLowerCase().includes('no findings') ||
+        alertText.toLowerCase().includes('no result') ||
+        alertText.toLowerCase() === 'normal'
+      ) {
         return { alert: null, severity: null };
       }
       return { alert: alertText, severity: inferSeverity(alertText) };
     } catch (err) {
       return null;
     }
-  }, []);
+  }, [existingRecords]);
 
   const saveAssessment = async (dayNo?: number) => {
     if (!selectedPatientId) return null;
