@@ -36,6 +36,8 @@ export const useLabValuesScreen = (onBack: () => void) => {
   const [backendAlerts, setBackendAlerts] = useState<Record<string, string | null>>({});
   const [backendSeverities, setBackendSeverities] = useState<Record<string, string | null>>({});
 
+  const [isAlertLoading, setIsAlertLoading] = useState(false);
+
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [showLabList, setShowLabList] = useState(false);
   const [passedAlert, setPassedAlert] = useState<string | null>(null);
@@ -80,15 +82,20 @@ export const useLabValuesScreen = (onBack: () => void) => {
     const prefix = getTestPrefix(LAB_TESTS[selectedTestIndex]);
     const patientId = selectedPatientId;
 
+    setIsAlertLoading(true);
     debounceTimer.current = setTimeout(async () => {
       const res = await analyzeLabField(patientId, labIdRef.current, prefix, result, normalRange);
-      if (!res) return;
+      if (!res) {
+        setIsAlertLoading(false);
+        return;
+      }
       if (res.labId && !labIdRef.current) {
         labIdRef.current = res.labId;
         setLabId(res.labId);
       }
       setBackendAlerts(prev => ({ ...prev, [`${prefix}_alert`]: res.alert }));
       setBackendSeverities(prev => ({ ...prev, [`${prefix}_severity`]: res.severity }));
+      setIsAlertLoading(false);
     }, 800);
 
     return () => {
@@ -236,6 +243,7 @@ export const useLabValuesScreen = (onBack: () => void) => {
     normalRange, setNormalRange,
     backendAlerts,
     backendSeverities,
+    isAlertLoading,
     isAdpieActive, setIsAdpieActive,
     showLabList, setShowLabList,
     passedAlert, setPassedAlert,

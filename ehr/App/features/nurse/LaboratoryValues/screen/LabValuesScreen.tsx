@@ -50,6 +50,7 @@ const LabValuesScreen = ({ onBack }: any) => {
     handleCDSSPress,
     handleNextOrSave,
     generateFindingsSummary,
+    isAlertLoading,
   } = useLabValuesScreen(onBack);
 
   const selectedTest = LAB_TESTS[selectedTestIndex];
@@ -335,6 +336,7 @@ const LabValuesScreen = ({ onBack }: any) => {
       <CDSSModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
+        loading={isAlertLoading}
         alertText={currentAlert || 'No clinical findings found.'}
         severity={currentSeverity ?? undefined}
       />

@@ -34,7 +34,7 @@ export const convertTo24h = (timeStr: string) => {
   } else if (modifier === 'PM') {
     hours = (parseInt(hours, 10) + 12).toString();
   }
-  return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
+  return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
 };
 
 const formatTo12h = (time24: string) => {
@@ -150,22 +150,25 @@ export const useVitalSignsLogic = () => {
   const analyzeField = useCallback(async (payload: any): Promise<{ alert: string | null; severity: string | null } | null> => {
     try {
       const today = new Date().toLocaleDateString('en-CA');
+      const payloadTime = (payload.time || '').substring(0, 5);
       const existingRecord = existingRecords.find(r => {
         const recDate = (r.date || r.created_at).split('T')[0];
-        return recDate === today && r.time === payload.time;
+        return recDate === today && (r.time || '').substring(0, 5) === payloadTime;
       });
-      const targetId = existingRecord?.id || recordIdRef.current;
-      let response;
-      if (targetId) {
-        response = await apiClient.put(`/vital-signs/${targetId}/assessment`, payload);
-      } else {
-        response = await apiClient.post('/vital-signs', payload);
+      let targetId = existingRecord?.id || recordIdRef.current;
+
+      if (!targetId) {
+        const postResp = await apiClient.post('/vital-signs', payload);
+        const postData = postResp.data?.data || postResp.data;
+        targetId = postData?.id;
+        if (targetId) recordIdRef.current = targetId;
       }
+
+      if (!targetId) return null;
+
+      const response = await apiClient.put(`/vital-signs/${targetId}/assessment`, payload);
       const data = response.data?.data || response.data;
-      if (data?.id && !recordIdRef.current) {
-        recordIdRef.current = data.id;
-      }
-      const alertText: string = (data?.assessment_alert || data?.alert || '').toString().trim();
+      const alertText: string = (data?.alerts || data?.assessment_alert || data?.alert || '').toString().trim();
       if (
         !alertText ||
         alertText.toLowerCase().includes('no findings') ||
@@ -206,12 +209,10 @@ export const useVitalSignsLogic = () => {
 
     try {
       // Check if we have an existing record for this patient, date, and time slot
-      const existingRecord = existingRecords.find(
-        r => {
-            const recDate = (r.date || r.created_at).split('T')[0];
-            return recDate === today && r.time === time24;
-        }
-      );
+      const existingRecord = existingRecords.find(r => {
+        const recDate = (r.date || r.created_at).split('T')[0];
+        return recDate === today && (r.time || '').substring(0, 5) === time24.substring(0, 5);
+      });
 
       let response;
       if (existingRecord) {
@@ -220,22 +221,23 @@ export const useVitalSignsLogic = () => {
         response = await apiClient.post('/vital-signs', payload);
       }
       
-      const data = response.data;
+      const data = response.data?.data || response.data;
       
       // Refresh local records list after save
       await loadPatientData(selectedPatientId);
       
-      if (data.assessment_alert) {
-        const isCritical = data.assessment_alert.includes('🔴') || data.assessment_alert.includes('CRITICAL');
+      const alertText: string = (data?.alerts || data?.assessment_alert || data?.alert || '').toString().trim();
+      if (alertText && !alertText.toLowerCase().includes('no findings')) {
+        const isCritical = alertText.includes('🔴') || alertText.toUpperCase().includes('CRITICAL');
         const alertObj: { title: string, message: string, type: 'success' | 'error' } = {
           title: isCritical ? 'CRITICAL ALERT' : 'VITAL SIGNS ASSESSMENT',
-          message: data.assessment_alert.replace(/ \| /g, '\n'),
+          message: alertText.replace(/ \| /g, '\n'),
           type: isCritical ? 'error' : 'success'
         };
         setBackendAlert(alertObj);
-        setBackendSeverity(inferSeverity(data.assessment_alert));
-        setRealtimeAlert(data.assessment_alert);
-        setRealtimeSeverity(inferSeverity(data.assessment_alert));
+        setBackendSeverity(inferSeverity(alertText));
+        setRealtimeAlert(alertText);
+        setRealtimeSeverity(inferSeverity(alertText));
       }
       setIsExistingRecord(true);
       return data;
@@ -263,7 +265,9 @@ export const useVitalSignsLogic = () => {
       setCurrentTimeIndex(nextIndex);
       const historyForNext = vitalsHistory[TIME_SLOTS[nextIndex]];
       setCurrentVitals(historyForNext || initialVitals);
-      setBackendAlert(null); 
+      setBackendAlert(null);
+      setRealtimeAlert(null);
+      setRealtimeSeverity(null);
     }
   };
 
@@ -316,6 +320,8 @@ export const useVitalSignsLogic = () => {
     const newTime = TIME_SLOTS[index];
     const historyForSlot = vitalsHistory[newTime];
     setCurrentVitals(historyForSlot || initialVitals);
+    setRealtimeAlert(null);
+    setRealtimeSeverity(null);
   };
 
   const reset = () => {
