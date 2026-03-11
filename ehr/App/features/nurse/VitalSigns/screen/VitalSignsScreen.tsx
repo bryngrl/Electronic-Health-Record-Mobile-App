@@ -99,12 +99,17 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [recordId, setRecordId] = useState<number | null>(null);
   const [isNA, setIsNA] = useState(false);
+  const [isAlertLoading, setIsAlertLoading] = useState(false);
   const fieldTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const analyzeCountRef = useRef(0);
 
   const handleVitalChange = useCallback((key: string, value: string) => {
     handleUpdateVital(key, value);
     if (!selectedPatientId) return;
     if (fieldTimers.current[key]) clearTimeout(fieldTimers.current[key]);
+    setIsAlertLoading(true);
+    analyzeCountRef.current += 1;
+    const thisCount = analyzeCountRef.current;
     fieldTimers.current[key] = setTimeout(async () => {
       const today = new Date().toLocaleDateString('en-CA');
       const time24 = convertTo24h(TIME_SLOTS[currentTimeIndex]);
@@ -123,6 +128,9 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
       if (res) {
         setRealtimeAlert(res.alert);
         setRealtimeSeverity(res.severity);
+      }
+      if (thisCount === analyzeCountRef.current) {
+        setIsAlertLoading(false);
       }
     }, 800);
   }, [selectedPatientId, vitals, analyzeField, handleUpdateVital, TIME_SLOTS, currentTimeIndex, setRealtimeAlert, setRealtimeSeverity]);
@@ -737,6 +745,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
         visible={cdssVisible}
         onClose={() => setCdssVisible(false)}
         category="VITAL SIGNS ASSESSMENT"
+        loading={isAlertLoading}
         alertText={(() => {
           const validDataAlert =
             dataAlert &&

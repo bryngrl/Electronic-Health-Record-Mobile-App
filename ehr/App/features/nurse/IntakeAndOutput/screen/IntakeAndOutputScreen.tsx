@@ -88,11 +88,16 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   const fieldTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [backendAlert, setLocalBackendAlert] = useState<string | null>(null);
   const [backendSeverity, setLocalBackendSeverity] = useState<string | null>(null);
+  const [isAlertLoading, setIsAlertLoading] = useState(false);
+  const analyzeCountRef = useRef(0);
 
   const handleFieldChange = useCallback((field: string, value: string) => {
     handleUpdateField(field, value);
     if (!selectedPatientId) return;
     if (fieldTimers.current[field]) clearTimeout(fieldTimers.current[field]);
+    setIsAlertLoading(true);
+    analyzeCountRef.current += 1;
+    const thisCount = analyzeCountRef.current;
     fieldTimers.current[field] = setTimeout(async () => {
       const currentData = { ...intakeOutput, [field]: value };
       const payload = {
@@ -105,6 +110,9 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
       if (result) {
         setLocalBackendAlert(result.alert);
         setLocalBackendSeverity(result.severity);
+      }
+      if (thisCount === analyzeCountRef.current) {
+        setIsAlertLoading(false);
       }
     }, 800);
   }, [selectedPatientId, intakeOutput, analyzeField, handleUpdateField]);
@@ -512,6 +520,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
         visible={cdssModalVisible}
         onClose={() => setCdssModalVisible(false)}
         category="I&O Assessment"
+        loading={isAlertLoading}
         alertText={getCleanedAlertText()}
         severity={backendSeverity || assessmentSeverity || undefined}
       />
