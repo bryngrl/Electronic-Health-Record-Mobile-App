@@ -7,6 +7,7 @@ interface VitalCardProps {
   onChangeText: (text: string) => void;
   disabled?: boolean;
   onDisabledPress?: () => void;
+  keyboardType?: 'numeric' | 'numbers-and-punctuation' | 'default';
 }
 
 const VitalCard: React.FC<VitalCardProps> = ({
@@ -15,6 +16,7 @@ const VitalCard: React.FC<VitalCardProps> = ({
   onChangeText,
   disabled,
   onDisabledPress,
+  keyboardType = 'numeric',
 }) => (
   <View style={styles.cardContainer}>
     {/* Outer Box / Label Header Area */}
@@ -34,7 +36,7 @@ const VitalCard: React.FC<VitalCardProps> = ({
         style={styles.innerInput}
         value={value}
         onChangeText={onChangeText}
-        keyboardType="numeric"
+        keyboardType={keyboardType}
         placeholder="--"
         placeholderTextColor="#C7C7CD"
         editable={!disabled}

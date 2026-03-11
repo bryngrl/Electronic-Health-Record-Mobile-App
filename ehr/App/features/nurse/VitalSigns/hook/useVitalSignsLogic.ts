@@ -169,6 +169,8 @@ export const useVitalSignsLogic = () => {
       const response = await apiClient.put(`/vital-signs/${targetId}/assessment`, payload);
       const data = response.data?.data || response.data;
       const alertText: string = (data?.alerts || data?.assessment_alert || data?.alert || '').toString().trim();
+      console.log('[VS analyzeField] raw response data:', JSON.stringify(data));
+      console.log('[VS analyzeField] alert text:', alertText || '(empty)');
       if (
         !alertText ||
         alertText.toLowerCase().includes('no findings') ||

@@ -43,51 +43,32 @@ const CDSSModal: React.FC<CDSSModalProps> = ({
   const severityStyle = getSeverityStyle(severity);
   const renderFormattedText = (text: string) => {
     if (!text || typeof text !== 'string') return null;
-    // Split by " | " or newlines in case there are multiple concatenated alerts
-    const lines = text.split(/ \| |\n/);
+    const lines = bulletFormat
+      ? text.split(/;\s*| \| |\n/).filter(l => l.trim())
+      : text.split(/ \| |\n/).filter(l => l.trim());
+    const isMultiple = bulletFormat && lines.length > 1;
 
     return lines.map((line, index) => {
-      if (!line.trim()) return null;
-
       const upperLine = line.toUpperCase();
-      let titleColor = '#333'; // Default black for text
+      let titleColor = '#333';
       let alertTitle = '';
       let alertDesc = line;
 
-      // 1. Identify Severity and set Title Color
-      if (
-        line.includes('🔴') ||
-        upperLine.includes('CRITICAL') ||
-        upperLine.includes('SEVERE')
-      ) {
-        titleColor = '#C62828'; // Deep Red
-      } else if (
-        line.includes('🟠') ||
-        upperLine.includes('WARNING') ||
-        upperLine.includes('LOW')
-      ) {
-        titleColor = '#E65100'; // Deep Orange
-      } else if (
-        line.includes('✓') ||
-        upperLine.includes('NORMAL') ||
-        upperLine.includes('INFO') ||
-        upperLine.includes('SUCCESS')
-      ) {
-        titleColor = '#2E7D32'; // Deep Green
+      if (line.includes('🔴') || upperLine.includes('CRITICAL') || upperLine.includes('SEVERE')) {
+        titleColor = '#C62828';
+      } else if (line.includes('🟠') || upperLine.includes('WARNING') || upperLine.includes('LOW')) {
+        titleColor = '#E65100';
+      } else if (line.includes('✓') || upperLine.includes('NORMAL') || upperLine.includes('INFO') || upperLine.includes('SUCCESS')) {
+        titleColor = '#2E7D32';
       }
 
-      // 2. Try to split into Title and Description at the colon
       const splitIndex = line.indexOf(':');
       if (splitIndex !== -1) {
         alertTitle = line.substring(0, splitIndex + 1);
         alertDesc = line.substring(splitIndex + 1);
       } else {
-        // Fallback: If no colon, try to color the first part if it has an emoji
         const words = line.split(' ');
-        if (
-          words.length > 1 &&
-          (line.includes('🔴') || line.includes('🟠') || line.includes('✓'))
-        ) {
+        if (words.length > 1 && (line.includes('🔴') || line.includes('🟠') || line.includes('✓'))) {
           alertTitle = words[0] + ' ' + (words[1] || '') + ' ';
           alertDesc = words.slice(2).join(' ');
         } else {
@@ -97,13 +78,14 @@ const CDSSModal: React.FC<CDSSModalProps> = ({
       }
 
       return (
-        <Text key={index} style={styles.alertContent}>
-          <Text style={{ color: titleColor, fontWeight: 'bold' }}>
-            {alertTitle}
+        <View key={index} style={isMultiple ? styles.bulletRow : undefined}>
+          {isMultiple && <Text style={[styles.bullet, { color: titleColor }]}>{'•'}</Text>}
+          <Text style={[styles.alertContent, isMultiple && styles.bulletText]}>
+            <Text style={{ color: titleColor, fontWeight: 'bold' }}>{alertTitle}</Text>
+            <Text style={{ color: '#333' }}>{alertDesc}</Text>
+            {!isMultiple && index < lines.length - 1 ? '\n\n' : ''}
           </Text>
-          <Text style={{ color: '#333' }}>{alertDesc}</Text>
-          {index < lines.length - 1 ? '\n\n' : ''}
-        </Text>
+        </View>
       );
     });
   };
@@ -200,7 +182,21 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 5,
   },
-  alertContent: { color: '#333', fontSize: 14, lineHeight: 20 },
+  alertContent: { color: '#333', fontSize: 14, lineHeight: 20, flexShrink: 1 },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  bullet: {
+    fontSize: 16,
+    lineHeight: 20,
+    marginRight: 8,
+    fontWeight: 'bold',
+  },
+  bulletText: {
+    flex: 1,
+  },
   severityBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
