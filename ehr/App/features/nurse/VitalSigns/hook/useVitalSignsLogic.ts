@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import apiClient from '@api/apiClient';
 
 const TIME_SLOTS = ['6:00 AM', '8:00 AM', '12:00 PM', '2:00 PM', '6:00 PM', '8:00 PM', '12:00 AM'];
@@ -17,6 +17,13 @@ const initialVitals: Vitals = {
   rr: '',
   bp: '',
   spo2: '',
+};
+
+const inferSeverity = (text: string): string => {
+  const upper = text.toUpperCase();
+  if (upper.includes('URGENT') || upper.includes('CRITICAL') || upper.includes('IMMEDIATELY') || upper.includes('EMERGENCY') || upper.includes('PERITONITIS') || upper.includes('SEPSIS')) return 'CRITICAL';
+  if (upper.includes('EVALUATE') || upper.includes('MONITOR') || upper.includes('ASSESS') || upper.includes('REFER') || upper.includes('DISEASE') || upper.includes('INFECTION') || upper.includes('ABNORMAL') || upper.includes('SUSPECTED') || upper.includes('LIVER') || upper.includes('HEMOLYSIS') || upper.includes('JAUNDICE') || upper.includes('PALLOR') || upper.includes('TREAT') || upper.includes('ELEVATED') || upper.includes('TACHYCARDIA') || upper.includes('BRADYCARDIA') || upper.includes('HYPERTENSION') || upper.includes('HYPOTENSION') || upper.includes('FEVER') || upper.includes('HYPOTHERMIA')) return 'WARNING';
+  return 'INFO';
 };
 
 const convertTo24h = (timeStr: string) => {
@@ -50,8 +57,13 @@ export const useVitalSignsLogic = () => {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   
   const [backendAlert, setBackendAlert] = useState<{ title: string, message: string, type: 'success' | 'error' } | null>(null);
+  const [backendSeverity, setBackendSeverity] = useState<string | null>(null);
+  const [realtimeAlert, setRealtimeAlert] = useState<string | null>(null);
+  const [realtimeSeverity, setRealtimeSeverity] = useState<string | null>(null);
   const [dataAlert, setDataAlert] = useState<string | null>(null);
   const [existingRecords, setExistingRecords] = useState<any[]>([]);
+  const [isExistingRecord, setIsExistingRecord] = useState(false);
+  const recordIdRef = useRef<number | null>(null);
 
   const currentTime = useMemo(() => TIME_SLOTS[currentTimeIndex], [currentTimeIndex]);
 
@@ -108,6 +120,10 @@ export const useVitalSignsLogic = () => {
       
       setVitalsHistory(history);
       
+      if (Object.keys(history).length > 0) {
+        setIsExistingRecord(true);
+      }
+
       if (history[currentTime]) {
         setCurrentVitals(history[currentTime]);
       } else if (records.length > 0) {
@@ -130,6 +146,29 @@ export const useVitalSignsLogic = () => {
       setCurrentVitals(initialVitals);
     }
   };
+
+  const analyzeField = useCallback(async (payload: any): Promise<{ alert: string | null; severity: string | null } | null> => {
+    try {
+      const targetId = recordIdRef.current;
+      let response;
+      if (targetId) {
+        response = await apiClient.put(`/vital-signs/${targetId}/assessment`, payload);
+      } else {
+        response = await apiClient.post('/vital-signs', payload);
+      }
+      const data = response.data?.data || response.data;
+      if (data?.id && !recordIdRef.current) {
+        recordIdRef.current = data.id;
+      }
+      const alertText: string = (data?.assessment_alert || data?.alert || '').toString().trim();
+      if (!alertText || alertText === 'No findings.' || alertText === 'No Findings') {
+        return { alert: null, severity: null };
+      }
+      return { alert: alertText, severity: inferSeverity(alertText) };
+    } catch (err) {
+      return null;
+    }
+  }, []);
 
   const saveAssessment = async (dayNo?: number) => {
     if (!selectedPatientId) return null;
@@ -184,7 +223,11 @@ export const useVitalSignsLogic = () => {
           type: isCritical ? 'error' : 'success'
         };
         setBackendAlert(alertObj);
+        setBackendSeverity(inferSeverity(data.assessment_alert));
+        setRealtimeAlert(data.assessment_alert);
+        setRealtimeSeverity(inferSeverity(data.assessment_alert));
       }
+      setIsExistingRecord(true);
       return data;
     } catch (e: any) {
       console.error('API Error saving vital signs:', e?.response?.data || e.message);
@@ -241,6 +284,11 @@ export const useVitalSignsLogic = () => {
   const setSelectedPatient = (id: string | null, name: string) => {
     setSelectedPatientId(id);
     setPatientName(name);
+    setIsExistingRecord(false);
+    recordIdRef.current = null;
+    setRealtimeAlert(null);
+    setRealtimeSeverity(null);
+    setBackendSeverity(null);
     if (id) {
       loadPatientData(id);
     } else {
@@ -295,6 +343,7 @@ export const useVitalSignsLogic = () => {
     currentTimeIndex,
     handleNextTime,
     saveAssessment,
+    analyzeField,
     updateDPIE,
     isMenuVisible,
     setIsMenuVisible,
@@ -303,8 +352,15 @@ export const useVitalSignsLogic = () => {
     TIME_SLOTS,
     chartData,
     currentAlert: backendAlert,
+    backendSeverity,
+    realtimeAlert,
+    realtimeSeverity,
+    setRealtimeAlert,
+    setRealtimeSeverity,
     dataAlert,
     vitalKeys: Object.keys(initialVitals) as (keyof Vitals)[],
     existingRecords,
+    isExistingRecord,
+    setIsExistingRecord,
   };
 };

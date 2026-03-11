@@ -374,7 +374,55 @@ This API provides the latest clinical alerts generated from assessments. Use thi
 
 ---
 
-## 🛠️ 9. Tutorial: Connecting ADPIE API to Mobile Screens
+## 🛠️ 9. Tutorial: Physical Exam Alerts & CDSS
+
+The Physical Exam module uses a Clinical Decision Support System (CDSS) to analyze nurse findings in real-time.
+
+### **A. Field Names (Crucial)**
+
+When sending data to the Physical Exam API, you **MUST** use these exact field names for the CDSS to work:
+
+| Field Key            | UI Label           |
+| :------------------- | :----------------- |
+| `general_appearance` | GENERAL APPEARANCE |
+| `skin_condition`     | SKIN               |
+| `eye_condition`      | EYES               |
+| `oral_condition`     | ORAL CAVITY        |
+| `cardiovascular`     | CARDIOVASCULAR     |
+| `abdomen_condition`  | ABDOMEN            |
+| `extremities`        | EXTRAMITIES        |
+| `neurological`       | NEUROLOGICAL       |
+
+### **B. Live Analysis (Real-time Feedback)**
+
+As the nurse types findings into a textarea, call the analysis endpoint to show immediate alerts.
+
+- **Endpoint:** `POST /api/adpie/analyze`
+- **Body Example:**
+
+```json
+{
+  "fieldName": "skin_condition",
+  "finding": "Poor skin turgor and dry mucous membranes",
+  "component": "physical-exam"
+}
+```
+
+- **Response Handle:**
+  - If `level` is `CRITICAL` or `WARNING`, show a red/amber notification icon next to the input.
+  - If `message` is `"NO RECOMMENDATIONS"`, clear any existing alerts.
+
+### **C. Summary Alerts (Section Headers)**
+
+To show if a Physical Exam section has any alerts without opening it:
+
+1. Call `GET /api/physical-exam/data-alert/patient/{id}`.
+2. The backend will return a concatenated string of all current physical exam alerts (e.g., `"Abnormal skin turgor; Crackles in lungs"`).
+3. If the string is not empty, display a "🔔" icon on the Physical Exam menu item.
+
+---
+
+## 🛠️ 10. Tutorial: Connecting ADPIE API to Mobile Screens
 
 This section explains how to implement the 4-step ADPIE (Diagnosis, Planning, Intervention, Evaluation) workflow in your mobile app using the centralized CDSS API.
 

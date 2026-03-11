@@ -72,12 +72,20 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
     isDataEntered,
     isDataComplete,
     currentAlert,
+    backendSeverity,
+    realtimeAlert,
+    realtimeSeverity,
+    setRealtimeAlert,
+    setRealtimeSeverity,
+    analyzeField,
     dataAlert,
     saveAssessment,
     isMenuVisible,
     setIsMenuVisible,
     reset,
     existingRecords,
+    isExistingRecord,
+    setIsExistingRecord,
   } = useVitalSignsLogic();
 
   const [chartIndex, setChartIndex] = useState(0);
@@ -88,10 +96,45 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
   const [successVisible, setSuccessVisible] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [selectedPatient, setSelectedPatientFull] = useState<any | null>(null);
-
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [recordId, setRecordId] = useState<number | null>(null);
   const [isNA, setIsNA] = useState(false);
+  const fieldTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  const handleVitalChange = useCallback((key: string, value: string) => {
+    handleUpdateVital(key, value);
+    if (!selectedPatientId) return;
+    if (fieldTimers.current[key]) clearTimeout(fieldTimers.current[key]);
+    fieldTimers.current[key] = setTimeout(async () => {
+      const today = new Date().toLocaleDateString('en-CA');
+      const time24 = TIME_SLOTS[currentTimeIndex]
+        .replace(' AM', '').replace(' PM', '')
+        .split(':')
+        .map((p: string, i: number) => {
+          if (i === 0) {
+            let h = parseInt(p, 10);
+            const slot = TIME_SLOTS[currentTimeIndex];
+            if (slot.includes('PM') && h !== 12) h += 12;
+            if (slot.includes('AM') && h === 12) h = 0;
+            return h.toString().padStart(2, '0');
+          }
+          return p.padStart(2, '0');
+        }).join(':') + ':00';
+      const payload = {
+        patient_id: parseInt(selectedPatientId, 10),
+        date: today,
+        time: time24,
+        day_no: 1,
+        ...vitals,
+        [key]: value || 'N/A',
+      };
+      const result = await analyzeField(payload);
+      if (result) {
+        setRealtimeAlert(result.alert);
+        setRealtimeSeverity(result.severity);
+      }
+    }, 800);
+  }, [selectedPatientId, vitals, analyzeField, handleUpdateVital, TIME_SLOTS, currentTimeIndex, setRealtimeAlert, setRealtimeSeverity]);
 
   const toggleNA = () => {
     const newState = !isNA;
@@ -119,10 +162,10 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
   }, [selectedPatientId, vitals]);
 
   useEffect(() => {
-    if (isDataComplete) {
+    if (realtimeAlert) {
       triggerShake();
     }
-  }, [isDataComplete]);
+  }, [realtimeAlert]);
 
   const triggerShake = () => {
     shakeAnim.setValue(0);
@@ -207,21 +250,17 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
       const dayNo = parseInt(calculateDayNumber(), 10) || 1;
       const res = await saveAssessment(dayNo);
       
-      // Laravel might wrap the response in a 'data' key or return it directly
       const actualData = res?.data || res;
       const id = actualData?.id || actualData?.vital_id;
 
       if (id) {
         setRecordId(id);
+        setIsExistingRecord(true);
 
         if (currentTimeIndex === TIME_SLOTS.length - 1) {
-          // If it's the last slot, show success message
-          const isUpdate = (actualData.updated_at !== actualData.created_at) || 
-                           existingRecords.some(r => r.id === id);
-          
           setSuccessMessage({
-            title: isUpdate ? 'Successully Updated' : 'Successfully Submitted',
-            message: isUpdate
+            title: isExistingRecord ? 'SUCCESSFULLY UPDATED' : 'SUCCESSFULLY SUBMITTED',
+            message: isExistingRecord
               ? 'Vital signs updated successfully.'
               : 'Vital signs submitted successfully.',
           });
@@ -290,15 +329,9 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
     const findings = Object.entries(vitals)
       .filter(([_, value]) => typeof value === 'string' && value.trim() !== '' && value !== 'N/A')
       .map(([key, value]) => `${key.toUpperCase()}: ${value}`);
-    
-    if (currentAlert?.message) {
-      findings.push(currentAlert.message);
-    }
-
-    if (dataAlert) {
-      findings.push(dataAlert);
-    }
-    
+    const alert = realtimeAlert || currentAlert?.message;
+    if (alert) findings.push(alert);
+    if (dataAlert) findings.push(dataAlert);
     return findings.join('. ');
   };
 
@@ -505,7 +538,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
             <VitalCard
               label="Temperature"
               value={vitals.temperature}
-              onChangeText={v => handleUpdateVital('temperature', v)}
+              onChangeText={v => handleVitalChange('temperature', v)}
               disabled={!selectedPatientId || isNA}
               onDisabledPress={() => {
                 if (!selectedPatientId) {
@@ -516,7 +549,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
             <VitalCard
               label="HR"
               value={vitals.hr}
-              onChangeText={v => handleUpdateVital('hr', v)}
+              onChangeText={v => handleVitalChange('hr', v)}
               disabled={!selectedPatientId || isNA}
               onDisabledPress={() => {
                 if (!selectedPatientId) {
@@ -527,7 +560,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
             <VitalCard
               label="RR"
               value={vitals.rr}
-              onChangeText={v => handleUpdateVital('rr', v)}
+              onChangeText={v => handleVitalChange('rr', v)}
               disabled={!selectedPatientId || isNA}
               onDisabledPress={() => {
                 if (!selectedPatientId) {
@@ -538,7 +571,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
             <VitalCard
               label="BP"
               value={vitals.bp}
-              onChangeText={v => handleUpdateVital('bp', v)}
+              onChangeText={v => handleVitalChange('bp', v)}
               disabled={!selectedPatientId || isNA}
               onDisabledPress={() => {
                 if (!selectedPatientId) {
@@ -549,7 +582,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
             <VitalCard
               label="SP02"
               value={vitals.spo2}
-              onChangeText={v => handleUpdateVital('spo2', v)}
+              onChangeText={v => handleVitalChange('spo2', v)}
               disabled={!selectedPatientId || isNA}
               onDisabledPress={() => {
                 if (!selectedPatientId) {
@@ -568,13 +601,13 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
                   {
                     backgroundColor: !selectedPatientId
                       ? theme.alertBellDisabledBg
-                      : currentAlert || isDataComplete
+                      : realtimeAlert || currentAlert
                       ? theme.alertBellOnBg
                       : theme.alertBellOffBg,
                     borderColor: !selectedPatientId
                       ? theme.border
                       : '#EDB62C',
-                    opacity: !selectedPatientId ? 1 : currentAlert || isDataComplete ? 1 : 0.3,
+                    opacity: !selectedPatientId ? 1 : realtimeAlert || currentAlert ? 1 : 0.3,
                   },
                 ]}
                 disabled={!isDataEntered}
@@ -714,16 +747,16 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
         confirmText="OK"
       />
 
-      {/* Clinical Guidance Modal */}
       <CDSSModal
         visible={cdssVisible}
         onClose={() => setCdssVisible(false)}
         category="VITAL SIGNS ASSESSMENT"
         alertText={
-          dataAlert 
-            ? `${dataAlert}${currentAlert?.message ? '\n\n' + currentAlert.message : ''}`
+          realtimeAlert || dataAlert
+            ? [realtimeAlert, dataAlert].filter(Boolean).join('\n\n')
             : (currentAlert?.message || 'No clinical findings found.')
         }
+        severity={realtimeSeverity || backendSeverity || undefined}
       />
 
       {/* Time Selection Menu */}
