@@ -28,7 +28,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import VitalCard from '@nurse/VitalSigns/component/VitalCard';
 import PreciseVitalChart from '@nurse/VitalSigns/component/VitalSignsChart';
-import { useVitalSignsLogic } from '@nurse/VitalSigns/hook/useVitalSignsLogic';
+import { useVitalSignsLogic, convertTo24h } from '@nurse/VitalSigns/hook/useVitalSignsLogic';
 import SweetAlert from '@components/SweetAlert';
 import CDSSModal from '@components/CDSSModal';
 import ADPIEScreen from '@components/ADPIEScreen';
@@ -107,31 +107,22 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
     if (fieldTimers.current[key]) clearTimeout(fieldTimers.current[key]);
     fieldTimers.current[key] = setTimeout(async () => {
       const today = new Date().toLocaleDateString('en-CA');
-      const time24 = TIME_SLOTS[currentTimeIndex]
-        .replace(' AM', '').replace(' PM', '')
-        .split(':')
-        .map((p: string, i: number) => {
-          if (i === 0) {
-            let h = parseInt(p, 10);
-            const slot = TIME_SLOTS[currentTimeIndex];
-            if (slot.includes('PM') && h !== 12) h += 12;
-            if (slot.includes('AM') && h === 12) h = 0;
-            return h.toString().padStart(2, '0');
-          }
-          return p.padStart(2, '0');
-        }).join(':') + ':00';
+      const time24 = convertTo24h(TIME_SLOTS[currentTimeIndex]);
+      const sanitized: Record<string, string> = {};
+      Object.entries({ ...vitals, [key]: value }).forEach(([k, v]) => {
+        sanitized[k] = v && v.trim() ? v : 'N/A';
+      });
       const payload = {
         patient_id: parseInt(selectedPatientId, 10),
         date: today,
         time: time24,
         day_no: 1,
-        ...vitals,
-        [key]: value || 'N/A',
+        ...sanitized,
       };
-      const result = await analyzeField(payload);
-      if (result) {
-        setRealtimeAlert(result.alert);
-        setRealtimeSeverity(result.severity);
+      const res = await analyzeField(payload);
+      if (res) {
+        setRealtimeAlert(res.alert);
+        setRealtimeSeverity(res.severity);
       }
     }, 800);
   }, [selectedPatientId, vitals, analyzeField, handleUpdateVital, TIME_SLOTS, currentTimeIndex, setRealtimeAlert, setRealtimeSeverity]);
@@ -224,16 +215,11 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
     message: '',
   });
 
-  const handleAlertPress = async () => {
+  const handleAlertPress = () => {
     if (!selectedPatientId) {
       return setAlertVisible(true);
     }
-    const dayNo = parseInt(calculateDayNumber(), 10);
-    const res = await saveAssessment(dayNo);
-    if (res && res.id) {
-      setRecordId(res.id);
-      setCdssVisible(true);
-    }
+    setCdssVisible(true);
   };
 
   const handleSelectTimeSlot = (index: number) => {
