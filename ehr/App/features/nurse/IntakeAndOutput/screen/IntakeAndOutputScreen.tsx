@@ -52,6 +52,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   const {
     patientName,
     selectedPatientId,
+    selectedPatient,
     handleSelectPatient,
     intakeOutput,
     handleUpdateField,
@@ -100,11 +101,13 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     const thisCount = analyzeCountRef.current;
     fieldTimers.current[field] = setTimeout(async () => {
       const currentData = { ...intakeOutput, [field]: value };
+      const toInt = (v: string) => { const n = parseInt(v, 10); return isNaN(n) ? null : n; };
       const payload = {
         patient_id: parseInt(selectedPatientId, 10),
-        oral_intake: currentData.oral_intake || 'N/A',
-        iv_fluids_volume: currentData.iv_fluids_volume || 'N/A',
-        urine_output: currentData.urine_output || 'N/A',
+        day_no: parseInt(calculateDayNumber(), 10) || 1,
+        oral_intake: toInt(currentData.oral_intake),
+        iv_fluids_volume: toInt(currentData.iv_fluids_volume),
+        urine_output: toInt(currentData.urine_output),
       };
       const result = await analyzeField(payload);
       if (result) {
@@ -197,6 +200,16 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     );
   }, []);
 
+  const calculateDayNumber = () => {
+    if (!selectedPatient?.admission_date) return '';
+    const admission = new Date(selectedPatient.admission_date);
+    const today = new Date();
+    admission.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.floor((today.getTime() - admission.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays > 0 ? diffDays.toString() : '1';
+  };
+
   const hasRealAlert = !!(backendAlert || assessmentAlert || dataAlert);
 
   const handleSubmit = async () => {
@@ -206,7 +219,8 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
       return;
     }
 
-    const result = await saveAssessment();
+    const dayNo = parseInt(calculateDayNumber(), 10) || 1;
+    const result = await saveAssessment(dayNo);
     if (result) {
       setIsExistingRecord(true);
       setSuccessMessage({
@@ -229,7 +243,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
       setAlertVisible(true);
       return;
     }
-    const res = await saveAssessment();
+    const res = await saveAssessment(parseInt(calculateDayNumber(), 10) || 1);
     if (res && res.id) {
       setIsExistingRecord(true);
       const alertFromRes = res.assessment_alert || res.alert || backendAlert;
@@ -347,6 +361,15 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
             onPatientSelect={handleSelectPatient}
             onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
           />
+
+          <View style={{ width: '50%' }}>
+              <Text style={styles.fieldLabel}>DAY NO :</Text>
+              <View style={styles.pillInput}>
+                <Text style={styles.dateVal}>
+                  {calculateDayNumber() || '—'}
+                </Text>
+              </View>
+            </View>
 
           <TouchableOpacity
             style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
@@ -559,6 +582,23 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontFamily: 'AlteHaasGroteskBold',
       fontSize: 13,
     },
+    row: { flexDirection: 'row', marginBottom: 15 },
+    fieldLabel: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 14,
+      marginBottom: 8,
+    },
+    pillInput: {
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      borderRadius: 25,
+      height: 45,
+      paddingHorizontal: 20,
+      justifyContent: 'center',
+      backgroundColor: theme.card,
+    },
+    dateVal: { color: theme.text, fontFamily: 'AlteHaasGrotesk' },
     naRow: {
       flexDirection: 'row',
       alignItems: 'center',
