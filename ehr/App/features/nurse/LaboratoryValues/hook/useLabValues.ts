@@ -117,8 +117,12 @@ export const useLabValues = () => {
       const data = response.data?.data || response.data;
       const returnedLabId: number | null = data?.id || null;
       const alertText: string = (data?.[`${prefix}_alert`] || '').toString().trim();
-      const invalid = ['No findings.', 'No Findings', 'Normal'];
-      if (!alertText || invalid.includes(alertText) || alertText.includes('No result')) {
+      if (
+        !alertText ||
+        alertText.toLowerCase().includes('no findings') ||
+        alertText.toLowerCase().includes('no result') ||
+        alertText.toLowerCase() === 'normal'
+      ) {
         return { alert: null, severity: null, labId: returnedLabId };
       }
       return { alert: alertText, severity: inferSeverity(alertText), labId: returnedLabId };
