@@ -117,11 +117,12 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
       Object.entries({ ...vitals, [key]: value }).forEach(([k, v]) => {
         sanitized[k] = v && v.trim() ? v : 'N/A';
       });
+      const dayNo = parseInt(calculateDayNumber(), 10) || 1;
       const payload = {
         patient_id: parseInt(selectedPatientId, 10),
         date: today,
         time: time24,
-        day_no: 1,
+        day_no: dayNo,
         ...sanitized,
       };
       const res = await analyzeField(payload);
@@ -235,36 +236,35 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
     setIsMenuVisible(false);
   };
 
-  const handleNextPress = async () => {
+  const handleNextPress = () => {
+    handleNextTime();
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const handleSubmitPress = async () => {
     if (!selectedPatientId) {
       return setAlertVisible(true);
     }
 
-    if (isDataEntered) {
-      const dayNo = parseInt(calculateDayNumber(), 10) || 1;
-      const res = await saveAssessment(dayNo);
-      
-      const actualData = res?.data || res;
-      const id = actualData?.id || actualData?.vital_id;
+    Object.values(fieldTimers.current).forEach(t => clearTimeout(t));
+    fieldTimers.current = {};
 
-      if (id) {
-        setRecordId(id);
-        setIsExistingRecord(true);
+    const dayNo = parseInt(calculateDayNumber(), 10) || 1;
+    const res = await saveAssessment(dayNo);
+    const actualData = res?.data || res;
+    const id = actualData?.id || actualData?.vital_id;
 
-        if (currentTimeIndex === TIME_SLOTS.length - 1) {
-          setSuccessMessage({
-            title: isExistingRecord ? 'SUCCESSFULLY UPDATED' : 'SUCCESSFULLY SUBMITTED',
-            message: isExistingRecord
-              ? 'Vital signs updated successfully.'
-              : 'Vital signs submitted successfully.',
-          });
-          setSuccessVisible(true);
-          return;
-        }
-      }
+    if (id) {
+      setRecordId(id);
+      setIsExistingRecord(true);
+      setSuccessMessage({
+        title: isExistingRecord ? 'SUCCESSFULLY UPDATED' : 'SUCCESSFULLY SUBMITTED',
+        message: isExistingRecord
+          ? 'Vital signs updated successfully.'
+          : 'Vital signs submitted successfully.',
+      });
+      setSuccessVisible(true);
     }
-    handleNextTime();
-    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const handleCDSSPress = async () => {
@@ -566,6 +566,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
               label="BP"
               value={vitals.bp}
               onChangeText={v => handleVitalChange('bp', v)}
+              keyboardType="numbers-and-punctuation"
               disabled={!selectedPatientId || isNA}
               onDisabledPress={() => {
                 if (!selectedPatientId) {
@@ -651,7 +652,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
                       borderColor: theme.buttonDisabledBorder,
                     },
                   ]}
-                  onPress={handleNextPress}
+                  onPress={handleSubmitPress}
                   disabled={!selectedPatientId}
                 >
                   <Text
@@ -732,11 +733,9 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
         type="success"
         onConfirm={() => {
           setSuccessVisible(false);
-          if (currentTimeIndex === TIME_SLOTS.length - 1) {
-            setRecordId(null);
-            reset();
-            setSelectedPatientFull(null);
-          }
+          setRecordId(null);
+          reset();
+          setSelectedPatientFull(null);
         }}
         confirmText="OK"
       />
@@ -746,6 +745,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack }) => {
         onClose={() => setCdssVisible(false)}
         category="VITAL SIGNS ASSESSMENT"
         loading={isAlertLoading}
+        bulletFormat
         alertText={(() => {
           const validDataAlert =
             dataAlert &&
