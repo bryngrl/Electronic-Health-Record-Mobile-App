@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,283 +6,66 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
-  TextInput,
-  Pressable,
   Image,
-  BackHandler,
-  Platform,
   StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import LabResultCard from '../components/LabResultCard';
-import apiClient from '@api/apiClient';
-import { useLabValues } from '../hook/useLabValues';
 import CDSSModal from '@components/CDSSModal';
 import ADPIEScreen from '@components/ADPIEScreen';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
+import { useLabValuesScreen } from './useLabValuesScreen';
+import { LAB_TESTS, getTestPrefix } from './constants';
 
 const alertIcon = require('@assets/icons/alert.png');
-
-const LAB_TESTS = [
-  'WBC (×10⁹/L)',
-  'RBC (×10¹²/L)',
-  'Hgb (g/dL)',
-  'Hct (%)',
-  'Platelets (×10⁹/L)',
-  'MCV (fL)',
-  'MCH (pg)',
-  'MCHC (g/dL)',
-  'RDW (%)',
-  'Neutrophils (%)',
-  'Lymphocytes (%)',
-  'Monocytes (%)',
-  'Eosinophils (%)',
-  'Basophils (%)',
-];
 
 const LabValuesScreen = ({ onBack }: any) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(() => createStyles(theme, commonStyles, isDarkMode), [theme, commonStyles, isDarkMode]);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const {
-    alerts,
-    checkLabAlerts,
-    saveLabAssessment,
-    fetchLatestLabValues,
-    setAlerts,
+    searchText,
+    selectedPatientId,
+    scrollEnabled, setScrollEnabled,
+    isNA, toggleNA,
+    labId,
+    isExistingRecord,
+    selectedTestIndex, setSelectedTestIndex,
+    result, setResult,
+    normalRange, setNormalRange,
+    backendAlerts,
+    backendSeverities,
+    isAdpieActive, setIsAdpieActive,
+    showLabList, setShowLabList,
+    passedAlert, setPassedAlert,
+    alertConfig, setAlertConfig,
+    showAlert,
     dataAlert,
-    fetchDataAlert,
-  } = useLabValues();
-  const [labId, setLabId] = useState<number | null>(null);
-  const [selectedTest, setSelectedTest] = useState(LAB_TESTS[0]);
-  const [result, setResult] = useState('');
-  const [normalRange, setNormalRange] = useState('');
-  const [allLabData, setAllLabData] = useState<any>({});
+    handlePatientSelect,
+    handleCDSSPress,
+    handleNextOrSave,
+    generateFindingsSummary,
+  } = useLabValuesScreen(onBack);
 
-  const [isAdpieActive, setIsAdpieActive] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [showLabList, setShowLabList] = useState(false);
-
-  const [searchText, setSearchText] = useState('');
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
-    null,
-  );
-  const [scrollEnabled, setScrollEnabled] = useState(true);
-  const [isNA, setIsNA] = useState(false);
-  const scrollViewRef = useRef<ScrollView>(null);
-
-  const toggleNA = () => {
-    const newState = !isNA;
-    setIsNA(newState);
-    if (newState) {
-      setResult('N/A');
-      setNormalRange('N/A');
-    } else {
-      if (result === 'N/A') setResult('');
-      if (normalRange === 'N/A') setNormalRange('');
-    }
-  };
-
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'error';
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'error',
-  });
-
-  useEffect(() => {
-    const backAction = () => {
-      onBack();
-      return true;
-    };
-
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      backAction,
-    );
-
-    return () => backHandler.remove();
-  }, [onBack]);
-
-  const showAlert = (
-    title: string,
-    message: string,
-    type: 'success' | 'error' = 'error',
-  ) => {
-    setAlertConfig({ visible: true, title, message, type });
-  };
-
-  const getBackendPrefix = (label: string) => label.split(' ')[0].toLowerCase();
-
-  useEffect(() => {
-    if (!selectedPatientId || !result.trim() || !normalRange.trim()) return;
-
-    const prefix = getBackendPrefix(selectedTest);
-    const timer = setTimeout(async () => {
-      try {
-        await checkLabAlerts(labId as number, {
-          [`${prefix}_result`]: result,
-          [`${prefix}_normal_range`]: normalRange,
-        });
-      } catch (e) {
-        console.error('Lab CDSS Error:', e);
-      }
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [result, normalRange, selectedTest, labId, selectedPatientId]);
-
-  const [passedAlert, setPassedAlert] = useState<string | null>(null);
-
-  const handleCDSSPress = async () => {
-    if (!selectedPatientId) {
-      return showAlert(
-        'Patient Required',
-        'Please select a patient first in the search bar.',
-      );
-    }
-    const prefix = getBackendPrefix(selectedTest);
-    const payload = {
-      patient_id: parseInt(selectedPatientId, 10),
-      [`${prefix}_result`]: result,
-      [`${prefix}_normal_range`]: normalRange,
-    };
-    try {
-      const res = await saveLabAssessment(payload, labId);
-      if (res && res.id) {
-        setLabId(res.id);
-        if (res.assessment_alert || res.alert) {
-          setPassedAlert(res.assessment_alert || res.alert);
-        }
-        setIsAdpieActive(true);
-        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-      }
-    } catch (e) {
-      showAlert('Error', 'Could not initiate nursing process.');
-    }
-  };
-
-  const handleNextOrSave = async () => {
-    if (!selectedPatientId) {
-      return showAlert(
-        'Patient Required',
-        'Please select a patient first in the search bar.',
-      );
-    }
-    const prefix = getBackendPrefix(selectedTest);
-    const payload: any = {
-      patient_id: parseInt(selectedPatientId, 10),
-      [`${prefix}_result`]: result,
-      [`${prefix}_normal_range`]: normalRange,
-    };
-    try {
-      let finalRes;
-      if (!labId) {
-        finalRes = await saveLabAssessment(payload, labId);
-        if (finalRes && finalRes.id) setLabId(finalRes.id);
-      } else {
-        finalRes = await saveLabAssessment(payload, labId);
-        await checkLabAlerts(labId, {
-          [`${prefix}_result`]: result,
-          [`${prefix}_normal_range`]: normalRange,
-        });
-      }
-
-      // Update local storage of all results
-      if (finalRes) {
-          setAllLabData(finalRes);
-      }
-
-      if (selectedTest === 'Basophils (%)') {
-        showAlert('Success', 'Complete Lab Assessment Saved.', 'success');
-        setTimeout(() => onBack(), 1500);
-      } else {
-        const idx = LAB_TESTS.indexOf(selectedTest);
-        const nextTest = LAB_TESTS[idx + 1];
-        setSelectedTest(nextTest);
-        
-        // Load data for NEXT test if it exists
-        const nextPrefix = getBackendPrefix(nextTest);
-        setResult(allLabData[`${nextPrefix}_result`] || (isNA ? 'N/A' : ''));
-        setNormalRange(allLabData[`${nextPrefix}_normal_range`] || (isNA ? 'N/A' : ''));
-        
-        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-      }
-    } catch (e) {
-      showAlert('Error', 'Submission failed.');
-    }
-  };
-
-  const handlePatientSelect = async (id: number | null, name: string) => {
-    setSelectedPatientId(id ? id.toString() : null);
-    setSearchText(name);
-    if (id) {
-      fetchDataAlert(id);
-      const data = await fetchLatestLabValues(id);
-      if (data) {
-        setLabId(data.id);
-        setAllLabData(data);
-        const prefix = getBackendPrefix(selectedTest);
-        setResult(data[`${prefix}_result`] || '');
-        setNormalRange(data[`${prefix}_normal_range`] || '');
-        setAlerts(data);
-      } else {
-        setLabId(null);
-        setAllLabData({});
-        setResult('');
-        setNormalRange('');
-        setAlerts({});
-      }
-    } else {
-      setLabId(null);
-      setAllLabData({});
-      setResult('');
-      setNormalRange('');
-      setAlerts({});
-    }
-  };
-
-  // Sync inputs when test changes
-  useEffect(() => {
-      const prefix = getBackendPrefix(selectedTest);
-      setResult(allLabData[`${prefix}_result`] || (isNA ? 'N/A' : ''));
-      setNormalRange(allLabData[`${prefix}_normal_range`] || (isNA ? 'N/A' : ''));
-  }, [selectedTest]);
+  const selectedTest = LAB_TESTS[selectedTestIndex];
+  const prefix = getTestPrefix(selectedTest);
+  const currentAlert = backendAlerts[`${prefix}_alert`] ?? null;
+  const currentSeverity = backendSeverities[`${prefix}_severity`] ?? null;
+  const isClinicalAlert = !!(currentAlert || (dataAlert && dataAlert.trim() !== ''));
+  const hasInputData = result.trim() !== '' && normalRange.trim() !== '';
 
   const fadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
-    : [
-        'rgba(255, 255, 255, 0)',
-        'rgba(255, 255, 255, 0.8)',
-        'rgba(255, 255, 255, 1)',
-      ];
+    : ['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 1)'];
 
   const headerFadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
     : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
-
-  const generateFindingsSummary = () => {
-    const findings = Object.entries(allLabData)
-      .filter(([key, value]) => key.endsWith('_result') && typeof value === 'string' && value.trim() !== '' && value !== 'N/A')
-      .map(([key, value]) => {
-          const test = key.replace('_result', '').toUpperCase();
-          return `${test}: ${value}`;
-      });
-    
-    if (dataAlert) {
-      findings.push(dataAlert);
-    }
-
-    return findings.join('. ');
-  };
 
   if (isAdpieActive && labId && selectedPatientId) {
     return (
@@ -300,14 +83,6 @@ const LabValuesScreen = ({ onBack }: any) => {
       />
     );
   }
-
-  const currentAlert = alerts[`${getBackendPrefix(selectedTest)}_alert`];
-  const hasInputData = result.trim() !== '' && normalRange.trim() !== '';
-  const isClinicalAlert =
-    (currentAlert &&
-    currentAlert !== 'Normal' &&
-    !currentAlert.includes('No result') &&
-    !currentAlert.includes('Unable to compare')) || (dataAlert && dataAlert.trim() !== '');
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -365,12 +140,12 @@ const LabValuesScreen = ({ onBack }: any) => {
                     key={index}
                     style={styles.dropdownItem}
                     onPress={() => {
-                      setSelectedTest(test);
+                      setSelectedTestIndex(index);
                       setShowLabList(false);
                     }}
                   >
                     <Text style={styles.dropdownItemText}>{test}</Text>
-                    {selectedTest === test && (
+                    {selectedTestIndex === index && (
                       <Icon name="check" size={16} color={theme.primary} />
                     )}
                   </TouchableOpacity>
@@ -473,7 +248,7 @@ const LabValuesScreen = ({ onBack }: any) => {
               />
             </TouchableOpacity>
 
-            {selectedTest === 'Basophils (%)' ? (
+            {selectedTestIndex === LAB_TESTS.length - 1 ? (
               <View style={styles.buttonGroup}>
                 <TouchableOpacity
                   style={[
@@ -514,7 +289,7 @@ const LabValuesScreen = ({ onBack }: any) => {
                       !selectedPatientId && { color: theme.textMuted },
                     ]}
                   >
-                    SUBMIT
+                    {isExistingRecord ? 'UPDATE' : 'SUBMIT'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -527,7 +302,10 @@ const LabValuesScreen = ({ onBack }: any) => {
                     borderColor: theme.buttonDisabledBorder,
                   },
                 ]}
-                onPress={handleNextOrSave}
+                onPress={async () => {
+                  await handleNextOrSave();
+                  scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                }}
                 disabled={!selectedPatientId}
               >
                 <Text
@@ -558,6 +336,7 @@ const LabValuesScreen = ({ onBack }: any) => {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         alertText={dataAlert ? `${dataAlert}${currentAlert ? '\n\n' + currentAlert : ''}` : (currentAlert || 'No clinical findings found.')}
+        severity={currentSeverity ?? undefined}
       />
 
       <SweetAlert

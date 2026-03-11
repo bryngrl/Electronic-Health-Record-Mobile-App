@@ -57,14 +57,17 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     handleUpdateField,
     isDataEntered,
     saveAssessment,
-    checkRealTimeAlerts,
+    analyzeField,
     assessmentAlert,
+    assessmentSeverity,
     currentAlert,
     dataAlert,
     setBackendAlert,
     triggerPatientAlert,
     loading,
     recordId,
+    isExistingRecord,
+    setIsExistingRecord,
     ADPIE_STAGES,
     setIntakeOutput,
   } = useIntakeAndOutputLogic();
@@ -82,6 +85,29 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [isNA, setIsNA] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const fieldTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [backendAlert, setLocalBackendAlert] = useState<string | null>(null);
+  const [backendSeverity, setLocalBackendSeverity] = useState<string | null>(null);
+
+  const handleFieldChange = useCallback((field: string, value: string) => {
+    handleUpdateField(field, value);
+    if (!selectedPatientId) return;
+    if (fieldTimers.current[field]) clearTimeout(fieldTimers.current[field]);
+    fieldTimers.current[field] = setTimeout(async () => {
+      const currentData = { ...intakeOutput, [field]: value };
+      const payload = {
+        patient_id: parseInt(selectedPatientId, 10),
+        oral_intake: currentData.oral_intake || 'N/A',
+        iv_fluids_volume: currentData.iv_fluids_volume || 'N/A',
+        urine_output: currentData.urine_output || 'N/A',
+      };
+      const result = await analyzeField(payload);
+      if (result) {
+        setLocalBackendAlert(result.alert);
+        setLocalBackendSeverity(result.severity);
+      }
+    }, 800);
+  }, [selectedPatientId, intakeOutput, analyzeField, handleUpdateField]);
 
   const toggleNA = () => {
     const newState = !isNA;
@@ -163,27 +189,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     );
   }, []);
 
-  // REAL-TIME CDSS: Debounced polling
-  useEffect(() => {
-    if (!selectedPatientId) return;
-
-    const timer = setTimeout(async () => {
-      if (isDataEntered) {
-        try {
-          await checkRealTimeAlerts({
-            patient_id: parseInt(selectedPatientId, 10),
-            oral_intake: parseInt(intakeOutput.oral_intake, 10) || 0,
-            iv_fluids_volume: parseInt(intakeOutput.iv_fluids_volume, 10) || 0,
-            urine_output: parseInt(intakeOutput.urine_output, 10) || 0,
-          });
-        } catch (e) {
-          console.error('I&O CDSS Error:', e);
-        }
-      }
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [intakeOutput, selectedPatientId, isDataEntered, checkRealTimeAlerts]);
+  const hasRealAlert = !!(backendAlert || assessmentAlert || dataAlert);
 
   const handleSubmit = async () => {
     if (!selectedPatientId) {
@@ -194,11 +200,10 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
 
     const result = await saveAssessment();
     if (result) {
-      const isUpdate =
-        recordId === result.id || result.updated_at !== result.created_at;
+      setIsExistingRecord(true);
       setSuccessMessage({
-        title: isUpdate ? 'SUCCESSFULLY UPDATED' : 'SUCCESSFULLY SUBMITTED',
-        message: isUpdate
+        title: isExistingRecord ? 'SUCCESSFULLY UPDATED' : 'SUCCESSFULLY SUBMITTED',
+        message: isExistingRecord
           ? 'Intake and output updated successfully.'
           : 'Intake and output submitted successfully.',
       });
@@ -218,9 +223,9 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     }
     const res = await saveAssessment();
     if (res && res.id) {
-      if (res.assessment_alert || res.alert) {
-        setPassedAlert(res.assessment_alert || res.alert);
-      }
+      setIsExistingRecord(true);
+      const alertFromRes = res.assessment_alert || res.alert || backendAlert;
+      if (alertFromRes) setPassedAlert(alertFromRes);
       setIsAdpieActive(true);
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } else if (recordId) {
@@ -231,19 +236,12 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     }
   };
 
-  const handleAlertPress = async () => {
+  const handleAlertPress = () => {
     if (!selectedPatientId) {
       triggerPatientAlert();
       return setAlertVisible(true);
     }
-    if (isDataEntered) {
-      await saveAssessment();
-    }
     setCdssModalVisible(true);
-  };
-
-  const handleAlertConfirm = () => {
-    setAlertVisible(false);
   };
 
   const fadeColors = isDarkMode
@@ -262,15 +260,9 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     const findings = Object.entries(intakeOutput)
       .filter(([_, value]) => typeof value === 'string' && value.trim() !== '' && value !== 'N/A')
       .map(([key, value]) => `${key.replace(/_/g, ' ').toUpperCase()}: ${value}`);
-    
-    if (assessmentAlert) {
-      findings.push(assessmentAlert);
-    }
-
-    if (dataAlert) {
-      findings.push(dataAlert);
-    }
-    
+    const alert = backendAlert || assessmentAlert;
+    if (alert) findings.push(alert);
+    if (dataAlert) findings.push(dataAlert);
     return findings.join('. ');
   };
 
@@ -290,28 +282,11 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     );
   }
 
-  // Frontend-only cleaning of the alert string
   const getCleanedAlertText = () => {
-    let text = assessmentAlert || '';
-    if (dataAlert) {
-      text = `${dataAlert}${text ? '\n\n' + text : ''}`;
-    }
-
-    if (!text)
-      return 'No clinical findings found.';
-
-    // 1. Remove emojis
-    let cleaned = text.replace(/[🔴🟠✓⚠️❌]/g, '').trim();
-
-    // 2. Remove square brackets from status prefixes (e.g., [CRITICAL] -> CRITICAL)
-    cleaned = cleaned.replace(/\[(CRITICAL|WARNING|INFO)\]/gi, '$1');
-
-    return cleaned;
+    const combined = [backendAlert, assessmentAlert, dataAlert].filter(Boolean).join('\n\n');
+    if (!combined) return 'No clinical findings found.';
+    return combined.replace(/[🔴🟠✓⚠️❌]/g, '').replace(/\[(CRITICAL|WARNING|INFO)\]/gi, '$1').trim();
   };
-
-  const hasRealAlert =
-    (assessmentAlert && assessmentAlert.trim() !== '') ||
-    (dataAlert && dataAlert.trim() !== '');
 
   return (
     <SafeAreaView style={styles.root}>
@@ -403,7 +378,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
             <IntakeOutputCard
               label="ORAL INTAKE"
               value={intakeOutput.oral_intake}
-              onChangeText={text => handleUpdateField('oral_intake', text)}
+              onChangeText={text => handleFieldChange('oral_intake', text)}
               disabled={!selectedPatientId || isNA}
               onDisabledPress={() => {
                 if (!selectedPatientId) {
@@ -416,7 +391,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
             <IntakeOutputCard
               label="IV FLUIDS"
               value={intakeOutput.iv_fluids_volume}
-              onChangeText={text => handleUpdateField('iv_fluids_volume', text)}
+              onChangeText={text => handleFieldChange('iv_fluids_volume', text)}
               disabled={!selectedPatientId || isNA}
               onDisabledPress={() => {
                 if (!selectedPatientId) {
@@ -429,7 +404,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
             <IntakeOutputCard
               label="URINE OUTPUT"
               value={intakeOutput.urine_output}
-              onChangeText={text => handleUpdateField('urine_output', text)}
+              onChangeText={text => handleFieldChange('urine_output', text)}
               disabled={!selectedPatientId || isNA}
               onDisabledPress={() => {
                 if (!selectedPatientId) {
@@ -513,7 +488,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                       !selectedPatientId && { color: theme.textMuted },
                     ]}
                   >
-                    SUBMIT
+                    {isExistingRecord ? 'UPDATE' : 'SUBMIT'}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -532,34 +507,27 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
         onClose={() => setCdssModalVisible(false)}
         category="I&O Assessment"
         alertText={getCleanedAlertText()}
+        severity={backendSeverity || assessmentSeverity || undefined}
       />
 
-      {/* Alert Component */}
       <SweetAlert
         visible={alertVisible}
-        title={
-          !selectedPatientId
-            ? 'Patient Required'
-            : currentAlert?.title || 'ALERT'
-        }
+        title={!selectedPatientId ? 'Patient Required' : currentAlert?.title || 'ALERT'}
         message={
           !selectedPatientId
             ? 'Please select a patient first in the search bar.'
             : currentAlert?.message || 'Please fill out the form.'
         }
         type={!selectedPatientId ? 'error' : currentAlert?.type || 'success'}
-        onConfirm={handleAlertConfirm}
+        onConfirm={() => setAlertVisible(false)}
       />
 
-      {/* Success Alert */}
       <SweetAlert
         visible={successVisible}
         title={successMessage.title}
         message={successMessage.message}
         type="success"
-        onConfirm={() => {
-          setSuccessVisible(false);
-        }}
+        onConfirm={() => setSuccessVisible(false)}
       />
     </SafeAreaView>
   );
