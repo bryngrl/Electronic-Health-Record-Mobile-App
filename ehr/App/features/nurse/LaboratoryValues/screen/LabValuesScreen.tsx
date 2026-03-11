@@ -335,7 +335,19 @@ const LabValuesScreen = ({ onBack }: any) => {
       <CDSSModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        alertText={dataAlert ? `${dataAlert}${currentAlert ? '\n\n' + currentAlert : ''}` : (currentAlert || 'No clinical findings found.')}
+        alertText={(() => {
+          const validDataAlert =
+            dataAlert &&
+            !dataAlert.toLowerCase().includes('no findings') &&
+            !dataAlert.toLowerCase().includes('no result') &&
+            dataAlert.trim() !== ''
+              ? dataAlert
+              : null;
+          if (validDataAlert && currentAlert) return `${validDataAlert}\n\n${currentAlert}`;
+          if (validDataAlert) return validDataAlert;
+          if (currentAlert) return currentAlert;
+          return 'No clinical findings found.';
+        })()}
         severity={currentSeverity ?? undefined}
       />
 
