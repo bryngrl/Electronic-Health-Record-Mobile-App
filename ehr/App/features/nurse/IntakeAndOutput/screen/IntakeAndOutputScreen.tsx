@@ -88,37 +88,45 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   const scrollViewRef = useRef<ScrollView>(null);
   const fieldTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [backendAlert, setLocalBackendAlert] = useState<string | null>(null);
-  const [backendSeverity, setLocalBackendSeverity] = useState<string | null>(null);
+  const [backendSeverity, setLocalBackendSeverity] = useState<string | null>(
+    null,
+  );
   const [isAlertLoading, setIsAlertLoading] = useState(false);
   const analyzeCountRef = useRef(0);
 
-  const handleFieldChange = useCallback((field: string, value: string) => {
-    handleUpdateField(field, value);
-    if (!selectedPatientId) return;
-    if (fieldTimers.current[field]) clearTimeout(fieldTimers.current[field]);
-    setIsAlertLoading(true);
-    analyzeCountRef.current += 1;
-    const thisCount = analyzeCountRef.current;
-    fieldTimers.current[field] = setTimeout(async () => {
-      const currentData = { ...intakeOutput, [field]: value };
-      const toInt = (v: string) => { const n = parseInt(v, 10); return isNaN(n) ? null : n; };
-      const payload = {
-        patient_id: parseInt(selectedPatientId, 10),
-        day_no: parseInt(calculateDayNumber(), 10) || 1,
-        oral_intake: toInt(currentData.oral_intake),
-        iv_fluids_volume: toInt(currentData.iv_fluids_volume),
-        urine_output: toInt(currentData.urine_output),
-      };
-      const result = await analyzeField(payload);
-      if (result) {
-        setLocalBackendAlert(result.alert);
-        setLocalBackendSeverity(result.severity);
-      }
-      if (thisCount === analyzeCountRef.current) {
-        setIsAlertLoading(false);
-      }
-    }, 800);
-  }, [selectedPatientId, intakeOutput, analyzeField, handleUpdateField]);
+  const handleFieldChange = useCallback(
+    (field: string, value: string) => {
+      handleUpdateField(field, value);
+      if (!selectedPatientId) return;
+      if (fieldTimers.current[field]) clearTimeout(fieldTimers.current[field]);
+      setIsAlertLoading(true);
+      analyzeCountRef.current += 1;
+      const thisCount = analyzeCountRef.current;
+      fieldTimers.current[field] = setTimeout(async () => {
+        const currentData = { ...intakeOutput, [field]: value };
+        const toInt = (v: string) => {
+          const n = parseInt(v, 10);
+          return isNaN(n) ? null : n;
+        };
+        const payload = {
+          patient_id: parseInt(selectedPatientId, 10),
+          day_no: parseInt(calculateDayNumber(), 10) || 1,
+          oral_intake: toInt(currentData.oral_intake),
+          iv_fluids_volume: toInt(currentData.iv_fluids_volume),
+          urine_output: toInt(currentData.urine_output),
+        };
+        const result = await analyzeField(payload);
+        if (result) {
+          setLocalBackendAlert(result.alert);
+          setLocalBackendSeverity(result.severity);
+        }
+        if (thisCount === analyzeCountRef.current) {
+          setIsAlertLoading(false);
+        }
+      }, 800);
+    },
+    [selectedPatientId, intakeOutput, analyzeField, handleUpdateField],
+  );
 
   const toggleNA = () => {
     const newState = !isNA;
@@ -132,7 +140,8 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     } else {
       setIntakeOutput(prev => ({
         oral_intake: prev.oral_intake === 'N/A' ? '' : prev.oral_intake,
-        iv_fluids_volume: prev.iv_fluids_volume === 'N/A' ? '' : prev.iv_fluids_volume,
+        iv_fluids_volume:
+          prev.iv_fluids_volume === 'N/A' ? '' : prev.iv_fluids_volume,
         urine_output: prev.urine_output === 'N/A' ? '' : prev.urine_output,
       }));
     }
@@ -206,7 +215,10 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     const today = new Date();
     admission.setHours(0, 0, 0, 0);
     today.setHours(0, 0, 0, 0);
-    const diffDays = Math.floor((today.getTime() - admission.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const diffDays =
+      Math.floor(
+        (today.getTime() - admission.getTime()) / (1000 * 60 * 60 * 24),
+      ) + 1;
     return diffDays > 0 ? diffDays.toString() : '1';
   };
 
@@ -224,7 +236,9 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     if (result) {
       setIsExistingRecord(true);
       setSuccessMessage({
-        title: isExistingRecord ? 'SUCCESSFULLY UPDATED' : 'SUCCESSFULLY SUBMITTED',
+        title: isExistingRecord
+          ? 'SUCCESSFULLY UPDATED'
+          : 'SUCCESSFULLY SUBMITTED',
         message: isExistingRecord
           ? 'Intake and output updated successfully.'
           : 'Intake and output submitted successfully.',
@@ -280,8 +294,13 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
 
   const generateFindingsSummary = () => {
     const findings = Object.entries(intakeOutput)
-      .filter(([_, value]) => typeof value === 'string' && value.trim() !== '' && value !== 'N/A')
-      .map(([key, value]) => `${key.replace(/_/g, ' ').toUpperCase()}: ${value}`);
+      .filter(
+        ([_, value]) =>
+          typeof value === 'string' && value.trim() !== '' && value !== 'N/A',
+      )
+      .map(
+        ([key, value]) => `${key.replace(/_/g, ' ').toUpperCase()}: ${value}`,
+      );
     const alert = backendAlert || assessmentAlert;
     if (alert) findings.push(alert);
     if (dataAlert) findings.push(dataAlert);
@@ -311,9 +330,17 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     v.trim() !== '';
 
   const getCleanedAlertText = () => {
-    const parts = [backendAlert, assessmentAlert, isValidDataAlert(dataAlert) ? dataAlert : null].filter(Boolean);
+    const parts = [
+      backendAlert,
+      assessmentAlert,
+      isValidDataAlert(dataAlert) ? dataAlert : null,
+    ].filter(Boolean);
     if (!parts.length) return 'No clinical findings found.';
-    return parts.join('\n\n').replace(/[🔴🟠✓⚠️❌]/g, '').replace(/\[(CRITICAL|WARNING|INFO)\]/gi, '$1').trim();
+    return parts
+      .join('\n\n')
+      .replace(/[🔴🟠✓⚠️❌]/g, '')
+      .replace(/\[(CRITICAL|WARNING|INFO)\]/gi, '$1')
+      .trim();
   };
 
   return (
@@ -362,14 +389,12 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
             onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
           />
 
-          <View style={{ width: '50%' }}>
-              <Text style={styles.fieldLabel}>DAY NO :</Text>
-              <View style={styles.pillInput}>
-                <Text style={styles.dateVal}>
-                  {calculateDayNumber() || '—'}
-                </Text>
-              </View>
+          <View style={{ width: '100%', marginBottom: 15 }}>
+            <Text style={styles.fieldLabel}>DAY NO :</Text>
+            <View style={styles.pillInput}>
+              <Text style={styles.dateVal}>{calculateDayNumber() || '—'}</Text>
             </View>
+          </View>
 
           <TouchableOpacity
             style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
@@ -497,7 +522,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                 <Text
                   style={[
                     styles.cdssBtnText,
-                    (!selectedPatientId || (!isDataEntered && !isNA))
+                    !selectedPatientId || (!isDataEntered && !isNA)
                       ? { color: theme.textMuted }
                       : { color: theme.primary },
                   ]}
@@ -550,7 +575,11 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
 
       <SweetAlert
         visible={alertVisible}
-        title={!selectedPatientId ? 'Patient Required' : currentAlert?.title || 'ALERT'}
+        title={
+          !selectedPatientId
+            ? 'Patient Required'
+            : currentAlert?.title || 'ALERT'
+        }
         message={
           !selectedPatientId
             ? 'Please select a patient first in the search bar.'
