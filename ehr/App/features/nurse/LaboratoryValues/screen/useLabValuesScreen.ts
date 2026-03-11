@@ -6,10 +6,9 @@ import { LAB_TESTS, getTestPrefix } from './constants';
 const isValidAlert = (v: any): v is string =>
   typeof v === 'string' &&
   v.trim() !== '' &&
-  v !== 'No findings.' &&
-  v !== 'No Findings' &&
-  v !== 'Normal' &&
-  !v.includes('No result');
+  !v.toLowerCase().includes('no findings') &&
+  !v.toLowerCase().includes('no result') &&
+  v.toLowerCase() !== 'normal';
 
 export const useLabValuesScreen = (onBack: () => void) => {
   const {
