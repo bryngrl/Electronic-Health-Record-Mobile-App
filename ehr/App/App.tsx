@@ -3,6 +3,7 @@ import { ActivityIndicator, View, Platform } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import HomeScreen from '@features/nurse/Dashboard/screen/HomeScreen';
 import DoctorMainScreen from '@features/doctor/screens/DoctorMainScreen';
+import AdminHomeScreen from '@features/admin/screen/AdminHomeScreen';
 import LoginScreen from '@features/Auth/screen/LoginScreen';
 import { ThemeProvider, useAppTheme } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from '@features/Auth/AuthContext';
@@ -39,13 +40,20 @@ const MainApp = () => {
     );
   }
 
+  const role = user?.role?.toLowerCase();
+
   let content;
   if (!user) {
     content = <LoginScreen />;
-  } else if (user.role === 'doctor') {
-    content = <DoctorMainScreen />;
-  } else {
+  } else if (role === 'nurse') {
     content = <HomeScreen />;
+  } else if (role === 'doctor') {
+    content = <DoctorMainScreen />;
+  } else if (role === 'admin') {
+    content = <AdminHomeScreen />;
+  } else {
+    // Fallback for unknown roles
+    content = <LoginScreen />;
   }
 
   return (
