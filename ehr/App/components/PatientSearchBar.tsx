@@ -14,6 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import apiClient from '@api/apiClient';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
@@ -199,6 +200,7 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
             inputRef.current?.focus();
           }}
         >
+          <Ionicons name="search-outline" size={20} color={theme.textMuted} style={styles.searchIconLeft} />
           <TextInput
             ref={inputRef}
             style={[styles.searchInput, inputStyle]}
@@ -290,17 +292,18 @@ const createStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   searchBar: {
     borderRadius: 25,
-    paddingHorizontal: 20,
-    height: 48,
+    paddingHorizontal: 15,
+    height: 50,
     borderWidth: 1.5,
     borderColor: theme.border,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.card,
   },
+  searchIconLeft: { marginRight: 10 },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     color: theme.text,
     height: '100%',
     fontFamily: 'AlteHaasGrotesk',

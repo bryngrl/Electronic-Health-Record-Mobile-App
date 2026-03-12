@@ -3,7 +3,6 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  SafeAreaView, 
   ScrollView, 
   TouchableOpacity, 
   ActivityIndicator,
@@ -264,7 +263,7 @@ export default function DoctorPatientDetailScreen({ patientId, category, recordI
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color="#035022" />
@@ -295,7 +294,7 @@ export default function DoctorPatientDetailScreen({ patientId, category, recordI
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

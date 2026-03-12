@@ -23,7 +23,7 @@ export interface DoctorStats {
 }
 
 const normalizeItem = (item: any, existingIsRead: boolean): PatientUpdate => ({
-  id: String(item.record_id ?? item.id),
+  id: `${item.type_key ?? ''}-${item.record_id ?? item.id}`,
   record_id: Number(item.record_id ?? item.id),
   patient_id: Number(item.patient_id),
   patient_name: item.patient_name ?? 'Unknown Patient',
@@ -97,7 +97,7 @@ export const useDoctorDashboardLogic = () => {
       });
       setError(null);
 
-      const response = await apiClient.get('/doctor/today-updates');
+      const response = await apiClient.get('/doctor/recent-forms', { params: { per_page: 50 } });
       let rawData = response.data?.data ?? response.data ?? [];
       if (!Array.isArray(rawData)) rawData = [];
 
@@ -106,7 +106,7 @@ export const useDoctorDashboardLogic = () => {
         const existingMap = new Map(prev.map(u => [u.id, u]));
 
         const merged = rawData.map((item: any) => {
-          const itemId = String(item.record_id ?? item.id);
+          const itemId = `${item.type_key ?? ''}-${item.record_id ?? item.id}`;
           const existing = existingMap.get(itemId);
           // Preserve isRead for items already cached; respect API is_read for new items
           const isRead = existing ? existing.isRead : (item.is_read ?? false);
@@ -136,10 +136,11 @@ export const useDoctorDashboardLogic = () => {
 
   const formatTime = (dateString: string) => {
     if (!dateString) return '';
-    const now = new Date();
-    const normalizedDate = dateString.endsWith('Z') ? dateString : `${dateString}Z`;
-    const updateDate = new Date(normalizedDate);
+    // API returns "2026-03-11 08:45:00" — replace space with T for valid ISO parse
+    const normalized = dateString.includes('T') ? dateString : dateString.replace(' ', 'T');
+    const updateDate = new Date(normalized);
     if (isNaN(updateDate.getTime())) return dateString;
+    const now = new Date();
     const diffInMs = now.getTime() - updateDate.getTime();
     const diffInMins = Math.floor(diffInMs / (1000 * 60));
     const diffInHours = Math.floor(diffInMins / 60);
@@ -148,7 +149,7 @@ export const useDoctorDashboardLogic = () => {
     if (diffInMins < 60) return `${diffInMins}m ago`;
     if (diffInHours < 24) return `${diffInHours}h ago`;
 
-    return updateDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return updateDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   const MODEL_TYPE_MAP: Record<string, string> = {
@@ -194,6 +195,7 @@ export const useDoctorDashboardLogic = () => {
         const matchesSearch = (item.patient_name ?? '').toLowerCase().includes(searchQuery.toLowerCase());
         return matchesFilter && matchesSearch;
       })
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
       .map(item => ({
         ...item,
         name: item.patient_name,

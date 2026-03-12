@@ -13,8 +13,24 @@
 `POST /api/auth/login`
 
 ```json
+{ "username": "doctor_username", "password": "password" }
+```
+
+Send the credentials in the **JSON request body**. Do **not** put the password in the URL query string.
+
+You may send either:
+
+```json
+{ "username": "doctor_username", "password": "password" }
+```
+
+or
+
+```json
 { "email": "doctor@example.com", "password": "password" }
 ```
+
+The login identifier must match either the exact value in `users.username` or `users.email`.
 
 **Response:**
 
@@ -23,6 +39,7 @@
   "access_token": "...",
   "role": "doctor",
   "full_name": "dr_username",
+  "email": "doctor@example.com",
   "user_id": 2
 }
 ```

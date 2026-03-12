@@ -1,18 +1,40 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator, Platform } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Alert,
+  ActivityIndicator,
+  Platform,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNBlobUtil from 'react-native-blob-util';
 import { AccountModal } from '../../../components/AccountModal';
 import PatientSearchBar from '../../../components/PatientSearchBar';
 import { BASE_URL } from '../../../api/apiClient';
+import { useAppTheme } from '@App/theme/ThemeContext';
+import { createStyles } from './DoctorReportsScreen.styles';
 
-const DoctorReportsScreen = ({ onNavigate }: { onNavigate: (route: string) => void }) => {
+const DoctorReportsScreen = ({
+  onNavigate,
+}: {
+  onNavigate: (route: string) => void;
+}) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
+  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(
+    null,
+  );
   const [patientName, setPatientName] = useState('');
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const { theme, isDarkMode } = useAppTheme();
+  const styles = useMemo(
+    () => createStyles(theme, isDarkMode),
+    [theme, isDarkMode],
+  );
 
   const handleGeneratePDF = async () => {
     if (!selectedPatientId) return;
@@ -34,23 +56,29 @@ const DoctorReportsScreen = ({ onNavigate }: { onNavigate: (route: string) => vo
       });
 
       if (Platform.OS === 'android') {
-        await RNBlobUtil.android.actionViewIntent(res.path(), 'application/pdf');
+        await RNBlobUtil.android.actionViewIntent(
+          res.path(),
+          'application/pdf',
+        );
       } else {
         await RNBlobUtil.ios.openDocument(res.path());
       }
     } catch (error: any) {
       console.error('PDF generation error:', error);
-      Alert.alert('Error', `Failed to generate PDF report.\n\n${error.message}`);
+      Alert.alert(
+        'Error',
+        `Failed to generate PDF report.\n\n${error.message}`,
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.root}>
-      <ScrollView 
+    <View style={styles.root}>
+      <ScrollView
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false} 
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         scrollEnabled={scrollEnabled}
       >
@@ -59,7 +87,11 @@ const DoctorReportsScreen = ({ onNavigate }: { onNavigate: (route: string) => vo
           <View>
             <Text style={styles.welcome}>Reports</Text>
             <Text style={styles.date}>
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              {new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+              })}
             </Text>
           </View>
         </View>
@@ -72,8 +104,8 @@ const DoctorReportsScreen = ({ onNavigate }: { onNavigate: (route: string) => vo
           }}
           onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
           initialPatientName={patientName}
-          label="" 
-          placeholder="Search Patients"
+          label=""
+          placeholder="Search"
           containerStyle={styles.searchBarContainer}
           inputBarStyle={styles.searchBarWrapper}
           apiEndpoint="/doctor/patients"
@@ -82,108 +114,97 @@ const DoctorReportsScreen = ({ onNavigate }: { onNavigate: (route: string) => vo
         {/* Conditional Content based on selection */}
         {!selectedPatientId ? (
           <View style={styles.instructionContainer}>
-            <Text style={styles.instructionText}>Choose Patient to generate report.</Text>
+            <Text style={styles.instructionText}>
+              Choose Patient to generate report.
+            </Text>
           </View>
         ) : (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.generateButton, isLoading && { opacity: 0.6 }]}
             onPress={handleGeneratePDF}
             disabled={isLoading}
             activeOpacity={0.7}
           >
-            {isLoading
-              ? <ActivityIndicator color="#FFF" size="small" />
-              : <Text style={styles.generateText}>GENERATE PDF</Text>
-            }
+            {isLoading ? (
+              <ActivityIndicator color="#FFF" size="small" />
+            ) : (
+              <Text style={styles.generateText}>GENERATE PDF</Text>
+            )}
           </TouchableOpacity>
         )}
 
         <View style={styles.blankSection} />
-
       </ScrollView>
 
-      {/* Doctor Internal Bottom Nav */}
       <View style={styles.bottomNav}>
-        <NavItem label="Home" icon={require('../../../../assets/doctors-page/doctor-home.png')} onPress={() => onNavigate('DoctorHome')} />
-        <NavItem label="Patients" icon={require('../../../../assets/doctors-page/doctor-patients.png')} onPress={() => onNavigate('DoctorPatients')} />
-        <NavItem label="Reports" icon={require('../../../../assets/doctors-page/doctor-reports.png')} active />
-        <NavItem label="Settings" icon={require('../../../../assets/doctors-page/doctor-settings.png')} onPress={() => onNavigate('DoctorSettings')} />
+        <NavItem
+          label="Home"
+          icon={require('../../../../assets/doctors-page/doctor-home.png')}
+          onPress={() => onNavigate('DoctorHome')}
+          theme={theme}
+          styles={styles}
+        />
+        <NavItem
+          label="Patients"
+          icon={require('../../../../assets/doctors-page/doctor-patients.png')}
+          onPress={() => onNavigate('DoctorPatients')}
+          theme={theme}
+          styles={styles}
+        />
+        <NavItem
+          label="Reports"
+          icon={require('../../../../assets/doctors-page/doctor-reports.png')}
+          active
+          theme={theme}
+          styles={styles}
+        />
+        <NavItem
+          label="Settings"
+          icon={require('../../../../assets/doctors-page/doctor-settings.png')}
+          onPress={() => onNavigate('DoctorSettings')}
+          theme={theme}
+          styles={styles}
+        />
       </View>
 
-      <AccountModal visible={modalVisible} onClose={() => setModalVisible(false)} onLogout={() => setModalVisible(false)} />
-    </SafeAreaView>
+      <AccountModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onLogout={() => setModalVisible(false)}
+      />
+    </View>
   );
 };
 
-const NavItem = ({ label, icon, active, onPress }: any) => (
+const NavItem = ({ label, icon, active, onPress, theme, styles }: any) => (
   <TouchableOpacity onPress={onPress} style={styles.navItemWrapper}>
-    <View style={[styles.navItem, active && styles.activeNavItem]}>
-      <Image source={icon} style={[styles.navIconImage, active && { tintColor: '#29A539' }]} resizeMode="contain" />
-      <Text style={[styles.navLabel, active && { color: '#29A539' }]}>{label}</Text>
+    <View
+      style={[
+        styles.navItem,
+        active && {
+          ...styles.activeNavItem,
+          backgroundColor: theme.navActiveBg,
+        },
+      ]}
+    >
+      <Image
+        source={icon}
+        style={[
+          styles.navIconImage,
+          { tintColor: active ? theme.secondary : theme.textMuted },
+        ]}
+        resizeMode="contain"
+      />
+      <Text
+        style={[
+          styles.navLabel,
+          { color: active ? theme.secondary : theme.textMuted },
+        ]}
+      >
+        {label}
+      </Text>
     </View>
   </TouchableOpacity>
 );
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FFF' },
-  scrollContent: { paddingHorizontal: 40, paddingBottom: 150, paddingTop: 40 },
-  header: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'flex-start', 
-    marginBottom: 35,
-    marginTop: 10
-  },
-  welcome: { fontSize: 35, color: '#035022', fontFamily: 'MinionPro-SemiboldItalic' },
-  date: { fontSize: 14, color: '#B2B2B2', marginTop: 4, fontWeight: 'bold' },
-  searchBarContainer: { marginBottom: 10, zIndex: 999 },
-  searchBarWrapper: {
-    backgroundColor: '#FFF', 
-    borderRadius: 30, 
-    paddingHorizontal: 15, 
-    borderWidth: 1, 
-    borderColor: '#F0F0F0',
-    height: 50,
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.05, 
-    shadowRadius: 10, 
-    elevation: 3, 
-  },
-  instructionContainer: { marginBottom: 25 },
-  instructionText: { fontSize: 14, color: '#858583', marginLeft: 5, fontWeight: '500' },
-  generateButton: {
-    height: 48,
-    backgroundColor: '#E5FFE8',
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: '#29A539',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  generateText: {
-    color: '#035022',
-    fontWeight: 'bold',
-    fontSize: 14,
-    letterSpacing: 0.5,
-  },
-  blankSection: { height: 200 },
-  bottomNav: { 
-    position: 'absolute', bottom: 20, left: 20, right: 20, height: 70, backgroundColor: '#FFF', 
-    borderRadius: 35, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', 
-    paddingHorizontal: 10, elevation: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 
-  },
-  navItemWrapper: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  navItem: { alignItems: 'center', justifyContent: 'center', paddingVertical: 8, width: '100%' },
-  activeNavItem: { backgroundColor: '#E5FFE8', borderRadius: 20 },
-  navIconImage: { width: 24, height: 24, marginBottom: 4 },
-  navLabel: { fontSize: 10, color: '#999' }
-});
 
 export default DoctorReportsScreen;

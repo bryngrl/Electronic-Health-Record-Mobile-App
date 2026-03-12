@@ -11,6 +11,7 @@ export const COLORS = {
     tableHeader: '#E5FFE8',
     textMuted: '#999696',
     border: '#E0E0E0',
+    filterBg: '#5EAE57',
 
     card: '#FFFFFF',
     card2: '#F6FFF7', // features card bg color
@@ -28,11 +29,13 @@ export const COLORS = {
     buttonDisabledBorder: '#E0E0E0',
     avatarCard: 'rgba(144, 255, 158, 0.32)',
     navActiveBg: '#E0FFDD',
+    updateBadgeBg: '#FFEEC2',
+    updateBadgeText: '#EDB62C',
 
     // Alert Bell Icon states
     alertBellDisabledBg: '#F2F1EF', // no patient selected
-    alertBellOffBg: '#FEF3C7',      // patient selected, no findings / unmatched alert
-    alertBellOnBg: '#FDE68A',       // patient selected, alert triggered
+    alertBellOffBg: '#FEF3C7', // patient selected, no findings / unmatched alert
+    alertBellOnBg: '#FDE68A', // patient selected, alert triggered
   },
   dark: {
     primary: '#4ADE80',
@@ -44,6 +47,7 @@ export const COLORS = {
     tableHeader: '#757575',
     textMuted: '#9CA3AF',
     border: '#3a5137',
+    filterBg: '#5EAE57',
 
     card: '#1E1E1E',
     card2: '#1A2E1C', // features card bg color
@@ -60,11 +64,13 @@ export const COLORS = {
     buttonDisabledBorder: '#3a5137',
     avatarCard: '#035022',
     navActiveBg: '#1A2E1C',
+    updateBadgeBg: '#3D2800',
+    updateBadgeText: '#F59E0B',
 
     // Alert Bell Icon states
     alertBellDisabledBg: '#2b2b2b', // no patient selected
-    alertBellOffBg: '#3D2800',      // patient selected, no findings / unmatched alert
-    alertBellOnBg: '#78350F',       // patient selected, alert triggered
+    alertBellOffBg: '#3D2800', // patient selected, no findings / unmatched alert
+    alertBellOnBg: '#78350F', // patient selected, alert triggered
   },
 };
 

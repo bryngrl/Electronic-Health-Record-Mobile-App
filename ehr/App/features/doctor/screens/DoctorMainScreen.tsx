@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, BackHandler } from 'react-native';
+import { View, StyleSheet, SafeAreaView, BackHandler, StatusBar } from 'react-native';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
 // --- DOCTOR FEATURE IMPORTS ---
@@ -24,7 +24,7 @@ import MedReconciliationScreen from '../../nurse/MedicalReconciliation/screen/Me
 
 
 export default function DoctorMainScreen() {
-  const { theme } = useAppTheme();
+  const { theme, isDarkMode } = useAppTheme();
   const [activeTab, setActiveTab] = useState('DoctorHome');
   const [navigationHistory, setNavigationHistory] = useState<string[]>(['DoctorHome']);
   const [selectedPatientData, setSelectedPatientData] = useState<any>(null);
@@ -96,10 +96,17 @@ export default function DoctorMainScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-      <View style={{ flex: 1 }}>
-        {getScreenContent()}
-      </View>
-    </SafeAreaView>
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+        <View style={{ flex: 1 }}>
+          {getScreenContent()}
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }

@@ -28,7 +28,7 @@ apiClient.interceptors.request.use(
     } catch (error) {
       console.error('Error fetching token from storage', error);
     }
-    console.log('Starting Request to:', config.baseURL, config.url);
+    console.log('Starting Request to:', config.baseURL, config.url?.split('?')[0]);
     return config;
   },
   error => {
