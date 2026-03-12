@@ -20,6 +20,7 @@ import React, {
   Dimensions,
   BackHandler,
   Platform,
+  Animated,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -33,7 +34,8 @@ import ADPIEScreen from '@components/ADPIEScreen';
 import CDSSModal from '@components/CDSSModal';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
-const alertIcon = require('@assets/icons/alert.png');
+const alertBellActiveIcon = require('@assets/icons/alert_bell_icon.png');
+const alertBellInactiveIcon = require('@assets/icons/alert_bell_icon_inactive.png');
 
 interface IntakeAndOutputScreenProps {
   onBack: () => void;
@@ -98,6 +100,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   );
   const [isAlertLoading, setIsAlertLoading] = useState(false);
   const analyzeCountRef = useRef(0);
+  const bellFadeAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (readOnly && patientId) {
@@ -233,7 +236,23 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     return diffDays > 0 ? diffDays.toString() : '1';
   };
 
-  const hasRealAlert = !!(backendAlert || assessmentAlert || dataAlert);
+  const handleAlertPress = () => {
+    if (!selectedPatientId) {
+      triggerPatientAlert();
+      setAlertVisible(true);
+      return;
+    }
+    setCdssModalVisible(true);
+  };
+
+  const handleCDSSPress = () => {
+    if (!selectedPatientId) {
+      triggerPatientAlert();
+      setAlertVisible(true);
+      return;
+    }
+    setCdssModalVisible(true);
+  };
 
   const handleSubmit = async () => {
     if (!selectedPatientId) {
@@ -241,55 +260,29 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
       setAlertVisible(true);
       return;
     }
-
     const dayNo = parseInt(calculateDayNumber(), 10) || 1;
-    const result = await saveAssessment(dayNo);
-    if (result) {
-      setIsExistingRecord(true);
+    const res = await saveAssessment(dayNo);
+    if (res) {
       setSuccessMessage({
-        title: isExistingRecord
-          ? 'SUCCESSFULLY UPDATED'
-          : 'SUCCESSFULLY SUBMITTED',
-        message: isExistingRecord
-          ? 'Intake and output updated successfully.'
-          : 'Intake and output submitted successfully.',
+        title: isExistingRecord ? 'Record Updated' : 'Record Saved',
+        message: 'Intake and Output data has been successfully processed.',
       });
       setSuccessVisible(true);
-    } else {
-      setAlertVisible(true);
     }
   };
 
-  const [passedAlert, setPassedAlert] = useState<string | null>(null);
+  const isValidDataAlert = (v: string | null | undefined): v is string =>
+    !!v &&
+    !v.toLowerCase().includes('no findings') &&
+    !v.toLowerCase().includes('no result') &&
+    !v.toLowerCase().includes('no alert') &&
+    v.trim() !== '';
 
-  const handleCDSSPress = async () => {
-    if (!selectedPatientId) {
-      triggerPatientAlert();
-      setAlertVisible(true);
-      return;
-    }
-    const res = await saveAssessment(parseInt(calculateDayNumber(), 10) || 1);
-    if (res && res.id) {
-      setIsExistingRecord(true);
-      const alertFromRes = res.assessment_alert || res.alert || backendAlert;
-      if (alertFromRes) setPassedAlert(alertFromRes);
-      setIsAdpieActive(true);
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-    } else if (recordId) {
-      setIsAdpieActive(true);
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-    } else {
-      setAlertVisible(true);
-    }
-  };
-
-  const handleAlertPress = () => {
-    if (!selectedPatientId) {
-      triggerPatientAlert();
-      return setAlertVisible(true);
-    }
-    setCdssModalVisible(true);
-  };
+  const hasRealAlert =
+    isValidDataAlert(backendAlert) ||
+    isValidDataAlert(assessmentAlert) ||
+    isValidDataAlert(dataAlert);
+  const isAlertActive = !!selectedPatientId && hasRealAlert;
 
   const fadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
@@ -302,43 +295,6 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   const headerFadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
     : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
-
-  const generateFindingsSummary = () => {
-    const findings = Object.entries(intakeOutput)
-      .filter(
-        ([_, value]) =>
-          typeof value === 'string' && value.trim() !== '' && value !== 'N/A',
-      )
-      .map(
-        ([key, value]) => `${key.replace(/_/g, ' ').toUpperCase()}: ${value}`,
-      );
-    const alert = backendAlert || assessmentAlert;
-    if (alert) findings.push(alert);
-    if (dataAlert) findings.push(dataAlert);
-    return findings.join('. ');
-  };
-
-  if (isAdpieActive && recordId) {
-    return (
-      <ADPIEScreen
-        recordId={recordId}
-        patientName={patientName}
-        onBack={() => {
-          setIsAdpieActive(false);
-          setPassedAlert(null);
-        }}
-        feature="intake-and-output"
-        findingsSummary={generateFindingsSummary()}
-        initialAlert={passedAlert || undefined}
-      />
-    );
-  }
-
-  const isValidDataAlert = (v: string | null | undefined): v is string =>
-    !!v &&
-    !v.toLowerCase().includes('no findings') &&
-    !v.toLowerCase().includes('no result') &&
-    v.trim() !== '';
 
   const getCleanedAlertText = () => {
     const parts = [
@@ -506,34 +462,22 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
 
           {!readOnly ? (
             <View style={styles.footerAction}>
-              <TouchableOpacity
-                style={[
-                  styles.alertIcon,
-                  {
-                    backgroundColor: !selectedPatientId
-                      ? theme.alertBellDisabledBg
-                      : hasRealAlert
-                      ? theme.alertBellOnBg
-                      : theme.alertBellOffBg,
-                    borderColor: theme.border,
-                    opacity: !selectedPatientId ? 1 : hasRealAlert ? 1 : 0.3,
-                  },
-                ]}
-                disabled={!isDataEntered || !selectedPatientId}
-                onPress={handleAlertPress}
-              >
-                <Image
-                  source={alertIcon}
-                  style={[
-                    styles.fullImg,
-                    hasRealAlert
-                      ? { tintColor: '#EDB62C' }
-                      : !selectedPatientId
-                      ? { tintColor: theme.textMuted }
-                      : { tintColor: '#EDB62C' },
-                  ]}
-                />
-              </TouchableOpacity>
+              <Animated.View style={{ opacity: bellFadeAnim }}>
+                <TouchableOpacity
+                  style={styles.alertIcon}
+                  disabled={!isDataEntered || !selectedPatientId}
+                  onPress={handleAlertPress}
+                >
+                  <Image
+                    source={
+                      isAlertActive
+                        ? alertBellActiveIcon
+                        : alertBellInactiveIcon
+                    }
+                    style={styles.fullImg}
+                  />
+                </TouchableOpacity>
+              </Animated.View>
 
               <View style={styles.buttonGroup}>
                 <TouchableOpacity
@@ -691,9 +635,9 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       borderRadius: 22.5,
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
+      overflow: 'hidden',
     },
-    fullImg: { width: '80%', height: '80%', resizeMode: 'contain' },
+    fullImg: { width: '100%', height: '100%', resizeMode: 'contain' },
     buttonGroup: { flex: 1, flexDirection: 'row', marginLeft: 15 },
     cdssButton: {
       flex: 1,
