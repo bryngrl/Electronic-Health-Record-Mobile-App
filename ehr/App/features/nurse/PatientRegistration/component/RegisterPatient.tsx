@@ -8,9 +8,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   BackHandler,
-  useColorScheme,
   StatusBar,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -187,7 +185,8 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
         setAlertConfig({
           visible: true,
           title: 'Success',
-          message: 'Patient registered successfully!',
+          message:
+            response.data?.message || 'Patient registered successfully!',
           type: 'success',
           onConfirm: () => {
             setAlertConfig(prev => ({ ...prev, visible: false }));
@@ -196,13 +195,31 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
         });
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail
-        ? Array.isArray(error.response.data.detail)
-          ? error.response.data.detail
-              .map((d: any) => `${d.loc.join('.')}: ${d.msg}`)
-              .join('\n')
-          : JSON.stringify(error.response.data.detail)
-        : error.message || 'Registration failed.';
+      const detail = error.response?.data;
+      const validationErrors = detail?.errors
+        ? Object.entries(detail.errors)
+            .map(([field, messages]) => {
+              const messageText = Array.isArray(messages)
+                ? messages.join(', ')
+                : String(messages);
+              return `${field}: ${messageText}`;
+            })
+            .join('\n')
+        : null;
+      const errorMessage =
+        validationErrors ||
+        detail?.message ||
+        (detail?.detail
+          ? Array.isArray(detail.detail)
+            ? detail.detail
+                .map((d: any) =>
+                  Array.isArray(d.loc) ? `${d.loc.join('.')}: ${d.msg}` : d.msg,
+                )
+                .join('\n')
+            : String(detail.detail)
+          : null) ||
+        error.message ||
+        'Registration failed.';
 
       setAlertConfig({
         visible: true,
@@ -263,12 +280,13 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
               </View>
               {step === 2 && (
                 <TouchableOpacity
-                  onPress={() =>
+                  onPress={() => {
                     setContacts([
-                      ...contacts,
                       { name: '', relationship: '', number: '' },
-                    ])
-                  }
+                      ...contacts,
+                    ]);
+                    setContactErrors(['', ...contactErrors]);
+                  }}
                   style={styles.addIconCircle}
                 >
                   <Icon name="add" size={24} color={theme.primary} />
@@ -725,9 +743,12 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   {contacts.length > 1 && (
                     <TouchableOpacity
                       style={styles.removeBtn}
-                      onPress={() =>
-                        setContacts(contacts.filter((_, i) => i !== index))
-                      }
+                      onPress={() => {
+                        setContacts(contacts.filter((_, i) => i !== index));
+                        setContactErrors(
+                          contactErrors.filter((_, i) => i !== index),
+                        );
+                      }}
                     >
                       <Icon
                         name="remove-circle"

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import apiClient from '@api/apiClient';
+import { useAuth } from '../../../Auth/AuthContext';
 
 export const useRegistration = () => {
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     first_name: '',
@@ -72,7 +74,6 @@ export const useRegistration = () => {
     const errors: Record<string, string> = {};
     const requiredFields = [
       'first_name',
-      'middle_name',
       'last_name',
       'birthdate',
       'sex',
@@ -123,7 +124,15 @@ export const useRegistration = () => {
   };
 
   const registerPatient = async () => {
-    // Explicitly define payload to match FastAPI PatientCreate schema
+    // Determine the correct values for religion and ethnicity
+    const finalReligion = form.religion === 'Other' ? form.other_religion : form.religion;
+    const finalEthnicity = form.ethnicity === 'Other' ? form.other_ethnicity : form.ethnicity;
+    const userId = user?.id ?? form.user_id;
+
+    if (!userId) {
+      throw new Error('Missing authenticated user. Please log in again before registering a patient.');
+    }
+
     const payload = {
       first_name: form.first_name,
       middle_name: form.middle_name,
@@ -133,17 +142,17 @@ export const useRegistration = () => {
       sex: form.sex,
       address: form.address,
       birthplace: form.birthplace,
-      religion: form.religion === 'Other' ? form.other_religion : form.religion,
-      ethnicity: form.ethnicity === 'Other' ? form.other_ethnicity : form.ethnicity,
+      religion: finalReligion,
+      ethnicity: finalEthnicity,
       chief_complaints: form.chief_complaints,
-      admission_date: new Date().toISOString().split('T')[0], // Required by backend
+      admission_date: new Date().toISOString().split('T')[0],
       room_no: form.room_no,
       bed_no: form.bed_no,
-      contact_name: contacts[0].name,
-      contact_relationship: contacts[0].relationship,
-      contact_number: contacts[0].number,
-      user_id: form.user_id,
-      is_active: 1,
+      contact_name: contacts.map(c => c.name.trim()),
+      contact_relationship: contacts.map(c => c.relationship.trim()),
+      contact_number: contacts.map(c => c.number.trim()),
+      user_id: userId,
+      is_active: true,
     };
 
     try {
@@ -165,6 +174,7 @@ export const useRegistration = () => {
     contacts,
     setContacts,
     contactErrors,
+    setContactErrors,
     formatNameOnBlur,
     handleNumberChange,
     validateNumberOnBlur,
