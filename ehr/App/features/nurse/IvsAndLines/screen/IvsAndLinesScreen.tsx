@@ -22,12 +22,22 @@ import DataCard from '../components/DataCard';
 import PatientSearchBar from '@components/PatientSearchBar';
 import SweetAlert from '@components/SweetAlert';
 import { useAppTheme } from '@App/theme/ThemeContext';
+import apiClient from '@api/apiClient'; // Import apiClient for manual fetch
 
+// UPDATED INTERFACE
 interface IvsAndLinesScreenProps {
   onBack: () => void;
+  readOnly?: boolean;
+  patientId?: number;
+  initialPatientName?: string;
 }
 
-const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
+const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ 
+  onBack,
+  readOnly = false,
+  patientId,
+  initialPatientName
+}) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
@@ -69,7 +79,45 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // --- DOCTOR VIEWING LOGIC ---
+  useEffect(() => {
+    if (readOnly && patientId) {
+      setSelectedPatientId(patientId);
+      setPatientName(initialPatientName || '');
+      
+      // Manually fetch data for viewing since hook might rely on search selection
+      const fetchData = async () => {
+        try {
+            const response = await apiClient.get(`/ivs-and-lines/patient/${patientId}`);
+            if (response.data && response.data.length > 0) {
+                const latest = response.data[0];
+                setIvFluid(latest.iv_fluid || '');
+                setRate(latest.rate || '');
+                setSite(latest.site || '');
+                setStatus(latest.status || '');
+                
+                if (latest.iv_fluid === 'N/A' && latest.rate === 'N/A' && latest.site === 'N/A') {
+                    setIsNA(true);
+                } else {
+                    setIsNA(false);
+                }
+            } else {
+                setIvFluid('');
+                setRate('');
+                setSite('');
+                setStatus('');
+                setIsNA(false);
+            }
+        } catch (error) {
+            console.error("Error fetching IV data:", error);
+        }
+      };
+      fetchData();
+    }
+  }, [readOnly, patientId, initialPatientName]);
+
   const toggleNA = () => {
+    if (readOnly) return; // Disable in read-only
     const newState = !isNA;
     setIsNA(newState);
     if (newState) {
@@ -137,6 +185,11 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
   };
 
   const handleFormSubmit = async () => {
+    if (readOnly) {
+        onBack();
+        return;
+    }
+
     if (!selectedPatientId) {
       showDisabledAlert();
       return;
@@ -216,51 +269,65 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
           scrollEnabled={scrollEnabled}
         >
           <View style={{ height: 20 }} />
-          {/* Patient Name Section */}
-          <PatientSearchBar
-            onPatientSelect={(id, name) => {
-              setSelectedPatientId(id);
-              setPatientName(name);
-            }}
-            initialPatientName={patientName}
-            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-          />
-
-          <TouchableOpacity
-            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
-            onPress={() => {
-              if (!selectedPatientId) {
-                showDisabledAlert();
-              } else {
-                toggleNA();
-              }
-            }}
-          >
-            <Text
-              style={[
-                styles.naText,
-                !selectedPatientId && { color: theme.textMuted },
-              ]}
-            >
-              Mark all as N/A
-            </Text>
-            <Icon
-              name={isNA ? 'check-box' : 'check-box-outline-blank'}
-              size={22}
-              color={selectedPatientId ? theme.primary : theme.textMuted}
+          
+          {/* SEARCH BAR TOGGLE */}
+          {!readOnly ? (
+            <PatientSearchBar
+                onPatientSelect={(id, name) => {
+                setSelectedPatientId(id);
+                setPatientName(name);
+                }}
+                initialPatientName={patientName}
+                onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
             />
-          </TouchableOpacity>
+          ) : (
+            <View style={styles.staticPatientContainer}>
+                <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+                <Text style={styles.staticPatientName}>{initialPatientName || "Unknown Patient"}</Text>
+            </View>
+          )}
 
-          <Text
-            style={[
-              styles.disabledTextAtBottom,
-              isNA && { color: theme.error },
-            ]}
-          >
-            {isNA
-              ? 'All fields below are disabled.'
-              : 'Checking this will disable all fields below.'}
-          </Text>
+          {/* HIDE TOGGLE IN READ ONLY */}
+          {!readOnly && (
+            <TouchableOpacity
+                style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+                onPress={() => {
+                if (!selectedPatientId) {
+                    showDisabledAlert();
+                } else {
+                    toggleNA();
+                }
+                }}
+            >
+                <Text
+                style={[
+                    styles.naText,
+                    !selectedPatientId && { color: theme.textMuted },
+                ]}
+                >
+                Mark all as N/A
+                </Text>
+                <Icon
+                name={isNA ? 'check-box' : 'check-box-outline-blank'}
+                size={22}
+                color={selectedPatientId ? theme.primary : theme.textMuted}
+                />
+            </TouchableOpacity>
+          )}
+
+          {/* HIDE WARNING TEXT IN READ ONLY */}
+          {!readOnly && (
+            <Text
+                style={[
+                styles.disabledTextAtBottom,
+                isNA && { color: theme.error },
+                ]}
+            >
+                {isNA
+                ? 'All fields below are disabled.'
+                : 'Checking this will disable all fields below.'}
+            </Text>
+          )}
 
           {/* Form Sections */}
           <DataCard
@@ -268,7 +335,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
             value={ivFluid}
             onChangeText={setIvFluid}
             placeholder="e.g., D5W, NS, LR"
-            disabled={!selectedPatientId || isNA}
+            disabled={!selectedPatientId || isNA || readOnly}
             onDisabledPress={showDisabledAlert}
           />
           <DataCard
@@ -276,7 +343,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
             value={rate}
             onChangeText={setRate}
             placeholder="e.g., 100 ml/hr"
-            disabled={!selectedPatientId || isNA}
+            disabled={!selectedPatientId || isNA || readOnly}
             onDisabledPress={showDisabledAlert}
           />
           <DataCard
@@ -284,7 +351,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
             value={site}
             onChangeText={setSite}
             placeholder="e.g., Left hand"
-            disabled={!selectedPatientId || isNA}
+            disabled={!selectedPatientId || isNA || readOnly}
             onDisabledPress={showDisabledAlert}
           />
           <DataCard
@@ -292,21 +359,21 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
             value={status}
             onChangeText={setStatus}
             placeholder="e.g., Running"
-            disabled={!selectedPatientId || isNA}
+            disabled={!selectedPatientId || isNA || readOnly}
             onDisabledPress={showDisabledAlert}
           />
 
-          {/* Submit Button */}
+          {/* Submit/Close Button */}
           <TouchableOpacity
             style={[
               styles.submitButton,
-              (!selectedPatientId) && {
+              (!selectedPatientId && !readOnly) && {
                 backgroundColor: theme.buttonDisabledBg,
                 borderColor: theme.buttonDisabledBorder,
               },
             ]}
             onPress={handleFormSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || (!selectedPatientId && !readOnly)}
           >
             {isSubmitting ? (
               <ActivityIndicator color={theme.primary} />
@@ -314,10 +381,10 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({ onBack }) => {
               <Text
                 style={[
                   styles.submitButtonText,
-                  !selectedPatientId && { color: theme.textMuted },
+                  (!selectedPatientId && !readOnly) && { color: theme.textMuted },
                 ]}
               >
-                SUBMIT
+                {readOnly ? 'CLOSE' : 'SUBMIT'}
               </Text>
             )}
           </TouchableOpacity>
@@ -366,6 +433,29 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontSize: 13,
       fontFamily: 'AlteHaasGroteskBold',
       marginTop: 5,
+    },
+    // New Static Patient styles
+    staticPatientContainer: {
+        marginBottom: 20,
+        backgroundColor: theme.card,
+        padding: 15,
+        borderRadius: 15,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: theme.border
+    },
+    staticPatientLabel: {
+        fontFamily: 'AlteHaasGroteskBold',
+        color: theme.primary,
+        fontSize: 12,
+        marginRight: 10
+    },
+    staticPatientName: {
+        fontFamily: 'AlteHaasGrotesk',
+        color: theme.text,
+        fontSize: 16,
+        fontWeight: 'bold'
     },
     naRow: {
       flexDirection: 'row',

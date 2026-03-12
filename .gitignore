@@ -13,3 +13,4 @@ __pycache__/
 ehr_backend/.venv/
 ehr_backend/ven/
 ehr_backend/venv/
+node_modules

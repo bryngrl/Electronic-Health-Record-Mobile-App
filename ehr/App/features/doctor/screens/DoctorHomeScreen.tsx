@@ -1,12 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TextInput, TouchableOpacity, Image, RefreshControl } from 'react-native';
-import PatientUpdateCard from '../components/PatientUpdateCard';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  SafeAreaView, 
+  ScrollView, 
+  TextInput, 
+  TouchableOpacity, 
+  Image, 
+  RefreshControl,
+  Dimensions
+} from 'react-native';
 import { useDoctorDashboardLogic } from '../hooks/useDoctorDashboardLogic';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { AccountModal } from '../../../components/AccountModal';
 import { useAuth } from '@features/Auth/AuthContext';
 
-const DoctorHomeScreen = ({ onBack, onViewAll, onNavigate }: { onBack?: () => void, onViewAll?: () => void, onNavigate: (route: string) => void }) => {
+const { width } = Dimensions.get('window');
+
+const DoctorHomeScreen = ({ onBack = () => {}, onViewAll, onNavigate }: { onBack?: () => void, onViewAll?: () => void, onNavigate: (route: string, extraData?: any) => void }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const { user } = useAuth();
   const { 
@@ -25,35 +37,95 @@ const DoctorHomeScreen = ({ onBack, onViewAll, onNavigate }: { onBack?: () => vo
   const readCount = updates.filter(u => u.status === 'Read').length;
 
   const renderEmptyState = () => {
-    if (activeFilter === 'Unread') {
-      if (updates.length === 0) {
-        return (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>no unread updates</Text>
-          </View>
-        );
+    return (
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyTitle}>No updates found</Text>
+        <Text style={styles.emptySubtitle}>Check back later for patient records.</Text>
+      </View>
+    );
+  };
+
+  const handleUpdatePress = (item: any) => {
+    if (item.status === 'Unread') markAsRead(item.id);
+
+    // MAPPING: Convert update_type to category
+    let category = '';
+    const type = item.type.toLowerCase();
+
+    if (type.includes('vital')) category = 'vital_signs';
+    else if (type.includes('physical')) category = 'physical_exam';
+    else if (type.includes('history') || type.includes('medical')) category = 'medical_history';
+    else if (type.includes('lab')) category = 'lab_values';
+    else if (type.includes('intake') || type.includes('output')) category = 'intake_output';
+    else if (type.includes('adl')) category = 'adl';
+    else if (type.includes('diagnostics')) category = 'diagnostics';
+    else if (type.includes('iv') || type.includes('line')) category = 'ivs_lines';
+    else if (type.includes('medication') && type.includes('reconciliation')) category = 'medication_reconciliation';
+    else if (type.includes('medication')) category = 'medication';
+    else if (type.includes('reconciliation') || type.includes('reco')) category = 'medication_reconciliation';
+
+
+    if (category) {
+      if (category === 'vital_signs') {
+        onNavigate('VitalSigns', {
+            patientId: item.patient_id,
+            patientName: item.name
+        });
+      } else if (category === 'physical_exam') {
+        onNavigate('PhysicalExam', {
+            patientId: item.patient_id,
+            patientName: item.name
+        });
+      } else if (category === 'medical_history') {
+        onNavigate('MedicalHistory', {
+            patientId: item.patient_id,
+            patientName: item.name
+        });
+      } else if (category === 'intake_output') {
+         onNavigate('IntakeOutput', {
+            patientId: item.patient_id,
+            patientName: item.name
+         });
+      } else if (category === 'lab_values') {
+        onNavigate('LabValues', {
+            patientId: item.patient_id,
+            patientName: item.name
+        });
+      } else if (category === 'adl') {
+        onNavigate('ADL', {
+            patientId: item.patient_id,
+            patientName: item.name
+        });
+      } else if (category === 'diagnostics') {
+        onNavigate('Diagnostics', {
+            patientId: item.patient_id,
+            patientName: item.name
+        });
+      } else if (category === 'ivs_lines') {
+        onNavigate('IvsLines', {
+            patientId: item.patient_id,
+            patientName: item.name
+        });
+      } else if (category === 'medication') {
+        onNavigate('Medication', {
+            patientId: item.patient_id,
+            patientName: item.name
+        });
+      } else if (category === 'medication_reconciliation') {
+        onNavigate('MedicationReconciliation', {
+            patientId: item.patient_id,
+            patientName: item.name
+        });
+
       } else {
-        return (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>You're all caught up</Text>
-            <Text style={styles.emptySubtitle}>no unread updates right now.</Text>
-          </View>
-        );
+        onNavigate('DoctorPatientDetail', {
+          patientId: item.patient_id,
+          category: category
+        });
       }
-    } else if (activeFilter === 'Read') {
-      return (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>no read updates yet</Text>
-          <Text style={styles.emptySubtitle}>updates you will open will appear here</Text>
-        </View>
-      );
     } else {
-      return (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>No updates today</Text>
-          <Text style={styles.emptySubtitle}>Patient records haven't been updated yet.</Text>
-        </View>
-      );
+      // Fallback for types we haven't mapped yet
+      console.log('Unmapped update type:', item.type);
     }
   };
 
@@ -66,8 +138,6 @@ const DoctorHomeScreen = ({ onBack, onViewAll, onNavigate }: { onBack?: () => vo
           <RefreshControl refreshing={loading} onRefresh={refreshUpdates} colors={['#29A539']} />
         }
       >
-
-        {/* Header */}
         <View style={styles.header}>
           <View>
             <Text style={styles.welcome}>Hello, {user?.full_name || 'Doctor'}</Text>
@@ -75,12 +145,11 @@ const DoctorHomeScreen = ({ onBack, onViewAll, onNavigate }: { onBack?: () => vo
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => setModalVisible(true)}>
-            <Icon name="keyboard-arrow-down" size={24} color="#333" />
+          <TouchableOpacity onPress={() => setModalVisible(true)} style={{ marginRight: 30 }}>
+            <Icon name="keyboard-arrow-down" size={24} color="#333"/>
           </TouchableOpacity>
         </View>
 
-        {/* Search Bar with Icon */}
         <View style={styles.searchContainer}>
           <View style={styles.searchBarWrapper}>
             <Image 
@@ -98,17 +167,20 @@ const DoctorHomeScreen = ({ onBack, onViewAll, onNavigate }: { onBack?: () => vo
           </View>
         </View>
 
-        {/* Stats Circles */}
-        <View style={styles.statsRow}>
-          <StatCircle label="Updates Today" count={updates.length.toString()} />
-          <StatCircle label="Unread Updates" count={unreadCount.toString()} />
-          <StatCircle label="Read Updates" count={readCount.toString()} />
+        <View style={styles.statsContainer}>
+            <View style={styles.greenVerticalLine} />
+            <View style={styles.statsRow}>
+                <StatItem label="Updates Today" count={updates.length.toString()} />
+                <StatItem label="Unread Updates" count={unreadCount.toString()} />
+                <StatItem label="Read Updates" count={readCount.toString()} />
+            </View>
         </View>
 
-        {/* Filters Section */}
         <View style={styles.filterHeader}>
           <Text style={styles.sectionTitle}>Patient Updates</Text>
-          <TouchableOpacity onPress={onViewAll}><Text style={styles.viewAll}>View all ›</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onViewAll}>
+            <Text style={styles.viewAll}>View all ›</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.chipsRow}>
@@ -116,34 +188,44 @@ const DoctorHomeScreen = ({ onBack, onViewAll, onNavigate }: { onBack?: () => vo
             <TouchableOpacity 
               key={filter}
               onPress={() => setActiveFilter(filter as any)}
-              style={[styles.chip, activeFilter === filter && styles.activeChip]}
+              style={[styles.chip, activeFilter === filter ? styles.activeChip : styles.inactiveChip]}
             >
-              <Text style={[styles.chipText, activeFilter === filter && styles.activeChipText]}>{filter}</Text>
+              <Text style={[styles.chipText, activeFilter === filter ? styles.activeChipText : styles.inactiveChipText]}>{filter}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Updates List */}
-        {filteredUpdates.length > 0 ? (
-          filteredUpdates.map(item => (
-            <TouchableOpacity 
-              key={item.id} 
-              onPress={() => item.status === 'Unread' && markAsRead(item.id)}
-              activeOpacity={0.7}
-            >
-              <PatientUpdateCard 
-                name={item.name}
-                type={item.type}
-                time={item.time}
-                isUnread={item.status === 'Unread'}
-              />
-            </TouchableOpacity>
-          ))
-        ) : renderEmptyState()}
+        <View style={styles.listContainer}>
+            {filteredUpdates.length > 0 ? (
+            filteredUpdates.map((item, index) => (
+                <TouchableOpacity 
+                    key={item.id || index} 
+                    onPress={() => handleUpdatePress(item)}
+                    activeOpacity={0.7}
+                    style={styles.patientRow}
+                >
+                    <View style={[styles.patientLeft, { flex: 1 }]}>
+                        <View style={[styles.statusDot, { backgroundColor: item.status === 'Unread' ? '#29A539' : 'transparent' }]} />
+                        <View style={styles.avatarContainer}>
+                            <Icon name="person" size={20} color="#035022" />
+                        </View>
+                        <Text style={[styles.patientName, { fontFamily: item.status === 'Unread' ? 'AlteHaasGroteskBold' : 'AlteHaasGrotesk', marginLeft: 12 }]}>{item.name}</Text>
+                    </View>
 
+                    <View style={styles.patientRightContainer}>
+                        <View style={styles.patientRight}>
+                            <View style={styles.badge}>
+                                <Text style={[styles.badgeText, { fontFamily: item.status === 'Unread' ? 'AlteHaasGroteskBold' : 'AlteHaasGrotesk' }]}>{item.type}</Text>
+                            </View>
+                            <Text style={styles.timeText}>{item.time}</Text>
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            ))
+            ) : renderEmptyState()}
+        </View>
       </ScrollView>
 
-      {/* Doctor Internal Bottom Nav */}
       <View style={styles.bottomNav}>
         <NavItem label="Home" icon={require('../../../../assets/doctors-page/doctor-home.png')} active />
         <NavItem label="Patients" icon={require('../../../../assets/doctors-page/doctor-patients.png')} onPress={() => onNavigate('DoctorPatients')} />
@@ -156,10 +238,10 @@ const DoctorHomeScreen = ({ onBack, onViewAll, onNavigate }: { onBack?: () => vo
   );
 };
 
-const StatCircle = ({ label, count }: any) => (
+const StatItem = ({ label, count }: any) => (
   <View style={styles.statItem}>
     <View style={styles.circle}>
-       <Image source={require('../../../../assets/doctors-page/middle.png')} style={{ width: 20, height: 20 }} resizeMode="contain" />
+       <Icon name="person" size={24} color="#035022" />
     </View>
     <Text style={styles.statLabel}>{label}</Text>
     <Text style={styles.statCount}>{count}</Text>
@@ -177,37 +259,52 @@ const NavItem = ({ label, icon, active, onPress }: any) => (
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#FFF' },
-  scrollContent: { paddingHorizontal: 25, paddingBottom: 150, paddingTop: 40 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  scrollContent: { paddingHorizontal: 40, paddingBottom: 150, paddingTop: 40 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 35, marginTop: 10 },
   welcome: { fontSize: 35, color: '#035022', fontFamily: 'MinionPro-SemiboldItalic' },
   date: { fontSize: 14, color: '#B2B2B2', marginTop: 4, fontWeight: 'bold' },
   searchContainer: { marginBottom: 25 },
   searchBarWrapper: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 25, paddingHorizontal: 15,
-    borderWidth: 1, borderColor: '#EBEBEB', shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05, shadowRadius: 5, elevation: 2,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 30, paddingHorizontal: 15,
+    borderWidth: 1, borderColor: '#F0F0F0', height: 50, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05, shadowRadius: 10, elevation: 3,
   },
   searchIcon: { width: 18, height: 18, marginRight: 10, tintColor: '#D9D9D9' },
-  searchBar: { flex: 1, height: 45, color: '#333' },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
+  searchBar: { flex: 1, height: 50, color: '#333', fontSize: 16 },
+  statsContainer: { flexDirection: 'row', marginBottom: 30, alignItems: 'center' },
+  greenVerticalLine: { width: 4, backgroundColor: '#29A539', height: '80%', marginRight: 15, borderRadius: 2 },
+  statsRow: { flex: 1, flexDirection: 'row', justifyContent: 'space-between' },
   statItem: { alignItems: 'center', flex: 1 },
   circle: { 
-    width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: '#7AF489',
+    width: 55, height: 55, borderRadius: 27.5, borderWidth: 1, borderColor: '#D4F5D9',
     backgroundColor: '#F6FFF7', justifyContent: 'center', alignItems: 'center', marginBottom: 8 
   },
-  statLabel: { fontSize: 12, color: '#035022', fontWeight: 'bold', textAlign: 'center', marginTop: 5 },
-  statCount: { fontSize: 24, color: '#035022', fontWeight: 'bold' },
+  statLabel: { fontSize: 11, color: '#035022', fontWeight: 'bold', textAlign: 'center', marginBottom: 2 },
+  statCount: { fontSize: 26, color: '#035022', fontWeight: 'bold' },
   filterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  sectionTitle: { fontSize: 15, fontWeight: 'bold', color: '#858583' },
-  viewAll: { color: '#999696', fontSize: 12 },
+  sectionTitle: { fontSize: 15, fontFamily: 'AlteHaasGroteskBold', color: '#858583' },
+  viewAll: { color: '#999696', fontSize: 13, fontFamily: 'AlteHaasGrotesk' },
   chipsRow: { flexDirection: 'row', marginBottom: 20 },
   chip: { paddingHorizontal: 20, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#5EAE57', marginRight: 10 },
   activeChip: { backgroundColor: '#5EAE57' },
-  chipText: { color: '#5EAE57', fontSize: 12, fontWeight: 'bold' },
+  inactiveChip: { backgroundColor: 'transparent' },
+  chipText: { fontSize: 12, fontFamily: 'AlteHaasGroteskBold', color: '#5EAE57' },
   activeChipText: { color: '#FFF' },
+  inactiveChipText: { color: '#5EAE57' },
+  listContainer: { paddingBottom: 20 },
+  patientRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
+  patientLeft: { flexDirection: 'row', alignItems: 'center' },
+  statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 10 },
+  avatarContainer: { marginRight: 0 },
+  patientName: { fontSize: 14, color: '#333', fontFamily: 'AlteHaasGroteskBold' },
+  patientRightContainer: { flexDirection: 'row', alignItems: 'center' },
+  patientRight: { alignItems: 'flex-end' },
+  badge: { backgroundColor: '#FFECBD', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginBottom: 4 },
+  badgeText: { color: '#EDB62C', fontSize: 10, fontFamily: 'AlteHaasGroteskBold' },
+  timeText: { color: '#999', fontSize: 10, fontFamily: 'AlteHaasGrotesk' },
   emptyState: { alignItems: 'center', marginTop: 50 },
-  emptyTitle: { color: '#999696', fontWeight: 'bold', fontSize: 16, marginBottom: 5, textAlign: 'center' },
-  emptySubtitle: { color: '#999696', fontSize: 14, textAlign: 'center' },
+  emptyTitle: { color: '#999696', fontWeight: 'bold', fontSize: 16, marginBottom: 5 },
+  emptySubtitle: { color: '#999696', fontSize: 14 },
   bottomNav: { 
     position: 'absolute', bottom: 20, left: 20, right: 20, height: 70, backgroundColor: '#FFF', 
     borderRadius: 35, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', 

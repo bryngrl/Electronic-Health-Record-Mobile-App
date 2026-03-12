@@ -14,7 +14,7 @@ const VitalCard: React.FC<VitalCardProps> = ({
   label,
   value,
   onChangeText,
-  disabled,
+  disabled = false,
   onDisabledPress,
   keyboardType = 'numeric',
 }) => (

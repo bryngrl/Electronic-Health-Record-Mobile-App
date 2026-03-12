@@ -34,12 +34,29 @@ def mark_update_as_read(update_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "success"}
 
+from datetime import datetime
+
 # Helper function for other parts of the app to create updates
 def create_doctor_update(db: Session, patient_id: int, update_type: str):
+    # Check if an unread update of the same type already exists for this patient
+    existing_update = db.query(DoctorUpdate).filter(
+        DoctorUpdate.patient_id == patient_id,
+        DoctorUpdate.update_type == update_type,
+        DoctorUpdate.status == "Unread"
+    ).first()
+
+    if existing_update:
+        # Just update the timestamp so it moves to the top of the list
+        existing_update.created_at = datetime.utcnow()
+        db.commit()
+        return existing_update
+    
+    # Otherwise create a new one
     new_update = DoctorUpdate(
         patient_id=patient_id,
         update_type=update_type,
-        status="Unread"
+        status="Unread",
+        created_at=datetime.utcnow()
     )
     db.add(new_update)
     db.commit()

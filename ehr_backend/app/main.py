@@ -24,7 +24,7 @@ from app.models.medication_reconciliation.medication_reconciliation import (
 )
 
 # Router imports
-from app.routers import auth, patient, doctor
+from app.routers import auth, patient, doctor, reports
 from app.routers.physical_exam import physical_exam as pe_router
 from app.routers.vital_signs import vital_signs as vs_router
 from app.routers.intake_and_output import intake_and_output as iao_router
@@ -64,6 +64,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(patient.router)
 app.include_router(doctor.router)
+app.include_router(reports.router)
 
 # Physical Exam (with ADPIE)
 app.include_router(pe_router.router)
@@ -98,7 +99,30 @@ app.include_router(ma_router.router)
 # Medication Reconciliation (3 sub-components: home, current, changes)
 app.include_router(mr_router.router)
 
+from sqlalchemy.orm import Session
+from app.services.auth_service import create_user
+
 Base.metadata.create_all(bind=engine)
+
+# --- Initial Database Setup ---
+def init_db():
+    db = Session(bind=engine)
+    try:
+        # Check if users exist
+        user_count = db.query(User).count()
+        if user_count == 0:
+            print("INFO: Database is empty. Creating default users...")
+            # Create one of each for testing
+            create_user(db, "Nurse Account", "nurse@example.com", "password", "nurse")
+            create_user(db, "Doctor Account", "doctor@example.com", "password", "doctor")
+            create_user(db, "Admin Account", "admin@example.com", "password", "admin")
+            print("INFO: Default users created (Password: 'password')")
+    except Exception as e:
+        print(f"ERROR: Failed to initialize database: {e}")
+    finally:
+        db.close()
+
+init_db()
 
 
 # Just to test that the backend is running
