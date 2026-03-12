@@ -28,7 +28,10 @@ const genderData = [
 
 export default function RegistrationForm({ updateField, onBack }: FormProps) {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
-  const styles = useMemo(() => createStyles(theme, commonStyles, isDarkMode), [theme, commonStyles, isDarkMode]);
+  const styles = useMemo(
+    () => createStyles(theme, commonStyles, isDarkMode),
+    [theme, commonStyles, isDarkMode],
+  );
 
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -69,7 +72,10 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
     setEmergencyContacts(emergencyContacts.filter(c => c.id !== id));
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.scrollContent}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.scrollContent}
+    >
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor="transparent"
@@ -117,7 +123,7 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
               />
             </View>
             <View style={styles.col}>
-              <Text style={styles.label}>Sex</Text>
+              <Text style={styles.label}>Gender</Text>
               <Dropdown
                 style={styles.dropdown}
                 data={genderData}
@@ -144,17 +150,17 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
           <View style={styles.row}>
             <View style={styles.col}>
               <Text style={styles.label}>Birth Place</Text>
-              <TextInput 
-                style={styles.input} 
-                placeholder="City" 
+              <TextInput
+                style={styles.input}
+                placeholder="City"
                 placeholderTextColor={theme.textMuted}
               />
             </View>
             <View style={styles.col}>
               <Text style={styles.label}>Ethnicity</Text>
-              <TextInput 
-                style={styles.input} 
-                placeholder="Ethnicity" 
+              <TextInput
+                style={styles.input}
+                placeholder="Ethnicity"
                 placeholderTextColor={theme.textMuted}
               />
             </View>
@@ -197,16 +203,16 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
               <View style={styles.row}>
                 <View style={styles.col}>
                   <Text style={styles.label}>Relationship</Text>
-                  <TextInput 
-                    style={styles.input} 
+                  <TextInput
+                    style={styles.input}
                     placeholderTextColor={theme.textMuted}
                   />
                 </View>
                 <View style={styles.col}>
                   <Text style={styles.label}>Contact Number</Text>
-                  <TextInput 
-                    style={styles.input} 
-                    keyboardType="phone-pad" 
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="phone-pad"
                     placeholderTextColor={theme.textMuted}
                   />
                 </View>
@@ -228,73 +234,74 @@ export default function RegistrationForm({ updateField, onBack }: FormProps) {
   );
 }
 
-const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.background },
-  scrollContent: { padding: 20 },
-  card: {
-    backgroundColor: theme.card,
-    borderRadius: 10,
-    elevation: 4,
-    marginBottom: 15,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  cardHeader: { backgroundColor: theme.primary, padding: 12 },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerText: { color: theme.white, fontWeight: 'bold', fontSize: 16 },
-  formPadding: { padding: 15 },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  col: { width: '48%' },
-  label: commonStyles.label,
-  input: commonStyles.input,
-  disabled: { backgroundColor: theme.surface, color: theme.textMuted },
-  textArea: { height: 80, textAlignVertical: 'top' },
-  dropdown: {
-    height: 52,
-    borderColor: theme.border,
-    borderWidth: 1.5,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    backgroundColor: theme.inputBg,
-  },
-  placeholderStyle: {
-    fontSize: 14,
-    color: theme.textMuted,
-  },
-  selectedTextStyle: {
-    fontSize: 14,
-    color: theme.text,
-  },
-  itemTextStyle: {
-    fontSize: 14,
-    color: theme.text,
-  },
-  divider: {
-    borderTopWidth: 1,
-    borderTopColor: theme.border,
-    marginTop: 15,
-    paddingTop: 10,
-  },
-  removeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-end',
-    marginBottom: 5,
-  },
-  removeText: { color: theme.error, fontSize: 12, marginLeft: 5 },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    marginBottom: 50,
-  },
-});
+const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: theme.background },
+    scrollContent: { padding: 20 },
+    card: {
+      backgroundColor: theme.card,
+      borderRadius: 10,
+      elevation: 4,
+      marginBottom: 15,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    cardHeader: { backgroundColor: theme.primary, padding: 12 },
+    headerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    headerText: { color: theme.white, fontWeight: 'bold', fontSize: 16 },
+    formPadding: { padding: 15 },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 10,
+    },
+    col: { width: '48%' },
+    label: commonStyles.label,
+    input: commonStyles.input,
+    disabled: { backgroundColor: theme.surface, color: theme.textMuted },
+    textArea: { height: 80, textAlignVertical: 'top' },
+    dropdown: {
+      height: 52,
+      borderColor: theme.border,
+      borderWidth: 1.5,
+      borderRadius: 10,
+      paddingHorizontal: 10,
+      backgroundColor: theme.inputBg,
+    },
+    placeholderStyle: {
+      fontSize: 14,
+      color: theme.textMuted,
+    },
+    selectedTextStyle: {
+      fontSize: 14,
+      color: theme.text,
+    },
+    itemTextStyle: {
+      fontSize: 14,
+      color: theme.text,
+    },
+    divider: {
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+      marginTop: 15,
+      paddingTop: 10,
+    },
+    removeBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-end',
+      marginBottom: 5,
+    },
+    removeText: { color: theme.error, fontSize: 12, marginLeft: 5 },
+    buttonRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 10,
+      marginBottom: 50,
+    },
+  });
