@@ -466,7 +466,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.inputLabel}>
-                    Sex <Text style={styles.required}>*</Text>
+                    Gender <Text style={styles.required}>*</Text>
                   </Text>
                   <Dropdown
                     style={[
