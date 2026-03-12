@@ -1,11 +1,9 @@
-cd e// App/features/PatientRegistration/hook/usePatients.ts
 import apiClient from '@api/apiClient';
 
 export const usePatients = () => {
   const registerPatient = async (payload: any) => {
-    // Matches POST /patient/ endpoint in Laravel.
     try {
-      const response = await apiClient.post('/patient/', payload);
+      const response = await apiClient.post('/patient', payload);
       return response;
     } catch (err: any) {
       // Normalize error so callers can show friendly messages
