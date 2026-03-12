@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   StatusBar,
+  Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -18,9 +19,11 @@ import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
 import { useLabValuesScreen } from './useLabValuesScreen';
-import { LAB_TESTS, getTestPrefix } from './constants';
+import { LAB_TESTS, LAB_CATEGORIES, getTestPrefix } from './constants';
+import { createStyles } from './styles';
 
-const alertIcon = require('@assets/icons/alert.png');
+const alertBellActiveIcon = require('@assets/icons/alert_bell_icon.png');
+const alertBellInactiveIcon = require('@assets/icons/alert_bell_icon_inactive.png');
 
 const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: {
   onBack: any;
@@ -32,6 +35,7 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
   const styles = useMemo(() => createStyles(theme, commonStyles, isDarkMode), [theme, commonStyles, isDarkMode]);
   const scrollViewRef = useRef<ScrollView>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const bellFadeAnim = useRef(new Animated.Value(1)).current;
 
   const {
     searchText,
@@ -68,8 +72,26 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
   const prefix = getTestPrefix(selectedTest);
   const currentAlert = backendAlerts[`${prefix}_alert`] ?? null;
   const currentSeverity = backendSeverities[`${prefix}_severity`] ?? null;
-  const isClinicalAlert = !!(currentAlert || (dataAlert && dataAlert.trim() !== ''));
-  const hasInputData = result.trim() !== '' && normalRange.trim() !== '';
+  const isValidAlert = (v: string | null | undefined): v is string =>
+    !!v &&
+    !v.toLowerCase().includes('no findings') &&
+    !v.toLowerCase().includes('no result') &&
+    !v.toLowerCase().includes('no alert') &&
+    v.toLowerCase() !== 'normal' &&
+    v.trim() !== '';
+
+  const isClinicalAlert = isValidAlert(currentAlert) || isValidAlert(dataAlert);
+  const hasInputData = result.trim() !== '' || normalRange.trim() !== '';
+  const isAlertActive = !!selectedPatientId && isClinicalAlert && hasInputData;
+
+  useEffect(() => {
+    bellFadeAnim.setValue(0.35);
+    Animated.timing(bellFadeAnim, {
+      toValue: 1,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [bellFadeAnim, isAlertActive, selectedPatientId]);
 
   const fadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
@@ -149,22 +171,35 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
           scrollEnabled={scrollEnabled}
         >
           <View style={{ height: 20 }} />
-          {showLabList && (            <View style={styles.dropdownOverlay}>
+          {showLabList && (
+            <View style={styles.dropdownOverlay}>
               <ScrollView nestedScrollEnabled={true}>
-                {LAB_TESTS.map((test, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.dropdownItem}
-                    onPress={() => {
-                      setSelectedTestIndex(index);
-                      setShowLabList(false);
-                    }}
-                  >
-                    <Text style={styles.dropdownItemText}>{test}</Text>
-                    {selectedTestIndex === index && (
-                      <Icon name="check" size={16} color={theme.primary} />
-                    )}
-                  </TouchableOpacity>
+                {LAB_CATEGORIES.map((category, catIndex) => (
+                  <View key={catIndex}>
+                    <View style={styles.categoryHeader}>
+                      <Text style={styles.categoryHeaderText}>
+                        {category.title}
+                      </Text>
+                    </View>
+                    {category.tests.map(test => {
+                      const globalIndex = LAB_TESTS.indexOf(test);
+                      return (
+                        <TouchableOpacity
+                          key={globalIndex}
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setSelectedTestIndex(globalIndex);
+                            setShowLabList(false);
+                          }}
+                        >
+                          <Text style={styles.dropdownItemText}>{test}</Text>
+                          {selectedTestIndex === globalIndex && (
+                            <Icon name="check" size={16} color={theme.primary} />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
                 ))}
               </ScrollView>
             </View>
@@ -245,36 +280,22 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
 
           {!readOnly ? (
             <View style={styles.footerRow}>
-              <TouchableOpacity
-                style={[
-                  styles.alertIcon,
-                  {
-                    backgroundColor: !selectedPatientId
-                      ? theme.alertBellDisabledBg
-                      : isClinicalAlert
-                      ? theme.alertBellOnBg
-                      : theme.alertBellOffBg,
-                    borderColor: !selectedPatientId
-                      ? theme.border
-                      : '#EDB62C',
-                    opacity: !selectedPatientId ? 1 : isClinicalAlert ? 1 : 0.3,
-                  },
-                ]}
-                disabled={!selectedPatientId}
-                onPress={() => setModalVisible(true)}
-              >
-                <Image
-                  source={alertIcon}
-                  style={[
-                    styles.fullImg,
-                    !selectedPatientId
-                      ? { tintColor: theme.textMuted }
-                      : isClinicalAlert
-                      ? { tintColor: '#EDB62C' }
-                      : { tintColor: '#EDB62C' },
-                  ]}
-                />
-              </TouchableOpacity>
+              <Animated.View style={{ opacity: bellFadeAnim }}>
+                <TouchableOpacity
+                  style={styles.alertIcon}
+                  disabled={!selectedPatientId}
+                  onPress={() => setModalVisible(true)}
+                >
+                  <Image
+                    source={
+                      isAlertActive
+                        ? alertBellActiveIcon
+                        : alertBellInactiveIcon
+                    }
+                    style={styles.fullImg}
+                  />
+                </TouchableOpacity>
+              </Animated.View>
 
               {selectedTestIndex === LAB_TESTS.length - 1 ? (
                 <View style={styles.buttonGroup}>
@@ -387,148 +408,5 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
     </SafeAreaView>
   );
 };
-
-const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) => StyleSheet.create({
-  safeArea: commonStyles.safeArea,
-  container: commonStyles.container,
-  scrollContent: { paddingBottom: 40 },
-  header: commonStyles.header,
-  title: commonStyles.title,
-  dateText: { fontSize: 13, fontFamily: 'AlteHaasGroteskBold', color: theme.textMuted },
-  naRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginBottom: 5,
-    marginTop: 5,
-  },
-  naText: {
-    fontSize: 14,
-    fontFamily: 'AlteHaasGroteskBold',
-    color: theme.primary,
-    marginRight: 8,
-  },
-  disabledTextAtBottom: {
-    fontSize: 13,
-    fontFamily: 'AlteHaasGroteskBold',
-    color: theme.textMuted,
-    textAlign: 'right',
-    marginBottom: 15,
-  },
-  dropdownOverlay: {
-    position: 'absolute',
-    top: 90,
-    right: 0,
-    width: 220,
-    maxHeight: 300,
-    backgroundColor: theme.card,
-    borderRadius: 15,
-    zIndex: 1000,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  dropdownItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
-  },
-  dropdownItemText: { fontSize: 13, color: theme.primary, fontWeight: '500' },
-  footerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-    paddingBottom: 40,
-  },
-  buttonGroup: { flex: 1, flexDirection: 'row', marginLeft: 10 },
-  alertIcon: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  fullImg: { width: '80%', height: '80%', resizeMode: 'contain' },
-  cdssBtn: {
-    flex: 1,
-    height: 50,
-    backgroundColor: theme.buttonBg,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.buttonBorder,
-    marginRight: 5,
-  },
-  submitBtn: {
-    flex: 1,
-    height: 50,
-    backgroundColor: theme.buttonBg,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.buttonBorder,
-    marginLeft: 5,
-  },
-  nextBtn: {
-    flex: 1,
-    marginLeft: 15,
-    height: 52,
-    backgroundColor: theme.buttonBg,
-    borderRadius: 26,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.buttonBorder,
-  },
-  disabledButton: {
-    backgroundColor: theme.card,
-    borderColor: theme.border,
-    opacity: 0.6,
-  },
-  cdssText: { color: theme.textMuted, fontWeight: 'bold' },
-  submitText: { color: theme.primary, fontWeight: 'bold', fontSize: 13 },
-  nextText: {
-    color: theme.primary,
-    fontWeight: 'bold',
-    fontSize: 14,
-    marginRight: 5,
-  },
-  fadeBottom: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 60,
-  },
-  staticPatientContainer: {
-    marginBottom: 20,
-    backgroundColor: theme.card,
-    padding: 15,
-    borderRadius: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  staticPatientLabel: {
-    fontFamily: 'AlteHaasGroteskBold',
-    color: theme.primary,
-    fontSize: 12,
-    marginRight: 10,
-  },
-  staticPatientName: {
-    fontFamily: 'AlteHaasGrotesk',
-    color: theme.text,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});
 
 export default LabValuesScreen;
