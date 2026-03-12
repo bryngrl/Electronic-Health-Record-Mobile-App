@@ -94,6 +94,7 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
     contacts,
     setContacts,
     contactErrors,
+    setContactErrors,
     formatNameOnBlur,
     handleNumberChange,
     validateNumberOnBlur,
@@ -548,7 +549,19 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                 ) : null}
               </View>
 
-              <View style={[styles.row, styles.inputGroup, { zIndex: 3000 }]}>
+              <View
+                style={[
+                  styles.row,
+                  styles.inputGroup,
+                  {
+                    zIndex: 3000,
+                    marginBottom:
+                      form.religion === 'Other' || form.ethnicity === 'Other'
+                        ? 10
+                        : 20,
+                  },
+                ]}
+              >
                 <View style={{ flex: 1, marginRight: 10 }}>
                   <Text style={styles.inputLabel}>
                     Religion <Text style={styles.required}>*</Text>
@@ -612,6 +625,68 @@ const RegisterPatient: React.FC<Props> = ({ onBack }) => {
                   ) : null}
                 </View>
               </View>
+
+              {(form.religion === 'Other' || form.ethnicity === 'Other') && (
+                <View style={[styles.row, { marginBottom: 20 }]}>
+                  {form.religion === 'Other' && (
+                    <View
+                      style={{
+                        flex: 1,
+                        marginRight: form.ethnicity === 'Other' ? 10 : 0,
+                      }}
+                    >
+                      <TextInput
+                        style={[
+                          styles.input,
+                          formErrors.other_religion ? styles.inputError : null,
+                        ]}
+                        placeholder="Specify Religion"
+                        placeholderTextColor={theme.textMuted}
+                        value={form.other_religion}
+                        onChangeText={v => {
+                          setForm({ ...form, other_religion: v });
+                          if (formErrors.other_religion)
+                            setFormErrors({
+                              ...formErrors,
+                              other_religion: '',
+                            });
+                        }}
+                      />
+                      {formErrors.other_religion && (
+                        <Text style={styles.errorTextSmall}>
+                          {formErrors.other_religion}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                  {form.ethnicity === 'Other' && (
+                    <View style={{ flex: 1 }}>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          formErrors.other_ethnicity ? styles.inputError : null,
+                        ]}
+                        placeholder="Specify Ethnicity"
+                        placeholderTextColor={theme.textMuted}
+                        value={form.other_ethnicity}
+                        onChangeText={v => {
+                          setForm({ ...form, other_ethnicity: v });
+                          if (formErrors.other_ethnicity)
+                            setFormErrors({
+                              ...formErrors,
+                              other_ethnicity: '',
+                            });
+                        }}
+                      />
+                      {formErrors.other_ethnicity && (
+                        <Text style={styles.errorTextSmall}>
+                          {formErrors.other_ethnicity}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                </View>
+              )}
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>

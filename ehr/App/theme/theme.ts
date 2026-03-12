@@ -35,7 +35,7 @@ export const COLORS = {
     // Alert Bell Icon states
     alertBellDisabledBg: '#F2F1EF', // no patient selected
     alertBellOffBg: '#FEF3C7', // patient selected, no findings / unmatched alert
-    alertBellOnBg: '#FDE68A', // patient selected, alert triggered
+    alertBellOnBg: '#FFECBD', // patient selected, alert triggered
 
     // Toast / Snackbar
     toastSuccessBg: '#ECFDF5',

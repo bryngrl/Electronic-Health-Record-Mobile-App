@@ -22,13 +22,15 @@ import {
   BackHandler,
   Platform,
   Animated,
-  Easing,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import VitalCard from '@nurse/VitalSigns/component/VitalCard';
 import PreciseVitalChart from '@nurse/VitalSigns/component/VitalSignsChart';
-import { useVitalSignsLogic, convertTo24h } from '@nurse/VitalSigns/hook/useVitalSignsLogic';
+import {
+  useVitalSignsLogic,
+  convertTo24h,
+} from '@nurse/VitalSigns/hook/useVitalSignsLogic';
 import SweetAlert from '@components/SweetAlert';
 import CDSSModal from '@components/CDSSModal';
 import ADPIEScreen from '@components/ADPIEScreen';
@@ -40,7 +42,8 @@ const ITEM_WIDTH = width * 0.72;
 const ITEM_SPACING = 15;
 const SNAP_INTERVAL = ITEM_WIDTH + ITEM_SPACING;
 
-const alertIcon = require('@assets/icons/alert.png');
+const alertBellActiveIcon = require('@assets/icons/alert_bell_icon.png');
+const alertBellInactiveIcon = require('@assets/icons/alert_bell_icon_inactive.png');
 const arrowIcon = require('@assets/icons/ARROW.png');
 const backArrow = require('@assets/icons/back_arrow.png');
 const nextArrow = require('@assets/icons/next_arrow.png');
@@ -52,7 +55,12 @@ interface VitalSignsScreenProps {
   initialPatientName?: string;
 }
 
-const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack, readOnly = false, patientId, initialPatientName }) => {
+const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
+  onBack,
+  readOnly = false,
+  patientId,
+  initialPatientName,
+}) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
@@ -106,6 +114,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack, readOnly = 
   const [isAlertLoading, setIsAlertLoading] = useState(false);
   const fieldTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const analyzeCountRef = useRef(0);
+  const bellFadeAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (readOnly && patientId) {
@@ -113,38 +122,50 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack, readOnly = 
     }
   }, [readOnly, patientId]);
 
-  const handleVitalChange = useCallback((key: string, value: string) => {
-    handleUpdateVital(key, value);
-    if (!selectedPatientId) return;
-    if (fieldTimers.current[key]) clearTimeout(fieldTimers.current[key]);
-    setIsAlertLoading(true);
-    analyzeCountRef.current += 1;
-    const thisCount = analyzeCountRef.current;
-    fieldTimers.current[key] = setTimeout(async () => {
-      const today = new Date().toLocaleDateString('en-CA');
-      const time24 = convertTo24h(TIME_SLOTS[currentTimeIndex]);
-      const sanitized: Record<string, string> = {};
-      Object.entries({ ...vitals, [key]: value }).forEach(([k, v]) => {
-        sanitized[k] = v && v.trim() ? v : 'N/A';
-      });
-      const dayNo = parseInt(calculateDayNumber(), 10) || 1;
-      const payload = {
-        patient_id: parseInt(selectedPatientId, 10),
-        date: today,
-        time: time24,
-        day_no: dayNo,
-        ...sanitized,
-      };
-      const res = await analyzeField(payload);
-      if (res) {
-        setRealtimeAlert(res.alert);
-        setRealtimeSeverity(res.severity);
-      }
-      if (thisCount === analyzeCountRef.current) {
-        setIsAlertLoading(false);
-      }
-    }, 800);
-  }, [selectedPatientId, vitals, analyzeField, handleUpdateVital, TIME_SLOTS, currentTimeIndex, setRealtimeAlert, setRealtimeSeverity]);
+  const handleVitalChange = useCallback(
+    (key: string, value: string) => {
+      handleUpdateVital(key, value);
+      if (!selectedPatientId) return;
+      if (fieldTimers.current[key]) clearTimeout(fieldTimers.current[key]);
+      setIsAlertLoading(true);
+      analyzeCountRef.current += 1;
+      const thisCount = analyzeCountRef.current;
+      fieldTimers.current[key] = setTimeout(async () => {
+        const today = new Date().toLocaleDateString('en-CA');
+        const time24 = convertTo24h(TIME_SLOTS[currentTimeIndex]);
+        const sanitized: Record<string, string> = {};
+        Object.entries({ ...vitals, [key]: value }).forEach(([k, v]) => {
+          sanitized[k] = v && v.trim() ? v : 'N/A';
+        });
+        const dayNo = parseInt(calculateDayNumber(), 10) || 1;
+        const payload = {
+          patient_id: parseInt(selectedPatientId, 10),
+          date: today,
+          time: time24,
+          day_no: dayNo,
+          ...sanitized,
+        };
+        const res = await analyzeField(payload);
+        if (res) {
+          setRealtimeAlert(res.alert);
+          setRealtimeSeverity(res.severity);
+        }
+        if (thisCount === analyzeCountRef.current) {
+          setIsAlertLoading(false);
+        }
+      }, 800);
+    },
+    [
+      selectedPatientId,
+      vitals,
+      analyzeField,
+      handleUpdateVital,
+      TIME_SLOTS,
+      currentTimeIndex,
+      setRealtimeAlert,
+      setRealtimeSeverity,
+    ],
+  );
 
   const toggleNA = () => {
     const newState = !isNA;
@@ -160,8 +181,6 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack, readOnly = 
     }
   };
 
-  const shakeAnim = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
     if (selectedPatientId) {
       const allNA = Object.values(vitals).every(v => v === 'N/A');
@@ -170,42 +189,6 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack, readOnly = 
       setIsNA(false);
     }
   }, [selectedPatientId, vitals]);
-
-  useEffect(() => {
-    if (realtimeAlert) {
-      triggerShake();
-    }
-  }, [realtimeAlert]);
-
-  const triggerShake = () => {
-    shakeAnim.setValue(0);
-    Animated.sequence([
-      Animated.timing(shakeAnim, {
-        toValue: 10,
-        duration: 50,
-        useNativeDriver: true,
-        easing: Easing.linear,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: -10,
-        duration: 50,
-        useNativeDriver: true,
-        easing: Easing.linear,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: 10,
-        duration: 50,
-        useNativeDriver: true,
-        easing: Easing.linear,
-      }),
-      Animated.timing(shakeAnim, {
-        toValue: 0,
-        duration: 50,
-        useNativeDriver: true,
-        easing: Easing.linear,
-      }),
-    ]).start();
-  };
 
   const calculateDayNumber = () => {
     if (!selectedPatient?.admission_date) return '';
@@ -233,6 +216,16 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack, readOnly = 
     title: '',
     message: '',
   });
+  const isAlertActive = !!selectedPatientId && !!(realtimeAlert || currentAlert);
+
+  useEffect(() => {
+    bellFadeAnim.setValue(0.35);
+    Animated.timing(bellFadeAnim, {
+      toValue: 1,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [bellFadeAnim, isAlertActive, selectedPatientId]);
 
   const handleAlertPress = () => {
     if (!selectedPatientId) {
@@ -273,7 +266,9 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack, readOnly = 
       setRecordId(id);
       setIsExistingRecord(true);
       setSuccessMessage({
-        title: isExistingRecord ? 'SUCCESSFULLY UPDATED' : 'SUCCESSFULLY SUBMITTED',
+        title: isExistingRecord
+          ? 'SUCCESSFULLY UPDATED'
+          : 'SUCCESSFULLY SUBMITTED',
         message: isExistingRecord
           ? 'Vital signs updated successfully.'
           : 'Vital signs submitted successfully.',
@@ -337,7 +332,10 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack, readOnly = 
 
   const generateFindingsSummary = () => {
     const findings = Object.entries(vitals)
-      .filter(([_, value]) => typeof value === 'string' && value.trim() !== '' && value !== 'N/A')
+      .filter(
+        ([_, value]) =>
+          typeof value === 'string' && value.trim() !== '' && value !== 'N/A',
+      )
       .map(([key, value]) => `${key.toUpperCase()}: ${value}`);
     const alert = realtimeAlert || currentAlert?.message;
     if (alert) findings.push(alert);
@@ -387,7 +385,14 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack, readOnly = 
                 })}
               </Text>
               {readOnly && (
-                <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: '#E8572A',
+                    fontFamily: 'AlteHaasGroteskBold',
+                    marginTop: 5,
+                  }}
+                >
                   [READ ONLY]
                 </Text>
               )}
@@ -426,7 +431,9 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack, readOnly = 
           ) : (
             <View style={styles.staticPatientContainer}>
               <Text style={styles.staticPatientLabel}>PATIENT:</Text>
-              <Text style={styles.staticPatientName}>{initialPatientName || 'Unknown Patient'}</Text>
+              <Text style={styles.staticPatientName}>
+                {initialPatientName || 'Unknown Patient'}
+              </Text>
             </View>
           )}
 
@@ -621,33 +628,19 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack, readOnly = 
 
           {!readOnly ? (
             <View style={styles.footerAction}>
-              <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
+              <Animated.View style={{ opacity: bellFadeAnim }}>
                 <TouchableOpacity
-                  style={[
-                    styles.alertIcon,
-                    {
-                      backgroundColor: !selectedPatientId
-                        ? theme.alertBellDisabledBg
-                        : realtimeAlert || currentAlert
-                        ? theme.alertBellOnBg
-                        : theme.alertBellOffBg,
-                      borderColor: !selectedPatientId
-                        ? theme.border
-                        : '#EDB62C',
-                      opacity: !selectedPatientId ? 1 : realtimeAlert || currentAlert ? 1 : 0.3,
-                    },
-                  ]}
+                  style={styles.alertIcon}
                   disabled={!isDataEntered}
                   onPress={handleAlertPress}
                 >
                   <Image
-                    source={alertIcon}
-                    style={[
-                      styles.fullImg,
-                      !selectedPatientId
-                        ? { tintColor: theme.textMuted }
-                        : { tintColor: '#EDB62C' },
-                    ]}
+                    source={
+                      isAlertActive
+                        ? alertBellActiveIcon
+                        : alertBellInactiveIcon
+                    }
+                    style={styles.fullImg}
                   />
                 </TouchableOpacity>
               </Animated.View>
@@ -734,7 +727,12 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack, readOnly = 
                   onPress={handlePrevPress}
                   disabled={isFirstTimeSlot}
                 >
-                  <Text style={[styles.nextBtnText, isFirstTimeSlot && { color: theme.textMuted }]}>
+                  <Text
+                    style={[
+                      styles.nextBtnText,
+                      isFirstTimeSlot && { color: theme.textMuted },
+                    ]}
+                  >
                     ‹ PREV
                   </Text>
                 </TouchableOpacity>
@@ -749,15 +747,17 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack, readOnly = 
                   onPress={handleNextPress}
                   disabled={isLastTimeSlot}
                 >
-                  <Text style={[styles.nextBtnText, isLastTimeSlot && { color: theme.textMuted }]}>
+                  <Text
+                    style={[
+                      styles.nextBtnText,
+                      isLastTimeSlot && { color: theme.textMuted },
+                    ]}
+                  >
                     NEXT ›
                   </Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={styles.submitButton}
-                onPress={onBack}
-              >
+              <TouchableOpacity style={styles.submitButton} onPress={onBack}>
                 <Text style={styles.submitBtnText}>CLOSE</Text>
               </TouchableOpacity>
             </View>
@@ -790,7 +790,11 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack, readOnly = 
             : currentAlert?.message || 'No alerts.'
         }
         type={
-          !selectedPatientId ? 'error' : dataAlert ? 'error' : currentAlert?.type || 'success'
+          !selectedPatientId
+            ? 'error'
+            : dataAlert
+            ? 'error'
+            : currentAlert?.type || 'success'
         }
         onConfirm={() => setAlertVisible(false)}
         confirmText="OK"
@@ -827,8 +831,14 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({ onBack, readOnly = 
             !dataAlert.toLowerCase().includes('no result')
               ? dataAlert
               : null;
-          const parts = [realtimeAlert, validDataAlert, currentAlert?.message].filter(Boolean);
-          return parts.length ? parts.join('\n\n') : 'No clinical findings found.';
+          const parts = [
+            realtimeAlert,
+            validDataAlert,
+            currentAlert?.message,
+          ].filter(Boolean);
+          return parts.length
+            ? parts.join('\n\n')
+            : 'No clinical findings found.';
         })()}
         severity={realtimeSeverity || backendSeverity || undefined}
       />
@@ -972,10 +982,10 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       justifyContent: 'center',
       alignItems: 'center',
       borderRadius: 22.5,
-      borderWidth: 1,
+      overflow: 'hidden',
       marginBottom: 40,
     },
-    fullImg: { width: '70%', height: '70%', resizeMode: 'contain' },
+    fullImg: { width: '100%', height: '100%', resizeMode: 'contain' },
     buttonGroup: { flex: 1, flexDirection: 'row', marginLeft: 15 },
     cdssButton: {
       flex: 1,

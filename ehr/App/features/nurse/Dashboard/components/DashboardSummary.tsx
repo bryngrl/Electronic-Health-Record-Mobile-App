@@ -174,9 +174,14 @@ const DashboardSummary = ({
               p.is_active === true ||
               p.is_active === 1,
           }))
-          .filter(p => p.isActive); // Dashboard should ONLY show active patients
+          .filter(p => p.isActive) // Dashboard should ONLY show active patients
+          .sort((a, b) => {
+            const dateA = new Date(a.created_at || a.admission_date).getTime();
+            const dateB = new Date(b.created_at || b.admission_date).getTime();
+            return dateB - dateA;
+          });
 
-        setPatients(mappedPatients.reverse());
+        setPatients(mappedPatients);
       } else {
         setPatients([]);
       }

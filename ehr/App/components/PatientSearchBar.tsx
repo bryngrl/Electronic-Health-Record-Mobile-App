@@ -134,11 +134,13 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
             return hasId && isActive;
           })
           .sort((a, b) => {
-            const lastCompare = (a.last_name || '').localeCompare(
-              b.last_name || '',
-            );
-            if (lastCompare !== 0) return lastCompare;
-            return (a.first_name || '').localeCompare(b.first_name || '');
+            const dateA = new Date(a.created_at || a.admission_date || 0).getTime();
+            const dateB = new Date(b.created_at || b.admission_date || 0).getTime();
+            if (dateA !== dateB) return dateB - dateA;
+
+            const idA = a.id || 0;
+            const idB = b.id || 0;
+            return idB - idA;
           });
 
         setPatients(normalized);

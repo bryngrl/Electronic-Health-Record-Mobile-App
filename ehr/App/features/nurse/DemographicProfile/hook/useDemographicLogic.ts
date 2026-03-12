@@ -98,11 +98,15 @@ export const useDemographicLogic = (
             }
           });
 
-          // Convert back to array and sort by ID Descending
+          // Convert back to array and sort by ID or Date Descending
           const finalData = Array.from(patientMap.values()).sort((a, b) => {
+            const dateA = new Date(a.created_at || a.admission_date || 0).getTime();
+            const dateB = new Date(b.created_at || b.admission_date || 0).getTime();
+            if (dateA !== dateB) return dateB - dateA;
+
             const idA = a.patient_id || a.id || 0;
             const idB = b.patient_id || b.id || 0;
-            return idA - idB;
+            return idB - idA;
           });
 
           // Persist the master list to storage so it survives app restarts
