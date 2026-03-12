@@ -44,9 +44,17 @@ const DoctorReportsScreen = ({
     if (isLoading) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.15, duration: 700, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
-        ])
+          Animated.timing(pulseAnim, {
+            toValue: 1.15,
+            duration: 700,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 700,
+            useNativeDriver: true,
+          }),
+        ]),
       ).start();
     } else {
       pulseAnim.setValue(1);
@@ -160,10 +168,15 @@ const DoctorReportsScreen = ({
       />
 
       {/* PDF Loading Overlay — swap the logo source below to use a custom .png */}
-      <Modal visible={isLoading} transparent animationType="fade" statusBarTranslucent>
+      <Modal
+        visible={isLoading}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
         <View style={styles.loadingOverlay}>
           <Animated.Image
-            source={require('../../../../assets/icons/doctor_updates.png')}
+            source={require('@assets/icons/loading.png')}
             style={[styles.loadingLogo, { transform: [{ scale: pulseAnim }] }]}
             resizeMode="contain"
           />
