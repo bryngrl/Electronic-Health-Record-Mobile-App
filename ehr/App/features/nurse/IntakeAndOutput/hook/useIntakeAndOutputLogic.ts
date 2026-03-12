@@ -36,6 +36,7 @@ export const useIntakeAndOutputLogic = () => {
   const [isExistingRecord, setIsExistingRecord] = useState(false);
   const recordIdRef = useRef<number | null>(null);
   const [existingRecords, setExistingRecords] = useState<any[]>([]);
+  const [currentDayNo, setCurrentDayNo] = useState<string>('');
 
   const ADPIE_STAGES = ['Assessment', 'Diagnosis', 'Planning', 'Intervention', 'Evaluation'];
 
@@ -140,6 +141,9 @@ export const useIntakeAndOutputLogic = () => {
         setRecordId(data.id);
         recordIdRef.current = data.id;
       }
+      if (data?.day_no !== undefined && data?.day_no !== null) {
+        setCurrentDayNo(String(data.day_no));
+      }
       const alertText: string = (data?.alert || data?.assessment_alert || '').toString().trim();
       if (alertText && alertText !== 'No findings.' && alertText !== 'No Findings') {
         setAssessmentAlert(alertText);
@@ -161,6 +165,7 @@ export const useIntakeAndOutputLogic = () => {
     setIsExistingRecord(false);
     recordIdRef.current = null;
     setRecordId(null);
+    setCurrentDayNo('');
     setAssessmentAlert(null);
     setAssessmentSeverity(null);
     
@@ -171,6 +176,11 @@ export const useIntakeAndOutputLogic = () => {
         recordIdRef.current = data.id;
         setRecordId(data.id);
         setIsExistingRecord(true);
+        setCurrentDayNo(
+          data.day_no !== undefined && data.day_no !== null
+            ? String(data.day_no)
+            : '',
+        );
         setIntakeOutput({
           oral_intake: (data.oral_intake ?? '').toString(),
           iv_fluids_volume: (data.iv_fluids_volume ?? data.iv_fluids ?? '').toString(),
@@ -181,9 +191,11 @@ export const useIntakeAndOutputLogic = () => {
           setAssessmentSeverity(inferSeverity(data.assessment_alert));
         }
       } else {
+        setCurrentDayNo('');
         setIntakeOutput({ oral_intake: '', iv_fluids_volume: '', urine_output: '' });
       }
     } else {
+      setCurrentDayNo('');
       setIntakeOutput({ oral_intake: '', iv_fluids_volume: '', urine_output: '' });
     }
   }, [fetchLatestIntakeOutput]);
@@ -214,6 +226,7 @@ export const useIntakeAndOutputLogic = () => {
     triggerPatientAlert,
     loading,
     recordId,
+    currentDayNo,
     isExistingRecord,
     setIsExistingRecord,
     ADPIE_STAGES,

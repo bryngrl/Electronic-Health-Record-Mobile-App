@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
-  Dimensions,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { useDoctorDashboardLogic } from '../hooks/useDoctorDashboardLogic';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -18,10 +18,8 @@ import { useAppTheme } from '@App/theme/ThemeContext';
 import { createStyles } from './DoctorHomeScreen.styles';
 import DoctorBottomNav from '../components/DoctorBottomNav';
 
-const { width } = Dimensions.get('window');
-
 const DoctorHomeScreen = ({
-  onBack = () => {},
+  onBack: _onBack = () => {},
   onViewAll,
   onNavigate,
 }: {
@@ -30,6 +28,7 @@ const DoctorHomeScreen = ({
   onNavigate: (route: string, extraData?: any) => void;
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
+  const [showAllUpdates, setShowAllUpdates] = useState(false);
   const { user } = useAuth();
   const { theme, isDarkMode } = useAppTheme();
   const styles = useMemo(
@@ -50,6 +49,10 @@ const DoctorHomeScreen = ({
 
   const unreadCount = updates.filter(u => !u.isRead).length;
   const readCount = updates.filter(u => u.isRead).length;
+  const shouldShowExpandedList =
+    showAllUpdates || searchQuery.trim().length > 0;
+  const visibleThreshold = shouldShowExpandedList ? 7 : 3;
+  const hasOverflowingUpdates = filteredUpdates.length > visibleThreshold;
 
   const renderEmptyState = () => {
     return (
@@ -143,19 +146,16 @@ const DoctorHomeScreen = ({
               label="Updates Today"
               count={updates.length.toString()}
               styles={styles}
-              theme={theme}
             />
             <StatItem
               label="Unread Updates"
               count={unreadCount.toString()}
               styles={styles}
-              theme={theme}
             />
             <StatItem
               label="Read Updates"
               count={readCount.toString()}
               styles={styles}
-              theme={theme}
             />
           </View>
         </View>
@@ -194,56 +194,107 @@ const DoctorHomeScreen = ({
         </View>
 
         <View style={styles.listContainer}>
-          {filteredUpdates.length > 0
-            ? filteredUpdates.map((item, index) => (
-                <TouchableOpacity
-                  key={item.id || index}
-                  onPress={() => handleUpdatePress(item)}
-                  activeOpacity={0.7}
-                  style={styles.patientRow}
+          {filteredUpdates.length > 0 ? (
+            <View>
+              <View
+                style={[
+                  styles.patientListWrapper,
+                  {
+                    maxHeight: shouldShowExpandedList ? 500 : 250,
+                  },
+                ]}
+              >
+                <ScrollView
+                  style={styles.patientListScroll}
+                  nestedScrollEnabled={true}
+                  showsVerticalScrollIndicator={false}
                 >
-                  <View style={[styles.patientLeft, { flex: 1 }]}>
-                    <View
+                  {filteredUpdates.map((item, index) => (
+                    <TouchableOpacity
+                      key={item.id || index}
+                      onPress={() => handleUpdatePress(item)}
+                      activeOpacity={0.7}
                       style={[
-                        styles.statusDot,
-                        {
-                          backgroundColor:
-                            item.status === 'Unread'
-                              ? theme.secondary
-                              : 'transparent',
-                        },
-                      ]}
-                    />
-                    <View style={styles.avatarContainer}>
-                      <Icon name="person" size={20} color={theme.primary} />
-                    </View>
-                    <Text
-                      style={[
-                        styles.patientName,
-                        {
-                          fontFamily:
-                            item.status === 'Unread'
-                              ? 'AlteHaasGroteskBold'
-                              : 'AlteHaasGrotesk',
-                          opacity: item.status === 'Unread' ? 1 : 0.95,
-                          marginLeft: 12,
-                        },
+                        styles.patientRow,
+                        index === filteredUpdates.length - 1
+                          ? styles.lastPatientRow
+                          : null,
                       ]}
                     >
-                      {item.name}
-                    </Text>
-                  </View>
-                  <View style={styles.patientRightContainer}>
-                    <View style={styles.patientRight}>
-                      <View style={styles.badge}>
-                        <Text style={[styles.badgeText]}>{item.type}</Text>
+                      <View style={styles.patientLeftExpanded}>
+                        <View
+                          style={[
+                            styles.statusDot,
+                            item.status === 'Unread'
+                              ? styles.unreadStatusDot
+                              : styles.readStatusDot,
+                          ]}
+                        />
+                        <View style={styles.avatarContainer}>
+                          <Icon name="person" size={20} color={theme.primary} />
+                        </View>
+                        <Text
+                          style={[
+                            styles.patientName,
+                            item.status === 'Unread'
+                              ? styles.unreadPatientName
+                              : styles.readPatientName,
+                          ]}
+                        >
+                          {item.name}
+                        </Text>
                       </View>
-                      <Text style={styles.timeText}>{item.time}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))
-            : renderEmptyState()}
+                      <View style={styles.patientRightContainer}>
+                        <View style={styles.patientRight}>
+                          <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{item.type}</Text>
+                          </View>
+                          <Text style={styles.timeText}>{item.time}</Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                {hasOverflowingUpdates && (
+                  <LinearGradient
+                    colors={[
+                      'rgba(0,0,0,0)',
+                      isDarkMode
+                        ? 'rgba(18,18,18,0.8)'
+                        : 'rgba(255,255,255,0.8)',
+                      isDarkMode ? 'rgba(18,18,18,1)' : 'rgba(255,255,255,1)',
+                    ]}
+                    style={styles.fadeBottom}
+                    pointerEvents="none"
+                  />
+                )}
+              </View>
+
+              {searchQuery.trim().length === 0 &&
+                filteredUpdates.length > 3 && (
+                  <TouchableOpacity
+                    style={styles.showMoreBtn}
+                    onPress={() => setShowAllUpdates(prev => !prev)}
+                  >
+                    <Text style={styles.showMoreText}>
+                      {showAllUpdates ? 'Show less' : 'View more'}
+                    </Text>
+                    <Icon
+                      name={
+                        showAllUpdates
+                          ? 'keyboard-arrow-up'
+                          : 'keyboard-arrow-down'
+                      }
+                      size={20}
+                      color={theme.textMuted}
+                    />
+                  </TouchableOpacity>
+                )}
+            </View>
+          ) : (
+            renderEmptyState()
+          )}
         </View>
       </ScrollView>
 
@@ -258,7 +309,7 @@ const DoctorHomeScreen = ({
   );
 };
 
-const StatItem = ({ label, count, styles, theme }: any) => (
+const StatItem = ({ label, count, styles }: any) => (
   <View style={styles.statItem}>
     <View style={styles.circle}>
       <Image

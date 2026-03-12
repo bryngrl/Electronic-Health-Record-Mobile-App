@@ -1,6 +1,6 @@
 import { StyleSheet, Platform } from 'react-native';
 
-export const createStyles = (theme: any, isDarkMode: boolean) =>
+export const createStyles = (theme: any, _isDarkMode: boolean) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: theme.background },
     scrollContent: { paddingHorizontal: 40, paddingBottom: 150 },
@@ -38,7 +38,13 @@ export const createStyles = (theme: any, isDarkMode: boolean) =>
       elevation: 5,
     },
     searchIcon: { marginRight: 10 },
-    searchBar: { flex: 1, height: 50, color: theme.text, fontSize: 15, fontFamily: 'AlteHaasGrotesk' },
+    searchBar: {
+      flex: 1,
+      height: 50,
+      color: theme.text,
+      fontSize: 15,
+      fontFamily: 'AlteHaasGrotesk',
+    },
     statsContainer: {
       flexDirection: 'row',
       marginBottom: 30,
@@ -116,6 +122,12 @@ export const createStyles = (theme: any, isDarkMode: boolean) =>
     activeChipText: { color: '#FFF' },
     inactiveChipText: { color: theme.filterBg },
     listContainer: { paddingBottom: 20 },
+    patientListWrapper: {
+      backgroundColor: theme.background,
+    },
+    patientListScroll: {
+      width: '100%',
+    },
     patientRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -124,13 +136,37 @@ export const createStyles = (theme: any, isDarkMode: boolean) =>
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
+    lastPatientRow: {
+      marginBottom: 40,
+    },
     patientLeft: { flexDirection: 'row', alignItems: 'center' },
+    patientLeftExpanded: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
     statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 10 },
+    unreadStatusDot: {
+      backgroundColor: theme.secondary,
+    },
+    readStatusDot: {
+      backgroundColor: 'transparent',
+    },
     avatarContainer: { marginHorizontal: 10 },
     patientName: {
       fontSize: 14,
       color: theme.text,
       fontFamily: 'AlteHaasGrotesk',
+    },
+    unreadPatientName: {
+      fontFamily: 'AlteHaasGroteskBold',
+      opacity: 1,
+      marginLeft: 12,
+    },
+    readPatientName: {
+      fontFamily: 'AlteHaasGrotesk',
+      opacity: 0.95,
+      marginLeft: 12,
     },
     patientRightContainer: { flexDirection: 'row', alignItems: 'center' },
     patientRight: { alignItems: 'flex-end' },
@@ -150,6 +186,25 @@ export const createStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.textMuted,
       fontSize: 11,
       fontFamily: 'AlteHaasGroteskBold',
+    },
+    fadeBottom: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 40,
+    },
+    showMoreBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 10,
+    },
+    showMoreText: {
+      color: theme.textMuted,
+      fontSize: 13,
+      marginRight: 5,
+      fontFamily: 'AlteHaasGrotesk',
     },
     emptyState: { alignItems: 'center', marginTop: 50 },
     emptyTitle: {

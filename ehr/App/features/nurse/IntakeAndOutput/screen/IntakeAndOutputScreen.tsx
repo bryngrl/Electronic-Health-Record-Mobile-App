@@ -52,6 +52,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     isDataEntered,
     loading,
     recordId,
+    currentDayNo,
     isExistingRecord,
     alertVisible, setAlertVisible,
     cdssModalVisible, setCdssModalVisible,
@@ -165,7 +166,9 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
           <View style={{ width: '100%', marginBottom: 15 }}>
             <Text style={styles.fieldLabel}>DAY NO :</Text>
             <View style={styles.pillInput}>
-              <Text style={styles.dateVal}>{calculateDayNumber() || '—'}</Text>
+              <Text style={styles.dateVal}>
+                {currentDayNo || calculateDayNumber() || '—'}
+              </Text>
             </View>
           </View>
 
