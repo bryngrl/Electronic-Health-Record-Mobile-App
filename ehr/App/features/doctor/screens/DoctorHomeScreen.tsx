@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
   View,
   Text,
   ScrollView,
@@ -28,7 +29,10 @@ const DoctorHomeScreen = ({
   onNavigate: (route: string, extraData?: any) => void;
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [showAllUpdates, setShowAllUpdates] = useState(false);
+  const [showStickyHeader, setShowStickyHeader] = useState(false);
+  const [stickyHeaderHeight, setStickyHeaderHeight] = useState(0);
+  const stickyOpacity = useRef(new Animated.Value(0)).current;
+  const stickyTranslateY = useRef(new Animated.Value(-12)).current;
   const { user } = useAuth();
   const { theme, isDarkMode } = useAppTheme();
   const styles = useMemo(
@@ -49,10 +53,21 @@ const DoctorHomeScreen = ({
 
   const unreadCount = updates.filter(u => !u.isRead).length;
   const readCount = updates.filter(u => u.isRead).length;
-  const shouldShowExpandedList =
-    showAllUpdates || searchQuery.trim().length > 0;
-  const visibleThreshold = shouldShowExpandedList ? 7 : 3;
-  const hasOverflowingUpdates = filteredUpdates.length > visibleThreshold;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(stickyOpacity, {
+        toValue: showStickyHeader ? 1 : 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(stickyTranslateY, {
+        toValue: showStickyHeader ? 0 : -12,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [showStickyHeader, stickyOpacity, stickyTranslateY]);
 
   const renderEmptyState = () => {
     return (
@@ -89,9 +104,113 @@ const DoctorHomeScreen = ({
 
   return (
     <View style={styles.root}>
+      <Animated.View
+        pointerEvents={showStickyHeader ? 'auto' : 'none'}
+        onLayout={event => {
+          setStickyHeaderHeight(event.nativeEvent.layout.height);
+        }}
+        style={[
+          styles.stickyOverlay,
+          {
+            opacity: stickyOpacity,
+            transform: [{ translateY: stickyTranslateY }],
+          },
+        ]}
+      >
+        <View style={styles.stickyHeaderRow}>
+          <View>
+            <Text style={styles.welcome}>
+              Hello, {user?.full_name || 'Doctor'}
+            </Text>
+            <Text style={styles.date}>
+              {new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setModalVisible(true)}
+            style={{ marginTop: 10 }}
+          >
+            <Icon name="keyboard-arrow-down" size={24} color={theme.text} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.stickySearchContainer}>
+          <View style={styles.searchBarWrapper}>
+            <Ionicons
+              name="search-outline"
+              size={20}
+              color={theme.textMuted}
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={styles.searchBar}
+              placeholder="Search"
+              placeholderTextColor={theme.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+        </View>
+
+        <View style={styles.stickyPillsRow}>
+          {['All', 'Unread', 'Read'].map(filter => (
+            <TouchableOpacity
+              key={`sticky-${filter}`}
+              onPress={() => setActiveFilter(filter as any)}
+              style={[
+                styles.chip,
+                activeFilter === filter
+                  ? styles.activeChip
+                  : styles.inactiveChip,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  activeFilter === filter
+                    ? styles.activeChipText
+                    : styles.inactiveChipText,
+                ]}
+              >
+                {filter}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Animated.View>
+
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.stickyFadeWrapper,
+          {
+            top: stickyHeaderHeight - 4,
+            opacity: stickyOpacity,
+            transform: [{ translateY: stickyTranslateY }],
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={[
+            'rgba(255, 255, 255, 0.73)',
+            'rgba(255, 255, 255, 0.51)',
+            'rgba(255, 255, 255, 0.32)',
+          ]}
+          style={styles.stickyFadeBottom}
+        />
+      </Animated.View>
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        scrollEventThrottle={16}
+        onScroll={event => {
+          setShowStickyHeader(event.nativeEvent.contentOffset.y > 170);
+        }}
         refreshControl={
           <RefreshControl
             refreshing={loading}
@@ -160,141 +279,84 @@ const DoctorHomeScreen = ({
           </View>
         </View>
 
-        <View style={styles.filterHeader}>
-          <Text style={styles.sectionTitle}>Patient Updates</Text>
-          <TouchableOpacity onPress={onViewAll}>
-            <Text style={styles.viewAll}>View all ›</Text>
-          </TouchableOpacity>
-        </View>
+        <View style={styles.stickyControls}>
+          <View style={styles.filterHeader}>
+            <Text style={styles.sectionTitle}>Patient Updates</Text>
+            <TouchableOpacity onPress={onViewAll}>
+              <Text style={styles.viewAll}>View all ›</Text>
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.chipsRow}>
-          {['All', 'Unread', 'Read'].map(filter => (
-            <TouchableOpacity
-              key={filter}
-              onPress={() => setActiveFilter(filter as any)}
-              style={[
-                styles.chip,
-                activeFilter === filter
-                  ? styles.activeChip
-                  : styles.inactiveChip,
-              ]}
-            >
-              <Text
+          <View style={styles.chipsRow}>
+            {['All', 'Unread', 'Read'].map(filter => (
+              <TouchableOpacity
+                key={filter}
+                onPress={() => setActiveFilter(filter as any)}
                 style={[
-                  styles.chipText,
+                  styles.chip,
                   activeFilter === filter
-                    ? styles.activeChipText
-                    : styles.inactiveChipText,
+                    ? styles.activeChip
+                    : styles.inactiveChip,
                 ]}
               >
-                {filter}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.chipText,
+                    activeFilter === filter
+                      ? styles.activeChipText
+                      : styles.inactiveChipText,
+                  ]}
+                >
+                  {filter}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         <View style={styles.listContainer}>
-          {filteredUpdates.length > 0 ? (
-            <View>
-              <View
-                style={[
-                  styles.patientListWrapper,
-                  {
-                    maxHeight: shouldShowExpandedList ? 500 : 250,
-                  },
-                ]}
-              >
-                <ScrollView
-                  style={styles.patientListScroll}
-                  nestedScrollEnabled={true}
-                  showsVerticalScrollIndicator={false}
+          {filteredUpdates.length > 0
+            ? filteredUpdates.map((item, index) => (
+                <TouchableOpacity
+                  key={item.id || index}
+                  onPress={() => handleUpdatePress(item)}
+                  activeOpacity={0.7}
+                  style={styles.patientRow}
                 >
-                  {filteredUpdates.map((item, index) => (
-                    <TouchableOpacity
-                      key={item.id || index}
-                      onPress={() => handleUpdatePress(item)}
-                      activeOpacity={0.7}
+                  <View style={styles.patientLeftExpanded}>
+                    <View
                       style={[
-                        styles.patientRow,
-                        index === filteredUpdates.length - 1
-                          ? styles.lastPatientRow
-                          : null,
+                        styles.statusDot,
+                        item.status === 'Unread'
+                          ? styles.unreadStatusDot
+                          : styles.readStatusDot,
+                      ]}
+                    />
+                    <View style={styles.avatarContainer}>
+                      <Icon name="person" size={20} color={theme.primary} />
+                    </View>
+                    <Text
+                      style={[
+                        styles.patientName,
+                        item.status === 'Unread'
+                          ? styles.unreadPatientName
+                          : styles.readPatientName,
                       ]}
                     >
-                      <View style={styles.patientLeftExpanded}>
-                        <View
-                          style={[
-                            styles.statusDot,
-                            item.status === 'Unread'
-                              ? styles.unreadStatusDot
-                              : styles.readStatusDot,
-                          ]}
-                        />
-                        <View style={styles.avatarContainer}>
-                          <Icon name="person" size={20} color={theme.primary} />
-                        </View>
-                        <Text
-                          style={[
-                            styles.patientName,
-                            item.status === 'Unread'
-                              ? styles.unreadPatientName
-                              : styles.readPatientName,
-                          ]}
-                        >
-                          {item.name}
-                        </Text>
-                      </View>
-                      <View style={styles.patientRightContainer}>
-                        <View style={styles.patientRight}>
-                          <View style={styles.badge}>
-                            <Text style={styles.badgeText}>{item.type}</Text>
-                          </View>
-                          <Text style={styles.timeText}>{item.time}</Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-
-                {hasOverflowingUpdates && (
-                  <LinearGradient
-                    colors={[
-                      'rgba(0,0,0,0)',
-                      isDarkMode
-                        ? 'rgba(18,18,18,0.8)'
-                        : 'rgba(255,255,255,0.8)',
-                      isDarkMode ? 'rgba(18,18,18,1)' : 'rgba(255,255,255,1)',
-                    ]}
-                    style={styles.fadeBottom}
-                    pointerEvents="none"
-                  />
-                )}
-              </View>
-
-              {searchQuery.trim().length === 0 &&
-                filteredUpdates.length > 3 && (
-                  <TouchableOpacity
-                    style={styles.showMoreBtn}
-                    onPress={() => setShowAllUpdates(prev => !prev)}
-                  >
-                    <Text style={styles.showMoreText}>
-                      {showAllUpdates ? 'Show less' : 'View more'}
+                      {item.name}
                     </Text>
-                    <Icon
-                      name={
-                        showAllUpdates
-                          ? 'keyboard-arrow-up'
-                          : 'keyboard-arrow-down'
-                      }
-                      size={20}
-                      color={theme.textMuted}
-                    />
-                  </TouchableOpacity>
-                )}
-            </View>
-          ) : (
-            renderEmptyState()
-          )}
+                  </View>
+                  <View style={styles.patientRightContainer}>
+                    <View style={styles.patientRight}>
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>{item.type}</Text>
+                      </View>
+                      <Text style={styles.timeText}>{item.time}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))
+            : renderEmptyState()}
         </View>
       </ScrollView>
 

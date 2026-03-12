@@ -8,7 +8,7 @@ export const createStyles = (theme: any, _isDarkMode: boolean) =>
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
-      marginBottom: 35,
+      marginBottom: 25,
       marginTop: Platform.OS === 'ios' ? 20 : 40,
     },
     welcome: {
@@ -48,6 +48,7 @@ export const createStyles = (theme: any, _isDarkMode: boolean) =>
     statsContainer: {
       flexDirection: 'row',
       marginBottom: 30,
+      marginTop: 10,
       alignItems: 'center',
     },
     greenVerticalLine: {
@@ -107,7 +108,36 @@ export const createStyles = (theme: any, _isDarkMode: boolean) =>
       fontSize: 14,
       fontFamily: 'AlteHaasGrotesk',
     },
-    chipsRow: { flexDirection: 'row', marginBottom: 20 },
+    stickyControls: {
+      backgroundColor: theme.background,
+      paddingBottom: 18,
+    },
+    chipsRow: { flexDirection: 'row', marginBottom: 10, paddingBottom: 10 },
+    stickyOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: theme.background,
+      paddingHorizontal: 40,
+      paddingTop: Platform.OS === 'ios' ? 20 : 40,
+      paddingBottom: 10,
+      zIndex: 20,
+      overflow: 'visible',
+    },
+    stickyHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 20,
+    },
+    stickySearchContainer: {
+      marginBottom: 16,
+    },
+    stickyPillsRow: {
+      flexDirection: 'row',
+      paddingBottom: 20,
+    },
     chip: {
       paddingHorizontal: 20,
       paddingVertical: 8,
@@ -122,12 +152,6 @@ export const createStyles = (theme: any, _isDarkMode: boolean) =>
     activeChipText: { color: '#FFF' },
     inactiveChipText: { color: theme.filterBg },
     listContainer: { paddingBottom: 20 },
-    patientListWrapper: {
-      backgroundColor: theme.background,
-    },
-    patientListScroll: {
-      width: '100%',
-    },
     patientRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -135,9 +159,6 @@ export const createStyles = (theme: any, _isDarkMode: boolean) =>
       paddingVertical: 12,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
-    },
-    lastPatientRow: {
-      marginBottom: 40,
     },
     patientLeft: { flexDirection: 'row', alignItems: 'center' },
     patientLeftExpanded: {
@@ -187,24 +208,19 @@ export const createStyles = (theme: any, _isDarkMode: boolean) =>
       fontSize: 11,
       fontFamily: 'AlteHaasGroteskBold',
     },
-    fadeBottom: {
+    stickyFadeWrapper: {
       position: 'absolute',
-      bottom: 0,
       left: 0,
       right: 0,
-      height: 40,
+      zIndex: 19,
     },
-    showMoreBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: 10,
-    },
-    showMoreText: {
-      color: theme.textMuted,
-      fontSize: 13,
-      marginRight: 5,
-      fontFamily: 'AlteHaasGrotesk',
+    stickyFadeBottom: {
+      width: '100%',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 30,
     },
     emptyState: { alignItems: 'center', marginTop: 50 },
     emptyTitle: {
