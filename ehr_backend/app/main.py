@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from app.database.db import engine
 from app.database.base import Base
@@ -22,9 +22,10 @@ from app.models.medication_administration.medication_administration import Medic
 from app.models.medication_reconciliation.medication_reconciliation import (
     HomeMedication, CurrentMedication, ChangesInMedication
 )
+from app.models.audit_log import AuditLog
 
 # Router imports
-from app.routers import auth, patient, doctor, reports
+from app.routers import auth, patient, doctor, reports, audit_logs
 from app.routers.physical_exam import physical_exam as pe_router
 from app.routers.vital_signs import vital_signs as vs_router
 from app.routers.intake_and_output import intake_and_output as iao_router
@@ -65,6 +66,7 @@ app.include_router(auth.router)
 app.include_router(patient.router)
 app.include_router(doctor.router)
 app.include_router(reports.router)
+app.include_router(audit_logs.router)
 
 # Physical Exam (with ADPIE)
 app.include_router(pe_router.router)
@@ -129,3 +131,22 @@ init_db()
 @app.get("/")
 def root():
     return {"status": "EHR backend is running"}
+
+
+@app.get("/loginMsg.js", include_in_schema=False)
+def scanner_login_probe():
+    # Common router-bot probe path; return empty response to reduce noisy 404 logs.
+    return Response(status_code=204)
+
+
+@app.get("/cgi/get.cgi", include_in_schema=False)
+def scanner_cgi_probe():
+    # Common router-bot probe path; return empty response to reduce noisy 404 logs.
+    return Response(status_code=204)
+
+
+@app.websocket("/")
+async def root_websocket_probe(ws: WebSocket):
+    # Accept and close immediately so unsolicited WS probes do not show as 403.
+    await ws.accept()
+    await ws.close(code=1000)

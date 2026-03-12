@@ -4,6 +4,8 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import HomeScreen from '@features/nurse/Dashboard/screen/HomeScreen';
 import DoctorMainScreen from '@features/doctor/screens/DoctorMainScreen';
 import LoginScreen from '@features/Auth/screen/LoginScreen';
+// Added Admin Screen import
+import AdminMainScreen from '@features/Admin/screen/AdminMainScreen'; 
 import { ThemeProvider, useAppTheme } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from '@features/Auth/AuthContext';
 import SplashScreen from '@components/SplashScreen';
@@ -29,12 +31,16 @@ const MainApp = () => {
     );
   }
 
+  // Updated routing logic to include admin
   let content;
   if (!user) {
     content = <LoginScreen />;
-  } else if (user.role === 'doctor') {
+  } else if (user.role?.toLowerCase() === 'admin') {
+    content = <AdminMainScreen />;
+  } else if (user.role?.toLowerCase() === 'doctor') {
     content = <DoctorMainScreen />;
   } else {
+    // Defaulting to Nurse/HomeScreen
     content = <HomeScreen />;
   }
 
