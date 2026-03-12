@@ -37,7 +37,10 @@ const NurseBottomNav = ({
   const { theme, isDarkMode } = useAppTheme();
   const insets = useSafeAreaInsets();
 
-  const styles = React.useMemo(() => createStyles(theme, isDarkMode, insets.bottom), [theme, isDarkMode, insets.bottom]);
+  const styles = React.useMemo(
+    () => createStyles(theme, isDarkMode, insets.bottom),
+    [theme, isDarkMode, insets.bottom],
+  );
 
   const NavItem = ({ label, route, iconKey, onPress }: any) => {
     const isActive = activeRoute === route;
@@ -97,51 +100,52 @@ const NurseBottomNav = ({
   );
 };
 
-const createStyles = (theme: any, isDarkMode: boolean, bottomInset: number) => StyleSheet.create({
-  shadowContainer: {
-    position: 'absolute',
-    bottom: Math.max(bottomInset, 16) + 8,
-    left: 20,
-    right: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  shadowShape: {
-    width: '100%',
-    alignSelf: 'stretch',
-    borderRadius: 35,
-  },
-  bottomNav: {
-    width: '100%',
-    height: 70,
-    borderRadius: 35,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-  },
-  navItemWrapper: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  navItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    width: '100%',
-    height: '100%',
-  },
-  activeNavItem: {
-    backgroundColor: theme.navActiveBg,
-    borderRadius: 50,
-    width: 85,
-    height: 55,
-  },
-  navIconImage: { width: 20, height: 20, marginBottom: 6 },
-  navLabel: {
-    fontSize: 10,
-    color: '#848484',
-    fontFamily: 'AlteHaasGroteskBold',
-    marginBottom: -4,
-  },
-});
+const createStyles = (theme: any, isDarkMode: boolean, bottomInset: number) =>
+  StyleSheet.create({
+    shadowContainer: {
+      position: 'absolute',
+      bottom: Math.max(bottomInset, 16) + 8,
+      left: 20,
+      right: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+    },
+    shadowShape: {
+      width: '100%',
+      alignSelf: 'stretch',
+      borderRadius: 35,
+    },
+    bottomNav: {
+      width: '100%',
+      height: 70,
+      borderRadius: 35,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+    },
+    navItemWrapper: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    navItem: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+      width: '100%',
+      height: '100%',
+    },
+    activeNavItem: {
+      backgroundColor: theme.navActiveBg,
+      borderRadius: 50,
+      width: 85,
+      height: 55,
+    },
+    navIconImage: { width: 20, height: 20, marginBottom: 6 },
+    navLabel: {
+      fontSize: 11,
+      color: '#848484',
+      fontFamily: 'AlteHaasGroteskBold',
+      marginBottom: -4,
+    },
+  });
 
 export default NurseBottomNav;

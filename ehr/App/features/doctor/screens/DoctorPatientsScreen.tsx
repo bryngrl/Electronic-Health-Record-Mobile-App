@@ -12,6 +12,7 @@ import {
   Dimensions,
   Platform
 } from 'react-native';
+import DoctorBottomNav from '../components/DoctorBottomNav';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -235,12 +236,7 @@ const DoctorPatientsScreen = ({ onNavigate }: { onNavigate: (route: string, para
         </View>
       </ScrollView>
 
-      <View style={styles.bottomNav}>
-        <NavItem label="Home" icon={require('../../../../assets/doctors-page/doctor-home.png')} onPress={() => onNavigate('DoctorHome')} theme={theme} styles={styles} />
-        <NavItem label="Patients" icon={require('../../../../assets/doctors-page/doctor-patients.png')} active theme={theme} styles={styles} />
-        <NavItem label="Reports" icon={require('../../../../assets/doctors-page/doctor-reports.png')} onPress={() => onNavigate('DoctorReports')} theme={theme} styles={styles} />
-        <NavItem label="Settings" icon={require('../../../../assets/doctors-page/doctor-settings.png')} onPress={() => onNavigate('DoctorSettings')} theme={theme} styles={styles} />
-      </View>
+      <DoctorBottomNav activeRoute="DoctorPatients" onNavigate={onNavigate} />
 
       <AccountModal 
         visible={accountModalVisible} 
@@ -257,14 +253,5 @@ const DoctorPatientsScreen = ({ onNavigate }: { onNavigate: (route: string, para
     </View>
   );
 };
-
-const NavItem = ({ label, icon, active, onPress, theme, styles }: any) => (
-  <TouchableOpacity onPress={onPress} style={styles.navItemWrapper}>
-    <View style={[styles.navItem, active && { ...styles.activeNavItem, backgroundColor: theme.navActiveBg }]}>
-      <Image source={icon} style={[styles.navIconImage, { tintColor: active ? theme.secondary : theme.textMuted }]} resizeMode="contain" />
-      <Text style={[styles.navLabel, { color: active ? theme.secondary : theme.textMuted }]}>{label}</Text>
-    </View>
-  </TouchableOpacity>
-);
 
 export default DoctorPatientsScreen;

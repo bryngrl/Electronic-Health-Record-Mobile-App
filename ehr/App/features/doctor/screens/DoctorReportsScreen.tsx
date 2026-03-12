@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,11 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  Modal,
+  Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import DoctorBottomNav from '../components/DoctorBottomNav';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNBlobUtil from 'react-native-blob-util';
 import { AccountModal } from '../../../components/AccountModal';
@@ -35,6 +38,20 @@ const DoctorReportsScreen = ({
     () => createStyles(theme, isDarkMode),
     [theme, isDarkMode],
   );
+
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (isLoading) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.15, duration: 700, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isLoading]);
 
   const handleGeneratePDF = async () => {
     if (!selectedPatientId) return;
@@ -125,86 +142,36 @@ const DoctorReportsScreen = ({
             disabled={isLoading}
             activeOpacity={0.7}
           >
-            {isLoading ? (
-              <ActivityIndicator color="#FFF" size="small" />
-            ) : (
-              <Text style={styles.generateText}>GENERATE PDF</Text>
-            )}
+            <Text style={styles.generateText}>
+              {isLoading ? 'GENERATING...' : 'GENERATE PDF'}
+            </Text>
           </TouchableOpacity>
         )}
 
         <View style={styles.blankSection} />
       </ScrollView>
 
-      <View style={styles.bottomNav}>
-        <NavItem
-          label="Home"
-          icon={require('../../../../assets/doctors-page/doctor-home.png')}
-          onPress={() => onNavigate('DoctorHome')}
-          theme={theme}
-          styles={styles}
-        />
-        <NavItem
-          label="Patients"
-          icon={require('../../../../assets/doctors-page/doctor-patients.png')}
-          onPress={() => onNavigate('DoctorPatients')}
-          theme={theme}
-          styles={styles}
-        />
-        <NavItem
-          label="Reports"
-          icon={require('../../../../assets/doctors-page/doctor-reports.png')}
-          active
-          theme={theme}
-          styles={styles}
-        />
-        <NavItem
-          label="Settings"
-          icon={require('../../../../assets/doctors-page/doctor-settings.png')}
-          onPress={() => onNavigate('DoctorSettings')}
-          theme={theme}
-          styles={styles}
-        />
-      </View>
+      <DoctorBottomNav activeRoute="DoctorReports" onNavigate={onNavigate} />
 
       <AccountModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onLogout={() => setModalVisible(false)}
       />
+
+      {/* PDF Loading Overlay — swap the logo source below to use a custom .png */}
+      <Modal visible={isLoading} transparent animationType="fade" statusBarTranslucent>
+        <View style={styles.loadingOverlay}>
+          <Animated.Image
+            source={require('../../../../assets/icons/doctor_updates.png')}
+            style={[styles.loadingLogo, { transform: [{ scale: pulseAnim }] }]}
+            resizeMode="contain"
+          />
+          <Text style={styles.loadingText}>Generating PDF...</Text>
+        </View>
+      </Modal>
     </View>
   );
 };
-
-const NavItem = ({ label, icon, active, onPress, theme, styles }: any) => (
-  <TouchableOpacity onPress={onPress} style={styles.navItemWrapper}>
-    <View
-      style={[
-        styles.navItem,
-        active && {
-          ...styles.activeNavItem,
-          backgroundColor: theme.navActiveBg,
-        },
-      ]}
-    >
-      <Image
-        source={icon}
-        style={[
-          styles.navIconImage,
-          { tintColor: active ? theme.secondary : theme.textMuted },
-        ]}
-        resizeMode="contain"
-      />
-      <Text
-        style={[
-          styles.navLabel,
-          { color: active ? theme.secondary : theme.textMuted },
-        ]}
-      >
-        {label}
-      </Text>
-    </View>
-  </TouchableOpacity>
-);
 
 export default DoctorReportsScreen;

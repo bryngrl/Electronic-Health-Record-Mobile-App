@@ -16,6 +16,7 @@ import { AccountModal } from '../../../components/AccountModal';
 import { useAuth } from '@features/Auth/AuthContext';
 import { useAppTheme } from '@App/theme/ThemeContext';
 import { createStyles } from './DoctorHomeScreen.styles';
+import DoctorBottomNav from '../components/DoctorBottomNav';
 
 const { width } = Dimensions.get('window');
 
@@ -246,36 +247,7 @@ const DoctorHomeScreen = ({
         </View>
       </ScrollView>
 
-      <View style={styles.bottomNav}>
-        <NavItem
-          label="Home"
-          icon={require('../../../../assets/doctors-page/doctor-home.png')}
-          active
-          theme={theme}
-          styles={styles}
-        />
-        <NavItem
-          label="Patients"
-          icon={require('../../../../assets/doctors-page/doctor-patients.png')}
-          onPress={() => onNavigate('DoctorPatients')}
-          theme={theme}
-          styles={styles}
-        />
-        <NavItem
-          label="Reports"
-          icon={require('../../../../assets/doctors-page/doctor-reports.png')}
-          onPress={() => onNavigate('DoctorReports')}
-          theme={theme}
-          styles={styles}
-        />
-        <NavItem
-          label="Settings"
-          icon={require('../../../../assets/doctors-page/doctor-settings.png')}
-          onPress={() => onNavigate('DoctorSettings')}
-          theme={theme}
-          styles={styles}
-        />
-      </View>
+      <DoctorBottomNav activeRoute="DoctorHome" onNavigate={onNavigate} />
 
       <AccountModal
         visible={modalVisible}
@@ -298,37 +270,6 @@ const StatItem = ({ label, count, styles, theme }: any) => (
     <Text style={styles.statLabel}>{label}</Text>
     <Text style={styles.statCount}>{count}</Text>
   </View>
-);
-
-const NavItem = ({ label, icon, active, onPress, theme, styles }: any) => (
-  <TouchableOpacity onPress={onPress} style={styles.navItemWrapper}>
-    <View
-      style={[
-        styles.navItem,
-        active && {
-          ...styles.activeNavItem,
-          backgroundColor: theme.navActiveBg,
-        },
-      ]}
-    >
-      <Image
-        source={icon}
-        style={[
-          styles.navIconImage,
-          { tintColor: active ? theme.secondary : theme.textMuted },
-        ]}
-        resizeMode="contain"
-      />
-      <Text
-        style={[
-          styles.navLabel,
-          { color: active ? theme.secondary : theme.textMuted },
-        ]}
-      >
-        {label}
-      </Text>
-    </View>
-  </TouchableOpacity>
 );
 
 export default DoctorHomeScreen;

@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Image,
   Linking,
   Switch,
 } from 'react-native';
@@ -12,6 +11,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAppTheme } from '@App/theme/ThemeContext';
 import { useAuth } from '@features/Auth/AuthContext';
+import DoctorBottomNav from '../components/DoctorBottomNav';
 import SweetAlert from '../../../components/SweetAlert';
 import { createStyles } from './DoctorSettingsScreen.styles';
 
@@ -159,32 +159,7 @@ const DoctorSettingsScreen = ({
         </View>
       </ScrollView>
 
-      <View style={styles.bottomNav}>
-        <NavItem
-          label="Home"
-          icon={require('../../../../assets/doctors-page/doctor-home.png')}
-          onPress={() => onNavigate('DoctorHome')}
-          theme={theme}
-        />
-        <NavItem
-          label="Patients"
-          icon={require('../../../../assets/doctors-page/doctor-patients.png')}
-          onPress={() => onNavigate('DoctorPatients')}
-          theme={theme}
-        />
-        <NavItem
-          label="Reports"
-          icon={require('../../../../assets/doctors-page/doctor-reports.png')}
-          onPress={() => onNavigate('DoctorReports')}
-          theme={theme}
-        />
-        <NavItem
-          label="Settings"
-          icon={require('../../../../assets/doctors-page/doctor-settings.png')}
-          active
-          theme={theme}
-        />
-      </View>
+      <DoctorBottomNav activeRoute="DoctorSettings" onNavigate={onNavigate} />
 
       <SweetAlert
         visible={showLogoutAlert}
@@ -272,44 +247,6 @@ const InfoRow = ({
     </View>
     {chevron && <Icon name="chevron-right" size={20} color={theme.textMuted} />}
   </View>
-);
-
-const NavItem = ({ label, icon, active, onPress, theme }: any) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-  >
-    <View
-      style={[
-        {
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingVertical: 8,
-          width: '100%',
-        },
-        active && { backgroundColor: theme.navActiveBg, borderRadius: 20 },
-      ]}
-    >
-      <Image
-        source={icon}
-        style={{
-          width: 24,
-          height: 24,
-          marginBottom: 4,
-          tintColor: active ? theme.secondary : theme.textMuted,
-        }}
-        resizeMode="contain"
-      />
-      <Text
-        style={{
-          fontSize: 10,
-          color: active ? theme.secondary : theme.textMuted,
-        }}
-      >
-        {label}
-      </Text>
-    </View>
-  </TouchableOpacity>
 );
 
 export default DoctorSettingsScreen;

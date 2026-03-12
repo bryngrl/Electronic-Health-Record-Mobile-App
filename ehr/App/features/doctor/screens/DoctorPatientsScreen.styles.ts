@@ -76,36 +76,9 @@ export const createStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.textMuted,
       fontSize: 12,
     },
-    bottomNav: {
-      position: 'absolute',
-      bottom: 20,
-      left: 20,
-      right: 20,
-      height: 70,
-      backgroundColor: theme.card,
-      borderRadius: 35,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: 10,
-      elevation: 10,
-      shadowColor: '#000',
-      shadowOpacity: 0.1,
-      shadowRadius: 10,
-    },
-    navItemWrapper: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    navItem: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 8,
-      width: '100%',
-    },
-    activeNavItem: { borderRadius: 20 },
-    navIconImage: { width: 24, height: 24, marginBottom: 4 },
-    navLabel: { fontSize: 10 },
   });
 
-export const createModalStyles = (theme: any) =>
+export const createModalStyles= (theme: any) =>
   StyleSheet.create({
     overlay: {
       flex: 1,

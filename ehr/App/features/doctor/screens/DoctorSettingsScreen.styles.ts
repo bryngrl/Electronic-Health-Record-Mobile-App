@@ -78,22 +78,5 @@ export const createStyles = (theme: any, isDarkMode: boolean) =>
     footerText: { fontSize: 13, fontFamily: 'AlteHaasGroteskBold', color: theme.textMuted },
     footerSub: { fontSize: 11, fontFamily: 'AlteHaasGrotesk', color: theme.textMuted, marginTop: 4 },
 
-    bottomNav: {
-      position: 'absolute',
-      bottom: 20,
-      left: 20,
-      right: 20,
-      height: 70,
-      backgroundColor: theme.card,
-      borderRadius: 35,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: 10,
-      elevation: 10,
-      shadowColor: '#000',
-      shadowOpacity: 0.1,
-      shadowRadius: 10,
-    },
   });
 
