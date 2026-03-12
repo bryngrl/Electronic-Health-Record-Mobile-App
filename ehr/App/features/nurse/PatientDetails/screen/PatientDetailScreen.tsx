@@ -58,7 +58,7 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
       }
 
       try {
-        if (!patient) setIsLoading(true);
+        setIsLoading(true);
         const data = await getPatientById(patientId);
         if (data) setPatient(data);
       } catch (error) {
@@ -81,6 +81,50 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
       year: 'numeric',
     });
   };
+
+  const parseContactField = (value: unknown) => {
+    if (Array.isArray(value)) {
+      return value.map(item => String(item ?? '').trim());
+    }
+    if (typeof value !== 'string') {
+      return value ? [String(value).trim()] : [];
+    }
+
+    const trimmedValue = value.trim();
+    if (!trimmedValue) {
+      return [];
+    }
+
+    if (trimmedValue.startsWith('[') && trimmedValue.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmedValue);
+        if (Array.isArray(parsed)) {
+          return parsed.map(item => String(item ?? '').trim());
+        }
+      } catch (error) {
+        console.error('Failed to parse patient contact field:', error);
+      }
+    }
+
+    return [trimmedValue];
+  };
+
+  const emergencyContacts = useMemo(() => {
+    const names = parseContactField(patient?.contact_name);
+    const relationships = parseContactField(patient?.contact_relationship);
+    const numbers = parseContactField(patient?.contact_number);
+    const contactCount = Math.max(
+      names.length,
+      relationships.length,
+      numbers.length,
+    );
+
+    return Array.from({ length: contactCount }, (_, index) => ({
+      name: names[index] || 'N/A',
+      relationship: relationships[index] || 'N/A',
+      number: numbers[index] || 'N/A',
+    }));
+  }, [patient]);
 
   if (isLoading) {
     return (
@@ -208,23 +252,33 @@ const PatientDetailsScreen: React.FC<PatientDetailsScreenProps> = ({
         {/* Emergency Contact Section */}
         <Text style={styles.sectionTitle}>EMERGENCY CONTACT</Text>
 
-        <View style={styles.gridContainer}>
-          <View style={styles.row}>
-            <DetailItem label="Name" value={patient?.contact_name} halfWidth />
-            <DetailItem
-              label="Relationship"
-              value={patient?.contact_relationship}
-              halfWidth
-            />
-          </View>
+        {emergencyContacts.length > 0 ? (
+          emergencyContacts.map((contact, index) => (
+            <View key={`${contact.name}-${contact.number}-${index}`}>
+              {emergencyContacts.length > 1 ? (
+                <Text style={styles.contactLabel}>Contact {index + 1}:</Text>
+              ) : null}
+              <View style={styles.gridContainer}>
+                <View style={styles.row}>
+                  <DetailItem label="Name" value={contact.name} halfWidth />
+                  <DetailItem
+                    label="Relationship"
+                    value={contact.relationship}
+                    halfWidth
+                  />
+                </View>
 
-          <View style={{ marginBottom: 45 }}>
-            <DetailItem
-              label="Contact Number"
-              value={patient?.contact_number}
-            />
+                <View style={styles.contactSection}>
+                  <DetailItem label="Contact Number" value={contact.number} />
+                </View>
+              </View>
+            </View>
+          ))
+        ) : (
+          <View style={styles.contactSection}>
+            <DetailItem label="Contact Number" value="N/A" />
           </View>
-        </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -247,7 +301,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     scrollContent: {
       paddingHorizontal: 40,
       paddingTop: 0,
-      paddingBottom: 20,
+      paddingBottom: 100,
     },
     circle1: {
       position: 'absolute',
@@ -368,9 +422,15 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     },
     sectionTitle: {
       ...commonStyles.sectionTitle,
-      marginTop: 15,
+      marginTop: 10,
       marginBottom: 20,
       letterSpacing: 0.5,
+    },
+    contactLabel: {
+      ...commonStyles.sectionTitle,
+      fontFamily: 'AlteHaasGroteskBold',
+      marginTop: 4,
+      marginBottom: 5,
     },
   });
 
