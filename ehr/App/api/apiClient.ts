@@ -1,13 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// local development:
-const BACKEND_PORT = 8000;
-const IP_ADDRESS = '192.168.1.21';
-export const BASE_URL = `http://${IP_ADDRESS}:${BACKEND_PORT}/`;
-
-//prodcution:
-// export const BASE_URL = `https://electronichealthrecord.bscs3a.com/api`;
+import { BASE_URL, HOST, BACKEND_PORT } from './config';
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -75,7 +68,7 @@ apiClient.interceptors.response.use(
       // Request made but no response received
       console.error(
         'No response from backend. Check if server is running on',
-        host + ':' + BACKEND_PORT,
+        HOST + ':' + BACKEND_PORT,
       );
     } else {
       // Error in request setup
