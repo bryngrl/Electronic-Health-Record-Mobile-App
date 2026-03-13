@@ -1,11 +1,13 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// const BACKEND_PORT = 8000;
-// const YOUR_IP = '192.168.1.21';
-// const host = YOUR_IP;
+// local development:
+const BACKEND_PORT = 8000;
+const IP_ADDRESS = '192.168.1.21';
+export const BASE_URL = `http://${IP_ADDRESS}:${BACKEND_PORT}/`;
 
-export const BASE_URL = `https://electronichealthrecord.bscs3a.com/api`;
+//prodcution:
+// export const BASE_URL = `https://electronichealthrecord.bscs3a.com/api`;
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
