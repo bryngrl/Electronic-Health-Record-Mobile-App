@@ -115,7 +115,11 @@ const DoctorSettingsScreen = ({
         {/* Preferences */}
         <SectionHeader title="Preferences" theme={theme} />
         <View style={styles.card}>
-          <View style={styles.settingsRow}>
+          <TouchableOpacity
+            style={styles.settingsRow}
+            onPress={toggleDarkMode}
+            activeOpacity={0.7}
+          >
             <View style={styles.settingsIconLabel}>
               <View style={styles.settingsIconBox}>
                 <Ionicons name="moon-outline" size={20} color={theme.primary} />
@@ -128,7 +132,7 @@ const DoctorSettingsScreen = ({
               onValueChange={toggleDarkMode}
               value={isDarkMode}
             />
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Account */}

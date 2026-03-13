@@ -11,18 +11,23 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  ActivityIndicator,
   RefreshControl,
   Modal,
   Animated,
+  StatusBar,
+  Platform,
+  BackHandler,
+  useWindowDimensions,
+  SafeAreaView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import AdminBottomNav from '../components/AdminBottomNav';
 import AdminRegisterScreen from './AdminRegisterScreen';
 import { AdminUserDetails } from './AdminUserDetails';
 import AdminUserDetailsEdit from './AdminUserDetailsEdit';
 import AdminUserSearchScreen from './AdminUserSearchScreen';
+import AdminSettingsScreen from './AdminSettingsScreen';
 import apiClient from '@api/apiClient';
 import { useAuth } from '@features/Auth/AuthContext';
 import SweetAlert from '@components/SweetAlert';
@@ -36,11 +41,25 @@ interface UserAccount {
   email: string;
   username?: string;
   address?: string;
+  birthdate?: string;
+  birthplace?: string;
+  age?: number;
+}
+
+interface AdminStats {
+  total_users: number;
+  total_nurses: number;
+  total_doctors: number;
+  total_admins: number;
+  total_patients: number;
+  active_patients: number;
+  audit_logs_today: number;
 }
 
 const AdminMainScreen = ({ navigation }: any) => {
   const { user } = useAuth();
   const { theme, isDarkMode } = useAppTheme();
+  const { height: windowHeight } = useWindowDimensions();
   const styles = useMemo(
     () => createStyles(theme, isDarkMode),
     [theme, isDarkMode],
@@ -49,8 +68,10 @@ const AdminMainScreen = ({ navigation }: any) => {
   const [activeTab, setActiveTab] = useState<'Users' | 'Register' | 'Settings'>(
     'Users',
   );
+  const [navigationHistory, setNavigationHistory] = useState<string[]>([
+    'Users',
+  ]);
 
-  // Modal & User Control States
   const [isUserDetailsVisible, setIsUserDetailsVisible] = useState(false);
   const [targetUser, setTargetUser] = useState<UserAccount | null>(null);
   const [selectedUserForEdit, setSelectedUserForEdit] =
@@ -58,6 +79,7 @@ const AdminMainScreen = ({ navigation }: any) => {
 
   const [showUserSearchScreen, setShowUserSearchScreen] = useState(false);
   const [users, setUsers] = useState<UserAccount[]>([]);
+  const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All');
@@ -68,6 +90,43 @@ const AdminMainScreen = ({ navigation }: any) => {
   const [modalPos, setModalPos] = useState({ y: 0, x: 0, w: 0 });
 
   const animValue = useRef(new Animated.Value(0)).current;
+
+  const handleNavigation = useCallback((tab: any) => {
+    setActiveTab(prev => {
+      if (prev !== tab) {
+        setNavigationHistory(h => [...h, tab]);
+      }
+      return tab;
+    });
+  }, []);
+
+  const handleBack = useCallback(() => {
+    if (selectedUserForEdit) {
+      setSelectedUserForEdit(null);
+      return true;
+    }
+    if (showUserSearchScreen) {
+      setShowUserSearchScreen(false);
+      return true;
+    }
+    if (navigationHistory.length > 1) {
+      const newHistory = [...navigationHistory];
+      newHistory.pop();
+      const previousTab = newHistory[newHistory.length - 1] as any;
+      setNavigationHistory(newHistory);
+      setActiveTab(previousTab);
+      return true;
+    }
+    return false;
+  }, [navigationHistory, selectedUserForEdit, showUserSearchScreen]);
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      handleBack,
+    );
+    return () => backHandler.remove();
+  }, [handleBack]);
 
   useEffect(() => {
     if (isRoleModalVisible) {
@@ -102,10 +161,14 @@ const AdminMainScreen = ({ navigation }: any) => {
     type: 'info',
   });
 
-  const fetchUsers = async () => {
+  const fetchData = async () => {
     try {
-      const response = await apiClient.get('/auth/users');
-      setUsers(response.data || []);
+      const [usersRes, statsRes] = await Promise.all([
+        apiClient.get('/admin/users'),
+        apiClient.get('/admin/stats'),
+      ]);
+      setUsers(usersRes.data || []);
+      setStats(statsRes.data || null);
     } catch (error) {
       console.error(error);
     } finally {
@@ -115,11 +178,18 @@ const AdminMainScreen = ({ navigation }: any) => {
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (
+      activeTab === 'Users' &&
+      !showUserSearchScreen &&
+      !selectedUserForEdit
+    ) {
+      fetchData();
+    }
+  }, [activeTab, showUserSearchScreen, selectedUserForEdit]);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchUsers();
+    fetchData();
   }, []);
 
   const handleUpdateRole = async (nextRole: string) => {
@@ -137,7 +207,7 @@ const AdminMainScreen = ({ navigation }: any) => {
         setAlertConfig({ visible: false });
         try {
           setLoading(true);
-          await apiClient.put(`/auth/users/${selectedUser.id}/role`, {
+          await apiClient.patch(`/admin/users/${selectedUser.id}/role`, {
             role: nextRole,
           });
           setAlertConfig({
@@ -147,7 +217,7 @@ const AdminMainScreen = ({ navigation }: any) => {
             type: 'success',
             onConfirm: () => {
               setAlertConfig({ visible: false });
-              fetchUsers();
+              fetchData();
             },
           });
           setUsers(prev =>
@@ -235,7 +305,15 @@ const AdminMainScreen = ({ navigation }: any) => {
   if (activeTab === 'Register')
     return (
       <AdminRegisterScreen
-        onNavigateTab={setActiveTab}
+        onNavigateTab={handleNavigation}
+        navigation={navigation}
+      />
+    );
+
+  if (activeTab === 'Settings')
+    return (
+      <AdminSettingsScreen
+        onNavigateTab={handleNavigation}
         navigation={navigation}
       />
     );
@@ -276,214 +354,227 @@ const AdminMainScreen = ({ navigation }: any) => {
     );
 
   return (
-    <SafeAreaView style={styles.root}>
-      <AccountModal
-        visible={isAccountModalVisible}
-        onClose={() => setAccountModalVisible(false)}
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
       />
+      <SafeAreaView style={styles.root}>
+        <AccountModal
+          visible={isAccountModalVisible}
+          onClose={() => setAccountModalVisible(false)}
+        />
 
-      {/* Liquid Modal Component */}
-      <AdminUserDetails
-        visible={isUserDetailsVisible}
-        onClose={() => setIsUserDetailsVisible(false)}
-        userData={targetUser}
-        navigation={{
-          navigate: (screen: string, params: any) => {
-            setIsUserDetailsVisible(false);
-            if (screen === 'AdminUserDetailsEdit')
-              setSelectedUserForEdit(params.userData);
-          },
-        }}
-      />
+        <AdminUserDetails
+          visible={isUserDetailsVisible}
+          onClose={() => setIsUserDetailsVisible(false)}
+          userData={targetUser}
+          navigation={{
+            navigate: (screen: string, params: any) => {
+              setIsUserDetailsVisible(false);
+              if (screen === 'AdminUserDetailsEdit')
+                setSelectedUserForEdit(params.userData);
+            },
+          }}
+        />
 
-      <SweetAlert
-        visible={alertConfig.visible}
-        {...alertConfig}
-        onCancel={() => setAlertConfig({ visible: false })}
-      />
+        <SweetAlert
+          visible={alertConfig.visible}
+          {...alertConfig}
+          onCancel={() => setAlertConfig({ visible: false })}
+        />
 
-      {/* Role Picker */}
-      <Modal visible={isRoleModalVisible} transparent animationType="none">
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setRoleModalVisible(false)}
-        >
-          <Animated.View
-            style={[
-              styles.dropdownContainer,
-              {
-                top: modalPos.y,
-                left: modalPos.x,
-                width: modalPos.w,
-                opacity,
-                transform: [{ scaleY }, { translateY }],
-              },
-            ]}
+        <Modal visible={isRoleModalVisible} transparent animationType="none">
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setRoleModalVisible(false)}
           >
-            <View
+            <Animated.View
               style={[
-                styles.roleBadge,
-                selectedUser?.role?.toLowerCase() === 'nurse'
-                  ? styles.nurseBadge
-                  : styles.doctorBadge,
-                { marginBottom: 8 },
+                styles.dropdownContainer,
+                {
+                  top: modalPos.y,
+                  left: modalPos.x,
+                  width: modalPos.w,
+                  opacity,
+                  transform: [{ scaleY }, { translateY }],
+                },
               ]}
             >
-              <Text
+              <View
                 style={[
-                  styles.roleBadgeText,
+                  styles.roleBadge,
                   selectedUser?.role?.toLowerCase() === 'nurse'
-                    ? styles.nurseText
-                    : styles.doctorText,
-                  { flex: 1 },
+                    ? styles.nurseBadge
+                    : styles.doctorBadge,
+                  { marginBottom: 8 },
                 ]}
               >
-                {selectedUser?.role?.toUpperCase()}
-              </Text>
-              <Icon
-                name="keyboard-arrow-up"
-                size={18}
-                color={
-                  selectedUser?.role?.toLowerCase() === 'nurse'
-                    ? '#EDB62C'
-                    : '#0075C3'
-                }
-              />
-            </View>
-            <TouchableOpacity
-              style={[
-                styles.dropdownPill,
-                styles.nurseBadge,
-                selectedUser?.role?.toLowerCase() === 'nurse' &&
-                  styles.selectedBorderNurse,
-              ]}
-              onPress={() => handleUpdateRole('nurse')}
-            >
-              <Text style={[styles.roleBadgeText, styles.nurseText]}>
-                Nurse
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.dropdownPill,
-                styles.doctorBadge,
-                selectedUser?.role?.toLowerCase() === 'doctor' &&
-                  styles.selectedBorderDoctor,
-                { marginTop: 8 },
-              ]}
-              onPress={() => handleUpdateRole('doctor')}
-            >
-              <Text style={[styles.roleBadgeText, styles.doctorText]}>
-                Doctor
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </TouchableOpacity>
-      </Modal>
-
-      <View style={styles.fixedHeaderContainer}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.welcome}>
-              Hello, {user?.full_name?.split(' ')[0] || 'Admin'}
-            </Text>
-            <Text style={styles.date}>
-              {new Date().toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={() => setAccountModalVisible(true)}>
-            <Icon name="keyboard-arrow-down" size={32} color={theme.primary} />
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity
-          style={styles.searchContainer}
-          activeOpacity={0.8}
-          onPress={() => setShowUserSearchScreen(true)}
-        >
-          <View style={styles.searchBarWrapper}>
-            <Icon
-              name="search"
-              size={22}
-              color="#D9D9D9"
-              style={{ marginRight: 10 }}
-            />
-            <Text style={{ color: '#D9D9D9', fontSize: 16 }}>Search User</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      <FlatList
-        data={filteredUsers}
-        keyExtractor={item => item.id.toString()}
-        renderItem={({ item }) => <UserItem user={item} />}
-        ListHeaderComponent={() => (
-          <View>
-            <View style={styles.statsRow}>
-              {['Users', 'Nurses', 'Doctors'].map((label, idx) => (
-                <View key={idx} style={styles.card}>
-                  <Text style={styles.cardTitle}>
-                    <Text style={{ color: theme.primary }}>
-                      Total of{'\n'}
-                      <Text style={styles.boldText}>{label}</Text>
-                    </Text>
-                  </Text>
-                  <Text style={styles.cardCount}>
-                    {label === 'Users'
-                      ? users.filter(u => u.role !== 'admin').length
-                      : users.filter(
-                          u => u.role === label.slice(0, -1).toLowerCase(),
-                        ).length}
-                  </Text>
-                </View>
-              ))}
-            </View>
-            <View style={styles.chipsRow}>
-              {['All', 'Nurses', 'Doctors'].map(filter => (
-                <TouchableOpacity
-                  key={filter}
-                  onPress={() => setActiveFilter(filter)}
+                <Text
                   style={[
-                    styles.chip,
-                    activeFilter === filter
-                      ? styles.activeChip
-                      : styles.inactiveChip,
+                    styles.roleBadgeText,
+                    selectedUser?.role?.toLowerCase() === 'nurse'
+                      ? styles.nurseText
+                      : styles.doctorText,
+                    { flex: 1 },
                   ]}
                 >
-                  <Text
+                  {selectedUser?.role?.toUpperCase()}
+                </Text>
+                <Icon
+                  name="keyboard-arrow-up"
+                  size={18}
+                  color={
+                    selectedUser?.role?.toLowerCase() === 'nurse'
+                      ? '#EDB62C'
+                      : '#0075C3'
+                  }
+                />
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.dropdownPill,
+                  styles.nurseBadge,
+                  selectedUser?.role?.toLowerCase() === 'nurse' &&
+                    styles.selectedBorderNurse,
+                ]}
+                onPress={() => handleUpdateRole('nurse')}
+              >
+                <Text style={[styles.roleBadgeText, styles.nurseText]}>
+                  Nurse
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.dropdownPill,
+                  styles.doctorBadge,
+                  selectedUser?.role?.toLowerCase() === 'doctor' &&
+                    styles.selectedBorderDoctor,
+                  { marginTop: 8 },
+                ]}
+                onPress={() => handleUpdateRole('doctor')}
+              >
+                <Text style={[styles.roleBadgeText, styles.doctorText]}>
+                  Doctor
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </TouchableOpacity>
+        </Modal>
+
+        <View style={styles.fixedHeaderContainer}>
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.welcome}>
+                Hello, {user?.full_name?.split(' ')[0] || 'Admin'}
+              </Text>
+              <Text style={styles.date}>
+                {new Date().toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setAccountModalVisible(true)}
+              style={{ marginTop: 10 }}
+            >
+              <Icon name="keyboard-arrow-down" size={24} color={theme.text} />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={styles.searchBarContainer}
+            activeOpacity={0.8}
+            onPress={() => setShowUserSearchScreen(true)}
+          >
+            <Ionicons
+              name="search-outline"
+              size={20}
+              color={theme.textMuted}
+              style={styles.searchIcon}
+            />
+            <Text style={styles.searchInputPlaceholder}>Search User</Text>
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={filteredUsers}
+          keyExtractor={item => item.id.toString()}
+          renderItem={({ item }) => <UserItem user={item} />}
+          ListHeaderComponent={() => (
+            <View>
+              <View style={styles.statsRow}>
+                {[
+                  {
+                    label: 'Users',
+                    count:
+                      (stats?.total_nurses || 0) + (stats?.total_doctors || 0),
+                  },
+                  { label: 'Nurses', count: stats?.total_nurses || 0 },
+                  { label: 'Doctors', count: stats?.total_doctors || 0 },
+                ].map((item, idx) => (
+                  <View key={idx} style={styles.card}>
+                    <Text style={styles.cardTitle}>
+                      <Text style={{ color: theme.primary }}>
+                        Total of{'\n'}
+                        <Text style={styles.boldText}>{item.label}</Text>
+                      </Text>
+                    </Text>
+                    <Text style={styles.cardCount}>{item.count}</Text>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.chipsRow}>
+                {['All', 'Nurses', 'Doctors'].map(filter => (
+                  <TouchableOpacity
+                    key={filter}
+                    onPress={() => setActiveFilter(filter)}
                     style={[
-                      styles.chipText,
+                      styles.chip,
                       activeFilter === filter
-                        ? styles.activeChipText
-                        : styles.inactiveChipText,
+                        ? styles.activeChip
+                        : styles.inactiveChip,
                     ]}
                   >
-                    {filter}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={[
+                        styles.chipText,
+                        activeFilter === filter
+                          ? styles.activeChipText
+                          : styles.inactiveChipText,
+                      ]}
+                    >
+                      {filter}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-          </View>
-        )}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={fetchUsers}
-            colors={[theme.primary]}
-          />
-        }
-      />
+          )}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[theme.primary]}
+            />
+          }
+        />
 
-      <View style={styles.floatingNavContainer}>
-        <AdminBottomNav activeTab="Users" onNavigate={setActiveTab} />
-      </View>
-    </SafeAreaView>
+        <View style={styles.floatingNavContainer} pointerEvents="box-none">
+          <View
+            style={{ height: windowHeight, width: '100%' }}
+            pointerEvents="box-none"
+          >
+            <AdminBottomNav activeTab="Users" onNavigate={handleNavigation} />
+          </View>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 };
 
@@ -495,30 +586,44 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
       backgroundColor: theme.background,
       zIndex: 10,
     },
-    scrollContent: { paddingHorizontal: 25, paddingBottom: 150 },
+    scrollContent: { paddingHorizontal: 40, paddingBottom: 150 },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'center',
+      alignItems: 'flex-start',
+      marginTop: Platform.OS === 'ios' ? 20 : 40,
       marginBottom: 35,
-      marginTop: 10,
     },
     welcome: {
       fontSize: 35,
-      color: '#035022',
+      color: theme.primary,
       fontFamily: 'MinionPro-SemiboldItalic',
     },
-    date: { fontSize: 14, color: '#B2B2B2', marginTop: 4, fontWeight: 'bold' },
-    searchContainer: { marginBottom: 10 },
-    searchBarWrapper: {
+    date: {
+      fontSize: 14,
+      color: theme.textMuted,
+      marginTop: 4,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+    searchBarContainer: {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: theme.card,
-      borderRadius: 30,
+      borderRadius: 125,
       paddingHorizontal: 15,
-      borderWidth: 1,
-      borderColor: theme.border,
       height: 50,
+      marginBottom: 25,
+      elevation: 5,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.3,
+      shadowRadius: 2,
+    },
+    searchIcon: { marginRight: 10 },
+    searchInputPlaceholder: {
+      fontSize: 15,
+      color: theme.textMuted,
+      fontFamily: 'AlteHaasGrotesk',
     },
     statsRow: {
       flexDirection: 'row',
@@ -539,7 +644,6 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
     cardCount: {
       fontSize: 40,
       color: theme.primary,
-      fontWeight: '600',
       textAlign: 'center',
       fontFamily: 'AnekGujarati',
     },
@@ -561,9 +665,7 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingVertical: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
+      paddingVertical: 12,
     },
     userLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
     avatarCircle: {
@@ -573,16 +675,21 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
       justifyContent: 'center',
       alignItems: 'center',
     },
-    userName: { fontSize: 14, marginLeft: 8 },
+    userName: {
+      fontSize: 14,
+      marginLeft: 8,
+      color: theme.text,
+      fontFamily: 'AlteHaasGrotesk',
+    },
     roleBadge: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 15,
-      paddingVertical: 10,
+      paddingVertical: 8,
       borderRadius: 25,
       minWidth: 105,
     },
-    roleBadgeText: { fontSize: 12, fontWeight: 'bold' },
+    roleBadgeText: { fontSize: 12, fontFamily: 'AlteHaasGroteskBold' },
     nurseBadge: {
       backgroundColor: isDarkMode ? 'rgba(255, 238, 194, 0.2)' : '#FFEEC2',
     },
@@ -593,9 +700,12 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
     doctorText: { color: '#0075C3' },
     floatingNavContainer: {
       position: 'absolute',
-      bottom: 20,
-      left: 25,
-      right: 25,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'transparent',
+      zIndex: 1000,
     },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
     dropdownContainer: { position: 'absolute' },

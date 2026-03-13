@@ -16,8 +16,9 @@ import {
   Platform,
   PanResponder,
   Animated,
-  Dimensions,
+  useWindowDimensions,
   TouchableWithoutFeedback,
+  Dimensions,
   StatusBar,
 } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
@@ -25,8 +26,6 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import apiClient from '@api/apiClient';
 import SweetAlert from '@components/SweetAlert';
 import { useAppTheme } from '@App/theme/ThemeContext';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const NURSE_TEXT = '#EDB62C';
 const DOCTOR_TEXT = '#0075C3';
@@ -39,9 +38,10 @@ export const AdminUserDetails = ({
   navigation,
 }: any) => {
   const { theme, isDarkMode } = useAppTheme();
+  const { height: windowHeight } = useWindowDimensions();
   const styles = useMemo(
-    () => createStyles(theme, isDarkMode),
-    [theme, isDarkMode],
+    () => createStyles(theme, isDarkMode, windowHeight),
+    [theme, isDarkMode, windowHeight],
   );
 
   const [loading, setLoading] = useState(false);
@@ -59,7 +59,7 @@ export const AdminUserDetails = ({
     type: 'info',
   });
 
-  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const translateY = useRef(new Animated.Value(windowHeight)).current;
   const roleAnimValue = useRef(new Animated.Value(0)).current;
   const scrollOffset = useRef(0);
 
@@ -102,11 +102,11 @@ export const AdminUserDetails = ({
 
   const handleDismiss = useCallback(() => {
     Animated.timing(translateY, {
-      toValue: SCREEN_HEIGHT,
+      toValue: windowHeight,
       duration: 250,
       useNativeDriver: true,
     }).start(() => onClose());
-  }, [onClose]);
+  }, [onClose, windowHeight]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -130,15 +130,15 @@ export const AdminUserDetails = ({
   ).current;
 
   const fetchAllData = async () => {
-    if (!userData?.id) return;
+    if (!userData?.id || !userData?.username) return;
     try {
       setLoading(true);
       const [userRes, logsRes] = await Promise.all([
-        apiClient.get(`/auth/users/${userData.id}`),
-        apiClient.get(`/audit-logs/users/${userData.id}`),
+        apiClient.get(`/admin/users/${userData.id}`),
+        apiClient.get(`/admin/audit-logs?search=${userData.username}`),
       ]);
       setCurrentUser(userRes.data);
-      setAuditLogs(logsRes.data || []);
+      setAuditLogs(logsRes.data?.data || []);
     } catch (error) {
       console.error(error);
     } finally {
@@ -160,7 +160,7 @@ export const AdminUserDetails = ({
         setAlertConfig({ visible: false });
         try {
           setLoading(true);
-          await apiClient.put(`/auth/users/${currentUser.id}/role`, {
+          await apiClient.patch(`/admin/users/${currentUser.id}/role`, {
             role: nextRole.toLowerCase(),
           });
           await fetchAllData();
@@ -192,9 +192,10 @@ export const AdminUserDetails = ({
   };
 
   const isNurse = currentUser.role?.toLowerCase() === 'nurse';
+  const isDoctor = currentUser.role?.toLowerCase() === 'doctor';
 
   const backdropOpacity = translateY.interpolate({
-    inputRange: [0, SCREEN_HEIGHT * 0.4],
+    inputRange: [0, windowHeight * 0.4],
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
@@ -205,8 +206,14 @@ export const AdminUserDetails = ({
       visible={visible}
       animationType="none"
       onRequestClose={handleDismiss}
+      statusBarTranslucent
     >
       <View style={styles.overlay}>
+        <StatusBar
+          barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+          backgroundColor="transparent"
+          translucent={true}
+        />
         <Animated.View
           style={[StyleSheet.absoluteFill, { opacity: backdropOpacity }]}
         >
@@ -250,60 +257,52 @@ export const AdminUserDetails = ({
                 style={[
                   styles.dropdownContainer,
                   {
-                    top: 100,
+                    top: modalY,
                     left: modalX,
                     width: modalWidth,
                     transform: [{ scaleY }, { translateY: roleTranslateY }],
                   },
                 ]}
               >
-                <View
-                  style={[
-                    styles.roleBadge,
-                    isNurse ? styles.nurseBadge : styles.doctorBadge,
-                    { marginBottom: 8, width: '100%', borderWidth: 0 },
-                  ]}
-                >
-                  <Text
+                {['nurse', 'doctor', 'admin'].map(role => (
+                  <TouchableOpacity
+                    key={role}
                     style={[
-                      styles.roleBadgeText,
-                      isNurse ? styles.nurseText : styles.doctorText,
-                      { flex: 1 },
+                      styles.dropdownPill,
+                      role === 'nurse'
+                        ? styles.nurseBadge
+                        : role === 'doctor'
+                        ? styles.doctorBadge
+                        : {
+                            backgroundColor: theme.card,
+                            borderWidth: 1,
+                            borderColor: theme.border,
+                          },
+                      currentUser.role?.toLowerCase() === role &&
+                        (role === 'nurse'
+                          ? styles.selectedBorderNurse
+                          : role === 'doctor'
+                          ? styles.selectedBorderDoctor
+                          : { borderColor: theme.primary }),
+                      { marginTop: role === 'nurse' ? 4 : 8 },
                     ]}
+                    onPress={() => handleUpdateRole(role)}
                   >
-                    {currentUser.role?.toUpperCase()}
-                  </Text>
-                  <Icon
-                    name="keyboard-arrow-up"
-                    size={18}
-                    color={isNurse ? '#EDB62C' : '#0075C3'}
-                  />
-                </View>
-                <TouchableOpacity
-                  style={[
-                    styles.dropdownPill,
-                    styles.nurseBadge,
-                    isNurse && styles.selectedBorderNurse,
-                  ]}
-                  onPress={() => handleUpdateRole('nurse')}
-                >
-                  <Text style={[styles.roleBadgeText, styles.nurseText]}>
-                    Nurse
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.dropdownPill,
-                    styles.doctorBadge,
-                    !isNurse && styles.selectedBorderDoctor,
-                    { marginTop: 8 },
-                  ]}
-                  onPress={() => handleUpdateRole('doctor')}
-                >
-                  <Text style={[styles.roleBadgeText, styles.doctorText]}>
-                    Doctor
-                  </Text>
-                </TouchableOpacity>
+                    <Text
+                      style={[
+                        styles.roleBadgeText,
+                        role === 'nurse'
+                          ? styles.nurseText
+                          : role === 'doctor'
+                          ? styles.doctorText
+                          : { color: theme.text },
+                      ]}
+                    >
+                      {role.charAt(0).toUpperCase() +
+                        role.slice(1).toLowerCase()}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </Animated.View>
             </TouchableOpacity>
           </Modal>
@@ -332,12 +331,19 @@ export const AdminUserDetails = ({
                   {currentUser.full_name || 'Loading...'}
                 </Text>
 
-                {/* --- DROPDOWN TRIGGER (EDIT POSITION BELOW) --- */}
                 <TouchableOpacity
                   activeOpacity={0.8}
                   style={[
                     styles.roleBadge,
-                    isNurse ? styles.nurseBadge : styles.doctorBadge,
+                    isNurse
+                      ? styles.nurseBadge
+                      : isDoctor
+                      ? styles.doctorBadge
+                      : {
+                          backgroundColor: theme.card,
+                          borderWidth: 1,
+                          borderColor: theme.border,
+                        },
                   ]}
                   onPress={e => {
                     e.currentTarget.measureInWindow((x, y, width, height) => {
@@ -345,8 +351,7 @@ export const AdminUserDetails = ({
                         Platform.OS === 'android'
                           ? StatusBar.currentHeight || 0
                           : 0;
-                      // ADJUST THESE 3 LINES TO MOVE THE DROPDOWN
-                      setModalY(y - statusBarHeight);
+                      setModalY(y - statusBarHeight + height + 5);
                       setModalX(x);
                       setModalWidth(width);
                       setRoleModalVisible(true);
@@ -356,18 +361,27 @@ export const AdminUserDetails = ({
                   <Text
                     style={[
                       styles.roleBadgeText,
-                      isNurse ? styles.nurseText : styles.doctorText,
+                      isNurse
+                        ? styles.nurseText
+                        : isDoctor
+                        ? styles.doctorText
+                        : { color: theme.text },
+                      { flex: 1 },
                     ]}
                   >
-                    {currentUser.role?.toUpperCase()}
+                    {currentUser.role
+                      ? currentUser.role.charAt(0).toUpperCase() +
+                        currentUser.role.slice(1).toLowerCase()
+                      : ''}
                   </Text>
                   <Icon
                     name="keyboard-arrow-down"
                     size={18}
-                    color={isNurse ? NURSE_TEXT : DOCTOR_TEXT}
+                    color={
+                      isNurse ? NURSE_TEXT : isDoctor ? DOCTOR_TEXT : theme.text
+                    }
                   />
                 </TouchableOpacity>
-                {/* ---------------------------------------------- */}
               </View>
               <TouchableOpacity
                 style={styles.editButton}
@@ -418,7 +432,7 @@ export const AdminUserDetails = ({
               <View style={styles.infoBox}>
                 <Text style={styles.label}>Birth Place :</Text>
                 <Text style={[styles.value, { color: theme.text }]}>
-                  {currentUser.birth_place || '---'}
+                  {currentUser.birthplace || '---'}
                 </Text>
               </View>
               <View style={styles.infoBox}>
@@ -508,7 +522,7 @@ export const AdminUserDetails = ({
                             },
                           ]}
                         >
-                          {log.details}
+                          {log.sentence}
                         </Text>
                         <Text
                           style={[
@@ -520,7 +534,7 @@ export const AdminUserDetails = ({
                             },
                           ]}
                         >
-                          {new Date(log.created_at).toLocaleDateString('sv-SE')}
+                          {log.date}
                         </Text>
                       </View>
                     ))}
@@ -570,14 +584,14 @@ export const AdminUserDetails = ({
   );
 };
 
-const createStyles = (theme: any, isDarkMode: boolean) =>
+const createStyles = (theme: any, isDarkMode: boolean, windowHeight: number) =>
   StyleSheet.create({
     overlay: { flex: 1, justifyContent: 'flex-end' },
     modalContainer: {
       backgroundColor: theme.background,
       borderTopLeftRadius: 35,
       borderTopRightRadius: 35,
-      height: SCREEN_HEIGHT * 0.9,
+      height: windowHeight * 0.9,
       elevation: 24,
       shadowColor: '#000',
       shadowOpacity: 0.1,
@@ -596,7 +610,7 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
       backgroundColor: isDarkMode ? theme.border : '#CCC',
       borderRadius: 3,
     },
-    scrollPadding: { paddingHorizontal: 30, paddingBottom: 60 },
+    scrollPadding: { paddingHorizontal: 40, paddingBottom: 60 },
     profileHeader: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -613,20 +627,32 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
       justifyContent: 'center',
       alignItems: 'center',
     },
-    avatarText: { fontSize: 36, color: '#29A539', fontWeight: 'bold' },
+    avatarText: {
+      fontSize: 36,
+      color: '#29A539',
+      fontWeight: 'bold',
+      fontFamily: 'AlteHaasGroteskBold',
+    },
     nameSection: { flex: 1, marginLeft: 20 },
-    userNameText: { fontSize: 20, fontWeight: '700', color: theme.text },
+    userNameText: {
+      fontSize: 20,
+      color: theme.text,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
     roleBadge: {
       flexDirection: 'row',
       paddingHorizontal: 15,
-      paddingVertical: 10,
+      paddingVertical: 5,
       borderRadius: 25,
       alignSelf: 'flex-start',
       marginTop: 8,
       alignItems: 'center',
       minWidth: 105,
     },
-    roleBadgeText: { fontSize: 12, fontWeight: 'bold' },
+    roleBadgeText: {
+      fontSize: 12,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
     editButton: {
       width: 45,
       height: 45,
@@ -638,9 +664,9 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
     },
     sectionTitle: {
       fontSize: 18,
-      fontWeight: 'bold',
       marginBottom: 25,
-      color: '#29A539',
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
     },
     infoGrid: {
       flexDirection: 'row',
@@ -649,8 +675,17 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
     },
     infoBox: { width: '48%' },
     infoBoxFull: { width: '100%', marginBottom: 15 },
-    label: { fontSize: 14, color: theme.textMuted, fontWeight: 'bold' },
-    value: { fontSize: 14, color: theme.text, marginTop: 4 },
+    label: {
+      fontSize: 14,
+      color: theme.textMuted,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+    value: {
+      fontSize: 14,
+      color: theme.text,
+      marginTop: 4,
+      fontFamily: 'AlteHaasGrotesk',
+    },
     auditTableContainer: {
       borderRadius: 15,
       borderWidth: 1,
@@ -662,26 +697,42 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
       shadowOpacity: 0.05,
     },
     auditTableHeader: { paddingVertical: 12, paddingHorizontal: 15 },
-    auditHeaderTitle: { fontWeight: 'bold', color: '#29A539', fontSize: 14 },
+    auditHeaderTitle: {
+      color: theme.primary,
+      fontSize: 14,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
     auditSubHeader: {
       flexDirection: 'row',
       paddingHorizontal: 15,
       paddingVertical: 8,
       borderBottomWidth: 1,
     },
-    columnLabel: { fontSize: 13, color: '#29A539', fontWeight: '600' },
+    columnLabel: {
+      fontSize: 13,
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
     logRow: {
       flexDirection: 'row',
       paddingHorizontal: 15,
       paddingVertical: 12,
       borderBottomWidth: 0.5,
     },
-    logText: { fontSize: 12 },
+    logText: { fontSize: 12, fontFamily: 'AlteHaasGrotesk' },
     footerTimeline: { paddingHorizontal: 5 },
     timelineItem: { flexDirection: 'row', alignItems: 'center' },
     verticalBar: { width: 3, height: 50, marginRight: 20, borderRadius: 2 },
-    timelineLabel: { fontSize: 16, fontWeight: 'bold', color: '#29A539' },
-    timelineValue: { fontSize: 14, marginTop: 4 },
+    timelineLabel: {
+      fontSize: 16,
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+    timelineValue: {
+      fontSize: 14,
+      marginTop: 4,
+      fontFamily: 'AlteHaasGrotesk',
+    },
     roleModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
     dropdownContainer: {
       position: 'absolute',
@@ -690,7 +741,7 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
     },
     dropdownPill: {
       paddingHorizontal: 15,
-      paddingVertical: 12,
+      paddingVertical: 8,
       borderRadius: 25,
       width: '100%',
       borderWidth: 2,

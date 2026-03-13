@@ -1,40 +1,107 @@
-# 📋 Admin API Documentation
+# 📋 Admin API Documentation & Tutorial
 
 **Base URL:** `http://your-domain.com/api/admin`  
-**Auth:** All routes require `Authorization: Bearer {token}` header + **admin role**.  
-**Login first:** `POST /api/auth/login` → use returned `access_token`.
+**Auth:** All routes require `Authorization: Bearer {token}` header and **Admin** privileges.
+
+---
+
+## 🚀 Quick Start Tutorial (Complete Guide)
+
+This tutorial walks you through the common workflow of a System Administrator using the API.
+
+### 1. Authenticate
+
+Before any action, you must log in to obtain a Bearer Token.
+
+- **Endpoint:** `POST /api/auth/login`
+- **Body:** `{ "username": "admin_user", "password": "secure_password" }`
+- **Action:** Save the `access_token` from the response. Include it in the header of all subsequent requests: `Authorization: Bearer YOUR_TOKEN_HERE`.
+
+### 2. Monitor System Health
+
+Check the dashboard stats to see current user counts and system activity.
+
+- **Endpoint:** `GET /api/admin/stats`
+- **What to look for:** Ensure `total_users` matches your expectations and check `audit_logs_today` for recent activity.
+
+### 3. Register a New Staff Member
+
+When a new nurse or doctor joins, register their account with complete personal details.
+
+- **Endpoint:** `POST /api/admin/users`
+- **Body:**
+  ```json
+  {
+    "username": "nurse_jane",
+    "email": "jane@hospital.com",
+    "password": "password123",
+    "role": "nurse",
+    "full_name": "Jane Doe",
+    "birthdate": "1992-08-24",
+    "age": 33,
+    "sex": "Female",
+    "address": "789 Medical Plaza, West City",
+    "birthplace": "Central Hospital"
+  }
+  ```
+
+### 4. Search and Update User Profiles
+
+If a staff member changes their address or you need to update their role.
+
+- **Endpoint:** `GET /api/admin/users?search=Jane` (Find the user ID)
+- **Endpoint:** `PUT /api/admin/users/{id}`
+- **Body:** `{ "address": "New Address 101", "role": "doctor" }`
+
+### 5. Review the Audit Trail
+
+Verify that the registration and updates were recorded correctly in the system logs.
+
+- **Endpoint:** `GET /api/admin/audit-logs`
+- **Verification:** Look for actions like `USER REGISTRATION` or `USER UPDATED`. The `sentence` field will provide a human-readable explanation of what occurred.
 
 ---
 
 ## 🔐 Authentication
 
-### Login
+### Admin Login
+
 `POST /api/auth/login`
+
 ```json
-{ "email": "admin@example.com", "password": "password" }
+{ "username": "admin_id", "password": "password" }
 ```
+
 **Response:**
+
 ```json
-{ "access_token": "...", "role": "admin", "full_name": "admin_username", "user_id": 1 }
+{
+  "access_token": "1|AbCdEf...",
+  "role": "admin",
+  "full_name": "Administrator",
+  "user_id": 1
+}
 ```
 
 ---
 
-## 📊 Dashboard Stats
+## 📊 Dashboard Statistics
 
-### Get Admin Stats
+### Get System Overview
+
 `GET /api/admin/stats`
 
 **Response:**
+
 ```json
 {
-  "total_users": 15,
-  "total_nurses": 10,
-  "total_doctors": 4,
-  "total_admins": 1,
-  "total_patients": 120,
-  "active_patients": 45,
-  "audit_logs_today": 23
+  "total_users": 25,
+  "total_nurses": 15,
+  "total_doctors": 8,
+  "total_admins": 2,
+  "total_patients": 142,
+  "active_patients": 56,
+  "audit_logs_today": 12
 }
 ```
 
@@ -43,142 +110,136 @@
 ## 👤 User Management
 
 ### List All Users
+
 `GET /api/admin/users`
 
-| Query Param | Description |
-|-------------|-------------|
-| `role` | Filter by role: `nurse`, `doctor`, `admin` |
-| `search` | Search by username or email |
+| Query Param | Description                             |
+| ----------- | --------------------------------------- |
+| `role`      | Filter by: `nurse`, `doctor`, `admin`   |
+| `search`    | Search by username, email, or full name |
 
 **Response:**
+
 ```json
 [
   {
-    "id": 3,
-    "username": "nurse_reyes",
-    "email": "reyes@hospital.com",
+    "id": 5,
+    "username": "nurse_jane",
+    "email": "jane@hospital.com",
     "role": "nurse",
-    "created_at": "2025-01-10 08:00:00"
+    "full_name": "Jane Doe",
+    "created_at": "2026-03-13 10:00:00"
   }
 ]
 ```
 
-### Get Single User
+### Get Single User Details
+
 `GET /api/admin/users/{id}`
 
 **Response:**
+
 ```json
 {
-  "id": 3,
-  "username": "nurse_reyes",
-  "email": "reyes@hospital.com",
+  "id": 5,
+  "username": "nurse_jane",
+  "email": "jane@hospital.com",
   "role": "nurse",
-  "created_at": "2025-01-10 08:00:00"
+  "full_name": "Jane Doe",
+  "birthdate": "1992-08-24",
+  "age": 33,
+  "sex": "Female",
+  "address": "789 Medical Plaza",
+  "birthplace": "Central Hospital",
+  "created_at": "2026-03-13 10:00:00"
 }
 ```
 
 ### Register New User
+
 `POST /api/admin/users`
 
-**Body:**
-```json
-{
-  "username": "dr_santos",
-  "email": "santos@hospital.com",
-  "password": "securepassword",
-  "role": "doctor"
-}
-```
+| Field        | Required | Description                           |
+| ------------ | -------- | ------------------------------------- |
+| `username`   | ✅       | Unique identifier for login           |
+| `email`      | ✅       | Unique valid email address            |
+| `password`   | ✅       | Minimum 8 characters                  |
+| `role`       | ✅       | Must be `nurse`, `doctor`, or `admin` |
+| `full_name`  | ❌       | User's legal name                     |
+| `birthdate`  | ❌       | Format: `YYYY-MM-DD`                  |
+| `age`        | ❌       | Integer value                         |
+| `sex`        | ❌       | e.g., `Male`, `Female`                |
+| `address`    | ❌       | Residential/Contact address           |
+| `birthplace` | ❌       | Place of birth                        |
 
-| Field | Required | Rules |
-|-------|----------|-------|
-| `username` | ✅ | Unique |
-| `email` | ✅ | Valid email, unique |
-| `password` | ✅ | Min 8 characters |
-| `role` | ✅ | `nurse` · `doctor` · `admin` |
+### Update User Details
 
-**Response `201`:**
-```json
-{
-  "message": "User registered successfully.",
-  "user": {
-    "id": 16,
-    "username": "dr_santos",
-    "email": "santos@hospital.com",
-    "role": "doctor"
-  }
-}
-```
+`PUT /api/admin/users/{id}`
+_(All fields are optional; provide only the fields you wish to change)_
 
-**Error `422` (validation):**
-```json
-{
-  "message": "The username has already been taken.",
-  "errors": { "username": ["The username has already been taken."] }
-}
-```
+### Update User Role (Quick Patch)
 
-### Update User Role
 `PATCH /api/admin/users/{id}/role`
 
-**Body:**
 ```json
-{ "role": "doctor" }
-```
-
-**Response:**
-```json
-{
-  "message": "Role updated successfully.",
-  "user": { "id": 3, "username": "nurse_reyes", "role": "doctor" }
-}
+{ "role": "admin" }
 ```
 
 ---
 
 ## 📝 Audit Logs
 
-### Get Audit Logs
+### View Audit Trail
+
 `GET /api/admin/audit-logs`
 
-| Query Param | Default | Description |
-|-------------|---------|-------------|
-| `search` | `""` | Search by username or action |
-| `sort` | `desc` | `asc` or `desc` (by date) |
-| `page` | `1` | Page number |
-| `per_page` | `20` | Results per page (max 100) |
+| Query Param | Default | Description                        |
+| ----------- | ------- | ---------------------------------- |
+| `search`    | `""`    | Search by user, action, or details |
+| `sort`      | `desc`  | `asc` (oldest) or `desc` (newest)  |
+| `per_page`  | `20`    | Results per page (max 100)         |
 
 **Response:**
+
 ```json
 {
   "data": [
     {
-      "id": 101,
-      "user_id": 3,
-      "user_name": "nurse_reyes",
-      "user_role": "nurse",
-      "action": "Patient Created (Mobile)",
-      "details": {
-        "details": "User nurse_reyes registered a patient via mobile.",
-        "patient_id": 7
-      },
-      "created_at": "2025-03-10T09:00:00.000000Z"
+      "id": 501,
+      "user_name": "admin_id",
+      "user_role": "ADMIN",
+      "action": "USER REGISTRATION",
+      "sentence": "Administrator admin_id successfully registered a new user: nurse_jane with role NURSE.",
+      "date": "2026-03-13",
+      "time": "10:05:22",
+      "created_at": "2026-03-13 10:05:22"
+    },
+    {
+      "id": 502,
+      "user_name": "nurse_jane",
+      "user_role": "NURSE",
+      "action": "ADL RECORD CREATED",
+      "sentence": "Nurse nurse_jane created a new Activities of Daily Living (ADL) record for patient ID: 12.",
+      "date": "2026-03-13",
+      "time": "10:15:00",
+      "created_at": "2026-03-13 10:15:00"
     }
   ],
-  "total": 500,
+  "total": 1250,
   "page": 1,
   "per_page": 20,
-  "last_page": 25
+  "last_page": 63
 }
 ```
 
 ---
 
-## ⚠️ Error Responses
+## ⚠️ Error Reference
 
-| Status | Meaning |
-|--------|---------|
-| `401` | Missing or invalid token — login first |
-| `403` | Authenticated but not an admin |
-| `404` | Resource not found |
-| `422` | Validation error (see `errors` field) |
+| Status | Code                 | Meaning                                           |
+| ------ | -------------------- | ------------------------------------------------- |
+| `401`  | Unauthorized         | Missing or expired token. Log in again.           |
+| `403`  | Forbidden            | Authenticated, but your role is not Admin.        |
+| `404`  | Not Found            | The requested user or resource does not exist.    |
+| `422`  | Unprocessable Entity | Validation failed (e.g., username already taken). |
+| `500`  | Server Error         | Internal system failure. Contact support.         |

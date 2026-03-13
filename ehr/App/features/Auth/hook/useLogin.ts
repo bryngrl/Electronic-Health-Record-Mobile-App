@@ -62,26 +62,39 @@ export const useLogin = () => {
       });
 
       if (__DEV__) {
-        const { access_token: _accessToken, ...safeResponseData } =
-          response.data || {};
-        console.log('Login response (redacted):', safeResponseData);
+        console.log('--- LOGIN SUCCESS: RAW BACKEND DATA ---');
+        console.log(JSON.stringify(response.data, null, 2));
+        console.log('---------------------------------------');
       }
 
       const {
         access_token,
         role,
         full_name,
+        name,
         user_id,
+        id,
         email: userEmail,
+        ...restOfUserDetails
       } = response.data;
 
+      // Extract full_name reliably
+      const finalFullName = full_name || name || restOfUserDetails.user?.full_name || restOfUserDetails.user?.name;
+      const finalId = user_id || id || restOfUserDetails.user?.id;
+
       await login(
-        { id: user_id, full_name, email: userEmail ?? email, role },
+        {
+          id: finalId,
+          full_name: finalFullName,
+          email: userEmail ?? email,
+          role,
+          ...restOfUserDetails,
+        },
         access_token,
       );
       // console.log('[Login] Stored email:', userEmail ?? email);
 
-      showToast(`Welcome back, ${full_name || email}!`, 'success', 4000);
+      showToast(`Welcome back, ${finalFullName || email}!`, 'success', 4000);
     } catch (error: any) {
       console.error('Login error full:', error);
       let errorMessage = 'Invalid username or password';

@@ -6,6 +6,13 @@ interface User {
   full_name: string;
   email: string;
   role: string;
+  username?: string;
+  address?: string;
+  birthdate?: string;
+  birthplace?: string;
+  age?: number;
+  sex?: string;
+  created_at?: string;
 }
 
 interface AuthContextType {

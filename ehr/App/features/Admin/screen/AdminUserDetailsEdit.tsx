@@ -17,8 +17,9 @@ import {
   Platform,
   ActivityIndicator,
   RefreshControl,
+  StatusBar,
+  SafeAreaView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import apiClient from '@api/apiClient';
 import SweetAlert from '@components/SweetAlert';
@@ -33,6 +34,8 @@ const NURSE_GOLD_BG = '#FFEEC2';
 const NURSE_TEXT = '#EDB62C';
 const DOCTOR_BLUE_BG = '#D6EAFF';
 const DOCTOR_TEXT = '#0075C3';
+const ADMIN_RED_BG = '#FFEBEE';
+const ADMIN_TEXT_RED = '#D32F2F';
 
 // --- HELPER COMPONENTS ---
 
@@ -72,7 +75,6 @@ const ValidatedDropdown = ({
             borderBottomLeftRadius: 0,
             borderBottomRightRadius: 0,
             borderBottomColor: 'transparent',
-            borderColor: PRIMARY_MED,
             borderWidth: 2,
             elevation: 0,
           },
@@ -86,6 +88,7 @@ const ValidatedDropdown = ({
               color:
                 roleStyle?.color ||
                 (value !== '' ? theme.text : theme.textMuted),
+              fontFamily: 'AlteHaasGroteskBold',
             },
           ]}
         >
@@ -167,7 +170,7 @@ const AdminUserDetailsEdit = ({ route, navigation }: any) => {
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const triggerRefs = useRef<{ [key: string]: TouchableOpacity | null }>({});
 
-  const roles = ['nurse', 'doctor'];
+  const roles = ['nurse', 'doctor', 'admin'];
   const genders = ['Male', 'Female'];
   const months = [
     '01',
@@ -200,11 +203,10 @@ const AdminUserDetailsEdit = ({ route, navigation }: any) => {
     age: userData.age?.toString() || '',
     sex: userData.sex || 'Male',
     address: userData.address || '',
-    birth_place: userData.birth_place || '',
+    birthplace: userData.birthplace || '',
     username: userData.username || '',
   });
 
-  // --- REAL-TIME VALIDATION ---
   useEffect(() => {
     const newErrors: any = {};
     if (!formData.full_name.trim()) newErrors.full_name = 'Name is required';
@@ -216,16 +218,15 @@ const AdminUserDetailsEdit = ({ route, navigation }: any) => {
     if (!formData.username.trim()) newErrors.username = 'Username is required';
     if (!formData.address.trim()) newErrors.address = 'Address is required';
     if (!formData.month || !formData.day || !formData.year)
-      newErrors.birthday = 'Required';
+      newErrors.birthdate = 'Required';
     setErrors(newErrors);
   }, [formData]);
 
-  // --- AGE CALCULATION ---
   useEffect(() => {
     if (formData.month && formData.day && formData.year) {
       const birthDate = new Date(
         parseInt(formData.year),
-        parseInt(formData.month) - 1, // Correct month index
+        parseInt(formData.month) - 1,
         parseInt(formData.day),
       );
       const today = new Date();
@@ -248,20 +249,20 @@ const AdminUserDetailsEdit = ({ route, navigation }: any) => {
         email: formData.email.trim(),
         address: formData.address.trim(),
         sex: formData.sex,
-        birth_place: formData.birth_place.trim(),
+        birthplace: formData.birthplace.trim(),
         age: parseInt(formData.age, 10) || 0,
-        birthday: `${formData.year}-${formData.month}-${formData.day}`, // Format: YYYY-MM-DD
+        birthdate: `${formData.year}-${formData.month}-${formData.day}`,
         username: formData.username.trim(),
       };
 
       if (formData.role !== userData.role) {
-        await apiClient.put(`/auth/users/${userData.id}/role`, {
+        await apiClient.patch(`/admin/users/${userData.id}/role`, {
           role: formData.role.toLowerCase(),
         });
       }
 
       const response = await apiClient.put(
-        `/auth/users/${userData.id}`,
+        `/admin/users/${userData.id}`,
         payload,
       );
       if (response.status === 200 || response.status === 204) {
@@ -326,8 +327,8 @@ const AdminUserDetailsEdit = ({ route, navigation }: any) => {
     try {
       setLoading(true);
       const tempPass = Math.random().toString(36).slice(-8);
-      await apiClient.put(`/auth/users/${userData.id}/reset-password`, {
-        new_password: tempPass,
+      await apiClient.patch(`/admin/users/${userData.id}`, {
+        password: tempPass,
       });
       setAlertConfig({
         visible: true,
@@ -357,8 +358,8 @@ const AdminUserDetailsEdit = ({ route, navigation }: any) => {
   };
 
   useEffect(() => {
-    if (userData.birthday) {
-      const d = new Date(userData.birthday);
+    if (userData.birthdate) {
+      const d = new Date(userData.birthdate);
       setFormData(prev => ({
         ...prev,
         month: (d.getMonth() + 1).toString().padStart(2, '0'),
@@ -366,273 +367,331 @@ const AdminUserDetailsEdit = ({ route, navigation }: any) => {
         year: d.getFullYear().toString(),
       }));
     }
-  }, [userData.birthday]);
+  }, [userData.birthdate]);
 
   const roleStyle =
     formData.role === 'nurse' && !isDarkMode
-      ? { backgroundColor: NURSE_GOLD_BG, color: NURSE_TEXT }
+      ? {
+          backgroundColor: NURSE_GOLD_BG,
+          color: NURSE_TEXT,
+          borderColor: NURSE_TEXT,
+        }
       : formData.role === 'doctor' && !isDarkMode
-      ? { backgroundColor: DOCTOR_BLUE_BG, color: DOCTOR_TEXT }
+      ? {
+          backgroundColor: DOCTOR_BLUE_BG,
+          color: DOCTOR_TEXT,
+          borderColor: DOCTOR_TEXT,
+        }
+      : formData.role === 'admin' && !isDarkMode
+      ? {
+          backgroundColor: ADMIN_RED_BG,
+          color: ADMIN_TEXT_RED,
+          borderColor: ADMIN_TEXT_RED,
+        }
       : null;
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
-    >
-      <AccountModal
-        visible={isAccountModalVisible}
-        onClose={() => setAccountModalVisible(false)}
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
       />
-      <SweetAlert
-        visible={alertConfig.visible}
-        {...alertConfig}
-        confirmText="OK"
-        cancelText="CANCEL"
-      />
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.background }]}
       >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="always"
-          scrollEnabled={openDropdown === null}
+        <AccountModal
+          visible={isAccountModalVisible}
+          onClose={() => setAccountModalVisible(false)}
+        />
+        <SweetAlert
+          visible={alertConfig.visible}
+          {...alertConfig}
+          confirmText="OK"
+          cancelText="CANCEL"
+        />
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
         >
-          <View style={styles.header}>
-            <View>
-              <Text style={[styles.headerTitle, { color: theme.primary }]}>
-                Edit Information
-              </Text>
-              <Text style={[styles.headerDate, { color: theme.textMuted }]}>
-                {new Date().toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </Text>
-            </View>
-          </View>
-
-          <ValidatedDropdown
-            label="Role"
-            value={formData.role.toUpperCase()}
-            theme={theme}
-            triggerRef={(el: any) => {
-              triggerRefs.current['role'] = el;
-            }}
-            onOpen={() => openDropdownMenu('role')}
-            isOpen={openDropdown === 'role'}
-            roleStyle={roleStyle}
-          />
-
-          <FocusedInput
-            label="Full Name"
-            value={formData.full_name}
-            onChangeText={(v: any) =>
-              setFormData({ ...formData, full_name: v })
-            }
-            theme={theme}
-            error={errors.full_name}
-            isDarkMode={isDarkMode}
-          />
-
-          <View style={styles.labelRow}>
-            <Text style={[styles.labelText, { color: theme.primary }]}>
-              Birthday
-            </Text>
-            <Text style={{ color: 'red' }}> *</Text>
-          </View>
-          <View style={styles.dateRow}>
-            {['month', 'day', 'year'].map(t => (
-              <ValidatedDropdown
-                key={t}
-                value={formData[t as keyof typeof formData]}
-                placeholder={t.toUpperCase()}
-                customWidth="31%"
-                theme={theme}
-                triggerRef={(el: any) => {
-                  triggerRefs.current[t] = el;
-                }}
-                onOpen={() => openDropdownMenu(t)}
-                isOpen={openDropdown === t}
-                hasError={errors.birthday}
-              />
-            ))}
-          </View>
-
-          <View style={styles.row}>
-            <View style={{ width: '48%' }}>
-              <View style={styles.labelRow}>
-                <Text style={[styles.labelText, { color: theme.primary }]}>
-                  Age
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="always"
+            scrollEnabled={openDropdown === null}
+          >
+            <View style={styles.header}>
+              <View>
+                <Text style={[styles.headerTitle, { color: theme.primary }]}>
+                  Edit Information
+                </Text>
+                <Text style={[styles.headerDate, { color: theme.textMuted }]}>
+                  {new Date().toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
                 </Text>
               </View>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: isDarkMode ? theme.border : '#F9F9F9',
-                    color: theme.text,
-                    borderColor: theme.border,
-                  },
-                ]}
-                value={formData.age}
-                editable={false}
-              />
+              <TouchableOpacity
+                onPress={() => setAccountModalVisible(true)}
+                style={{ marginTop: 10 }}
+              >
+                <Icon name="keyboard-arrow-down" size={24} color={theme.text} />
+              </TouchableOpacity>
             </View>
-            <View style={{ width: '48%' }}>
-              <ValidatedDropdown
-                label="Sex"
-                value={formData.sex}
-                theme={theme}
-                triggerRef={(el: any) => {
-                  triggerRefs.current['gender'] = el;
-                }}
-                onOpen={() => openDropdownMenu('gender')}
-                isOpen={openDropdown === 'gender'}
-              />
+
+            <ValidatedDropdown
+              label="Role"
+              value={formData.role.toUpperCase()}
+              theme={theme}
+              triggerRef={(el: any) => {
+                triggerRefs.current['role'] = el;
+              }}
+              onOpen={() => openDropdownMenu('role')}
+              isOpen={openDropdown === 'role'}
+              roleStyle={roleStyle}
+            />
+
+            <FocusedInput
+              label="Full Name"
+              value={formData.full_name}
+              onChangeText={(v: any) =>
+                setFormData({ ...formData, full_name: v })
+              }
+              theme={theme}
+              error={errors.full_name}
+              isDarkMode={isDarkMode}
+            />
+
+            <View style={styles.labelRow}>
+              <Text style={[styles.labelText, { color: theme.primary }]}>
+                Birthday
+              </Text>
+              <Text style={{ color: 'red' }}> *</Text>
             </View>
-          </View>
+            <View style={styles.dateRow}>
+              {['month', 'day', 'year'].map(t => (
+                <ValidatedDropdown
+                  key={t}
+                  value={formData[t as keyof typeof formData]}
+                  placeholder={t.toUpperCase()}
+                  customWidth="31%"
+                  theme={theme}
+                  triggerRef={(el: any) => {
+                    triggerRefs.current[t] = el;
+                  }}
+                  onOpen={() => openDropdownMenu(t)}
+                  isOpen={openDropdown === t}
+                  hasError={errors.birthdate}
+                />
+              ))}
+            </View>
 
-          <FocusedInput
-            label="Address"
-            value={formData.address}
-            onChangeText={(v: any) => setFormData({ ...formData, address: v })}
-            theme={theme}
-            error={errors.address}
-            isDarkMode={isDarkMode}
-          />
-          <FocusedInput
-            label="Birth Place"
-            value={formData.birth_place}
-            onChangeText={(v: any) =>
-              setFormData({ ...formData, birth_place: v })
-            }
-            theme={theme}
-            isDarkMode={isDarkMode}
-          />
-          <FocusedInput
-            label="Email"
-            value={formData.email}
-            onChangeText={(v: any) => setFormData({ ...formData, email: v })}
-            theme={theme}
-            error={errors.email}
-            isDarkMode={isDarkMode}
-          />
-          <FocusedInput
-            label="Username"
-            value={formData.username}
-            onChangeText={(v: any) => setFormData({ ...formData, username: v })}
-            theme={theme}
-            error={errors.username}
-            isDarkMode={isDarkMode}
-          />
+            <View style={styles.row}>
+              <View style={{ width: '48%' }}>
+                <View style={styles.labelRow}>
+                  <Text style={[styles.labelText, { color: theme.primary }]}>
+                    Age
+                  </Text>
+                </View>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDarkMode ? theme.border : '#F9F9F9',
+                      color: theme.text,
+                      borderColor: theme.border,
+                      fontFamily: 'AlteHaasGrotesk',
+                    },
+                  ]}
+                  value={formData.age}
+                  editable={false}
+                />
+              </View>
+              <View style={{ width: '48%' }}>
+                <ValidatedDropdown
+                  label="Sex"
+                  value={formData.sex}
+                  theme={theme}
+                  triggerRef={(el: any) => {
+                    triggerRefs.current['gender'] = el;
+                  }}
+                  onOpen={() => openDropdownMenu('gender')}
+                  isOpen={openDropdown === 'gender'}
+                />
+              </View>
+            </View>
 
-          <TouchableOpacity
-            style={styles.resetPass}
-            onPress={handleResetPassword}
-          >
-            <Text style={[styles.resetPassText, { color: theme.textMuted }]}>
-              Reset Password
-            </Text>
-          </TouchableOpacity>
+            <FocusedInput
+              label="Address"
+              value={formData.address}
+              onChangeText={(v: any) =>
+                setFormData({ ...formData, address: v })
+              }
+              theme={theme}
+              error={errors.address}
+              isDarkMode={isDarkMode}
+            />
+            <FocusedInput
+              label="Birth Place"
+              value={formData.birthplace}
+              onChangeText={(v: any) =>
+                setFormData({ ...formData, birthplace: v })
+              }
+              theme={theme}
+              isDarkMode={isDarkMode}
+            />
+            <FocusedInput
+              label="Email"
+              value={formData.email}
+              onChangeText={(v: any) => setFormData({ ...formData, email: v })}
+              theme={theme}
+              error={errors.email}
+              isDarkMode={isDarkMode}
+            />
+            <FocusedInput
+              label="Username"
+              value={formData.username}
+              onChangeText={(v: any) =>
+                setFormData({ ...formData, username: v })
+              }
+              theme={theme}
+              error={errors.username}
+              isDarkMode={isDarkMode}
+            />
 
-          <View style={styles.footer}>
             <TouchableOpacity
-              style={[
-                styles.cancelBtn,
-                { backgroundColor: isDarkMode ? theme.border : PRIMARY_LIGHT },
-              ]}
-              onPress={() => navigation.goBack()}
+              style={styles.resetPass}
+              onPress={handleResetPassword}
             >
               <Text
                 style={[
-                  styles.cancelBtnText,
-                  { color: isDarkMode ? theme.text : PRIMARY_DARK },
+                  styles.resetPassText,
+                  { color: theme.textMuted, fontFamily: 'AlteHaasGrotesk' },
                 ]}
               >
-                CANCEL
+                Reset Password
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.saveBtn}
-              onPress={handleSavePress}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <Text style={styles.saveBtnText}>SAVE CHANGES</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
 
-      <Modal visible={openDropdown !== null} transparent animationType="none">
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={1}
-          onPress={() => setOpenDropdown(null)}
-        >
-          <View
-            style={[
-              styles.modalDropdown,
-              {
-                top: dropdownPos.top,
-                left: dropdownPos.left,
-                width: dropdownPos.width,
-                backgroundColor: theme.card,
-                borderColor: PRIMARY_MED,
-                borderTopWidth: 0,
-              },
-            ]}
-          >
-            <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="always">
-              {(openDropdown === 'role'
-                ? roles
-                : openDropdown === 'gender'
-                ? genders
-                : openDropdown === 'month'
-                ? months
-                : openDropdown === 'day'
-                ? days
-                : years
-              ).map(opt => (
-                <TouchableOpacity
-                  key={opt}
+            <View style={styles.footer}>
+              <TouchableOpacity
+                style={[
+                  styles.cancelBtn,
+                  {
+                    backgroundColor: isDarkMode ? theme.border : PRIMARY_LIGHT,
+                  },
+                ]}
+                onPress={() => navigation.goBack()}
+              >
+                <Text
                   style={[
-                    styles.dropdownOption,
-                    { borderBottomColor: theme.border },
+                    styles.cancelBtnText,
+                    {
+                      color: isDarkMode ? theme.text : PRIMARY_DARK,
+                      fontFamily: 'AlteHaasGroteskBold',
+                    },
                   ]}
-                  onPress={() => {
-                    const key =
-                      openDropdown === 'gender' ? 'sex' : openDropdown!;
-                    setFormData({ ...formData, [key]: opt });
-                    setOpenDropdown(null);
-                  }}
                 >
+                  CANCEL
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveBtn}
+                onPress={handleSavePress}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
                   <Text
                     style={[
-                      styles.optionText,
-                      { color: theme.text },
-                      openDropdown === 'role' &&
-                        opt === 'nurse' && { color: NURSE_TEXT },
-                      openDropdown === 'role' &&
-                        opt === 'doctor' && { color: DOCTOR_TEXT },
+                      styles.saveBtnText,
+                      { fontFamily: 'AlteHaasGroteskBold' },
                     ]}
                   >
-                    {opt.toUpperCase()}
+                    SAVE CHANGES
                   </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-    </SafeAreaView>
+                )}
+              </TouchableOpacity>
+            </View>
+            <View style={{ height: 100 }} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+
+        <Modal visible={openDropdown !== null} transparent animationType="none">
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setOpenDropdown(null)}
+          >
+            <View
+              style={[
+                styles.modalDropdown,
+                {
+                  top: dropdownPos.top,
+                  left: dropdownPos.left,
+                  width: dropdownPos.width,
+                  backgroundColor: theme.card,
+                  borderColor: PRIMARY_MED,
+                  borderTopWidth: 0,
+                },
+              ]}
+            >
+              <ScrollView
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="always"
+              >
+                {(openDropdown === 'role'
+                  ? roles
+                  : openDropdown === 'gender'
+                  ? genders
+                  : openDropdown === 'month'
+                  ? months
+                  : openDropdown === 'day'
+                  ? days
+                  : years
+                ).map(opt => (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[
+                      styles.dropdownOption,
+                      { borderBottomColor: theme.border },
+                    ]}
+                    onPress={() => {
+                      const key =
+                        openDropdown === 'gender' ? 'sex' : openDropdown!;
+                      setFormData({ ...formData, [key]: opt });
+                      setOpenDropdown(null);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.optionText,
+                        {
+                          color: theme.text,
+                          fontFamily: 'AlteHaasGroteskBold',
+                        },
+                        openDropdown === 'role' &&
+                          opt === 'nurse' && { color: NURSE_TEXT },
+                        openDropdown === 'role' &&
+                          opt === 'doctor' && { color: DOCTOR_TEXT },
+                        openDropdown === 'role' &&
+                          opt === 'admin' && { color: ADMIN_TEXT_RED },
+                      ]}
+                    >
+                      {opt.toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      </SafeAreaView>
+    </View>
   );
 };
 
@@ -642,23 +701,21 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    marginTop: Platform.OS === 'ios' ? 20 : 40,
     marginBottom: 35,
-    marginTop: 10,
   },
   headerTitle: {
     fontSize: 35,
-    color: '#035022',
     fontFamily: 'MinionPro-SemiboldItalic',
   },
   headerDate: {
     fontSize: 14,
-    color: '#B2B2B2',
     marginTop: 4,
-    fontWeight: 'bold',
+    fontFamily: 'AlteHaasGroteskBold',
   },
   labelRow: { flexDirection: 'row', marginTop: 15, marginBottom: 5 },
-  labelText: { fontSize: 15, fontWeight: 'bold' },
+  labelText: { fontSize: 15, fontFamily: 'AlteHaasGroteskBold' },
   inputGroup: { marginBottom: 5 },
   input: {
     height: 48,
@@ -706,7 +763,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   saveBtnText: { color: '#FFF', fontWeight: 'bold' },
-  errorText: { color: 'red', fontSize: 12, marginTop: 4, marginLeft: 5 },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 5,
+    fontFamily: 'AlteHaasGrotesk',
+  },
   modalDropdown: {
     position: 'absolute',
     borderWidth: 2,

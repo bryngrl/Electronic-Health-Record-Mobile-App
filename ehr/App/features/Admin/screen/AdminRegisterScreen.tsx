@@ -17,8 +17,11 @@ import {
   Platform,
   ActivityIndicator,
   RefreshControl,
+  StatusBar,
+  BackHandler,
+  SafeAreaView,
+  useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AdminBottomNav from '../components/AdminBottomNav';
 import { useAuth } from '@features/Auth/AuthContext';
@@ -31,11 +34,25 @@ const PRIMARY_DARK = '#035022';
 const PRIMARY_LIGHT = '#E8F5E9';
 const PRIMARY_MED = '#5EAE57';
 
+const NURSE_GOLD_BG = '#FFEEC2';
+const NURSE_TEXT = '#EDB62C';
+const DOCTOR_BLUE_BG = '#D6EAFF';
+const DOCTOR_TEXT = '#0075C3';
+const ADMIN_RED_BG = '#FFEBEE';
+const ADMIN_TEXT_RED = '#D32F2F';
+
 // --- HELPER COMPONENTS ---
 
 const Label = ({ title, theme }: { title: string; theme: any }) => (
   <View style={styles.labelRow}>
-    <Text style={[styles.labelText, { color: theme.primary }]}>{title}</Text>
+    <Text
+      style={[
+        styles.labelText,
+        { color: theme.primary, fontFamily: 'AlteHaasGroteskBold' },
+      ]}
+    >
+      {title}
+    </Text>
     <Text style={{ color: 'red' }}> *</Text>
   </View>
 );
@@ -51,6 +68,7 @@ const ValidatedDropdown = ({
   hasError,
   errorMsg,
   isOpen,
+  roleStyle,
 }: any) => {
   return (
     <View style={[styles.inputGroup, customWidth && { width: customWidth }]}>
@@ -66,6 +84,7 @@ const ValidatedDropdown = ({
             borderWidth: isOpen ? 2 : 1,
           },
           hasError && styles.inputError,
+          roleStyle,
           isOpen && {
             borderBottomLeftRadius: 0,
             borderBottomRightRadius: 0,
@@ -78,7 +97,10 @@ const ValidatedDropdown = ({
         <Text
           style={[
             styles.placeholderText,
-            { color: value !== '' ? theme.text : theme.textMuted },
+            {
+              color: roleStyle?.color || (value !== '' ? theme.text : theme.textMuted),
+              fontFamily: 'AlteHaasGroteskBold',
+            },
           ]}
         >
           {value || placeholder}
@@ -86,7 +108,7 @@ const ValidatedDropdown = ({
         <Icon
           name={isOpen ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
           size={24}
-          color={hasError ? 'red' : theme.primary}
+          color={roleStyle?.color || (hasError ? 'red' : theme.primary)}
         />
       </TouchableOpacity>
       {!isOpen && hasError && <Text style={styles.errorText}>{errorMsg}</Text>}
@@ -125,6 +147,7 @@ const ValidatedInput = ({
               backgroundColor: theme.card,
               color: theme.text,
               borderWidth: isFocused ? 2 : 1,
+              fontFamily: 'AlteHaasGrotesk',
             },
             hasError && styles.inputError,
             !editable && {
@@ -170,6 +193,8 @@ const AdminRegisterScreen = ({ navigation, onNavigateTab }: any) => {
     [theme, isDarkMode],
   );
 
+  const { height: windowHeight } = useWindowDimensions();
+
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -189,7 +214,7 @@ const AdminRegisterScreen = ({ navigation, onNavigateTab }: any) => {
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const triggerRefs = useRef<{ [key: string]: TouchableOpacity | null }>({});
 
-  const roles = ['nurse', 'doctor'];
+  const roles = ['nurse', 'doctor', 'admin'];
   const genders = ['Male', 'Female'];
   const months = [
     '01',
@@ -222,7 +247,7 @@ const AdminRegisterScreen = ({ navigation, onNavigateTab }: any) => {
     age: '',
     sex: '',
     address: '',
-    birth_place: '',
+    birthplace: '',
     username: '',
     password: '',
     confirm_password: '',
@@ -260,7 +285,7 @@ const AdminRegisterScreen = ({ navigation, onNavigateTab }: any) => {
 
   const handleTextChange = (field: string, val: string) => {
     let finalVal = val;
-    if (['full_name', 'address', 'birth_place'].includes(field)) {
+    if (['full_name', 'address', 'birthplace'].includes(field)) {
       finalVal = val.replace(/\b\w/g, char => char.toUpperCase());
     }
     setFormData(prev => ({ ...prev, [field]: finalVal }));
@@ -278,7 +303,7 @@ const AdminRegisterScreen = ({ navigation, onNavigateTab }: any) => {
       age: '',
       sex: '',
       address: '',
-      birth_place: '',
+      birthplace: '',
       username: '',
       password: '',
       confirm_password: '',
@@ -288,6 +313,27 @@ const AdminRegisterScreen = ({ navigation, onNavigateTab }: any) => {
     setRefreshing(false);
     setAlertConfig({ visible: false });
   };
+
+  const roleStyle =
+    formData.role === 'nurse' && !isDarkMode
+      ? {
+          backgroundColor: NURSE_GOLD_BG,
+          color: NURSE_TEXT,
+          borderColor: NURSE_TEXT,
+        }
+      : formData.role === 'doctor' && !isDarkMode
+      ? {
+          backgroundColor: DOCTOR_BLUE_BG,
+          color: DOCTOR_TEXT,
+          borderColor: DOCTOR_TEXT,
+        }
+      : formData.role === 'admin' && !isDarkMode
+      ? {
+          backgroundColor: ADMIN_RED_BG,
+          color: ADMIN_TEXT_RED,
+          borderColor: ADMIN_TEXT_RED,
+        }
+      : null;
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -328,7 +374,6 @@ const AdminRegisterScreen = ({ navigation, onNavigateTab }: any) => {
     setSubmitted(true);
     let hasErrors = false;
 
-    // Validate all required fields
     Object.keys(formData).forEach(key => {
       if (validateField(key, formData[key as keyof typeof formData]))
         hasErrors = true;
@@ -338,24 +383,20 @@ const AdminRegisterScreen = ({ navigation, onNavigateTab }: any) => {
 
     try {
       setLoading(true);
-      const endpoint =
-        formData.role === 'nurse' ? '/auth/nurses' : '/auth/doctors';
-
-      // CLEAN PAYLOAD: Don't just spread formData, send exactly what the backend needs
       const payload = {
         full_name: formData.full_name,
         email: formData.email,
         password: formData.password,
         role: formData.role,
         username: formData.username,
-        birthday: `${formData.yyyy}-${formData.mm}-${formData.dd}`, // YYYY-MM-DD
+        birthdate: `${formData.yyyy}-${formData.mm}-${formData.dd}`,
         age: parseInt(formData.age, 10),
         sex: formData.sex,
         address: formData.address,
-        birth_place: formData.birth_place,
+        birthplace: formData.birthplace,
       };
 
-      const response = await apiClient.post(endpoint, payload);
+      const response = await apiClient.post('/admin/users', payload);
       if (response.status === 200 || response.status === 201) {
         setAlertConfig({
           visible: true,
@@ -366,7 +407,6 @@ const AdminRegisterScreen = ({ navigation, onNavigateTab }: any) => {
         });
       }
     } catch (error: any) {
-      // Logic for 422: Display specific validation errors from backend
       const serverMsg = error.response?.data?.detail;
       const errorMsg = Array.isArray(serverMsg)
         ? serverMsg[0].msg
@@ -396,7 +436,12 @@ const AdminRegisterScreen = ({ navigation, onNavigateTab }: any) => {
     return (
       <View style={styles.requirementRow}>
         <Icon name="close" size={16} color="#FF0000" style={styles.checkIcon} />
-        <Text style={[styles.requirementText, { color: '#FF0000' }]}>
+        <Text
+          style={[
+            styles.requirementText,
+            { color: '#FF0000', fontFamily: 'AlteHaasGrotesk' },
+          ]}
+        >
           {label}
         </Text>
       </View>
@@ -404,304 +449,340 @@ const AdminRegisterScreen = ({ navigation, onNavigateTab }: any) => {
   };
 
   return (
-    <SafeAreaView style={stylesObj.container}>
-      <AccountModal
-        visible={isAccountModalVisible}
-        onClose={() => setAccountModalVisible(false)}
+    <View style={stylesObj.container}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
       />
-      <SweetAlert
-        visible={alertConfig.visible}
-        {...alertConfig}
-        confirmText="OK"
-      />
+      <SafeAreaView style={stylesObj.container}>
+        <AccountModal
+          visible={isAccountModalVisible}
+          onClose={() => setAccountModalVisible(false)}
+        />
+        <SweetAlert
+          visible={alertConfig.visible}
+          {...alertConfig}
+          confirmText="OK"
+        />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={stylesObj.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          scrollEnabled={openDropdown === null}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[theme.primary]}
-            />
-          }
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
         >
-          <View style={stylesObj.header}>
-            <View>
-              <Text style={[stylesObj.headerTitle, { color: theme.primary }]}>
-                Registration
-              </Text>
-              <Text style={stylesObj.headerDate}>
-                {new Date().toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </Text>
-            </View>
-          </View>
-
-          <ValidatedDropdown
-            label="Role"
-            value={formData.role}
-            placeholder="Select role"
-            theme={theme}
-            triggerRef={(el: any) => {
-              triggerRefs.current['role'] = el;
-            }}
-            onOpen={() => openDropdownMenu('role')}
-            isOpen={openDropdown === 'role'}
-            hasError={submitted && errors['role']}
-            errorMsg={errors['role']}
-          />
-
-          <ValidatedInput
-            label="Full Name"
-            field="full_name"
-            value={formData.full_name}
-            placeholder="Enter Full Name"
-            errors={errors}
-            onTextChange={handleTextChange}
-            theme={theme}
-            isDarkMode={isDarkMode}
-          />
-          <ValidatedInput
-            label="Email"
-            field="email"
-            value={formData.email}
-            placeholder="Enter Email"
-            keyboardType="email-address"
-            errors={errors}
-            onTextChange={handleTextChange}
-            theme={theme}
-            isDarkMode={isDarkMode}
-          />
-
-          <Label title="Birthday" theme={theme} />
-          <View style={styles.dateRow}>
-            {['mm', 'dd', 'yyyy'].map(type => (
-              <ValidatedDropdown
-                key={type}
-                value={formData[type as keyof typeof formData]}
-                placeholder={type.toUpperCase()}
-                customWidth="31%"
-                theme={theme}
-                triggerRef={(el: any) => {
-                  triggerRefs.current[type] = el;
-                }}
-                onOpen={() => openDropdownMenu(type)}
-                isOpen={openDropdown === type}
-                hasError={submitted && errors[type]}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={stylesObj.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            scrollEnabled={openDropdown === null}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[theme.primary]}
               />
-            ))}
-          </View>
-
-          <View style={styles.row}>
-            <View style={{ width: '48%' }}>
-              <Label title="Age" theme={theme} />
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: isDarkMode ? theme.border : '#F9F9F9',
-                    color: theme.text,
-                    borderColor: theme.border,
-                  },
-                ]}
-                value={formData.age}
-                editable={false}
-              />
-            </View>
-            <View style={{ width: '48%' }}>
-              <ValidatedDropdown
-                label="Sex"
-                value={formData.sex}
-                placeholder="Sex"
-                theme={theme}
-                triggerRef={(el: any) => {
-                  triggerRefs.current['gender'] = el;
-                }}
-                onOpen={() => openDropdownMenu('gender')}
-                isOpen={openDropdown === 'gender'}
-                hasError={submitted && errors['sex']}
-                errorMsg={errors['sex']}
-              />
-            </View>
-          </View>
-
-          <ValidatedInput
-            label="Address"
-            field="address"
-            value={formData.address}
-            placeholder="Enter Address"
-            errors={errors}
-            onTextChange={handleTextChange}
-            theme={theme}
-            isDarkMode={isDarkMode}
-          />
-          <ValidatedInput
-            label="Birth Place"
-            field="birth_place"
-            value={formData.birth_place}
-            placeholder="Enter Birth Place"
-            errors={errors}
-            onTextChange={handleTextChange}
-            theme={theme}
-            isDarkMode={isDarkMode}
-          />
-          <ValidatedInput
-            label="Username"
-            field="username"
-            value={formData.username}
-            placeholder="Enter Username"
-            errors={errors}
-            onTextChange={handleTextChange}
-            theme={theme}
-            isDarkMode={isDarkMode}
-          />
-
-          <ValidatedInput
-            label="Password"
-            field="password"
-            value={formData.password}
-            placeholder="Enter Password"
-            secureTextEntry
-            errors={errors}
-            onTextChange={handleTextChange}
-            theme={theme}
-            isDarkMode={isDarkMode}
+            }
           >
-            {!allCriteriaMet && formData.password.length > 0 && (
-              <View style={styles.requirementContainer}>
-                <Requirement
-                  label="8-16 characters"
-                  met={passwordCriteria.length}
+            <View style={stylesObj.header}>
+              <View>
+                <Text style={[stylesObj.headerTitle, { color: theme.primary }]}>
+                  Registration
+                </Text>
+                <Text style={stylesObj.headerDate}>
+                  {new Date().toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setAccountModalVisible(true)}
+                style={{ marginTop: 10 }}
+              >
+                <Icon name="keyboard-arrow-down" size={24} color={theme.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ValidatedDropdown
+              label="Role"
+              value={formData.role.toUpperCase()}
+              placeholder="SELECT ROLE"
+              theme={theme}
+              triggerRef={(el: any) => {
+                triggerRefs.current['role'] = el;
+              }}
+              onOpen={() => openDropdownMenu('role')}
+              isOpen={openDropdown === 'role'}
+              hasError={submitted && errors['role']}
+              errorMsg={errors['role']}
+              roleStyle={roleStyle}
+            />
+
+            <ValidatedInput
+              label="Full Name"
+              field="full_name"
+              value={formData.full_name}
+              placeholder="Enter Full Name"
+              errors={errors}
+              onTextChange={handleTextChange}
+              theme={theme}
+              isDarkMode={isDarkMode}
+            />
+            <ValidatedInput
+              label="Email"
+              field="email"
+              value={formData.email}
+              placeholder="Enter Email"
+              keyboardType="email-address"
+              errors={errors}
+              onTextChange={handleTextChange}
+              theme={theme}
+              isDarkMode={isDarkMode}
+            />
+
+            <Label title="Birthday" theme={theme} />
+            <View style={styles.dateRow}>
+              {['mm', 'dd', 'yyyy'].map(type => (
+                <ValidatedDropdown
+                  key={type}
+                  value={formData[type as keyof typeof formData]}
+                  placeholder={type.toUpperCase()}
+                  customWidth="31%"
+                  theme={theme}
+                  triggerRef={(el: any) => {
+                    triggerRefs.current[type] = el;
+                  }}
+                  onOpen={() => openDropdownMenu(type)}
+                  isOpen={openDropdown === type}
+                  hasError={submitted && errors[type]}
                 />
-                <Requirement
-                  label="Lowercase letter"
-                  met={passwordCriteria.lowercase}
-                />
-                <Requirement
-                  label="Uppercase letter"
-                  met={passwordCriteria.uppercase}
-                />
-                <Requirement
-                  label="Numeric character"
-                  met={passwordCriteria.numeric}
-                />
-                <Requirement
-                  label="Special character"
-                  met={passwordCriteria.special}
+              ))}
+            </View>
+
+            <View style={styles.row}>
+              <View style={{ width: '48%' }}>
+                <Label title="Age" theme={theme} />
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: isDarkMode ? theme.border : '#F9F9F9',
+                      color: theme.text,
+                      borderColor: theme.border,
+                      fontFamily: 'AlteHaasGrotesk',
+                    },
+                  ]}
+                  value={formData.age}
+                  editable={false}
                 />
               </View>
-            )}
-          </ValidatedInput>
-
-          <ValidatedInput
-            label="Confirm Password"
-            field="confirm_password"
-            value={formData.confirm_password}
-            placeholder="Re-enter Password"
-            secureTextEntry
-            errors={errors}
-            onTextChange={handleTextChange}
-            theme={theme}
-            isDarkMode={isDarkMode}
-          />
-
-          <TouchableOpacity
-            style={[
-              stylesObj.submitBtn,
-              { backgroundColor: isDarkMode ? theme.primary : PRIMARY_LIGHT },
-            ]}
-            onPress={handleCreateAccount}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={isDarkMode ? '#FFF' : theme.primary} />
-            ) : (
-              <Text
-                style={[
-                  stylesObj.submitBtnText,
-                  { color: isDarkMode ? '#FFF' : PRIMARY_DARK },
-                ]}
-              >
-                CREATE ACCOUNT
-              </Text>
-            )}
-          </TouchableOpacity>
-          <View style={{ height: 100 }} />
-        </ScrollView>
-      </KeyboardAvoidingView>
-
-      <Modal visible={openDropdown !== null} transparent animationType="none">
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={1}
-          onPress={() => setOpenDropdown(null)}
-        >
-          <View
-            style={[
-              styles.modalDropdown,
-              {
-                top: dropdownPos.top,
-                left: dropdownPos.left,
-                width: dropdownPos.width,
-                backgroundColor: theme.card,
-                borderColor: PRIMARY_MED,
-                borderTopWidth: 0,
-              },
-            ]}
-          >
-            <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="always">
-              {(openDropdown === 'role'
-                ? roles
-                : openDropdown === 'gender'
-                ? genders
-                : openDropdown === 'mm'
-                ? months
-                : openDropdown === 'dd'
-                ? days
-                : years
-              ).map(opt => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[
-                    styles.dropdownOption,
-                    { borderBottomColor: theme.border },
-                  ]}
-                  onPress={() => {
-                    const key =
-                      openDropdown === 'gender' ? 'sex' : openDropdown!;
-                    setFormData(prev => ({ ...prev, [key]: opt }));
-                    validateField(key, opt);
-                    setOpenDropdown(null);
+              <View style={{ width: '48%' }}>
+                <ValidatedDropdown
+                  label="Gender"
+                  value={formData.sex}
+                  placeholder="Gender"
+                  theme={theme}
+                  triggerRef={(el: any) => {
+                    triggerRefs.current['gender'] = el;
                   }}
-                >
-                  <Text style={[styles.optionText, { color: theme.text }]}>
-                    {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+                  onOpen={() => openDropdownMenu('gender')}
+                  isOpen={openDropdown === 'gender'}
+                  hasError={submitted && errors['sex']}
+                  errorMsg={errors['sex']}
+                />
+              </View>
+            </View>
 
-      <View style={stylesObj.floatingNavContainer}>
-        <AdminBottomNav
-          activeTab="Register"
-          navigation={navigation}
-          onNavigate={onNavigateTab}
-        />
-      </View>
-    </SafeAreaView>
+            <ValidatedInput
+              label="Address"
+              field="address"
+              value={formData.address}
+              placeholder="Enter Address"
+              errors={errors}
+              onTextChange={handleTextChange}
+              theme={theme}
+              isDarkMode={isDarkMode}
+            />
+            <ValidatedInput
+              label="Birth Place"
+              field="birthplace"
+              value={formData.birthplace}
+              placeholder="Enter Birth Place"
+              errors={errors}
+              onTextChange={handleTextChange}
+              theme={theme}
+              isDarkMode={isDarkMode}
+            />
+            <ValidatedInput
+              label="Username"
+              field="username"
+              value={formData.username}
+              placeholder="Enter Username"
+              errors={errors}
+              onTextChange={handleTextChange}
+              theme={theme}
+              isDarkMode={isDarkMode}
+            />
+
+            <ValidatedInput
+              label="Password"
+              field="password"
+              value={formData.password}
+              placeholder="Enter Password"
+              secureTextEntry
+              errors={errors}
+              onTextChange={handleTextChange}
+              theme={theme}
+              isDarkMode={isDarkMode}
+            >
+              {!allCriteriaMet && formData.password.length > 0 && (
+                <View style={styles.requirementContainer}>
+                  <Requirement
+                    label="8-16 characters"
+                    met={passwordCriteria.length}
+                  />
+                  <Requirement
+                    label="Lowercase letter"
+                    met={passwordCriteria.lowercase}
+                  />
+                  <Requirement
+                    label="Uppercase letter"
+                    met={passwordCriteria.uppercase}
+                  />
+                  <Requirement
+                    label="Numeric character"
+                    met={passwordCriteria.numeric}
+                  />
+                  <Requirement
+                    label="Special character"
+                    met={passwordCriteria.special}
+                  />
+                </View>
+              )}
+            </ValidatedInput>
+
+            <ValidatedInput
+              label="Confirm Password"
+              field="confirm_password"
+              value={formData.confirm_password}
+              placeholder="Re-enter Password"
+              secureTextEntry
+              errors={errors}
+              onTextChange={handleTextChange}
+              theme={theme}
+              isDarkMode={isDarkMode}
+            />
+
+            <TouchableOpacity
+              style={[
+                stylesObj.submitBtn,
+                { backgroundColor: isDarkMode ? theme.primary : PRIMARY_LIGHT },
+              ]}
+              onPress={handleCreateAccount}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator
+                  color={isDarkMode ? '#FFF' : theme.primary}
+                />
+              ) : (
+                <Text
+                  style={[
+                    stylesObj.submitBtnText,
+                    { color: isDarkMode ? '#FFF' : PRIMARY_DARK },
+                  ]}
+                >
+                  CREATE ACCOUNT
+                </Text>
+              )}
+            </TouchableOpacity>
+            <View style={{ height: 100 }} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+
+        <Modal visible={openDropdown !== null} transparent animationType="none">
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setOpenDropdown(null)}
+          >
+            <View
+              style={[
+                styles.modalDropdown,
+                {
+                  top: dropdownPos.top,
+                  left: dropdownPos.left,
+                  width: dropdownPos.width,
+                  backgroundColor: theme.card,
+                  borderColor: PRIMARY_MED,
+                  borderTopWidth: 0,
+                },
+              ]}
+            >
+              <ScrollView
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="always"
+              >
+                {(openDropdown === 'role'
+                  ? roles
+                  : openDropdown === 'gender'
+                  ? genders
+                  : openDropdown === 'mm'
+                  ? months
+                  : openDropdown === 'dd'
+                  ? days
+                  : years
+                ).map(opt => (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[
+                      styles.dropdownOption,
+                      { borderBottomColor: theme.border },
+                    ]}
+                    onPress={() => {
+                      const key =
+                        openDropdown === 'gender' ? 'sex' : openDropdown!;
+                      setFormData(prev => ({ ...prev, [key]: opt }));
+                      validateField(key, opt);
+                      setOpenDropdown(null);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.optionText,
+                        { color: theme.text, fontFamily: 'AlteHaasGroteskBold' },
+                        openDropdown === 'role' &&
+                          opt === 'nurse' && { color: NURSE_TEXT },
+                        openDropdown === 'role' &&
+                          opt === 'doctor' && { color: DOCTOR_TEXT },
+                        openDropdown === 'role' &&
+                          opt === 'admin' && { color: ADMIN_TEXT_RED },
+                      ]}
+                    >
+                      {opt.toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
+        <View style={stylesObj.floatingNavContainer} pointerEvents="box-none">
+          <View
+            style={{ height: windowHeight, width: '100%' }}
+            pointerEvents="box-none"
+          >
+            <AdminBottomNav
+              activeTab="Register"
+              navigation={navigation}
+              onNavigate={onNavigateTab}
+            />
+          </View>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 };
 
@@ -712,20 +793,20 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'center',
+      alignItems: 'flex-start',
+      marginTop: Platform.OS === 'ios' ? 20 : 40,
       marginBottom: 35,
-      marginTop: 10,
     },
     headerTitle: {
       fontSize: 35,
-      color: '#035022',
+      color: theme.primary,
       fontFamily: 'MinionPro-SemiboldItalic',
     },
     headerDate: {
       fontSize: 14,
-      color: '#B2B2B2',
+      color: theme.textMuted,
       marginTop: 4,
-      fontWeight: 'bold',
+      fontFamily: 'AlteHaasGroteskBold',
     },
     submitBtn: {
       height: 50,
@@ -737,22 +818,25 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
       borderColor: PRIMARY_MED,
       marginBottom: 20,
     },
-    submitBtnText: { fontWeight: 'bold', fontSize: 14 },
+    submitBtnText: {
+      fontWeight: 'bold',
+      fontSize: 14,
+      fontFamily: 'AlteHaasGroteskBold',
+    },
     floatingNavContainer: {
       position: 'absolute',
-      bottom: 20,
-      left: 25,
-      right: 25,
-      elevation: 10,
-      shadowColor: '#000',
-      shadowOpacity: 0.1,
-      shadowRadius: 15,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'transparent',
+      zIndex: 1000,
     },
   });
 
 const styles = StyleSheet.create({
   labelRow: { flexDirection: 'row', marginTop: 15, marginBottom: 5 },
-  labelText: { fontSize: 15, fontWeight: 'bold' },
+  labelText: { fontSize: 15 },
   inputGroup: { marginBottom: 5 },
   inputWrapper: { position: 'relative', justifyContent: 'center' },
   input: {
@@ -765,7 +849,13 @@ const styles = StyleSheet.create({
   },
   eyeIcon: { position: 'absolute', right: 15 },
   inputError: { borderColor: 'red' },
-  errorText: { color: 'red', fontSize: 12, marginTop: 4, marginLeft: 5 },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 5,
+    fontFamily: 'AlteHaasGrotesk',
+  },
   pickerField: {
     height: 48,
     borderWidth: 1,
@@ -803,7 +893,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderBottomWidth: 0.5,
   },
-  optionText: { fontSize: 15 },
+  optionText: { fontSize: 14, fontWeight: 'bold' },
 });
 
 export default AdminRegisterScreen;

@@ -26,15 +26,20 @@ export const AccountModal = ({ visible, onClose, onLogout }: any) => {
   const [showLogoutAlert, setShowLogoutAlert] = React.useState(false);
 
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-  const styles = useMemo(() => createStyles(theme, isDarkMode), [theme, isDarkMode]);
+  const styles = useMemo(
+    () => createStyles(theme, isDarkMode),
+    [theme, isDarkMode],
+  );
 
   useEffect(() => {
     if (visible) {
+      // Optimized for a faster, snappier "scroll up"
       Animated.spring(translateY, {
         toValue: 0,
         useNativeDriver: true,
-        damping: 20,
-        stiffness: 100,
+        damping: 20,    // Controlled bounce
+        stiffness: 150, // Higher stiffness for faster entry
+        mass: 0.8,      // Lower mass for less "weight" during movement
       }).start();
     }
   }, [visible]);
@@ -57,10 +62,14 @@ export const AccountModal = ({ visible, onClose, onLogout }: any) => {
         if (gestureState.dy > 120 || gestureState.vy > 0.5) {
           handleDismiss();
         } else {
-          Animated.spring(translateY, { toValue: 0, useNativeDriver: true, bounciness: 6 }).start();
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 10,
+          }).start();
         }
       },
-    })
+    }),
   ).current;
 
   // Backdrop Interpolation
@@ -72,20 +81,31 @@ export const AccountModal = ({ visible, onClose, onLogout }: any) => {
 
   return (
     <>
-      <Modal transparent visible={visible} animationType="none" onRequestClose={handleDismiss}>
+      <Modal
+        transparent
+        visible={visible}
+        animationType="none"
+        onRequestClose={handleDismiss}
+      >
         <View style={styles.overlay}>
-          
           {/* Animated Blur/Dim Backdrop */}
-          <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropOpacity }]}>
+          <Animated.View
+            style={[StyleSheet.absoluteFill, { opacity: backdropOpacity }]}
+          >
             {Platform.OS === 'ios' ? (
               <BlurView
                 style={StyleSheet.absoluteFill}
-                blurType={isDarkMode ? "dark" : "light"}
+                blurType={isDarkMode ? 'dark' : 'light'}
                 blurAmount={10}
                 reducedTransparencyFallbackColor="black"
               />
             ) : (
-              <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
+              <View
+                style={[
+                  StyleSheet.absoluteFill,
+                  { backgroundColor: 'rgba(0,0,0,0.6)' },
+                ]}
+              />
             )}
             <TouchableWithoutFeedback onPress={handleDismiss}>
               <View style={{ flex: 1 }} />
@@ -93,27 +113,38 @@ export const AccountModal = ({ visible, onClose, onLogout }: any) => {
           </Animated.View>
 
           {/* Liquid Container */}
-          <Animated.View 
+          <Animated.View
             style={[styles.modalContainer, { transform: [{ translateY }] }]}
-            {...panResponder.panHandlers}
           >
-            <View style={styles.handle} />
-            <Text style={styles.titleText}>Account</Text>
+            {/* Gesture Handle Area - Only this part handles dragging */}
+            <View {...panResponder.panHandlers} style={styles.gestureHeader}>
+              <View style={styles.handle} />
+              <Text style={styles.titleText}>Account</Text>
+            </View>
 
             <View style={styles.profileSection}>
               <View style={styles.avatarBox}>
-                <Text style={styles.avatarText}>{user?.full_name?.charAt(0) || 'U'}</Text>
+                <Text style={styles.avatarText}>
+                  {user?.full_name?.charAt(0) || 'U'}
+                </Text>
               </View>
               <View style={styles.profileText}>
                 <Text style={styles.userName}>{user?.full_name || 'User'}</Text>
-<Text style={styles.userRole}>
-  {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase() : 'Role'}
-</Text>
+                <Text style={styles.userRole}>
+                  {user?.role
+                    ? user.role.charAt(0).toUpperCase() +
+                      user.role.slice(1).toLowerCase()
+                    : 'Role'}
+                </Text>
               </View>
             </View>
 
             <View style={styles.menuCard}>
-              <View style={styles.menuItem}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={toggleDarkMode}
+                activeOpacity={0.7}
+              >
                 <View style={styles.switchRow}>
                   <View style={styles.iconLabelRow}>
                     <Icon name="moon-outline" size={24} color={theme.primary} />
@@ -126,9 +157,12 @@ export const AccountModal = ({ visible, onClose, onLogout }: any) => {
                     value={isDarkMode}
                   />
                 </View>
-              </View>
+              </TouchableOpacity>
               <View style={styles.separator} />
-              <TouchableOpacity style={styles.menuItem} onPress={() => setShowLogoutAlert(true)}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => setShowLogoutAlert(true)}
+              >
                 <View style={styles.logoutRow}>
                   <Icon name="log-out-outline" size={24} color={theme.error} />
                   <Text style={styles.logoutLabel}>Log out</Text>
@@ -170,20 +204,84 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
       minHeight: SCREEN_HEIGHT * 0.45,
       elevation: 24,
     },
-    handle: { width: 45, height: 5, backgroundColor: theme.modalHandle, borderRadius: 3, alignSelf: 'center', marginBottom: 20 },
-    titleText: { fontSize: 18, color: theme.primary, textAlign: 'center', marginBottom: 25, fontWeight: 'bold' },
-    profileSection: { flexDirection: 'row', backgroundColor: theme.card, padding: 18, borderRadius: 22, alignItems: 'center', marginBottom: 15, borderWidth: 1, borderColor: theme.border },
-    avatarBox: { width: 55, height: 55, backgroundColor: theme.primary, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
+    gestureHeader: {
+      width: '100%',
+      paddingTop: 10,
+      paddingBottom: 5,
+      alignItems: 'center',
+    },
+    handle: {
+      width: 45,
+      height: 5,
+      backgroundColor: theme.modalHandle,
+      borderRadius: 3,
+      alignSelf: 'center',
+      marginBottom: 20,
+    },
+    titleText: {
+      fontSize: 18,
+      color: theme.primary,
+      textAlign: 'center',
+      marginBottom: 25,
+      fontWeight: 'bold',
+    },
+    profileSection: {
+      flexDirection: 'row',
+      backgroundColor: theme.card,
+      padding: 18,
+      borderRadius: 22,
+      alignItems: 'center',
+      marginBottom: 15,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    avatarBox: {
+      width: 55,
+      height: 55,
+      backgroundColor: theme.primary,
+      borderRadius: 15,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     avatarText: { color: '#FFF', fontSize: 24, fontWeight: 'bold' },
     profileText: { marginLeft: 16 },
     userName: { fontSize: 18, color: theme.primary, fontWeight: 'bold' },
-    userRole: { fontSize: 13, color: theme.textMuted, fontWeight: '600', marginTop: 2 },
-    menuCard: { backgroundColor: theme.card, borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: theme.border },
+    userRole: {
+      fontSize: 13,
+      color: theme.textMuted,
+      fontWeight: '600',
+      marginTop: 2,
+    },
+    menuCard: {
+      backgroundColor: theme.card,
+      borderRadius: 22,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
     menuItem: { padding: 20 },
-    menuText: { fontSize: 16, color: theme.text, marginLeft: 12, fontWeight: 'bold' },
-    switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    menuText: {
+      fontSize: 16,
+      color: theme.text,
+      marginLeft: 12,
+      fontWeight: 'bold',
+    },
+    switchRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
     iconLabelRow: { flexDirection: 'row', alignItems: 'center' },
-    separator: { height: 1, backgroundColor: theme.border, marginHorizontal: 20 },
+    separator: {
+      height: 1,
+      backgroundColor: theme.border,
+      marginHorizontal: 20,
+    },
     logoutRow: { flexDirection: 'row', alignItems: 'center' },
-    logoutLabel: { color: theme.error, fontSize: 16, marginLeft: 12, fontWeight: 'bold' },
+    logoutLabel: {
+      color: theme.error,
+      fontSize: 16,
+      marginLeft: 12,
+      fontWeight: 'bold',
+    },
   });

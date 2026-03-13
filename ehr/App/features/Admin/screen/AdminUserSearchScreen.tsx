@@ -9,10 +9,14 @@ import {
   TouchableOpacity, 
   ActivityIndicator, 
   Platform,
-  RefreshControl
+  RefreshControl,
+  StatusBar,
+  BackHandler,
+  useWindowDimensions
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Ensure this is installed
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage'; 
 
 import AdminBottomNav from '../components/AdminBottomNav';
 import apiClient from '@api/apiClient';
@@ -33,6 +37,8 @@ const AdminUserSearchScreen = ({ navigation }: any) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAccountModalVisible, setAccountModalVisible] = useState(false);
 
+  const { height: windowHeight } = useWindowDimensions();
+
   useEffect(() => {
     const timer = setTimeout(() => {
       searchInputRef.current?.focus();
@@ -45,7 +51,7 @@ const AdminUserSearchScreen = ({ navigation }: any) => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/auth/users');
+      const response = await apiClient.get('/admin/users');
       const staffOnly = (response.data || []).filter((u: any) => u.role?.toLowerCase() !== 'admin');
       setUsers(staffOnly);
     } catch (error) {
@@ -55,7 +61,6 @@ const AdminUserSearchScreen = ({ navigation }: any) => {
     }
   };
 
-  // --- RECENT SEARCHES LOGIC ---
   const loadRecentSearches = async () => {
     try {
       const saved = await AsyncStorage.getItem(RECENT_SEARCHES_KEY);
@@ -65,8 +70,8 @@ const AdminUserSearchScreen = ({ navigation }: any) => {
 
   const saveToRecents = async (user: any) => {
     try {
-      const filtered = recentUsers.filter(u => u.id !== user.id); // Remove duplicate if exists
-      const newRecents = [user, ...filtered].slice(0, 5); // Keep top 5
+      const filtered = recentUsers.filter(u => u.id !== user.id);
+      const newRecents = [user, ...filtered].slice(0, 5);
       setRecentUsers(newRecents);
       await AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(newRecents));
     } catch (e) { console.warn(e); }
@@ -91,7 +96,10 @@ const AdminUserSearchScreen = ({ navigation }: any) => {
   };
 
   const handleTabNavigation = (tab: 'Users' | 'Register' | 'Settings') => {
-    if (tab === 'Users') navigation.navigate('AdminMainScreen'); 
+    if (tab === 'Users') {
+      if (navigation.goBack) navigation.goBack();
+      else setActiveTab(tab);
+    } 
     else if (tab === 'Settings') setAccountModalVisible(true);
     else setActiveTab(tab);
   };
@@ -101,69 +109,77 @@ const AdminUserSearchScreen = ({ navigation }: any) => {
   }
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: theme.background }]}>
-      <AccountModal visible={isAccountModalVisible} onClose={() => { setAccountModalVisible(false); setActiveTab('Users'); }} />
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
+      <SafeAreaView style={styles.root}>
+        <AccountModal visible={isAccountModalVisible} onClose={() => { setAccountModalVisible(false); setActiveTab('Users'); }} />
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchUsers} colors={[theme.primary]} />}
-      >
-        <View style={styles.searchContainer}>
-          <View style={[styles.searchBarWrapper, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <Icon name="search" size={24} color={isDarkMode ? theme.textMuted : "#D9D9D9"} style={styles.searchIcon} />
-            <TextInput 
-              ref={searchInputRef}
-              style={[styles.searchBar, { color: theme.text }]} 
-              placeholder="Search User" 
-              placeholderTextColor="#D9D9D9" 
-              value={searchQuery} 
-              onChangeText={setSearchQuery} 
-            />
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchUsers} colors={[theme.primary]} />}
+        >
+          <View style={styles.searchContainer}>
+            <View style={[styles.searchBarWrapper, { backgroundColor: theme.card }]}>
+              <Ionicons name="search-outline" size={20} color={theme.textMuted} style={styles.searchIcon} />
+              <TextInput 
+                ref={searchInputRef}
+                style={[styles.searchBar, { color: theme.text }]} 
+                placeholder="Search User" 
+                placeholderTextColor={theme.textMuted} 
+                value={searchQuery} 
+                onChangeText={setSearchQuery} 
+              />
+            </View>
+          </View>
+
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>
+              {searchQuery.length > 0 ? 'Results' : 'Recents'}
+            </Text>
+            {!searchQuery && recentUsers.length > 0 && (
+              <TouchableOpacity onPress={clearRecents}>
+                <Text style={{color: theme.primary, fontSize: 12, fontWeight: 'bold', fontFamily: 'AlteHaasGroteskBold'}}>Clear</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.listSection}>
+            {searchQuery.length > 0 ? (
+              filteredUsers.length > 0 ? (
+                filteredUsers.map((item) => (
+                  <UserCard key={item.id} item={item} theme={theme} onPress={() => handleSelectUser(item)} />
+                ))
+              ) : (
+                <Text style={[styles.emptyText, { color: theme.textMuted }]}>No matches found</Text>
+              )
+            ) : (
+              recentUsers.map((item) => (
+                <UserCard key={`recent-${item.id}`} item={item} theme={theme} onPress={() => handleSelectUser(item)} />
+              ))
+            )}
+          </View>
+        </ScrollView>
+
+        <View style={styles.floatingNavContainer} pointerEvents="box-none">
+          <View style={{ height: windowHeight, width: '100%' }} pointerEvents="box-none">
+            <AdminBottomNav activeTab="Users" onNavigate={handleTabNavigation} />
           </View>
         </View>
-
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: isDarkMode ? theme.textMuted : '#B2B2B2' }]}>
-            {searchQuery.length > 0 ? 'Results' : 'Recents'}
-          </Text>
-          {!searchQuery && recentUsers.length > 0 && (
-            <TouchableOpacity onPress={clearRecents}>
-              <Text style={{color: theme.primary, fontSize: 12, fontWeight: 'bold'}}>Clear</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={styles.listSection}>
-          {searchQuery.length > 0 ? (
-            filteredUsers.length > 0 ? (
-              filteredUsers.map((item) => (
-                <UserCard key={item.id} item={item} theme={theme} onPress={() => handleSelectUser(item)} />
-              ))
-            ) : (
-              <Text style={[styles.emptyText, { color: theme.textMuted }]}>No matches found</Text>
-            )
-          ) : (
-            recentUsers.map((item) => (
-              <UserCard key={`recent-${item.id}`} item={item} theme={theme} onPress={() => handleSelectUser(item)} />
-            ))
-          )}
-        </View>
-      </ScrollView>
-
-      <View style={styles.floatingNavContainer}>
-        <AdminBottomNav activeTab="Users" navigation={navigation} onNavigate={handleTabNavigation} />
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 };
 
-// Sub-component for clean rendering
 const UserCard = ({ item, theme, onPress }: any) => (
   <TouchableOpacity style={styles.userCard} activeOpacity={0.6} onPress={onPress}>
-    <View style={[styles.iconBox, { backgroundColor: theme.card, borderColor: theme.border }]}>
-      <Icon name="person" size={26} color={theme.primary} />
+    <View style={styles.avatarCircle}>
+      <Icon name="person" size={24} color={theme.primary} />
     </View>
     <View style={styles.info}>
       <Text style={[styles.userName, { color: theme.text }]}>{item.full_name}</Text>
@@ -174,21 +190,46 @@ const UserCard = ({ item, theme, onPress }: any) => (
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  scrollContent: { paddingHorizontal: 35, paddingTop: 20, paddingBottom: 150 },
-  searchContainer: { marginBottom: 20 },
-  searchBarWrapper: { flexDirection: 'row', alignItems: 'center', borderRadius: 25, paddingHorizontal: 20, borderWidth: 1.5, height: 55 },
+  scrollContent: { paddingHorizontal: 40, paddingTop: Platform.OS === 'ios' ? 20 : 40, paddingBottom: 150 },
+  searchContainer: { marginBottom: 25 },
+  searchBarWrapper: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    borderRadius: 125, 
+    paddingHorizontal: 15, 
+    height: 50,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+  },
   searchIcon: { marginRight: 10 },
-  searchBar: { flex: 1, fontSize: 16 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingHorizontal: 5 },
-  sectionTitle: { fontSize: 14, fontWeight: 'bold' },
+  searchBar: { flex: 1, fontSize: 15, fontFamily: 'AlteHaasGrotesk' },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingHorizontal: 5 },
+  sectionTitle: { fontSize: 14, fontFamily: 'AlteHaasGroteskBold' },
   listSection: { marginTop: 5 },
-  userCard: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  iconBox: { width: 48, height: 48, borderRadius: 8, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
-  info: { marginLeft: 20 },
-  userName: { fontSize: 16, fontWeight: 'bold' },
-  userRole: { fontSize: 12, marginTop: 2, fontWeight: '500', textTransform: 'capitalize' },
-  floatingNavContainer: { position: 'absolute', bottom: 20, left: 20, right: 20, elevation: 10, zIndex: 100 },
-  emptyText: { textAlign: 'center', marginTop: 50 }
+  userCard: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, paddingVertical: 5 },
+  avatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  info: { marginLeft: 10 },
+  userName: { fontSize: 16, fontFamily: 'AlteHaasGrotesk' },
+  userRole: { fontSize: 12, marginTop: 2, textTransform: 'capitalize', fontFamily: 'AlteHaasGroteskBold' },
+  floatingNavContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    zIndex: 1000,
+  },
+  emptyText: { textAlign: 'center', marginTop: 50, fontFamily: 'AlteHaasGrotesk' }
 });
 
 export default AdminUserSearchScreen;

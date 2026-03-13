@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons'; 
-import { useAppTheme } from '@App/theme/ThemeContext'; // Import Added
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAppTheme } from '@App/theme/ThemeContext';
+import { Shadow } from 'react-native-shadow-2';
 
 interface AdminBottomNavProps {
   activeTab: 'Users' | 'Register' | 'Settings';
@@ -9,101 +11,145 @@ interface AdminBottomNavProps {
 }
 
 const AdminBottomNav = ({ activeTab, onNavigate }: AdminBottomNavProps) => {
-  const { theme, isDarkMode } = useAppTheme(); // Access Theme
+  const { theme, isDarkMode } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
-  // Theme-aware colors
-  const primaryTheme = theme.primary; 
-  const activeBg = isDarkMode ? 'rgba(41, 165, 57, 0.15)' : '#E0FFDD'; 
-  const inactiveGrey = theme.textMuted; 
-  const navContainerBg = theme.card;
+  const styles = React.useMemo(
+    () => createStyles(theme, isDarkMode, insets.bottom),
+    [theme, isDarkMode, insets.bottom],
+  );
 
-  const tabs = [
+  const tabs: {
+    id: 'Users' | 'Register' | 'Settings';
+    icon: string;
+    label: string;
+  }[] = [
     { id: 'Users', icon: 'account-circle', label: 'Users' },
     { id: 'Register', icon: 'person-add-alt-1', label: 'Register' },
     { id: 'Settings', icon: 'settings', label: 'Settings' },
   ];
 
+  const NavItem = ({ label, id, icon }: any) => {
+    const isActive = activeTab === id;
+
+    return (
+      <TouchableOpacity
+        onPress={() => onNavigate?.(id)}
+        style={styles.navItemWrapper}
+      >
+        <View style={[styles.navItem, isActive && styles.activeNavItem]}>
+          <Icon
+            name={icon}
+            size={22}
+            color={
+              isActive ? (isDarkMode ? theme.primary : '#29A539') : '#848484'
+            }
+          />
+          <Text
+            style={[
+              styles.navLabel,
+              isActive && {
+                color: isDarkMode ? theme.primary : '#29A539',
+                fontWeight: 'bold',
+              },
+            ]}
+          >
+            {label}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <View style={styles.navbarWrapper}>
-      <View style={[styles.navbarContainer, { backgroundColor: navContainerBg, borderColor: theme.border }]}>
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.id;
-          
-          return (
-            <TouchableOpacity 
+    <>
+      <View
+        style={[styles.bottomFill, { backgroundColor: theme.background }]}
+      />
+      <Shadow
+        distance={7}
+        startColor={'rgba(0, 0, 0, 0.1)'}
+        containerStyle={styles.shadowContainer}
+        style={[
+          styles.shadowShape,
+          { backgroundColor: theme.card || '#FFFFFF' },
+        ]}
+      >
+        <View
+          style={[
+            styles.bottomNav,
+            { backgroundColor: theme.card || '#FFFFFF' },
+          ]}
+        >
+          {tabs.map(tab => (
+            <NavItem
               key={tab.id}
-              style={styles.navItem} 
-              onPress={() => onNavigate?.(tab.id as any)}
-              activeOpacity={0.7}
-            >
-              {/* The Active Capsule Background */}
-              <View style={[
-                styles.iconIndicator, 
-                { backgroundColor: isActive ? activeBg : 'transparent' }
-              ]}>
-                <Icon 
-                  name={tab.icon} 
-                  size={25} 
-                  color={isActive ? primaryTheme : inactiveGrey} 
-                />
-                
-                <Text style={[
-                  styles.navText, 
-                  { 
-                    color: isActive ? primaryTheme : inactiveGrey,
-                    fontWeight: isActive ? '500' : '400' 
-                  }
-                ]}>
-                  {tab.label}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </View>
+              label={tab.label}
+              id={tab.id}
+              icon={tab.icon}
+            />
+          ))}
+        </View>
+      </Shadow>
+    </>
   );
 };
 
-const styles = StyleSheet.create({
-  navbarWrapper: {
-    position: 'absolute',
-    bottom: 20, 
-    left: 15,
-    right: 15,
-    zIndex: 100,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  navbarContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    borderRadius: 60, 
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconIndicator: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 100, 
-  },
-  navText: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-});
+const createStyles = (theme: any, isDarkMode: boolean, bottomInset: number) =>
+  StyleSheet.create({
+    shadowContainer: {
+      position: 'absolute',
+      bottom: Math.max(bottomInset, 16) + 8,
+      left: 20,
+      right: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+    },
+    bottomFill: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: Math.max(bottomInset, 16) + 50,
+      zIndex: 999,
+    },
+    shadowShape: {
+      width: '100%',
+      alignSelf: 'stretch',
+      borderRadius: 35,
+    },
+    bottomNav: {
+      width: '100%',
+      height: 70,
+      borderRadius: 35,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+    },
+    navItemWrapper: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    navItem: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+      width: '100%',
+      height: '100%',
+    },
+    activeNavItem: {
+      backgroundColor:
+        theme.navActiveBg ||
+        (isDarkMode ? 'rgba(41, 165, 57, 0.15)' : '#E0FFDD'),
+      borderRadius: 50,
+      width: '95%',
+      height: 55,
+    },
+    navLabel: {
+      fontSize: 11,
+      color: '#848484',
+      fontFamily: 'AlteHaasGroteskBold',
+      marginBottom: -4,
+    },
+  });
 
 export default AdminBottomNav;

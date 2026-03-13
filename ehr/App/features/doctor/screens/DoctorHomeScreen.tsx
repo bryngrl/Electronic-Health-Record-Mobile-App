@@ -120,7 +120,7 @@ const DoctorHomeScreen = ({
         <View style={styles.stickyHeaderRow}>
           <View>
             <Text style={styles.welcome}>
-              Hello, {user?.full_name || 'Doctor'}
+              Hello, {user?.full_name?.split(' ')[0] || 'Doctor'}
             </Text>
             <Text style={styles.date}>
               {new Date().toLocaleDateString('en-US', {
@@ -222,7 +222,7 @@ const DoctorHomeScreen = ({
         <View style={styles.header}>
           <View>
             <Text style={styles.welcome}>
-              Hello, {user?.full_name || 'Doctor'}
+              Hello, {user?.full_name?.split(' ')[0] || 'Doctor'}
             </Text>
             <Text style={styles.date}>
               {new Date().toLocaleDateString('en-US', {
