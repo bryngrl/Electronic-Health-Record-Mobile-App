@@ -1,9 +1,9 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BACKEND_PORT = 8000;
-const YOUR_IP = '192.168.1.21';
-const host = YOUR_IP;
+// const BACKEND_PORT = 8000;
+// const YOUR_IP = '192.168.1.21';
+// const host = YOUR_IP;
 
 export const BASE_URL = `http://${host}:${BACKEND_PORT}/`;
 
