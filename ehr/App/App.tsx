@@ -3,9 +3,7 @@ import { ActivityIndicator, View, Platform } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import HomeScreen from '@features/nurse/Dashboard/screen/HomeScreen';
 import DoctorMainScreen from '@features/doctor/screens/DoctorMainScreen';
-import AdminHomeScreen from '@features/admin/screen/AdminHomeScreen';
 import LoginScreen from '@features/Auth/screen/LoginScreen';
-// Added Admin Screen import
 import AdminMainScreen from '@features/Admin/screen/AdminMainScreen';
 import { ThemeProvider, useAppTheme } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from '@features/Auth/AuthContext';
