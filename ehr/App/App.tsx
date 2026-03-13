@@ -5,6 +5,8 @@ import HomeScreen from '@features/nurse/Dashboard/screen/HomeScreen';
 import DoctorMainScreen from '@features/doctor/screens/DoctorMainScreen';
 import AdminHomeScreen from '@features/admin/screen/AdminHomeScreen';
 import LoginScreen from '@features/Auth/screen/LoginScreen';
+// Added Admin Screen import
+import AdminMainScreen from '@features/Admin/screen/AdminMainScreen';
 import { ThemeProvider, useAppTheme } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from '@features/Auth/AuthContext';
 import SplashScreen from '@components/SplashScreen';
@@ -19,7 +21,9 @@ const NetworkMonitor = () => {
 const MainApp = () => {
   const { user, isLoading } = useAuth();
   const { theme } = useAppTheme();
-  const [splashFinished, setSplashFinished] = useState(Platform.OS !== 'android');
+  const [splashFinished, setSplashFinished] = useState(
+    Platform.OS !== 'android',
+  );
 
   // Wait for auth to resolve so splash knows which animation to play
   const nextScreen = !user ? 'Login' : 'Home';
@@ -41,7 +45,14 @@ const MainApp = () => {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: theme.background,
+        }}
+      >
         <ActivityIndicator size="large" color="#004d26" />
       </View>
     );
@@ -57,9 +68,9 @@ const MainApp = () => {
   } else if (role === 'doctor') {
     content = <DoctorMainScreen />;
   } else if (role === 'admin') {
-    content = <AdminHomeScreen />;
+    content = <AdminMainScreen />;
   } else {
-    // Fallback for unknown roles
+    // Fallback for unknown rolesx
     content = <LoginScreen />;
   }
 

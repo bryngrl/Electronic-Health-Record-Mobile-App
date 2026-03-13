@@ -403,12 +403,23 @@ const patients = [
   },
 ];
 
-const YOUR_IP = '192.168.1.14'; //change this to match your current ip (ipconfig in cmd prompt)
-const API_URL = 'http://' + YOUR_IP + ':8000/patients/';
+const DEFAULT_BACKEND_HOST = '127.0.0.1';
+const DEFAULT_BACKEND_PORT = '8000';
+const DEFAULT_PATIENTS_PATH = '/patients/';
+
+// Override examples:
+// PowerShell: $env:SEED_API_URL='http://192.168.1.20:8000/patients/'; node PatientSeed.js
+// PowerShell: $env:SEED_HOST='192.168.1.20'; $env:SEED_PORT='8000'; node PatientSeed.js
+const API_URL =
+  process.env.SEED_API_URL ||
+  `http://${process.env.SEED_HOST || DEFAULT_BACKEND_HOST}:${
+    process.env.SEED_PORT || DEFAULT_BACKEND_PORT
+  }${process.env.SEED_PATH || DEFAULT_PATIENTS_PATH}`;
 
 async function seedPatients() {
   console.log('--- Seeding Patients ---');
   console.log(`Starting seed process for ${patients.length} patients...`);
+  console.log(`Target API: ${API_URL}`);
 
   for (let i = 0; i < patients.length; i++) {
     try {

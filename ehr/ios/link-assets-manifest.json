@@ -1,0 +1,25 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "assets/fonts/AlteHaasGroteskBold.ttf",
+      "sha1": "6294f6b10900dab6d9667f6fb589b27a72998d01"
+    },
+    {
+      "path": "assets/fonts/AlteHaasGroteskRegular.ttf",
+      "sha1": "45cda920d4c140e22e4e65eeee540dda864bd3c7"
+    },
+    {
+      "path": "assets/fonts/AnekGujarati-VariableFont_wdth,wght.ttf",
+      "sha1": "71fdc57c6f1360d98dde57fb3f0ada1f5ee165d5"
+    },
+    {
+      "path": "assets/fonts/AnekGujarati.ttf",
+      "sha1": "71fdc57c6f1360d98dde57fb3f0ada1f5ee165d5"
+    },
+    {
+      "path": "assets/fonts/MinionPro-SemiboldItalic.otf",
+      "sha1": "0318a14112751cf08bf8d881e7c03445e251a2ea"
+    }
+  ]
+}

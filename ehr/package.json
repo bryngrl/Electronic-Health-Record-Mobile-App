@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android",
+    "android:usb": "adb reverse tcp:8081 tcp:8081 && adb reverse tcp:8000 tcp:8000 && react-native run-android",
+    "reverse:backend": "adb reverse tcp:8000 tcp:8000",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
@@ -26,7 +28,7 @@
     "react-native-image-picker": "^8.2.1",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-reanimated": "^4.2.2",
-    "react-native-safe-area-context": "^5.5.2",
+    "react-native-safe-area-context": "^5.7.0",
     "react-native-shadow-2": "^7.1.2",
     "react-native-svg": "^15.15.3",
     "react-native-vector-icons": "^10.3.0",
