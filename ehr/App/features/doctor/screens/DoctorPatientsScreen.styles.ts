@@ -125,7 +125,7 @@ export const createModalStyles = (theme: any) =>
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      backgroundColor: 'theme.card2',
+      backgroundColor: theme.card2,
       borderRadius: 18,
       padding: 10,
       marginBottom: 12,
