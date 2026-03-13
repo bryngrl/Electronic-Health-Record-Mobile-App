@@ -1,6 +1,8 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL, HOST, BACKEND_PORT } from './config';
+import { authEmitter, AUTH_EVENTS } from '@features/Auth/AuthEmitter';
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -53,16 +55,18 @@ apiClient.interceptors.response.use(
 
       // If we get a 403 (or 401) it might be because the interceptor token was stale
       // We can try to re-read from storage one time for specific requests
-      if (
-        (error.response.status === 403 || error.response.status === 401) &&
-        !originalRequest._retry
-      ) {
-        originalRequest._retry = true;
-        const token = await AsyncStorage.getItem('token');
-        if (token) {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return apiClient(originalRequest);
+      if (error.response.status === 403 || error.response.status === 401) {
+        if (!originalRequest._retry) {
+          originalRequest._retry = true;
+          const token = await AsyncStorage.getItem('token');
+          if (token) {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return apiClient(originalRequest);
+          }
         }
+        // If retry already happened or no token found, force logout
+        console.warn('Auth error detected, forcing logout...');
+        authEmitter.emit(AUTH_EVENTS.FORCE_LOGOUT);
       }
     } else if (error.request) {
       // Request made but no response received

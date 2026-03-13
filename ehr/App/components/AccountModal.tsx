@@ -206,9 +206,10 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
     },
     gestureHeader: {
       width: '100%',
-      paddingTop: 10,
-      paddingBottom: 5,
+      paddingTop: 15,
+      paddingBottom: 25,
       alignItems: 'center',
+      backgroundColor: 'transparent',
     },
     handle: {
       width: 45,
@@ -216,13 +217,12 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
       backgroundColor: theme.modalHandle,
       borderRadius: 3,
       alignSelf: 'center',
-      marginBottom: 20,
     },
     titleText: {
       fontSize: 18,
       color: theme.primary,
       textAlign: 'center',
-      marginBottom: 25,
+      marginTop: 20,
       fontWeight: 'bold',
     },
     profileSection: {

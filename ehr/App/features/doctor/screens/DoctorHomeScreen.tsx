@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
+  StatusBar,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useDoctorDashboardLogic } from '../hooks/useDoctorDashboardLogic';
@@ -104,6 +105,11 @@ const DoctorHomeScreen = ({
 
   return (
     <View style={styles.root}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <Animated.View
         pointerEvents={showStickyHeader ? 'auto' : 'none'}
         onLayout={event => {

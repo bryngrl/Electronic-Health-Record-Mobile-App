@@ -48,7 +48,7 @@ export default function LoginScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <KeyboardAvoidingView
         style={styles.container}
@@ -104,7 +104,7 @@ export default function LoginScreen() {
         onCancel={hideAlert}
         onConfirm={hideAlert}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
