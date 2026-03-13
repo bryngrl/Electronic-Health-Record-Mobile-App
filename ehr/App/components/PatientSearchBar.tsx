@@ -13,8 +13,14 @@ import {
   Keyboard,
   Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import apiClient from '@api/apiClient';
 import { useAppTheme } from '@App/theme/ThemeContext';
+
+// Cache key derived from endpoint so nurse and doctor endpoints are stored separately
+const getCacheKey = (endpoint: string) =>
+  `psb_cache_${endpoint.replace(/[^a-z0-9]/gi, '_')}`;
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -43,6 +49,7 @@ interface PatientSearchBarProps {
   label?: string;
   initialPatientName?: string;
   placeholder?: string;
+  apiEndpoint?: string;
 }
 
 const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
@@ -55,6 +62,7 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
   label = 'PATIENT NAME :',
   initialPatientName = '',
   placeholder = 'Select Patient name',
+  apiEndpoint = '/patient?all=true',
 }) => {
   const { theme, isDarkMode } = useAppTheme();
   const styles = useMemo(() => createStyles(theme, isDarkMode), [theme, isDarkMode]);
@@ -81,11 +89,25 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
   }, [showDropdown, onToggleDropdown]);
 
   useEffect(() => {
-    const fetchPatients = async () => {
+    const cacheKey = getCacheKey(apiEndpoint);
+
+    const loadAndFetch = async () => {
+      // Load cache for instant display
+      try {
+        const cached = await AsyncStorage.getItem(cacheKey);
+        if (cached) {
+          const parsed: Patient[] = JSON.parse(cached);
+          setPatients(parsed);
+          setFilteredPatients(parsed);
+          setLoading(false); // show cached data immediately
+        }
+      } catch {}
+
+      // Always fetch fresh data in background
       setLoading(true);
       setError(null);
       try {
-        const response = await apiClient.get('/patients/');
+        const response = await apiClient.get(apiEndpoint);
         let raw = [];
         if (Array.isArray(response.data)) {
           raw = response.data;
@@ -112,15 +134,18 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
             return hasId && isActive;
           })
           .sort((a, b) => {
-            const lastCompare = (a.last_name || '').localeCompare(
-              b.last_name || '',
-            );
-            if (lastCompare !== 0) return lastCompare;
-            return (a.first_name || '').localeCompare(b.first_name || '');
+            const dateA = new Date(a.created_at || a.admission_date || 0).getTime();
+            const dateB = new Date(b.created_at || b.admission_date || 0).getTime();
+            if (dateA !== dateB) return dateB - dateA;
+
+            const idA = a.id || 0;
+            const idB = b.id || 0;
+            return idB - idA;
           });
 
         setPatients(normalized);
         setFilteredPatients(normalized);
+        AsyncStorage.setItem(cacheKey, JSON.stringify(normalized)).catch(() => {});
       } catch (err: any) {
         console.error('PatientSearchBar Error:', err);
         setError('Connection failed.');
@@ -128,8 +153,9 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
         setLoading(false);
       }
     };
-    fetchPatients();
-  }, []);
+
+    loadAndFetch();
+  }, [apiEndpoint]);
 
   const handleSearch = (text: string) => {
     setSearchText(text);
@@ -176,6 +202,7 @@ const PatientSearchBar: React.FC<PatientSearchBarProps> = ({
             inputRef.current?.focus();
           }}
         >
+          <Ionicons name="search-outline" size={20} color={theme.textMuted} style={styles.searchIconLeft} />
           <TextInput
             ref={inputRef}
             style={[styles.searchInput, inputStyle]}
@@ -267,17 +294,18 @@ const createStyles = (theme: any, isDarkMode: boolean) => StyleSheet.create({
   },
   searchBar: {
     borderRadius: 25,
-    paddingHorizontal: 20,
-    height: 48,
+    paddingHorizontal: 15,
+    height: 50,
     borderWidth: 1.5,
     borderColor: theme.border,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.card,
   },
+  searchIconLeft: { marginRight: 10 },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     color: theme.text,
     height: '100%',
     fontFamily: 'AlteHaasGrotesk',

@@ -9,16 +9,17 @@ import {
   Image,
 } from 'react-native';
 import CDSSModal from '@components/CDSSModal';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 const alert1 = require('@assets/icons/alert_bell_icon.png');
 
-interface ExamInputProps {
+interface ADLInputCardProps {
   label: string;
   value: string;
   disabled: boolean;
-  alertText?: string;
+  dataAlert?: string | null;
+  alertSeverity?: string | null;
   onChangeText: (text: string) => void;
-  readOnly?: boolean;
   onDisabledPress?: () => void;
 }
 
@@ -29,18 +30,18 @@ const ADLInputCard = ({
   label,
   value,
   disabled,
-  alertText,
+  dataAlert,
+  alertSeverity,
   onChangeText,
-  readOnly = false,
   onDisabledPress,
-}: ExamInputProps) => {
+}: ADLInputCardProps) => {
+  const { theme } = useAppTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const [inputHeight, setInputHeight] = useState(
     4 * LINE_HEIGHT + INPUT_PADDING_BOTTOM,
   );
 
-  const isAlertActive = value.trim().length > 0 && value !== 'N/A';
-  const hasBackendAlert = !!alertText && alertText.trim().length > 0;
+  const hasBackendAlert = !!dataAlert;
 
   const visibleTypingHeight = Math.max(0, inputHeight - INPUT_PADDING_BOTTOM);
   const numLines = Math.max(
@@ -72,7 +73,7 @@ const ADLInputCard = ({
   };
 
   return (
-    <View style={[styles.card, (disabled || readOnly) && { opacity: 0.9 }]}>
+    <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.headerText}>{label}</Text>
       </View>
@@ -84,11 +85,7 @@ const ADLInputCard = ({
 
         <Pressable
           style={styles.inputArea}
-          onPress={() => {
-            if (disabled && onDisabledPress) {
-              onDisabledPress();
-            }
-          }}
+          onPress={() => disabled && onDisabledPress?.()}
         >
           <View style={styles.linesContainer} pointerEvents="none">
             {renderLines()}
@@ -97,25 +94,29 @@ const ADLInputCard = ({
           <TextInput
             style={styles.input}
             value={value}
-            onChangeText={(t) => { if (!readOnly) onChangeText(t); }}
+            onChangeText={onChangeText}
             multiline
-            editable={!disabled && !readOnly}
-            placeholder={readOnly ? "No findings recorded" : "Type findings..."}
-            placeholderTextColor="#999"
-            onContentSizeChange={e => {
-              setInputHeight(e.nativeEvent.contentSize.height);
-            }}
+            editable={!disabled}
+            placeholder="Type findings..."
+            pointerEvents={disabled ? 'none' : 'auto'}
+            onContentSizeChange={e =>
+              setInputHeight(e.nativeEvent.contentSize.height)
+            }
           />
         </Pressable>
 
         <TouchableOpacity
           style={[
             styles.alertIcon,
-            { opacity: isAlertActive ? 1.0 : 0.3 },
-            hasBackendAlert && styles.activeAlert,
+            {
+              backgroundColor: hasBackendAlert
+                ? theme.alertBellOnBg
+                : theme.alertBellOffBg,
+              opacity: hasBackendAlert ? 1.0 : 0.3,
+            },
           ]}
-          onPress={() => isAlertActive && setModalVisible(true)}
-          disabled={!isAlertActive}
+          onPress={() => hasBackendAlert && !disabled && setModalVisible(true)}
+          disabled={!hasBackendAlert || disabled}
         >
           <Image source={alert1} style={styles.alertImage} />
         </TouchableOpacity>
@@ -125,7 +126,8 @@ const ADLInputCard = ({
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         category={label}
-        alertText={alertText || 'Analyzing findings for potential risks...'}
+        alertText={dataAlert || 'No clinical findings found.'}
+        severity={alertSeverity ?? undefined}
       />
     </View>
   );
@@ -137,6 +139,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     marginBottom: 20,
     overflow: 'hidden',
+    elevation: 2,
     borderWidth: 1,
     borderColor: '#FEF3C7',
   },
@@ -198,7 +201,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 10,
     right: 15,
-    backgroundColor: '#FEF3C7',
     borderRadius: 22,
     width: 44,
     height: 44,
@@ -211,9 +213,6 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 22,
     resizeMode: 'cover',
-  },
-  activeAlert: {
-    backgroundColor: '#FDE68A',
   },
 });
 

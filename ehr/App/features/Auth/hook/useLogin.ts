@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 import apiClient from '@api/apiClient';
 import { useAuth } from '../AuthContext';
+import { useToast } from '@App/context/ToastContext';
 
 export const useLogin = () => {
   const [email, setEmail] = useState('');
@@ -21,6 +22,7 @@ export const useLogin = () => {
   });
 
   const { login } = useAuth();
+  const { showToast } = useToast();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
 
@@ -49,48 +51,28 @@ export const useLogin = () => {
 
     setIsSubmitting(true);
     try {
-      console.log('Attempting login with:', { email, password: '***' });
-      
-      // Send as JSON body instead of query parameters for better security and reliability
-      const response = await apiClient.post('/auth/login', {
-        email: email.trim(),
-        password: password
-      });
+      console.log('Attempting login with:', { email, password: '[HIDDEN]' });
+      const response = await apiClient.post('/auth/login', { username: email, password });
 
       console.log('Login response:', response.data);
-      const { access_token, role, full_name, user_id } = response.data;
+      const { access_token, role, full_name, user_id, email: userEmail } = response.data;
 
-      await login(
-        {
-          id: user_id,
-          full_name,
-          email: email.trim(),
-          role,
-        },
-        access_token,
-      );
+      await login({ id: user_id, full_name, email: userEmail ?? email, role }, access_token);
+      console.log('[Login] Stored email:', userEmail ?? email);
 
-      console.log('Login successful as', role);
+      showToast(`Welcome back, ${full_name || email}!`, 'success', 4000);
     } catch (error: any) {
-      console.error('Login error detail:', error);
-      let errorMessage = 'Invalid email or password';
+      console.error('Login error full:', error);
+      let errorMessage = 'Invalid username or password';
 
-      if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        if (error.response.status === 401) {
-          errorMessage = 'The email or password you entered is incorrect.';
-        } else if (error.response.status === 404) {
-          errorMessage = 'Login service not found. Please contact support.';
-        } else if (error.response.data?.detail) {
-          const detail = error.response.data.detail;
-          errorMessage = typeof detail === 'string' ? detail : JSON.stringify(detail);
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          errorMessage = detail.map((err: any) => `${err.loc.join('.')}: ${err.msg}`).join('\n');
+        } else if (typeof detail === 'string') {
+          errorMessage = detail;
         }
-      } else if (error.request) {
-        // The request was made but no response was received
-        errorMessage = 'Cannot connect to server. Please check your internet connection.';
-      } else {
-        // Something happened in setting up the request that triggered an Error
+      } else if (error.message) {
         errorMessage = error.message;
       }
 

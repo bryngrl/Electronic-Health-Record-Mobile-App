@@ -76,7 +76,7 @@ const MedicalReconCard = ({
             multiline
             editable={!disabled}
             placeholder="Type here..."
-            placeholderTextColor="#D1D1D1"
+            placeholderTextColor="#C7C7CD"
             pointerEvents={disabled ? 'none' : 'auto'}
             onContentSizeChange={e => {
               setInputHeight(e.nativeEvent.contentSize.height);

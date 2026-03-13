@@ -65,7 +65,7 @@ const DashboardSummary = ({
   onPatientSelect: (id: number) => void;
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const styles = createStyles(theme, commonStyles);
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -76,7 +76,19 @@ const DashboardSummary = ({
   const [recentFeatures, setRecentFeatures] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchLatestPatients();
+    if (token) {
+      fetchLatestPatients(true);
+
+      // Automatic polling every 2 seconds matching Demographic Profile
+      const interval = setInterval(() => {
+        fetchLatestPatients(false);
+      }, 2000);
+
+      return () => clearInterval(interval);
+    }
+  }, [token]);
+
+  useEffect(() => {
     loadRecentFeatures();
   }, []);
 
@@ -135,23 +147,48 @@ const DashboardSummary = ({
     onNavigate(featureId);
   };
 
-  const fetchLatestPatients = async () => {
+  const fetchLatestPatients = async (showLoading = true) => {
     try {
-      setLoading(true);
-      const response = await apiClient.get('/patients/');
-      if (response.data && Array.isArray(response.data)) {
-        const activePatients = response.data.filter(
-          (patient: any) =>
-            patient.is_active === '1' ||
-            patient.is_active === 1 ||
-            patient.is_active === true,
-        );
-        setPatients(activePatients.reverse());
+      if (showLoading) setLoading(true);
+      // We use all=true to ensure we get both active and inactive patients.
+      // This ensures patients don't disappear from the list when their status changes.
+      const timestamp = new Date().getTime();
+      const response = await apiClient.get(`/patient?all=true&t=${timestamp}`);
+
+      let rawData = [];
+      if (Array.isArray(response.data)) {
+        rawData = response.data;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        rawData = response.data.data;
+      }
+
+      if (rawData.length > 0) {
+        // Map data and filter for active-only on the Dashboard.
+        const mappedPatients = rawData
+          .map((p: any) => ({
+            ...p,
+            id: p.id || p.patient_id,
+            patient_id: p.patient_id || p.id,
+            isActive:
+              String(p.is_active) === '1' ||
+              p.is_active === true ||
+              p.is_active === 1,
+          }))
+          .filter(p => p.isActive) // Dashboard should ONLY show active patients
+          .sort((a, b) => {
+            const dateA = new Date(a.created_at || a.admission_date).getTime();
+            const dateB = new Date(b.created_at || b.admission_date).getTime();
+            return dateB - dateA;
+          });
+
+        setPatients(mappedPatients);
+      } else {
+        setPatients([]);
       }
     } catch (error) {
-      console.error('Connection Error:', error);
+      console.error('Connection Error fetching patients:', error);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -218,7 +255,7 @@ const DashboardSummary = ({
             />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search patients..."
+              placeholder="Search"
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholderTextColor={theme.textMuted}
@@ -227,7 +264,7 @@ const DashboardSummary = ({
 
           <Text style={styles.sectionTitle}>New Registered Patients</Text>
 
-          {loading ? (
+          {loading && patients.length === 0 ? (
             <ActivityIndicator
               color={theme.primary}
               style={{ marginVertical: 20 }}
@@ -415,7 +452,7 @@ const createStyles = (theme: any, commonStyles: any) =>
       backgroundColor: theme.card,
       borderRadius: 125,
       paddingHorizontal: 15,
-      height: 60,
+      height: 50,
       borderWidth: 0,
       borderColor: theme.border,
       marginBottom: 25,

@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
@@ -15,6 +16,9 @@ interface CDSSModalProps {
   title?: string;
   category?: string;
   alertText: string;
+  severity?: string;
+  loading?: boolean;
+  bulletFormat?: boolean;
 }
 
 const CDSSModal: React.FC<CDSSModalProps> = ({
@@ -23,54 +27,48 @@ const CDSSModal: React.FC<CDSSModalProps> = ({
   title = 'Clinical Guidance',
   category,
   alertText,
+  severity,
+  loading = false,
+  bulletFormat = false,
 }) => {
+  const getSeverityStyle = (sev?: string) => {
+    switch ((sev || '').toUpperCase()) {
+      case 'CRITICAL': return { bg: '#FDECEA', text: '#C62828', label: 'CRITICAL' };
+      case 'WARNING':  return { bg: '#FFF3E0', text: '#E65100', label: 'WARNING' };
+      case 'INFO':     return { bg: '#E8F5E9', text: '#2E7D32', label: 'INFO' };
+      default:         return null;
+    }
+  };
+
+  const severityStyle = getSeverityStyle(severity);
   const renderFormattedText = (text: string) => {
     if (!text || typeof text !== 'string') return null;
-    // Split by " | " or newlines in case there are multiple concatenated alerts
-    const lines = text.split(/ \| |\n/);
+    const lines = bulletFormat
+      ? text.split(/;\s*| \| |\n/).filter(l => l.trim())
+      : text.split(/ \| |\n/).filter(l => l.trim());
+    const isMultiple = bulletFormat && lines.length > 1;
 
     return lines.map((line, index) => {
-      if (!line.trim()) return null;
-
       const upperLine = line.toUpperCase();
-      let titleColor = '#333'; // Default black for text
+      let titleColor = '#333';
       let alertTitle = '';
       let alertDesc = line;
 
-      // 1. Identify Severity and set Title Color
-      if (
-        line.includes('🔴') ||
-        upperLine.includes('CRITICAL') ||
-        upperLine.includes('SEVERE')
-      ) {
-        titleColor = '#C62828'; // Deep Red
-      } else if (
-        line.includes('🟠') ||
-        upperLine.includes('WARNING') ||
-        upperLine.includes('LOW')
-      ) {
-        titleColor = '#E65100'; // Deep Orange
-      } else if (
-        line.includes('✓') ||
-        upperLine.includes('NORMAL') ||
-        upperLine.includes('INFO') ||
-        upperLine.includes('SUCCESS')
-      ) {
-        titleColor = '#2E7D32'; // Deep Green
+      if (line.includes('🔴') || upperLine.includes('CRITICAL') || upperLine.includes('SEVERE')) {
+        titleColor = '#C62828';
+      } else if (line.includes('🟠') || upperLine.includes('WARNING') || upperLine.includes('LOW')) {
+        titleColor = '#E65100';
+      } else if (line.includes('✓') || upperLine.includes('NORMAL') || upperLine.includes('INFO') || upperLine.includes('SUCCESS')) {
+        titleColor = '#2E7D32';
       }
 
-      // 2. Try to split into Title and Description at the colon
       const splitIndex = line.indexOf(':');
       if (splitIndex !== -1) {
         alertTitle = line.substring(0, splitIndex + 1);
         alertDesc = line.substring(splitIndex + 1);
       } else {
-        // Fallback: If no colon, try to color the first part if it has an emoji
         const words = line.split(' ');
-        if (
-          words.length > 1 &&
-          (line.includes('🔴') || line.includes('🟠') || line.includes('✓'))
-        ) {
+        if (words.length > 1 && (line.includes('🔴') || line.includes('🟠') || line.includes('✓'))) {
           alertTitle = words[0] + ' ' + (words[1] || '') + ' ';
           alertDesc = words.slice(2).join(' ');
         } else {
@@ -80,13 +78,14 @@ const CDSSModal: React.FC<CDSSModalProps> = ({
       }
 
       return (
-        <Text key={index} style={styles.alertContent}>
-          <Text style={{ color: titleColor, fontWeight: 'bold' }}>
-            {alertTitle}
+        <View key={index} style={isMultiple ? styles.bulletRow : undefined}>
+          {isMultiple && <Text style={[styles.bullet, { color: titleColor }]}>{'•'}</Text>}
+          <Text style={[styles.alertContent, isMultiple && styles.bulletText]}>
+            <Text style={{ color: titleColor, fontWeight: 'bold' }}>{alertTitle}</Text>
+            <Text style={{ color: '#333' }}>{alertDesc}</Text>
+            {!isMultiple && index < lines.length - 1 ? '\n\n' : ''}
           </Text>
-          <Text style={{ color: '#333' }}>{alertDesc}</Text>
-          {index < lines.length - 1 ? '\n\n' : ''}
-        </Text>
+        </View>
       );
     });
   };
@@ -108,7 +107,23 @@ const CDSSModal: React.FC<CDSSModalProps> = ({
             {category && (
               <Text style={styles.categoryText}>{category.toUpperCase()}</Text>
             )}
-            <View>{renderFormattedText(alertText)}</View>
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#B45309" />
+                <Text style={styles.loadingText}>Analyzing...</Text>
+              </View>
+            ) : (
+              <>
+                {severityStyle && (
+                  <View style={[styles.severityBadge, { backgroundColor: severityStyle.bg }]}>
+                    <Text style={[styles.severityText, { color: severityStyle.text }]}>
+                      [{severityStyle.label}]
+                    </Text>
+                  </View>
+                )}
+                <View>{renderFormattedText(alertText)}</View>
+              </>
+            )}
           </View>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
             <Text style={styles.closeBtnText}>DISMISS</Text>
@@ -150,6 +165,16 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   body: { marginBottom: 20 },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    color: '#B45309',
+    marginTop: 10,
+    fontSize: 14,
+    fontWeight: '600',
+  },
   categoryText: {
     color: '#D97706',
     fontSize: 10,
@@ -157,7 +182,33 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 5,
   },
-  alertContent: { color: '#333', fontSize: 14, lineHeight: 20 },
+  alertContent: { color: '#333', fontSize: 14, lineHeight: 20, flexShrink: 1 },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  bullet: {
+    fontSize: 16,
+    lineHeight: 20,
+    marginRight: 8,
+    fontWeight: 'bold',
+  },
+  bulletText: {
+    flex: 1,
+  },
+  severityBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  severityText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
   closeBtn: {
     backgroundColor: '#FDE68A',
     paddingVertical: 12,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,289 +6,96 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
-  TextInput,
-  Pressable,
   Image,
-  BackHandler,
-  Platform,
   StatusBar,
+  Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import LabResultCard from '../components/LabResultCard';
-import apiClient from '@api/apiClient';
-import { useLabValues } from '../hook/useLabValues';
 import CDSSModal from '@components/CDSSModal';
-import ADPIEScreen from './ADPIEScreen';
+import ADPIEScreen from '@components/ADPIEScreen';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
+import { useLabValuesScreen } from './useLabValuesScreen';
+import { LAB_TESTS, LAB_CATEGORIES, getTestPrefix } from './constants';
+import { createStyles } from './styles';
 
-const alertIcon = require('@assets/icons/alert.png');
+const alertBellActiveIcon = require('@assets/icons/alert_bell_icon.png');
+const alertBellInactiveIcon = require('@assets/icons/alert_bell_icon_inactive.png');
 
-const LAB_TESTS = [
-  'WBC (×10⁹/L)',
-  'RBC (×10¹²/L)',
-  'Hgb (g/dL)',
-  'Hct (%)',
-  'Platelets (×10⁹/L)',
-  'MCV (fL)',
-  'MCH (pg)',
-  'MCHC (g/dL)',
-  'RDW (%)',
-  'Neutrophils (%)',
-  'Lymphocytes (%)',
-  'Monocytes (%)',
-  'Eosinophils (%)',
-  'Basophils (%)',
-];
-
-// UPDATED INTERFACE
-interface LabValuesScreenProps {
-  onBack: () => void;
+const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: {
+  onBack: any;
   readOnly?: boolean;
   patientId?: number;
   initialPatientName?: string;
-}
-
-const LabValuesScreen = ({ 
-  onBack, 
-  readOnly = false, 
-  patientId, 
-  initialPatientName 
-}: LabValuesScreenProps) => {
+}) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(() => createStyles(theme, commonStyles, isDarkMode), [theme, commonStyles, isDarkMode]);
-
-  const { alerts, checkLabAlerts, saveLabAssessment } = useLabValues();
-  const [labId, setLabId] = useState<number | null>(null);
-  const [selectedTest, setSelectedTest] = useState(LAB_TESTS[0]);
-  const [result, setResult] = useState('');
-  const [normalRange, setNormalRange] = useState('');
-
-  const [isAdpieActive, setIsAdpieActive] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [showLabList, setShowLabList] = useState(false);
-
-  const [searchText, setSearchText] = useState('');
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
-    null,
-  );
-  const [scrollEnabled, setScrollEnabled] = useState(true);
-  const [isNA, setIsNA] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const bellFadeAnim = useRef(new Animated.Value(1)).current;
 
-  const getBackendPrefix = (label: string) => label.split(' ')[0].toLowerCase();
+  const {
+    searchText,
+    selectedPatientId,
+    scrollEnabled, setScrollEnabled,
+    isNA, toggleNA,
+    labId,
+    isExistingRecord,
+    selectedTestIndex, setSelectedTestIndex,
+    result, setResult,
+    normalRange, setNormalRange,
+    backendAlerts,
+    backendSeverities,
+    isAdpieActive, setIsAdpieActive,
+    showLabList, setShowLabList,
+    passedAlert, setPassedAlert,
+    alertConfig, setAlertConfig,
+    showAlert,
+    dataAlert,
+    handlePatientSelect,
+    handleCDSSPress,
+    handleNextOrSave,
+    generateFindingsSummary,
+    isAlertLoading,
+  } = useLabValuesScreen(onBack);
 
-  // --- DOCTOR VIEWING LOGIC ---
-  // Initialize with passed props if in readOnly mode
   useEffect(() => {
     if (readOnly && patientId) {
-      setSelectedPatientId(patientId.toString());
-      setSearchText(initialPatientName || '');
+      handlePatientSelect(patientId, initialPatientName || '');
     }
-  }, [readOnly, patientId, initialPatientName]);
+  }, [readOnly, patientId]);
 
-  // Fetch data when test changes in Read Only mode
-  useEffect(() => {
-    if (readOnly && selectedPatientId) {
-      // Helper to fetch data for the selected test
-      const fetchTestData = async () => {
-        try {
-          // Assuming endpoint /lab-values/patient/:id returns list of records
-          // We will fetch the latest one and extract the specific test data
-          const prefix = getBackendPrefix(selectedTest);
-          const response = await apiClient.get(`/lab-values/patient/${selectedPatientId}`);
-          
-          if (response.data && response.data.length > 0) {
-            // Get the latest record (assuming sorted desc or first item)
-            const latest = response.data[0];
-            const resVal = latest[`${prefix}_result`];
-            const rangeVal = latest[`${prefix}_normal_range`];
-            
-            setResult(resVal || '');
-            setNormalRange(rangeVal || '');
-            
-            if (resVal === 'N/A' && rangeVal === 'N/A') {
-                setIsNA(true);
-            } else {
-                setIsNA(false);
-            }
-          } else {
-             setResult('');
-             setNormalRange('');
-          }
-        } catch (error) {
-          console.log("Error fetching lab data:", error);
-          // Fallback if fetch fails
-          setResult('');
-          setNormalRange('');
-        }
-      };
-      fetchTestData();
-    }
-  }, [selectedTest, selectedPatientId, readOnly]);
+  const selectedTest = LAB_TESTS[selectedTestIndex];
+  const prefix = getTestPrefix(selectedTest);
+  const currentAlert = backendAlerts[`${prefix}_alert`] ?? null;
+  const currentSeverity = backendSeverities[`${prefix}_severity`] ?? null;
+  const isValidAlert = (v: string | null | undefined): v is string =>
+    !!v &&
+    !v.toLowerCase().includes('no findings') &&
+    !v.toLowerCase().includes('no result') &&
+    !v.toLowerCase().includes('no alert') &&
+    v.toLowerCase() !== 'normal' &&
+    v.trim() !== '';
 
-
-  const toggleNA = () => {
-    if (readOnly) return;
-    const newState = !isNA;
-    setIsNA(newState);
-    if (newState) {
-      setResult('N/A');
-      setNormalRange('N/A');
-    } else {
-      if (result === 'N/A') setResult('');
-      if (normalRange === 'N/A') setNormalRange('');
-    }
-  };
-
-  // SweetAlert State
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'error';
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'error',
-  });
+  const isClinicalAlert = isValidAlert(currentAlert) || isValidAlert(dataAlert);
+  const hasInputData = result.trim() !== '' || normalRange.trim() !== '';
+  const isAlertActive = !!selectedPatientId && isClinicalAlert && hasInputData;
 
   useEffect(() => {
-    const backAction = () => {
-      onBack();
-      return true;
-    };
-
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      backAction,
-    );
-
-    return () => backHandler.remove();
-  }, [onBack]);
-
-  const showAlert = (
-    title: string,
-    message: string,
-    type: 'success' | 'error' = 'error',
-  ) => {
-    setAlertConfig({ visible: true, title, message, type });
-  };
-
-  // CDSS Check - Disable in Read Only to avoid unnecessary API calls
-  useEffect(() => {
-    if (readOnly) return; 
-    if (!selectedPatientId || !result.trim() || !normalRange.trim()) return;
-
-    const prefix = getBackendPrefix(selectedTest);
-    const timer = setTimeout(async () => {
-      try {
-        await checkLabAlerts(labId as number, {
-          [`${prefix}_result`]: result,
-          [`${prefix}_normal_range`]: normalRange,
-        });
-      } catch (e) {
-        console.error('Lab CDSS Error:', e);
-      }
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [result, normalRange, selectedTest, labId, selectedPatientId, readOnly]);
-
-  const handleCDSSPress = async () => {
-    if (readOnly) return;
-
-    if (!selectedPatientId) {
-      return showAlert(
-        'Patient Required',
-        'Please select a patient first in the search bar.',
-      );
-    }
-    const prefix = getBackendPrefix(selectedTest);
-    const payload = {
-      patient_id: parseInt(selectedPatientId, 10),
-      [`${prefix}_result`]: result,
-      [`${prefix}_normal_range`]: normalRange,
-    };
-    try {
-      const res = await saveLabAssessment(payload);
-      if (res && res.id) {
-        setLabId(res.id);
-        setIsAdpieActive(true);
-        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-      }
-    } catch (e) {
-      showAlert('Error', 'Could not initiate nursing process.');
-    }
-  };
-
-  const handleNextOrSave = async () => {
-    // READ ONLY NAVIGATION LOGIC
-    if (readOnly) {
-        if (selectedTest === LAB_TESTS[LAB_TESTS.length - 1]) {
-            onBack(); // Exit on last item
-        } else {
-            const idx = LAB_TESTS.indexOf(selectedTest);
-            setSelectedTest(LAB_TESTS[idx + 1]);
-            scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-        }
-        return;
-    }
-
-    // NORMAL LOGIC
-    if (!selectedPatientId) {
-      return showAlert(
-        'Patient Required',
-        'Please select a patient first in the search bar.',
-      );
-    }
-    const prefix = getBackendPrefix(selectedTest);
-    const payload: any = {
-      patient_id: parseInt(selectedPatientId, 10),
-      [`${prefix}_result`]: result,
-      [`${prefix}_normal_range`]: normalRange,
-    };
-    try {
-      if (!labId) {
-        const res = await saveLabAssessment(payload);
-        if (res && res.id) setLabId(res.id);
-      } else {
-        await checkLabAlerts(labId, {
-          [`${prefix}_result`]: result,
-          [`${prefix}_normal_range`]: normalRange,
-        });
-      }
-
-      if (selectedTest === 'Basophils (%)') {
-        showAlert('Success', 'Complete Lab Assessment Saved.', 'success');
-        setTimeout(() => onBack(), 1500);
-      } else {
-        const idx = LAB_TESTS.indexOf(selectedTest);
-        setSelectedTest(LAB_TESTS[idx + 1]);
-        setResult(isNA ? 'N/A' : '');
-        setNormalRange(isNA ? 'N/A' : '');
-        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-      }
-    } catch (e) {
-      showAlert('Error', 'Submission failed.');
-    }
-  };
-
-  const handlePatientSelect = (id: number | null, name: string) => {
-    setSelectedPatientId(id ? id.toString() : null);
-    setSearchText(name);
-  };
+    bellFadeAnim.setValue(0.35);
+    Animated.timing(bellFadeAnim, {
+      toValue: 1,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [bellFadeAnim, isAlertActive, selectedPatientId]);
 
   const fadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
-    : [
-        'rgba(255, 255, 255, 0)',
-        'rgba(255, 255, 255, 0.8)',
-        'rgba(255, 255, 255, 1)',
-      ];
+    : ['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 1)'];
 
   const headerFadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
@@ -297,26 +104,19 @@ const LabValuesScreen = ({
   if (isAdpieActive && labId && selectedPatientId) {
     return (
       <ADPIEScreen
-        labId={labId}
-        patientId={selectedPatientId}
+        recordId={labId}
         patientName={searchText}
+        feature="lab-values"
+        findingsSummary={generateFindingsSummary()}
+        initialAlert={passedAlert || undefined}
         onBack={() => {
           setIsAdpieActive(false);
+          setPassedAlert(null);
           scrollViewRef.current?.scrollTo({ y: 0, animated: true });
         }}
-        readOnly={readOnly} // Pass readOnly if supported by ADPIE
       />
     );
   }
-
-  const currentAlert = alerts[`${getBackendPrefix(selectedTest)}_alert`];
-  // In read only, we rely on fetched data
-  const hasInputData = result.trim() !== '' && normalRange.trim() !== '';
-  const isClinicalAlert =
-    currentAlert &&
-    currentAlert !== 'Normal' &&
-    !currentAlert.includes('No result') &&
-    !currentAlert.includes('Unable to compare');
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -343,6 +143,11 @@ const LabValuesScreen = ({
                   day: 'numeric',
                 })}
               </Text>
+              {readOnly && (
+                <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
+                  [READ ONLY]
+                </Text>
+              )}
             </View>
             <TouchableOpacity onPress={() => setShowLabList(!showLabList)}>
               <Icon name="more-vert" size={35} color={theme.primary} />
@@ -369,78 +174,88 @@ const LabValuesScreen = ({
           {showLabList && (
             <View style={styles.dropdownOverlay}>
               <ScrollView nestedScrollEnabled={true}>
-                {LAB_TESTS.map((test, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.dropdownItem}
-                    onPress={() => {
-                      setSelectedTest(test);
-                      setShowLabList(false);
-                    }}
-                  >
-                    <Text style={styles.dropdownItemText}>{test}</Text>
-                    {selectedTest === test && (
-                      <Icon name="check" size={16} color={theme.primary} />
-                    )}
-                  </TouchableOpacity>
+                {LAB_CATEGORIES.map((category, catIndex) => (
+                  <View key={catIndex}>
+                    <View style={styles.categoryHeader}>
+                      <Text style={styles.categoryHeaderText}>
+                        {category.title}
+                      </Text>
+                    </View>
+                    {category.tests.map(test => {
+                      const globalIndex = LAB_TESTS.indexOf(test);
+                      return (
+                        <TouchableOpacity
+                          key={globalIndex}
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setSelectedTestIndex(globalIndex);
+                            setShowLabList(false);
+                          }}
+                        >
+                          <Text style={styles.dropdownItemText}>{test}</Text>
+                          {selectedTestIndex === globalIndex && (
+                            <Icon name="check" size={16} color={theme.primary} />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
                 ))}
               </ScrollView>
             </View>
           )}
 
-          {/* PATIENT SEARCH BAR TOGGLE */}
           {!readOnly ? (
             <PatientSearchBar
-                initialPatientName={searchText}
-                onPatientSelect={handlePatientSelect}
-                onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+              initialPatientName={searchText}
+              onPatientSelect={handlePatientSelect}
+              onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
             />
           ) : (
-             <View style={styles.staticPatientContainer}>
-                <Text style={styles.staticPatientLabel}>PATIENT:</Text>
-                <Text style={styles.staticPatientName}>{initialPatientName || "Unknown Patient"}</Text>
-             </View>
+            <View style={styles.staticPatientContainer}>
+              <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+              <Text style={styles.staticPatientName}>{initialPatientName || 'Unknown Patient'}</Text>
+            </View>
           )}
 
-          {/* HIDE MARK AS N/A IN READ ONLY */}
           {!readOnly && (
             <TouchableOpacity
-                style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
-                onPress={() => {
+              style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+              onPress={() => {
                 if (!selectedPatientId) {
-                    showAlert(
+                  showAlert(
                     'Patient Required',
                     'Please select a patient first in the search bar.',
-                    );
+                  );
                 } else {
-                    toggleNA();
+                  toggleNA();
                 }
-                }}
+              }}
             >
-                <Text
+              <Text
                 style={[
-                    styles.naText,
-                    !selectedPatientId && { color: theme.textMuted },
+                  styles.naText,
+                  !selectedPatientId && { color: theme.textMuted },
                 ]}
-                >
+              >
                 Mark all as N/A
-                </Text>
-                <Icon
+              </Text>
+              <Icon
                 name={isNA ? 'check-box' : 'check-box-outline-blank'}
                 size={22}
                 color={selectedPatientId ? theme.primary : theme.textMuted}
-                />
+              />
             </TouchableOpacity>
           )}
 
           {!readOnly && (
             <Text
-                style={[
+              style={[
                 styles.disabledTextAtBottom,
                 isNA && { color: theme.error },
-                ]}
+              ]}
             >
-                {isNA
+              {isNA
                 ? 'All fields below are disabled.'
                 : 'Checking this will disable all fields below.'}
             </Text>
@@ -452,10 +267,9 @@ const LabValuesScreen = ({
             rangeValue={normalRange}
             onResultChange={setResult}
             onRangeChange={setNormalRange}
-            // Disable inputs in Read Only
             disabled={!selectedPatientId || isNA || readOnly}
             onDisabledPress={() => {
-              if (!readOnly && !selectedPatientId) {
+              if (!selectedPatientId) {
                 showAlert(
                   'Patient Required',
                   'Please select a patient first in the search bar.',
@@ -464,124 +278,109 @@ const LabValuesScreen = ({
             }}
           />
 
-          <View style={styles.footerRow}>
-            {/* HIDE ALERT BUTTON IN READ ONLY */}
-            {!readOnly && (
+          {!readOnly ? (
+            <View style={styles.footerRow}>
+              <Animated.View style={{ opacity: bellFadeAnim }}>
                 <TouchableOpacity
-                style={[
-                    styles.alertIcon,
-                    {
-                    backgroundColor: isClinicalAlert
-                        ? isDarkMode
-                        ? '#78350F'
-                        : '#FFECBD'
-                        : selectedPatientId
-                        ? isDarkMode
-                        ? '#78350F'
-                        : '#FFECBD'
-                        : isDarkMode
-                        ? '#333'
-                        : '#EBEBEB',
-                    borderColor:
-                        isClinicalAlert || selectedPatientId
-                        ? '#EDB62C'
-                        : theme.border,
-                    },
-                ]}
-                disabled={!selectedPatientId}
-                onPress={() => setModalVisible(true)}
-                >
-                <Image
-                    source={alertIcon}
-                    style={[
-                    styles.fullImg,
-                    isClinicalAlert || selectedPatientId
-                        ? { tintColor: '#EDB62C', opacity: 1 }
-                        : { tintColor: theme.textMuted, opacity: 0.5 },
-                    ]}
-                />
-                </TouchableOpacity>
-            )}
-
-            {/* BUTTON LOGIC: 
-                - In Read Only: Always show NEXT (until last item which becomes FINISH)
-                - In Nurse Mode: Show CDSS/SUBMIT for last item, NEXT for others
-            */}
-            
-            {!readOnly && selectedTest === 'Basophils (%)' ? (
-              <View style={styles.buttonGroup}>
-                <TouchableOpacity
-                  style={[
-                    styles.cdssBtn,
-                    (!selectedPatientId || (!hasInputData && !isNA)) && {
-                      backgroundColor: theme.buttonDisabledBg,
-                      borderColor: theme.buttonDisabledBorder,
-                    },
-                  ]}
-                  onPress={handleCDSSPress}
+                  style={styles.alertIcon}
                   disabled={!selectedPatientId}
+                  onPress={() => setModalVisible(true)}
                 >
-                  <Text
-                    style={[
-                      styles.cdssText,
-                      (!selectedPatientId || (!hasInputData && !isNA))
-                        ? { color: theme.textMuted }
-                        : { color: theme.primary },
-                    ]}
-                  >
-                    CDSS
-                  </Text>
+                  <Image
+                    source={
+                      isAlertActive
+                        ? alertBellActiveIcon
+                        : alertBellInactiveIcon
+                    }
+                    style={styles.fullImg}
+                  />
                 </TouchableOpacity>
+              </Animated.View>
+
+              {selectedTestIndex === LAB_TESTS.length - 1 ? (
+                <View style={styles.buttonGroup}>
+                  <TouchableOpacity
+                    style={[
+                      styles.cdssBtn,
+                      (!selectedPatientId || (!hasInputData && !isNA)) && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
+                    ]}
+                    onPress={handleCDSSPress}
+                    disabled={!selectedPatientId}
+                  >
+                    <Text
+                      style={[
+                        styles.cdssText,
+                        (!selectedPatientId || (!hasInputData && !isNA))
+                          ? { color: theme.textMuted }
+                          : { color: theme.primary },
+                      ]}
+                    >
+                      CDSS
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.submitBtn,
+                      !selectedPatientId && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
+                    ]}
+                    onPress={handleNextOrSave}
+                    disabled={!selectedPatientId}
+                  >
+                    <Text
+                      style={[
+                        styles.submitText,
+                        !selectedPatientId && { color: theme.textMuted },
+                      ]}
+                    >
+                      {isExistingRecord ? 'UPDATE' : 'SUBMIT'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
                 <TouchableOpacity
                   style={[
-                    styles.submitBtn,
+                    styles.nextBtn,
                     !selectedPatientId && {
                       backgroundColor: theme.buttonDisabledBg,
                       borderColor: theme.buttonDisabledBorder,
                     },
                   ]}
-                  onPress={handleNextOrSave}
+                  onPress={async () => {
+                    await handleNextOrSave();
+                    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                  }}
                   disabled={!selectedPatientId}
                 >
                   <Text
                     style={[
-                      styles.submitText,
+                      styles.nextText,
                       !selectedPatientId && { color: theme.textMuted },
                     ]}
                   >
-                    SUBMIT
+                    NEXT
                   </Text>
+                  <Icon
+                    name="chevron-right"
+                    size={20}
+                    color={selectedPatientId ? theme.primary : theme.textMuted}
+                  />
                 </TouchableOpacity>
-              </View>
-            ) : (
-              // READ ONLY or NOT LAST ITEM
-              <TouchableOpacity
-                style={[
-                  styles.nextBtn,
-                  !selectedPatientId && {
-                    backgroundColor: theme.buttonDisabledBg,
-                    borderColor: theme.buttonDisabledBorder,
-                  },
-                ]}
-                onPress={handleNextOrSave}
-                disabled={!selectedPatientId}
-              >
-                <Text
-                  style={[
-                    styles.nextText,
-                    !selectedPatientId && { color: theme.textMuted },
-                  ]}
-                >
-                  {readOnly && selectedTest === LAB_TESTS[LAB_TESTS.length - 1] ? 'FINISH' : 'NEXT'}
-                </Text>
-                <Icon
-                  name={readOnly && selectedTest === LAB_TESTS[LAB_TESTS.length - 1] ? "check" : "chevron-right"}
-                  size={20}
-                  color={selectedPatientId ? theme.primary : theme.textMuted}
-                />
-              </TouchableOpacity>
-            )}
-          </View>
+              )}
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.submitBtn, { marginTop: 10 }]}
+              onPress={onBack}
+            >
+              <Text style={[styles.submitText, { color: theme.primary }]}>CLOSE</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
         <LinearGradient
           colors={fadeColors}
@@ -593,7 +392,9 @@ const LabValuesScreen = ({
       <CDSSModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        alertText={currentAlert || ''}
+        loading={isAlertLoading}
+        alertText={currentAlert || 'No clinical findings found.'}
+        severity={currentSeverity ?? undefined}
       />
 
       <SweetAlert
@@ -607,149 +408,5 @@ const LabValuesScreen = ({
     </SafeAreaView>
   );
 };
-
-const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) => StyleSheet.create({
-  safeArea: commonStyles.safeArea,
-  container: commonStyles.container,
-  scrollContent: { paddingBottom: 40 },
-  header: commonStyles.header,
-  title: commonStyles.title,
-  dateText: { fontSize: 13, fontFamily: 'AlteHaasGroteskBold', color: theme.textMuted },
-  // Static Patient Styles
-  staticPatientContainer: {
-    marginBottom: 20,
-    backgroundColor: theme.card,
-    padding: 15,
-    borderRadius: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.border
-  },
-  staticPatientLabel: {
-    fontFamily: 'AlteHaasGroteskBold',
-    color: theme.primary,
-    fontSize: 12,
-    marginRight: 10
-  },
-  staticPatientName: {
-    fontFamily: 'AlteHaasGrotesk',
-    color: theme.text,
-    fontSize: 16,
-    fontWeight: 'bold'
-  },
-  naRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginBottom: 5,
-    marginTop: 5,
-  },
-  naText: {
-    fontSize: 14,
-    fontFamily: 'AlteHaasGroteskBold',
-    color: theme.primary,
-    marginRight: 8,
-  },
-  disabledTextAtBottom: {
-    fontSize: 13,
-    fontFamily: 'AlteHaasGroteskBold',
-    color: theme.textMuted,
-    textAlign: 'right',
-    marginBottom: 15,
-  },
-  dropdownOverlay: {
-    position: 'absolute',
-    top: 90,
-    right: 0,
-    width: 220,
-    maxHeight: 300,
-    backgroundColor: theme.card,
-    borderRadius: 15,
-    zIndex: 1000,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: theme.border,
-  },
-  dropdownItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
-  },
-  dropdownItemText: { fontSize: 13, color: theme.primary, fontWeight: '500' },
-  footerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-    paddingBottom: 40,
-  },
-  buttonGroup: { flex: 1, flexDirection: 'row', marginLeft: 10 },
-  alertIcon: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  fullImg: { width: '80%', height: '80%', resizeMode: 'contain' },
-  cdssBtn: {
-    flex: 1,
-    height: 50,
-    backgroundColor: theme.buttonBg,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.buttonBorder,
-    marginRight: 5,
-  },
-  submitBtn: {
-    flex: 1,
-    height: 50,
-    backgroundColor: theme.buttonBg,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.buttonBorder,
-    marginLeft: 5,
-  },
-  nextBtn: {
-    flex: 1,
-    marginLeft: 15,
-    height: 52,
-    backgroundColor: theme.buttonBg,
-    borderRadius: 26,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.buttonBorder,
-  },
-  disabledButton: {
-    backgroundColor: theme.card,
-    borderColor: theme.border,
-    opacity: 0.6,
-  },
-  cdssText: { color: theme.textMuted, fontWeight: 'bold' },
-  submitText: { color: theme.primary, fontWeight: 'bold', fontSize: 13 },
-  nextText: {
-    color: theme.primary,
-    fontWeight: 'bold',
-    fontSize: 14,
-    marginRight: 5,
-  },
-  fadeBottom: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 60,
-  },
-});
 
 export default LabValuesScreen;

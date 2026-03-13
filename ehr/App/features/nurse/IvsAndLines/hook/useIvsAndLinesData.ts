@@ -29,10 +29,10 @@ const useIvsAndLinesData = () => {
       }
 
       try {
-        const response = await apiClient.get(`/ivs-and-lines/patient/${selectedPatientId}`);
+        const response = await apiClient.get(`/ivs-and-lines/${selectedPatientId}`);
         // If there's at least one record, load the most recent one
-        if (response.data && response.data.length > 0) {
-          const record = response.data[0]; // Assuming one per patient as per requirement
+        if (response.data) {
+          const record = Array.isArray(response.data) ? response.data[0] : response.data;
           setIvFluid(record.iv_fluid || '');
           setRate(record.rate || '');
           setSite(record.site || '');
@@ -74,13 +74,13 @@ const useIvsAndLinesData = () => {
 
       if (recordId) {
         // UPDATE existing record
-        response = await apiClient.put(`/ivs-and-lines/${recordId}`, payload);
+        response = await apiClient.put(`/ivs-and-lines/${selectedPatientId}`, payload);
         setIsSubmitting(false);
         return { action: 'update', data: response.data };
       } else {
         // CREATE new record
-        response = await apiClient.post(`/ivs-and-lines/?patient_id=${selectedPatientId}`, payload);
-        if (response.status === 201) {
+        response = await apiClient.post(`/ivs-and-lines/${selectedPatientId}`, payload);
+        if (response.data?.id) {
             setRecordId(response.data.id);
         }
         setIsSubmitting(false);

@@ -32,7 +32,7 @@ export const useEditPatient = (patientId: number) => {
   const loadPatientData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await apiClient.get(`/patients/${patientId}`);
+      const response = await apiClient.get(`/patient/${patientId}`);
       const data = response.data;
       
       setForm({
@@ -136,7 +136,7 @@ export const useEditPatient = (patientId: number) => {
     };
 
     try {
-      const response = await apiClient.put(`/patients/${patientId}`, payload);
+      const response = await apiClient.put(`/patient/${patientId}`, payload);
       return response;
     } catch (error: any) {
       console.error('Update error details:', error.response?.data);

@@ -22,8 +22,9 @@ const toRawDate = displayDate => {
 
 export const useMedAdministration = () => {
   const [step, setStep] = useState(0); 
-  const rawTimeSlots = ['10:00:00', '14:00:00', '18:00:00'];
-  const displayTimeSlots = ['10:00 AM', '2:00 PM', '6:00 PM'];
+  // Schedule: 10:00, 14:00, 18:00 (HH:mm format)
+  const rawTimeSlots = ['10:00', '14:00', '18:00'];
+  const displayTimeSlots = ['10:00 AM', '02:00 PM', '06:00 PM'];
 
   const [formData, setFormData] = useState({
     patient_id: null,
@@ -50,94 +51,107 @@ export const useMedAdministration = () => {
 
   const fetchPatientData = useCallback(async (patientId, dateStr) => {
     if (!patientId) return;
+    
     try {
-      const response = await apiClient.get(`/medication-administration/patient/${patientId}`);
-      const records = response.data || [];
-      if (records.length === 0) return;
-
-      // Find records for the requested date, or fallback to the latest date
       const rawDate = toRawDate(dateStr);
-      let targetRecords = records.filter(r => r.date === rawDate);
+      console.log(`[MedAdmin] Fetching for patient ${patientId} on ${rawDate}`);
       
-      if (targetRecords.length === 0) {
-        const latestDate = records[0].date;
-        targetRecords = records.filter(r => r.date === latestDate);
-        // Update display date to match the loaded data
-        const d = new Date(latestDate);
-        const formatted = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-        setFormData(prev => ({ ...prev, date: formatted }));
-      }
+      const fetchSlot = async (timeStr) => {
+        try {
+          const response = await apiClient.get(`/medication-administration/patient/${patientId}/time/${timeStr}`);
+          const data = response.data;
 
-      const newMeds = [
-        { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
-        { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
-        { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
-      ];
-
-      targetRecords.forEach(record => {
-        const timeIndex = rawTimeSlots.indexOf(record.time);
-        if (timeIndex !== -1) {
-          newMeds[timeIndex] = {
-            id: record.id,
-            medication: record.medication || '',
-            dose: record.dose || '',
-            route: record.route || '',
-            frequency: record.frequency || '',
-            comments: record.comments || '',
-          };
+          if (data && data.exists) {
+            console.log(`[MedAdmin] Record found for ${timeStr}: ID ${data.id}`);
+            return {
+              id: data.id, // Store ID for PUT updates
+              medication: data.medication === 'N/A' ? '' : data.medication || '',
+              dose: data.dose === 'N/A' ? '' : data.dose || '',
+              route: data.route === 'N/A' ? '' : data.route || '',
+              frequency: data.frequency === 'N/A' ? '' : data.frequency || '',
+              comments: data.comments === 'N/A' ? '' : data.comments || '',
+            };
+          }
+        } catch (error) {
+          console.log(`[MedAdmin] No record for slot ${timeStr}`);
         }
-      });
+        return { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' };
+      };
+
+      const updatedMeds = await Promise.all(rawTimeSlots.map(time => fetchSlot(time)));
 
       setFormData(prev => ({
         ...prev,
-        medications: newMeds,
+        medications: updatedMeds,
         patient_id: patientId,
       }));
     } catch (error) {
-      console.error('Error fetching patient med data:', error);
+      console.error('Error in fetchPatientData:', error);
     }
   }, []);
 
   const saveMedAdministration = async () => {
-    if (!formData.patient_id) throw new Error('Patient is required');
-    const sanitize = val => (val === null || (typeof val === 'string' && val.trim() === '')) ? 'N/A' : val;
-    const rawDate = toRawDate(formData.date);
-    const errors = [];
-    
-    for (let i = 0; i <= step; i++) {
-      const med = formData.medications[i];
-      if (med.medication === '' && !med.id) continue;
-
-      const payload = {
-        patient_id: parseInt(formData.patient_id, 10),
-        medication: sanitize(med.medication),
-        dose: sanitize(med.dose),
-        route: sanitize(med.route),
-        frequency: sanitize(med.frequency),
-        comments: sanitize(med.comments),
-        time: rawTimeSlots[i],
-        date: rawDate,
-      };
-
-      try {
-        if (med.id) {
-          await apiClient.put(`/medication-administration/${med.id}`, payload);
-        } else {
-          await apiClient.post('/medication-administration/', payload);
-        }
-      } catch (err) {
-        errors.push(`${displayTimeSlots[i]}: ${err?.response?.data?.detail || err.message}`);
-      }
+    if (!formData.patient_id) {
+      throw new Error('Patient is required');
     }
 
-    if (errors.length > 0) throw new Error(`Failed to save some records:\n${errors.join('\n')}`);
+    const sanitize = val =>
+      val === null || (typeof val === 'string' && val.trim() === '')
+        ? 'N/A'
+        : val;
+
+    const rawDate = toRawDate(formData.date);
+    const item = formData.medications[step];
+
+    const payload = {
+      patient_id: parseInt(formData.patient_id, 10),
+      medication: sanitize(item.medication),
+      dose: sanitize(item.dose),
+      route: sanitize(item.route),
+      frequency: sanitize(item.frequency),
+      time: rawTimeSlots[step],
+      date: rawDate,
+      comments: sanitize(item.comments),
+    };
+
+    try {
+      let response;
+      if (item.id) {
+        // Option 3 in Guide: If we have an ID, update specifically with PUT
+        console.log(`[MedAdmin] Editing existing record ID: ${item.id}`);
+        response = await apiClient.put(`/medication-administration/${item.id}`, payload);
+      } else {
+        // Option B in Guide: New record via POST
+        console.log(`[MedAdmin] Creating new record for ${rawTimeSlots[step]}`);
+        response = await apiClient.post('/medication-administration', payload);
+      }
+      
+      const savedData = response.data?.data || response.data;
+      if (savedData?.id) {
+        // Update local state with the returned ID
+        setFormData(prev => {
+          const newMeds = [...prev.medications];
+          newMeds[step] = { ...newMeds[step], id: savedData.id };
+          return { ...prev, medications: newMeds };
+        });
+      }
+      return savedData;
+    } catch (err) {
+      console.error(`Error saving med step ${step}:`, err?.response?.data || err.message);
+      const serverMsg = err?.response?.data?.message || err?.response?.data?.detail;
+      throw new Error(serverMsg || err.message || 'Failed to save');
+    }
   };
 
   return {
-    step, setStep,
+    step,
+    setStep,
     timeSlots: displayTimeSlots,
-    formData, setFormData,
-    updateCurrentMed, nextStep,
-    saveMedAdministration, fetchPatientData,
+    formData,
+    setFormData,
+    updateCurrentMed,
+    nextStep,
+    saveMedAdministration,
+    fetchPatientData,
   };
 };

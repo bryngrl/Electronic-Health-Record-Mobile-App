@@ -9,6 +9,8 @@ import {
   Image,
 } from 'react-native';
 import CDSSModal from '@components/CDSSModal';
+import SweetAlert from '@components/SweetAlert';
+import { useAppTheme } from '@App/theme/ThemeContext';
 
 const alert1 = require('@assets/icons/alert_bell_icon.png');
 
@@ -17,8 +19,9 @@ interface ExamInputProps {
   value: string;
   disabled: boolean;
   alertText?: string;
+  alertSeverity?: string | null;
+  dataAlert?: string | null;
   onChangeText: (text: string) => void;
-  readOnly?: boolean;
   onDisabledPress?: () => void;
 }
 
@@ -30,17 +33,19 @@ const ExamInputCard = ({
   value,
   disabled,
   alertText,
+  alertSeverity,
+  dataAlert,
   onChangeText,
-  readOnly = false,
   onDisabledPress,
 }: ExamInputProps) => {
+  const { theme } = useAppTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const [inputHeight, setInputHeight] = useState(
     4 * LINE_HEIGHT + INPUT_PADDING_BOTTOM,
   );
 
-  const isAlertActive = value.trim().length > 0 && value !== 'N/A';
-  const hasBackendAlert = !!alertText && alertText.trim().length > 0;
+  const hasBackendAlert = (!!alertText && alertText.trim().length > 0) || !!dataAlert;
+  const isAlertActive = hasBackendAlert;
 
   const visibleTypingHeight = Math.max(0, inputHeight - INPUT_PADDING_BOTTOM);
   const numLines = Math.max(
@@ -71,8 +76,17 @@ const ExamInputCard = ({
     return lines;
   };
 
+  const getAlertText = () => {
+    const parts = [];
+    if (dataAlert) parts.push(dataAlert);
+    if (alertText && alertText.trim() !== '') parts.push(alertText);
+    
+    if (parts.length === 0) return 'No clinical findings found.';
+    return parts.join('\n\n');
+  };
+
   return (
-    <View style={[styles.card, (disabled || readOnly) && { opacity: 0.8 }]}>
+    <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.headerText}>{label}</Text>
       </View>
@@ -97,11 +111,11 @@ const ExamInputCard = ({
           <TextInput
             style={styles.input}
             value={value}
-            onChangeText={(t) => { if (!readOnly) onChangeText(t); }}
+            onChangeText={onChangeText}
             multiline
-            editable={!disabled && !readOnly}
-            placeholder={readOnly ? "No findings recorded" : "Type findings..."}
-            placeholderTextColor="#999"
+            editable={!disabled}
+            placeholder="Type findings..."
+            pointerEvents={disabled ? 'none' : 'auto'}
             onContentSizeChange={e => {
               setInputHeight(e.nativeEvent.contentSize.height);
             }}
@@ -111,11 +125,15 @@ const ExamInputCard = ({
         <TouchableOpacity
           style={[
             styles.alertIcon,
-            { opacity: isAlertActive ? 1.0 : 0.3 },
-            hasBackendAlert && styles.activeAlert,
+            {
+              backgroundColor: isAlertActive
+                ? theme.alertBellOnBg
+                : theme.alertBellOffBg,
+              opacity: isAlertActive ? 1.0 : 0.3,
+            },
           ]}
-          onPress={() => isAlertActive && !disabled && setModalVisible(true)}
-          disabled={!isAlertActive || (disabled && !readOnly)}
+          onPress={() => isAlertActive && setModalVisible(true)}
+          disabled={!isAlertActive}
         >
           <Image source={alert1} style={styles.alertImage} />
         </TouchableOpacity>
@@ -125,7 +143,8 @@ const ExamInputCard = ({
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         category={label}
-        alertText={alertText || 'Analyzing findings for potential risks...'}
+        alertText={getAlertText()}
+        severity={alertSeverity ?? undefined}
       />
     </View>
   );
@@ -198,7 +217,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 10,
     right: 15,
-    backgroundColor: '#FEF3C7',
     borderRadius: 22,
     width: 44,
     height: 44,

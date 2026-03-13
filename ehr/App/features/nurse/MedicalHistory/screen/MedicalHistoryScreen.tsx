@@ -130,28 +130,23 @@ const FIELD_LABELS: Record<string, string> = {
   social: 'SOCIAL',
 };
 
-const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ 
-  onBack,
-  readOnly = false,
-  patientId,
-  initialPatientName
-}) => {
+const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly = false, patientId, initialPatientName }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
     [theme, commonStyles, isDarkMode],
   );
 
-  const { saveMedicalHistory, fetchMedicalHistory } = useMedicalHistory();
+  const { saveMedicalHistoryStep, fetchMedicalHistory } = useMedicalHistory();
   const [step, setStep] = useState(0);
-  const [searchText, setSearchText] = useState(initialPatientName || '');
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(
-    patientId || null,
+    null,
   );
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const prevPatientIdRef = useRef<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
     title: string;
@@ -182,13 +177,13 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
   });
 
   const toggleNA = () => {
-    if (readOnly) return; 
     const currentKey = steps[step].key;
     const newState = !isNAStep[currentKey];
 
     setIsNAStep(prev => ({ ...prev, [currentKey]: newState }));
 
     if (newState) {
+      // Set all fields in this step to "N/A"
       const fields = STEP_FIELDS[currentKey];
       const updatedSection = {
         ...(formData[currentKey as keyof typeof formData] as any),
@@ -198,6 +193,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
       });
       setFormData(prev => ({ ...prev, [currentKey]: updatedSection }));
     } else {
+      // Clear fields if they were "N/A"
       const fields = STEP_FIELDS[currentKey];
       const updatedSection = {
         ...(formData[currentKey as keyof typeof formData] as any),
@@ -212,35 +208,45 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
   };
 
   useEffect(() => {
+    if (readOnly && patientId) {
+      setSelectedPatientId(patientId);
+    }
+  }, [readOnly, patientId]);
+
+  useEffect(() => {
     const backAction = () => {
       onBack();
       return true;
     };
+
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
       backAction,
     );
+
     return () => backHandler.remove();
   }, [onBack]);
 
   const loadPatientData = useCallback(
-    async (pid: number) => {
-      const data = await fetchMedicalHistory(pid);
+    async (patientId: number) => {
+      const data = await fetchMedicalHistory(patientId);
       if (data) {
+        // Helper to handle both object and single-element array responses
         const getFirst = (val: any) => (Array.isArray(val) ? val[0] : val);
 
         const newFormData = {
           present: getFirst(data.present_illness) || initialFormData.present,
-          past: getFirst(data.past_medical_surgical) || initialFormData.past,
-          allergies: getFirst(data.allergies) || initialFormData.allergies,
+          past: getFirst(data.past_history || data.past_medical_surgical || data.past_medical) || initialFormData.past,
+          allergies: getFirst(data.allergies || data.known_condition_allergies) || initialFormData.allergies,
           vaccination:
             getFirst(data.vaccination) || initialFormData.vaccination,
           developmental:
-            getFirst(data.developmental_history) ||
+            getFirst(data.developmental_history || data.developmental) ||
             initialFormData.developmental,
         };
         setFormData(newFormData);
 
+        // Check for N/A state
         const newISNA: Record<string, boolean> = {};
         Object.keys(STEP_FIELDS).forEach(key => {
           const section = newFormData[key as keyof typeof newFormData];
@@ -266,6 +272,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
   );
 
   useEffect(() => {
+    // Only fetch when the patient ID actually changes to avoid overwriting typing
     if (selectedPatientId !== prevPatientIdRef.current) {
       prevPatientIdRef.current = selectedPatientId;
       if (selectedPatientId) {
@@ -292,16 +299,6 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
   ];
 
   const handleNext = async () => {
-    if (readOnly) {
-        if (step < steps.length - 1) {
-            setStep(step + 1);
-            scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-        } else {
-            onBack();
-        }
-        return;
-    }
-
     if (!selectedPatientId) {
       return showAlert(
         'Patient Required',
@@ -309,29 +306,22 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
       );
     }
 
+    const currentKey = steps[step].key;
+    const currentData = formData[currentKey as keyof typeof formData];
+
     try {
-      await saveMedicalHistory(selectedPatientId, formData);
+      // Save only the current step
+      await saveMedicalHistoryStep(selectedPatientId, currentKey, currentData);
 
       if (step < steps.length - 1) {
         setStep(step + 1);
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       } else {
-        const isUpdate = !!(
-          formData.present.medical_id ||
-          formData.past.medical_id ||
-          formData.allergies.medical_id ||
-          formData.vaccination.medical_id ||
-          formData.developmental.development_id
-        );
-
         showAlert(
-          isUpdate ? 'Successully Updated' : 'Successfully Submitted',
-          `Medical History has been ${
-            isUpdate ? 'updated' : 'submitted'
-          } successfully.`,
+          'Success',
+          'Medical History has been saved successfully.',
           'success',
         );
-
         loadPatientData(selectedPatientId);
       }
     } catch (error: any) {
@@ -386,11 +376,15 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
             paddingBottom: 15,
           }}
         >
-          {/* UPDATED HEADER: Removed Close Icon */}
           <View style={[styles.header, { marginBottom: 0 }]}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>Medical History</Text>
               <Text style={styles.dateText}>{formatDate()}</Text>
+              {readOnly && (
+                <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
+                  [READ ONLY]
+                </Text>
+              )}
             </View>
           </View>
         </View>
@@ -410,76 +404,61 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
           scrollEnabled={scrollEnabled}
         >
           <View style={{ height: 20 }} />
-          
-          {/* SEARCH BAR / STATIC PATIENT */}
-          {!readOnly ? (
-            <PatientSearchBar
-                onPatientSelect={(id, name) => {
-                  setSelectedPatientId(id);
-                  setSearchText(name);
-                }}
-                initialPatientName={searchText}
-                onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-            />
-          ) : (
-             <View style={styles.staticPatientContainer}>
-                <Text style={styles.staticPatientLabel}>PATIENT:</Text>
-                <Text style={styles.staticPatientName}>{initialPatientName || "Unknown Patient"}</Text>
-             </View>
-          )}
-
-          {/* HIDE MARK AS N/A IN READ ONLY */}
-          {!readOnly && (
-            <TouchableOpacity
-                style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
-                onPress={() => {
-                if (!selectedPatientId) {
-                    showAlert(
-                    'Patient Required',
-                    'Please select a patient first in the search bar.',
-                    );
-                } else {
-                    toggleNA();
-                }
-                }}
-            >
-                <Text
-                style={[
-                    styles.naText,
-                    !selectedPatientId && { color: theme.textMuted },
-                ]}
-                >
-                Mark all as N/A
-                </Text>
-                <Icon
-                name={
-                    isNAStep[currentStepKey]
-                    ? 'check-box'
-                    : 'check-box-outline-blank'
-                }
-                size={22}
-                color={selectedPatientId ? theme.primary : theme.textMuted}
-                />
-            </TouchableOpacity>
-          )}
+          <PatientSearchBar
+            onPatientSelect={id => setSelectedPatientId(id)}
+            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+            initialPatientName={readOnly ? (initialPatientName || '') : undefined}
+          />
 
           {!readOnly && (
+          <TouchableOpacity
+            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+            onPress={() => {
+              if (!selectedPatientId) {
+                showAlert(
+                  'Patient Required',
+                  'Please select a patient first in the search bar.',
+                );
+              } else {
+                toggleNA();
+              }
+            }}
+          >
             <Text
-                style={[
-                styles.disabledTextAtBottom,
-                isNAStep[currentStepKey] && { color: theme.error },
-                ]}
+              style={[
+                styles.naText,
+                !selectedPatientId && { color: theme.textMuted },
+              ]}
             >
-                {isNAStep[currentStepKey]
-                ? 'All fields below are disabled.'
-                : 'Checking this will disable all fields below.'}
+              Mark all as N/A
             </Text>
+            <Icon
+              name={
+                isNAStep[currentStepKey]
+                  ? 'check-box'
+                  : 'check-box-outline-blank'
+              }
+              size={22}
+              color={selectedPatientId ? theme.primary : theme.textMuted}
+            />
+          </TouchableOpacity>
+          )}
+
+          {!readOnly && (
+          <Text
+            style={[
+              styles.disabledTextAtBottom,
+              isNAStep[currentStepKey] && { color: theme.error },
+            ]}
+          >
+            {isNAStep[currentStepKey]
+              ? 'All fields below are disabled.'
+              : 'Checking this will disable all fields below.'}
+          </Text>
           )}
 
           <View style={styles.stepHeader}>
             <Text style={styles.stepHeaderText}>{steps[step].title}</Text>
-            {/* Optional Step Indicator for Viewing Mode */}
-            {readOnly && <Text style={{color: theme.textMuted, fontSize: 10}}>{step + 1} / {steps.length}</Text>}
           </View>
 
           {currentFields.map(field => (
@@ -496,7 +475,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
               onChangeText={(val: string) => updateField(field, val)}
               disabled={!selectedPatientId || isNAStep[currentStepKey] || readOnly}
               onDisabledPress={() => {
-                if (!readOnly && !selectedPatientId) {
+                if (!selectedPatientId) {
                   showAlert(
                     'Patient Required',
                     'Please select a patient first in the search bar.',
@@ -506,13 +485,37 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
             />
           ))}
 
-          <View style={styles.btnContainer}>
-            <Button
-              title={step === steps.length - 1 ? (readOnly ? 'FINISH' : 'SUBMIT') : 'NEXT'}
-              onPress={handleNext}
-              disabled={!selectedPatientId && !readOnly}
-            />
-          </View>
+          {!readOnly ? (
+            <View style={styles.btnContainer}>
+              <Button
+                title={step === steps.length - 1 ? 'SUBMIT' : 'NEXT'}
+                onPress={handleNext}
+                disabled={!selectedPatientId}
+              />
+            </View>
+          ) : (
+            <View style={{ marginTop: 10 }}>
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+                <TouchableOpacity
+                  style={[styles.navBtn, step === 0 && { backgroundColor: theme.buttonDisabledBg, borderColor: theme.buttonDisabledBorder }]}
+                  onPress={() => { setStep(step - 1); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
+                  disabled={step === 0}
+                >
+                  <Text style={[styles.navBtnText, step === 0 && { color: theme.textMuted }]}>‹ PREV</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.navBtn, step === steps.length - 1 && { backgroundColor: theme.buttonDisabledBg, borderColor: theme.buttonDisabledBorder }]}
+                  onPress={() => { setStep(step + 1); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
+                  disabled={step === steps.length - 1}
+                >
+                  <Text style={[styles.navBtnText, step === steps.length - 1 && { color: theme.textMuted }]}>NEXT ›</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity style={styles.navBtn} onPress={onBack}>
+                <Text style={styles.navBtnText}>CLOSE</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <View style={{ height: 100 }} />
         </ScrollView>
         <LinearGradient
@@ -545,29 +548,6 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontFamily: 'AlteHaasGroteskBold',
       color: theme.textMuted,
     },
-    // New styles for Static Patient View
-    staticPatientContainer: {
-        marginBottom: 20,
-        backgroundColor: theme.card,
-        padding: 15,
-        borderRadius: 15,
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: theme.border
-    },
-    staticPatientLabel: {
-        fontFamily: 'AlteHaasGroteskBold',
-        color: theme.primary,
-        fontSize: 12,
-        marginRight: 10
-    },
-    staticPatientName: {
-        fontFamily: 'AlteHaasGrotesk',
-        color: theme.text,
-        fontSize: 16,
-        fontWeight: 'bold'
-    },
     stepHeader: {
       backgroundColor: theme.tableHeader,
       paddingVertical: 10,
@@ -575,7 +555,6 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       alignItems: 'center',
       marginBottom: 10,
       marginTop: 20,
-      flexDirection: 'column', 
     },
     stepHeaderText: {
       color: theme.secondary,
@@ -602,6 +581,21 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       textAlign: 'right',
     },
     btnContainer: { marginTop: 10 },
+    navBtn: {
+      flex: 1,
+      backgroundColor: theme.buttonBg,
+      height: 50,
+      borderRadius: 25,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.buttonBorder,
+    },
+    navBtnText: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 15,
+    },
     fadeBottom: {
       position: 'absolute',
       bottom: 0,

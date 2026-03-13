@@ -121,9 +121,11 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
   };
 
   if (selectedPatientId) {
+    const selectedPatient = typedPatients.find(p => (p.patient_id || (p as any).id) === selectedPatientId);
     return (
       <PatientDetailsScreen
         patientId={selectedPatientId}
+        patientData={selectedPatient}
         onBack={() => setSelectedPatientId(null)}
         onEdit={id => {
           setSelectedPatientId(null);
@@ -189,30 +191,33 @@ const DemographicProfileScreen: React.FC<ProfileProps> = ({
           ) : (
             <FlatList
               data={typedPatients}
-              keyExtractor={item => item.patient_id.toString()}
+              keyExtractor={item => (item.patient_id || (item as any).id).toString()}
               contentContainerStyle={{ paddingBottom: 100 }}
-              renderItem={({ item }) => (
-                <PatientRow
-                  item={{
-                    ...item,
-                    name: `${item.last_name}, ${item.first_name}`,
-                    id: item.patient_id,
-                    isActive:
-                      typeof item.is_active === 'number'
-                        ? item.is_active === 1
-                        : Boolean(item.is_active ?? true),
-                  }}
-                  isSelected={selectedIds.has(item.patient_id)}
-                  isSelectionMode={isSelectionMode}
-                  onPress={() =>
-                    isSelectionMode
-                      ? toggleSelection(item.patient_id)
-                      : handlePatientClick(item.patient_id)
-                  }
-                  onLongPress={() => toggleSelection(item.patient_id)}
-                  onEdit={id => onEdit && onEdit(id)}
-                />
-              )}
+              renderItem={({ item }) => {
+                const pId = item.patient_id || (item as any).id;
+                return (
+                  <PatientRow
+                    item={{
+                      ...item,
+                      name: `${item.last_name}, ${item.first_name}`,
+                      id: pId,
+                      isActive:
+                        typeof item.is_active === 'number'
+                          ? item.is_active === 1
+                          : (item.is_active === true || item.is_active === 'true' || item.is_active === '1'),
+                    }}
+                    isSelected={selectedIds.has(pId)}
+                    isSelectionMode={isSelectionMode}
+                    onPress={() =>
+                      isSelectionMode
+                        ? toggleSelection(pId)
+                        : handlePatientClick(pId)
+                    }
+                    onLongPress={() => toggleSelection(pId)}
+                    onEdit={id => onEdit && onEdit(id)}
+                  />
+                );
+              }}
             />
           )}
 
