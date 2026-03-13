@@ -54,7 +54,11 @@ export const AccountModal = ({ visible, onClose, onLogout }: any) => {
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only capture if user is dragging down more than 5 pixels
+        return Math.abs(gestureState.dy) > 5 && gestureState.dy > 0;
+      },
       onPanResponderMove: (_, gestureState) => {
         if (gestureState.dy > 0) translateY.setValue(gestureState.dy);
       },
@@ -65,9 +69,16 @@ export const AccountModal = ({ visible, onClose, onLogout }: any) => {
           Animated.spring(translateY, {
             toValue: 0,
             useNativeDriver: true,
-            bounciness: 10,
+            bounciness: 8,
+            speed: 12,
           }).start();
         }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(translateY, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
       },
     }),
   ).current;
@@ -143,7 +154,8 @@ export const AccountModal = ({ visible, onClose, onLogout }: any) => {
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={toggleDarkMode}
-                activeOpacity={0.7}
+                activeOpacity={0.6}
+                hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
               >
                 <View style={styles.switchRow}>
                   <View style={styles.iconLabelRow}>
@@ -162,6 +174,8 @@ export const AccountModal = ({ visible, onClose, onLogout }: any) => {
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => setShowLogoutAlert(true)}
+                activeOpacity={0.6}
+                hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
               >
                 <View style={styles.logoutRow}>
                   <Icon name="log-out-outline" size={24} color={theme.error} />
