@@ -8,6 +8,7 @@ const isValidAlert = (v: any): v is string =>
   v.trim() !== '' &&
   !v.toLowerCase().includes('no findings') &&
   !v.toLowerCase().includes('no result') &&
+  !v.toLowerCase().includes('no alert') &&
   v.toLowerCase() !== 'normal';
 
 export const useLabValuesScreen = (onBack: () => void) => {

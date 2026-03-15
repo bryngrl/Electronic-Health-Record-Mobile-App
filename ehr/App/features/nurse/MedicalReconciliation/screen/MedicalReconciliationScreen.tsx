@@ -28,10 +28,16 @@ import { useAppTheme } from '@App/theme/ThemeContext';
 
 interface MedicalReconciliationProps {
   onBack: () => void;
+  readOnly?: boolean;
+  patientId?: number;
+  initialPatientName?: string;
 }
 
 const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
   onBack,
+  readOnly = false,
+  patientId: patientIdProp,
+  initialPatientName,
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
@@ -68,6 +74,13 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [isNA, setIsNA] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (readOnly && patientIdProp) {
+      setPatientId(patientIdProp);
+      setPatientName(initialPatientName || '');
+    }
+  }, [readOnly, patientIdProp]);
 
   const toggleNA = () => {
     const newState = !isNA;
@@ -202,10 +215,17 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
             <View>
               <Text style={styles.title}>Medical{'\n'}Reconciliation</Text>
               <Text style={styles.subDate}>{currentDate}</Text>
+              {readOnly && (
+                <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
+                  [READ ONLY]
+                </Text>
+              )}
             </View>
-            <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
-              <Icon name="more-vert" size={35} color={theme.primary} />
-            </TouchableOpacity>
+            {!readOnly && (
+              <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
+                <Icon name="more-vert" size={35} color={theme.primary} />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
         <LinearGradient
@@ -225,11 +245,12 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
         >
           <View style={{ height: 20 }} />
           <PatientSearchBar
-            initialPatientName={patientName}
+            initialPatientName={readOnly ? (initialPatientName || '') : patientName}
             onPatientSelect={handlePatientSelect}
             onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
           />
 
+          {!readOnly && (
           <TouchableOpacity
             style={[styles.naRow, !patientId && { opacity: 1 }]}
             onPress={() => {
@@ -243,7 +264,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
             <Text
               style={[
                 styles.naText,
-                !patientId && { color: theme.primary }, // Maintain primary color
+                !patientId && { color: theme.primary },
               ]}
             >
               Mark all as N/A
@@ -254,7 +275,9 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
               color={patientId ? theme.primary : theme.textMuted}
             />
           </TouchableOpacity>
+          )}
 
+          {!readOnly && (
           <Text
             style={[
               styles.disabledTextAtBottom,
@@ -265,6 +288,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
               ? 'All fields below are disabled.'
               : 'Checking this will disable all fields below.'}
           </Text>
+          )}
 
           {/* STAGE Indicator */}
           <View style={styles.stageTab}>
@@ -279,28 +303,28 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
               label="Medication"
               value={values.med}
               onChangeText={(v: string) => handleUpdate('med', v)}
-              disabled={!patientId || isNA}
+              disabled={!patientId || isNA || readOnly}
               onDisabledPress={triggerPatientAlert}
             />
             <MedicalReconCard
               label="Dose"
               value={values.dose}
               onChangeText={(v: string) => handleUpdate('dose', v)}
-              disabled={!patientId || isNA}
+              disabled={!patientId || isNA || readOnly}
               onDisabledPress={triggerPatientAlert}
             />
             <MedicalReconCard
               label="Route"
               value={values.route}
               onChangeText={(v: string) => handleUpdate('route', v)}
-              disabled={!patientId || isNA}
+              disabled={!patientId || isNA || readOnly}
               onDisabledPress={triggerPatientAlert}
             />
             <MedicalReconCard
               label="Frequency"
               value={values.freq}
               onChangeText={(v: string) => handleUpdate('freq', v)}
-              disabled={!patientId || isNA}
+              disabled={!patientId || isNA || readOnly}
               onDisabledPress={triggerPatientAlert}
             />
 
@@ -310,7 +334,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
                 label="Indication"
                 value={values.indication}
                 onChangeText={(v: string) => handleUpdate('indication', v)}
-                disabled={!patientId || isNA}
+                disabled={!patientId || isNA || readOnly}
                 onDisabledPress={triggerPatientAlert}
               />
             )}
@@ -319,17 +343,18 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
               label={getExtraLabel()}
               value={values.extra}
               onChangeText={(v: string) => handleUpdate('extra', v)}
-              disabled={!patientId || isNA}
+              disabled={!patientId || isNA || readOnly}
               onDisabledPress={triggerPatientAlert}
             />
           </View>
 
-          {/* FOOTER: Disabled until data is entered or while submitting */}
+          {/* FOOTER */}
+          {!readOnly ? (
           <TouchableOpacity
             style={[
               styles.actionBtn,
               (isSubmitting || !patientId) &&
-                { borderColor: theme.buttonDisabledBorder, backgroundColor: theme.buttonBg }, // Maintain bg color
+                { borderColor: theme.buttonDisabledBorder, backgroundColor: theme.buttonBg },
             ]}
             onPress={handleNextPress}
             disabled={isSubmitting || !patientId}
@@ -363,6 +388,29 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
               </>
             )}
           </TouchableOpacity>
+          ) : (
+            <View style={{ marginTop: 10 }}>
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { flex: 1, marginTop: 0, marginBottom: 0 }, stageIndex === 0 && { backgroundColor: theme.buttonDisabledBg, borderColor: theme.buttonDisabledBorder }]}
+                  onPress={() => { setStageIndex(stageIndex - 1); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
+                  disabled={stageIndex === 0}
+                >
+                  <Text style={[styles.btnText, stageIndex === 0 && { color: theme.textMuted }]}>‹ PREV</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { flex: 1, marginTop: 0, marginBottom: 0 }, isLastStage && { backgroundColor: theme.buttonDisabledBg, borderColor: theme.buttonDisabledBorder }]}
+                  onPress={() => { setStageIndex(stageIndex + 1); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
+                  disabled={isLastStage}
+                >
+                  <Text style={[styles.btnText, isLastStage && { color: theme.textMuted }]}>NEXT ›</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity style={[styles.actionBtn, { marginBottom: 0 }]} onPress={onBack}>
+                <Text style={styles.btnText}>CLOSE</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </ScrollView>
         <LinearGradient
           colors={fadeColors}

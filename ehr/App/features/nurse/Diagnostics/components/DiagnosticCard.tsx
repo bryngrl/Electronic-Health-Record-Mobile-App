@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  Modal,
+  Dimensions,
+  StatusBar,
 } from 'react-native';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import Ionicon from 'react-native-vector-icons/Ionicons';
@@ -24,7 +27,10 @@ interface Props {
   onImport: () => void;
   onDelete: (id: number) => void;
   disabled?: boolean;
+  hideImport?: boolean;
 }
+
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 const DiagnosticCard: React.FC<Props> = ({
   label,
@@ -33,20 +39,44 @@ const DiagnosticCard: React.FC<Props> = ({
   onImport,
   onDelete,
   disabled,
+  hideImport = false,
 }) => {
   const { theme, isDarkMode } = useAppTheme();
   const isGrid = viewMode === 'grid';
   const hasImages = images.length > 0;
   const imgCount = images.length;
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
-  // Adaptive size: 
-  // If 1-2 images (+ 1 add button), use ~46% width (roughly 2 per row)
-  // If 3 or more images (+ 1 add button), use ~30% width (roughly 3 per row)
   const useLargeLayout = imgCount <= 2;
   const itemWidth = useLargeLayout ? '46%' : '30%';
 
   return (
     <View style={[styles.cardWrapper, !isGrid && styles.fullWidth]}>
+      {/* Full-screen image lightbox */}
+      <Modal
+        visible={!!lightboxUrl}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLightboxUrl(null)}
+        statusBarTranslucent
+      >
+        <View style={styles.lightboxOverlay}>
+          <TouchableOpacity
+            style={styles.lightboxClose}
+            onPress={() => setLightboxUrl(null)}
+            activeOpacity={0.8}
+          >
+            <MaterialIcon name="close" size={28} color="#fff" />
+          </TouchableOpacity>
+          {lightboxUrl && (
+            <Image
+              source={{ uri: lightboxUrl }}
+              style={styles.lightboxImage}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
       {/* Mint Pill Label */}
       <View
         style={[
@@ -83,43 +113,60 @@ const DiagnosticCard: React.FC<Props> = ({
             contentContainerStyle={styles.gridContainer}
             showsVerticalScrollIndicator={false}
           >
-            {/* Add more button as a Square */}
-            <TouchableOpacity
-              style={[
-                styles.squareItem,
-                styles.addMoreSquare,
-                {
-                  width: itemWidth,
-                  backgroundColor: isDarkMode ? '#334155' : '#c4c4c4',
-                  borderColor: isDarkMode ? theme.border : '#9d9d9d',
-                },
-              ]}
-              onPress={onImport}
-              disabled={disabled}
-            >
-              <MaterialIcon name="add-a-photo" size={useLargeLayout ? 32 : 24} color={theme.primary} />
-              <Text style={[styles.addMoreText, { color: theme.primary, fontSize: useLargeLayout ? 12 : 10 }]}>
-                ADD
-              </Text>
-            </TouchableOpacity>
+            {/* ADD button — hidden for doctor read-only */}
+            {!hideImport && (
+              <TouchableOpacity
+                style={[
+                  styles.squareItem,
+                  styles.addMoreSquare,
+                  {
+                    width: itemWidth,
+                    backgroundColor: isDarkMode ? '#334155' : '#c4c4c4',
+                    borderColor: isDarkMode ? theme.border : '#9d9d9d',
+                  },
+                ]}
+                onPress={onImport}
+                disabled={disabled}
+              >
+                <MaterialIcon name="add-a-photo" size={useLargeLayout ? 32 : 24} color={theme.primary} />
+                <Text style={[styles.addMoreText, { color: theme.primary, fontSize: useLargeLayout ? 12 : 10 }]}>
+                  ADD
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {images.map(img => (
               <View key={img.id} style={[styles.squareItem, { width: itemWidth }]}>
-                <Image
-                  source={{ uri: img.url }}
-                  style={styles.squareImage}
-                  resizeMode="cover"
-                />
                 <TouchableOpacity
-                  style={styles.closeCircle}
-                  onPress={() => onDelete(img.id)}
+                  activeOpacity={0.85}
+                  onPress={() => setLightboxUrl(img.url)}
+                  style={{ width: '100%', height: '100%' }}
                 >
-                  <Ionicon name="close-circle" size={useLargeLayout ? 26 : 22} color="#FF5A5A" />
+                  <Image
+                    source={{ uri: img.url }}
+                    style={styles.squareImage}
+                    resizeMode="cover"
+                  />
                 </TouchableOpacity>
+                {/* Delete button — hidden for doctor read-only */}
+                {!hideImport && (
+                  <TouchableOpacity
+                    style={styles.closeCircle}
+                    onPress={() => onDelete(img.id)}
+                  >
+                    <Ionicon name="close-circle" size={useLargeLayout ? 26 : 22} color="#FF5A5A" />
+                  </TouchableOpacity>
+                )}
               </View>
             ))}
           </ScrollView>
         ) : (
+          hideImport ? (
+            <View style={styles.placeholder}>
+              <MaterialIcon name="image-not-supported" size={isGrid ? 40 : 60} color="#e2e2e2" />
+              <Text style={[styles.importText, { color: '#C7C7CD' }]}>No images available</Text>
+            </View>
+          ) : (
           <TouchableOpacity
             style={styles.placeholder}
             onPress={onImport}
@@ -141,6 +188,7 @@ const DiagnosticCard: React.FC<Props> = ({
             </Text>
             <Text style={styles.clickText}>Click to upload</Text>
           </TouchableOpacity>
+          )
         )}
       </View>
     </View>
@@ -216,6 +264,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 11,
     elevation: 3,
+  },
+  lightboxOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lightboxImage: {
+    width: SCREEN_W,
+    height: SCREEN_H * 0.85,
+  },
+  lightboxClose: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
+    padding: 6,
   },
 });
 

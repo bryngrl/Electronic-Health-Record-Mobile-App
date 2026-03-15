@@ -136,12 +136,6 @@ def create_home_medication(
     home_med: HomeMedicationCreate,
     db: Session = Depends(get_db)
 ):
-    """
-    Create a new home medication record.
-    
-    Documents medications taken at HOME (baseline).
-    This is the baseline medication list before hospitalization.
-    """
     new_record = HomeMedication(
         patient_id=home_med.patient_id,
         home_med=home_med.home_med,
@@ -152,6 +146,7 @@ def create_home_medication(
         home_text=home_med.home_text
     )
     db.add(new_record)
+    create_doctor_update(db, home_med.patient_id, "Medication Reconciliation")
     db.commit()
     db.refresh(new_record)
     return new_record
@@ -164,13 +159,6 @@ def get_patient_home_medications(
     limit: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
-    """
-    Get all home medication records for a specific patient.
-    
-    Supports pagination:
-    - skip: Number of records to skip (default: 0)
-    - limit: Maximum records to return (default: 10, max: 100)
-    """
     records = db.query(HomeMedication).filter(
         HomeMedication.patient_id == patient_id
     ).offset(skip).limit(limit).all()
@@ -182,7 +170,6 @@ def get_home_medication(
     home_med_id: int,
     db: Session = Depends(get_db)
 ):
-    """Get a specific home medication record by ID."""
     record = db.query(HomeMedication).filter(
         HomeMedication.id == home_med_id
     ).first()
@@ -199,11 +186,6 @@ def update_home_medication(
     update_data: HomeMedicationUpdate,
     db: Session = Depends(get_db)
 ):
-    """
-    Update a home medication record.
-    
-    Supports partial updates - only provided fields are updated.
-    """
     record = db.query(HomeMedication).filter(
         HomeMedication.id == home_med_id
     ).first()
@@ -215,6 +197,7 @@ def update_home_medication(
     for key, value in update_dict.items():
         setattr(record, key, value)
     
+    create_doctor_update(db, record.patient_id, "Medication Reconciliation")
     db.commit()
     db.refresh(record)
     return record
@@ -225,7 +208,6 @@ def delete_home_medication(
     home_med_id: int,
     db: Session = Depends(get_db)
 ):
-    """Delete a home medication record."""
     record = db.query(HomeMedication).filter(
         HomeMedication.id == home_med_id
     ).first()
@@ -245,12 +227,6 @@ def create_current_medication(
     current_med: CurrentMedicationCreate,
     db: Session = Depends(get_db)
 ):
-    """
-    Create a new current medication record.
-    
-    Documents medications in HOSPITAL (current state).
-    This is the medication list during hospitalization.
-    """
     new_record = CurrentMedication(
         patient_id=current_med.patient_id,
         date=current_med.date,
@@ -262,6 +238,7 @@ def create_current_medication(
         current_text=current_med.current_text
     )
     db.add(new_record)
+    create_doctor_update(db, current_med.patient_id, "Medication Reconciliation")
     db.commit()
     db.refresh(new_record)
     return new_record
@@ -274,13 +251,6 @@ def get_patient_current_medications(
     limit: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
-    """
-    Get all current medication records for a specific patient.
-    
-    Supports pagination:
-    - skip: Number of records to skip (default: 0)
-    - limit: Maximum records to return (default: 10, max: 100)
-    """
     records = db.query(CurrentMedication).filter(
         CurrentMedication.patient_id == patient_id
     ).offset(skip).limit(limit).all()
@@ -292,7 +262,6 @@ def get_current_medication(
     current_med_id: int,
     db: Session = Depends(get_db)
 ):
-    """Get a specific current medication record by ID."""
     record = db.query(CurrentMedication).filter(
         CurrentMedication.id == current_med_id
     ).first()
@@ -309,11 +278,6 @@ def update_current_medication(
     update_data: CurrentMedicationUpdate,
     db: Session = Depends(get_db)
 ):
-    """
-    Update a current medication record.
-    
-    Supports partial updates - only provided fields are updated.
-    """
     record = db.query(CurrentMedication).filter(
         CurrentMedication.id == current_med_id
     ).first()
@@ -325,6 +289,7 @@ def update_current_medication(
     for key, value in update_dict.items():
         setattr(record, key, value)
     
+    create_doctor_update(db, record.patient_id, "Medication Reconciliation")
     db.commit()
     db.refresh(record)
     return record
@@ -335,7 +300,6 @@ def delete_current_medication(
     current_med_id: int,
     db: Session = Depends(get_db)
 ):
-    """Delete a current medication record."""
     record = db.query(CurrentMedication).filter(
         CurrentMedication.id == current_med_id
     ).first()
@@ -355,12 +319,6 @@ def create_changes_in_medication(
     change: ChangesInMedicationCreate,
     db: Session = Depends(get_db)
 ):
-    """
-    Create a new changes in medication record.
-    
-    Documents CHANGES/DISCREPANCIES between home and current medications.
-    Tracks why medications changed (stopped, adjusted, new added, discontinued, etc.).
-    """
     new_record = ChangesInMedication(
         patient_id=change.patient_id,
         change_med=change.change_med,
@@ -370,6 +328,7 @@ def create_changes_in_medication(
         change_text=change.change_text
     )
     db.add(new_record)
+    create_doctor_update(db, change.patient_id, "Medication Reconciliation")
     db.commit()
     db.refresh(new_record)
     return new_record
@@ -382,13 +341,6 @@ def get_patient_changes_in_medications(
     limit: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
-    """
-    Get all changes in medication records for a specific patient.
-    
-    Supports pagination:
-    - skip: Number of records to skip (default: 0)
-    - limit: Maximum records to return (default: 10, max: 100)
-    """
     records = db.query(ChangesInMedication).filter(
         ChangesInMedication.patient_id == patient_id
     ).offset(skip).limit(limit).all()
@@ -400,7 +352,6 @@ def get_changes_in_medication(
     change_id: int,
     db: Session = Depends(get_db)
 ):
-    """Get a specific changes in medication record by ID."""
     record = db.query(ChangesInMedication).filter(
         ChangesInMedication.id == change_id
     ).first()
@@ -417,11 +368,6 @@ def update_changes_in_medication(
     update_data: ChangesInMedicationUpdate,
     db: Session = Depends(get_db)
 ):
-    """
-    Update a changes in medication record.
-    
-    Supports partial updates - only provided fields are updated.
-    """
     record = db.query(ChangesInMedication).filter(
         ChangesInMedication.id == change_id
     ).first()
@@ -433,6 +379,7 @@ def update_changes_in_medication(
     for key, value in update_dict.items():
         setattr(record, key, value)
     
+    create_doctor_update(db, record.patient_id, "Medication Reconciliation")
     db.commit()
     db.refresh(record)
     return record
@@ -443,7 +390,6 @@ def delete_changes_in_medication(
     change_id: int,
     db: Session = Depends(get_db)
 ):
-    """Delete a changes in medication record."""
     record = db.query(ChangesInMedication).filter(
         ChangesInMedication.id == change_id
     ).first()

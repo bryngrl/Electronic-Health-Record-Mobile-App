@@ -78,7 +78,7 @@ const DashboardSummary = ({
   useEffect(() => {
     if (token) {
       fetchLatestPatients(true);
-      
+
       // Automatic polling every 2 seconds matching Demographic Profile
       const interval = setInterval(() => {
         fetchLatestPatients(false);
@@ -154,7 +154,7 @@ const DashboardSummary = ({
       // This ensures patients don't disappear from the list when their status changes.
       const timestamp = new Date().getTime();
       const response = await apiClient.get(`/patient?all=true&t=${timestamp}`);
-      
+
       let rawData = [];
       if (Array.isArray(response.data)) {
         rawData = response.data;
@@ -169,11 +169,19 @@ const DashboardSummary = ({
             ...p,
             id: p.id || p.patient_id,
             patient_id: p.patient_id || p.id,
-            isActive: String(p.is_active) === '1' || p.is_active === true || p.is_active === 1
+            isActive:
+              String(p.is_active) === '1' ||
+              p.is_active === true ||
+              p.is_active === 1,
           }))
-          .filter(p => p.isActive); // Dashboard should ONLY show active patients
-        
-        setPatients(mappedPatients.reverse());
+          .filter(p => p.isActive) // Dashboard should ONLY show active patients
+          .sort((a, b) => {
+            const dateA = new Date(a.created_at || a.admission_date).getTime();
+            const dateB = new Date(b.created_at || b.admission_date).getTime();
+            return dateB - dateA;
+          });
+
+        setPatients(mappedPatients);
       } else {
         setPatients([]);
       }
@@ -247,7 +255,7 @@ const DashboardSummary = ({
             />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search patients..."
+              placeholder="Search"
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholderTextColor={theme.textMuted}
@@ -444,7 +452,7 @@ const createStyles = (theme: any, commonStyles: any) =>
       backgroundColor: theme.card,
       borderRadius: 125,
       paddingHorizontal: 15,
-      height: 60,
+      height: 50,
       borderWidth: 0,
       borderColor: theme.border,
       marginBottom: 25,

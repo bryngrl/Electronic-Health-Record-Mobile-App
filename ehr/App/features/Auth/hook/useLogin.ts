@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 import apiClient from '@api/apiClient';
 import { useAuth } from '../AuthContext';
+import { useToast } from '@App/context/ToastContext';
 
 export const useLogin = () => {
   const [email, setEmail] = useState('');
@@ -21,6 +22,7 @@ export const useLogin = () => {
   });
 
   const { login } = useAuth();
+  const { showToast } = useToast();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
 
@@ -49,43 +51,24 @@ export const useLogin = () => {
 
     setIsSubmitting(true);
     try {
-      console.log('Attempting login with:', { email, password: '***' });
-      // The apiClient now has /api as baseURL.
-      // SYNC_MOBILE_APP says login is POST /api/auth/login
-      const response = await apiClient.post(
-        `/auth/login?email=${encodeURIComponent(
-          email,
-        )}&password=${encodeURIComponent(password)}`,
-      );
+      console.log('Attempting login with:', { email, password: '[HIDDEN]' });
+      const response = await apiClient.post('/auth/login', { username: email, password });
 
       console.log('Login response:', response.data);
-      // Laravel response structure from SYNC_MOBILE_APP or standard:
-      // Typically { access_token, user: { id, full_name, role, ... } }
-      // But the guide says "returns an access_token, role, full_name, and user_id" 
-      // which matches what we had.
-      const { access_token, role, full_name, user_id } = response.data;
+      const { access_token, role, full_name, user_id, email: userEmail } = response.data;
 
-      await login(
-        {
-          id: user_id,
-          full_name,
-          email,
-          role,
-        },
-        access_token,
-      );
+      await login({ id: user_id, full_name, email: userEmail ?? email, role }, access_token);
+      console.log('[Login] Stored email:', userEmail ?? email);
 
-      console.log('Login successful as', role);
+      showToast(`Welcome back, ${full_name || email}!`, 'success', 4000);
     } catch (error: any) {
       console.error('Login error full:', error);
-      let errorMessage = 'Invalid email or password';
+      let errorMessage = 'Invalid username or password';
 
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
         if (Array.isArray(detail)) {
-          errorMessage = detail
-            .map((err: any) => `${err.loc.join('.')}: ${err.msg}`)
-            .join('\n');
+          errorMessage = detail.map((err: any) => `${err.loc.join('.')}: ${err.msg}`).join('\n');
         } else if (typeof detail === 'string') {
           errorMessage = detail;
         }

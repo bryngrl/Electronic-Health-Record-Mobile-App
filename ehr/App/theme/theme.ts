@@ -11,6 +11,7 @@ export const COLORS = {
     tableHeader: '#E5FFE8',
     textMuted: '#999696',
     border: '#E0E0E0',
+    filterBg: '#5EAE57',
 
     card: '#FFFFFF',
     card2: '#F6FFF7', // features card bg color
@@ -28,11 +29,30 @@ export const COLORS = {
     buttonDisabledBorder: '#E0E0E0',
     avatarCard: 'rgba(144, 255, 158, 0.32)',
     navActiveBg: '#E0FFDD',
+    updateBadgeBg: '#FFEEC2',
+    updateBadgeText: '#EDB62C',
 
     // Alert Bell Icon states
     alertBellDisabledBg: '#F2F1EF', // no patient selected
-    alertBellOffBg: '#FEF3C7',      // patient selected, no findings / unmatched alert
-    alertBellOnBg: '#FDE68A',       // patient selected, alert triggered
+    alertBellOffBg: '#FEF3C7', // patient selected, no findings / unmatched alert
+    alertBellOnBg: '#FFECBD', // patient selected, alert triggered
+
+    // Toast / Snackbar
+    toastSuccessBg: '#ECFDF5',
+    toastSuccessText: '#065F46',
+    toastSuccessBorder: '#6EE7B7',
+    toastErrorBg: '#FEF2F2',
+    toastErrorText: '#991B1B',
+    toastErrorBorder: '#FCA5A5',
+    toastWarningBg: '#FFFBEB',
+    toastWarningText: '#92400E',
+    toastWarningBorder: '#FCD34D',
+    toastInfoBg: '#EFF6FF',
+    toastInfoText: '#1E40AF',
+    toastInfoBorder: '#BFDBFE',
+    toastOfflineBg: '#F3F4F6',
+    toastOfflineText: '#374151',
+    toastOfflineBorder: '#D1D5DB',
   },
   dark: {
     primary: '#4ADE80',
@@ -44,6 +64,7 @@ export const COLORS = {
     tableHeader: '#757575',
     textMuted: '#9CA3AF',
     border: '#3a5137',
+    filterBg: '#5EAE57',
 
     card: '#1E1E1E',
     card2: '#1A2E1C', // features card bg color
@@ -60,11 +81,30 @@ export const COLORS = {
     buttonDisabledBorder: '#3a5137',
     avatarCard: '#035022',
     navActiveBg: '#1A2E1C',
+    updateBadgeBg: '#3D2800',
+    updateBadgeText: '#F59E0B',
 
     // Alert Bell Icon states
     alertBellDisabledBg: '#2b2b2b', // no patient selected
-    alertBellOffBg: '#3D2800',      // patient selected, no findings / unmatched alert
-    alertBellOnBg: '#78350F',       // patient selected, alert triggered
+    alertBellOffBg: '#3D2800', // patient selected, no findings / unmatched alert
+    alertBellOnBg: '#78350F', // patient selected, alert triggered
+
+    // Toast / Snackbar
+    toastSuccessBg: '#064E3B',
+    toastSuccessText: '#6EE7B7',
+    toastSuccessBorder: '#065F46',
+    toastErrorBg: '#450A0A',
+    toastErrorText: '#FCA5A5',
+    toastErrorBorder: '#991B1B',
+    toastWarningBg: '#451A03',
+    toastWarningText: '#FDE68A',
+    toastWarningBorder: '#92400E',
+    toastInfoBg: '#1E3A5F',
+    toastInfoText: '#93C5FD',
+    toastInfoBorder: '#1E40AF',
+    toastOfflineBg: '#1F2937',
+    toastOfflineText: '#D1D5DB',
+    toastOfflineBorder: '#374151',
   },
 };
 

@@ -33,7 +33,6 @@ export const LoginForm = ({
 }: LoginFormProps) => {
   return (
     <View style={[styles.formContainer, containerStyle]}>
-      {/* Username Label & Input */}
       <Text style={styles.label}>Username</Text>
       <TextInput
         style={styles.input}
@@ -42,6 +41,7 @@ export const LoginForm = ({
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
+        keyboardType="default"
       />
 
       {/* Password Label & Input */}

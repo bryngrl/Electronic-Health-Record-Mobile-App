@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -17,7 +17,12 @@ import SweetAlert from '@App/components/SweetAlert';
 import { useADLScreen } from './useADLScreen';
 import ADLCardsSection from './ADLCardsSection';
 
-const ADLScreen = ({ onBack }: any) => {
+const ADLScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: {
+  onBack: any;
+  readOnly?: boolean;
+  patientId?: number;
+  initialPatientName?: string;
+}) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
@@ -37,6 +42,13 @@ const ADLScreen = ({ onBack }: any) => {
     toggleNA, updateField, handleCDSSPress, handleSave,
     generateFindingsSummary, isDataEntered, calculateDayNumber,
   } = useADLScreen(onBack);
+
+  useEffect(() => {
+    if (readOnly && patientId) {
+      setSelectedPatient({ id: patientId, full_name: initialPatientName || '' });
+      setSearchText(initialPatientName || '');
+    }
+  }, [readOnly, patientId]);
 
   if (isAdpieActive && adlId && selectedPatient) {
     return (
@@ -81,6 +93,11 @@ const ADLScreen = ({ onBack }: any) => {
                   day: 'numeric',
                 })}
               </Text>
+              {readOnly && (
+                <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
+                  [READ ONLY]
+                </Text>
+              )}
             </View>
           </View>
         </View>
@@ -96,14 +113,21 @@ const ADLScreen = ({ onBack }: any) => {
           scrollEnabled={scrollEnabled}
         >
           <View style={{ height: 20 }} />
-          <PatientSearchBar
-            onPatientSelect={(id, name, patientObj) => {
-              setSearchText(name);
-              setSelectedPatient(patientObj);
-            }}
-            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-            initialPatientName={searchText}
-          />
+          {!readOnly ? (
+            <PatientSearchBar
+              onPatientSelect={(id, name, patientObj) => {
+                setSearchText(name);
+                setSelectedPatient(patientObj);
+              }}
+              onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+              initialPatientName={searchText}
+            />
+          ) : (
+            <View style={styles.staticPatientContainer}>
+              <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+              <Text style={styles.staticPatientName}>{initialPatientName || 'Unknown Patient'}</Text>
+            </View>
+          )}
 
           <View style={styles.section}>
             <View style={styles.row}>
@@ -134,27 +158,31 @@ const ADLScreen = ({ onBack }: any) => {
             </View>
           </View>
 
-          <TouchableOpacity
-            style={[styles.naRow, !selectedPatient && { opacity: 0.5 }]}
-            onPress={() =>
-              !selectedPatient
-                ? showAlert('Patient Required', 'Please select a patient first in the search bar.')
-                : toggleNA()
-            }
-          >
-            <Text style={[styles.naText, !selectedPatient && { color: theme.textMuted }]}>
-              Mark all as N/A
-            </Text>
-            <Icon
-              name={isNA ? 'check-box' : 'check-box-outline-blank'}
-              size={22}
-              color={selectedPatient ? theme.primary : theme.textMuted}
-            />
-          </TouchableOpacity>
+          {!readOnly && (
+            <TouchableOpacity
+              style={[styles.naRow, !selectedPatient && { opacity: 0.5 }]}
+              onPress={() =>
+                !selectedPatient
+                  ? showAlert('Patient Required', 'Please select a patient first in the search bar.')
+                  : toggleNA()
+              }
+            >
+              <Text style={[styles.naText, !selectedPatient && { color: theme.textMuted }]}>
+                Mark all as N/A
+              </Text>
+              <Icon
+                name={isNA ? 'check-box' : 'check-box-outline-blank'}
+                size={22}
+                color={selectedPatient ? theme.primary : theme.textMuted}
+              />
+            </TouchableOpacity>
+          )}
 
-          <Text style={[styles.disabledTextAtBottom, isNA && { color: theme.error }]}>
-            {isNA ? 'All fields below are disabled.' : 'Checking this will disable all fields below.'}
-          </Text>
+          {!readOnly && (
+            <Text style={[styles.disabledTextAtBottom, isNA && { color: theme.error }]}>
+              {isNA ? 'All fields below are disabled.' : 'Checking this will disable all fields below.'}
+            </Text>
+          )}
 
           <ADLCardsSection
             formData={formData}
@@ -171,6 +199,8 @@ const ADLScreen = ({ onBack }: any) => {
             isDataEntered={isDataEntered}
             adlId={adlId}
             isExistingRecord={isExistingRecord}
+            readOnly={readOnly}
+            onBack={onBack}
           />
         </ScrollView>
         <LinearGradient colors={fadeColors} style={styles.fadeBottom} pointerEvents="none" />
@@ -287,6 +317,28 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       left: 0,
       right: 0,
       height: 60,
+    },
+    staticPatientContainer: {
+      marginBottom: 20,
+      backgroundColor: theme.card,
+      padding: 15,
+      borderRadius: 15,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    staticPatientLabel: {
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      fontSize: 12,
+      marginRight: 10,
+    },
+    staticPatientName: {
+      fontFamily: 'AlteHaasGrotesk',
+      color: theme.text,
+      fontSize: 16,
+      fontWeight: 'bold',
     },
   });
 

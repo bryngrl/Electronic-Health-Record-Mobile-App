@@ -92,4 +92,26 @@ export const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean)
       right: 0,
       height: 60,
     },
+    staticPatientContainer: {
+      marginBottom: 20,
+      backgroundColor: theme.card,
+      padding: 15,
+      borderRadius: 15,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    staticPatientLabel: {
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      fontSize: 12,
+      marginRight: 10,
+    },
+    staticPatientName: {
+      fontFamily: 'AlteHaasGrotesk',
+      color: theme.text,
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
   });

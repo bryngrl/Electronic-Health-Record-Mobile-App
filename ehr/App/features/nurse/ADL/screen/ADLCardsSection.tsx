@@ -18,6 +18,8 @@ interface ADLCardsSectionProps {
   isDataEntered: boolean;
   adlId: number | null;
   isExistingRecord: boolean;
+  readOnly?: boolean;
+  onBack?: () => void;
 }
 
 const ADLCardsSection: React.FC<ADLCardsSectionProps> = ({
@@ -35,6 +37,8 @@ const ADLCardsSection: React.FC<ADLCardsSectionProps> = ({
   isDataEntered,
   adlId,
   isExistingRecord,
+  readOnly = false,
+  onBack,
 }) => {
   const patientRequired = () =>
     !selectedPatient && showAlert('Patient Required', 'Please select a patient first.');
@@ -46,7 +50,7 @@ const ADLCardsSection: React.FC<ADLCardsSectionProps> = ({
           key={field}
           label={label}
           value={formData[field] ?? ''}
-          disabled={!selectedPatient || isNA}
+          disabled={!selectedPatient || isNA || readOnly}
           dataAlert={getBackendAlert(field)}
           alertSeverity={getBackendSeverity(field)}
           onChangeText={val => updateField(field, val)}
@@ -54,48 +58,54 @@ const ADLCardsSection: React.FC<ADLCardsSectionProps> = ({
         />
       ))}
 
-      <View style={styles.footerRow}>
-        <TouchableOpacity
-          style={[
-            styles.cdssBtn,
-            (!selectedPatient || !isDataEntered) && {
-              backgroundColor: theme.buttonDisabledBg,
-              borderColor: theme.buttonDisabledBorder,
-            },
-          ]}
-          onPress={handleCDSSPress}
-          disabled={!selectedPatient || !isDataEntered}
-        >
-          <Text
+      {!readOnly ? (
+        <View style={styles.footerRow}>
+          <TouchableOpacity
             style={[
-              styles.cdssText,
-              (!selectedPatient || !isDataEntered) && { color: theme.textMuted },
+              styles.cdssBtn,
+              (!selectedPatient || !isDataEntered) && {
+                backgroundColor: theme.buttonDisabledBg,
+                borderColor: theme.buttonDisabledBorder,
+              },
             ]}
+            onPress={handleCDSSPress}
+            disabled={!selectedPatient || !isDataEntered}
           >
-            CDSS
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.submitBtn,
-            !selectedPatient && {
-              backgroundColor: theme.buttonDisabledBg,
-              borderColor: theme.buttonDisabledBorder,
-            },
-          ]}
-          onPress={handleSave}
-          disabled={!selectedPatient}
-        >
-          <Text
+            <Text
+              style={[
+                styles.cdssText,
+                (!selectedPatient || !isDataEntered) && { color: theme.textMuted },
+              ]}
+            >
+              CDSS
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[
-              styles.submitText,
-              !selectedPatient && { color: theme.textMuted },
+              styles.submitBtn,
+              !selectedPatient && {
+                backgroundColor: theme.buttonDisabledBg,
+                borderColor: theme.buttonDisabledBorder,
+              },
             ]}
+            onPress={handleSave}
+            disabled={!selectedPatient}
           >
-            {isExistingRecord ? 'UPDATE' : 'SUBMIT'}
-          </Text>
+            <Text
+              style={[
+                styles.submitText,
+                !selectedPatient && { color: theme.textMuted },
+              ]}
+            >
+              {isExistingRecord ? 'UPDATE' : 'SUBMIT'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity style={styles.submitBtn} onPress={onBack}>
+          <Text style={[styles.submitText, { color: theme.primary }]}>CLOSE</Text>
         </TouchableOpacity>
-      </View>
+      )}
 
       <View style={{ height: 100 }} />
     </>

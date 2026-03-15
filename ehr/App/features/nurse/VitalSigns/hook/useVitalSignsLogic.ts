@@ -273,6 +273,20 @@ export const useVitalSignsLogic = () => {
     }
   };
 
+  const handlePrevTime = () => {
+    setVitalsHistory(prev => ({ ...prev, [currentTime]: currentVitals }));
+
+    if (currentTimeIndex > 0) {
+      const prevIndex = currentTimeIndex - 1;
+      setCurrentTimeIndex(prevIndex);
+      const historyForPrev = vitalsHistory[TIME_SLOTS[prevIndex]];
+      setCurrentVitals(historyForPrev || initialVitals);
+      setBackendAlert(null);
+      setRealtimeAlert(null);
+      setRealtimeSeverity(null);
+    }
+  };
+
   const chartData = useMemo(() => {
     const keys: (keyof Vitals)[] = ['temperature', 'hr', 'rr', 'bp', 'spo2'];
     const result: Record<string, any[]> = {};
@@ -360,6 +374,7 @@ export const useVitalSignsLogic = () => {
     currentTime,
     currentTimeIndex,
     handleNextTime,
+    handlePrevTime,
     saveAssessment,
     analyzeField,
     updateDPIE,

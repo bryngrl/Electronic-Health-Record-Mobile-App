@@ -8,6 +8,13 @@ import LoginScreen from '@features/Auth/screen/LoginScreen';
 import { ThemeProvider, useAppTheme } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from '@features/Auth/AuthContext';
 import SplashScreen from '@components/SplashScreen';
+import { ToastProvider } from './context/ToastContext';
+import useNetworkMonitor from './hooks/useNetworkMonitor';
+
+const NetworkMonitor = () => {
+  useNetworkMonitor();
+  return null;
+};
 
 const MainApp = () => {
   const { user, isLoading } = useAuth();
@@ -68,7 +75,10 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <SafeAreaProvider>
-          <MainApp />
+          <ToastProvider>
+            <NetworkMonitor />
+            <MainApp />
+          </ToastProvider>
         </SafeAreaProvider>
       </AuthProvider>
     </ThemeProvider>

@@ -614,6 +614,15 @@ def delete_developmental_history(development_id: int, db: Session = Depends(get_
 
 # ──────────────── UNIFIED MEDICAL HISTORY ────────────────
 
+class MedicalHistorySubmitAll(BaseModel):
+    """Payload for submitting all medical history components at once"""
+    patient_id: int
+    present: Optional[PresentIllnessCreate] = None
+    past: Optional[PastMedicalSurgicalCreate] = None
+    allergies: Optional[AllergiesCreate] = None
+    vaccination: Optional[VaccinationCreate] = None
+    developmental: Optional[DevelopmentalHistoryCreate] = None
+
 class MedicalHistorySummary(BaseModel):
     """Unified view of all medical history components for a patient"""
     patient_id: int
@@ -622,6 +631,73 @@ class MedicalHistorySummary(BaseModel):
     allergies: Optional[AllergiesRead] = None
     vaccination: Optional[VaccinationRead] = None
     developmental_history: Optional[DevelopmentalHistoryRead] = None
+
+
+@router.post("/submit-all")
+def submit_all_medical_history(payload: MedicalHistorySubmitAll, db: Session = Depends(get_db)):
+    """Submit all medical history components at once and create ONE doctor update"""
+    patient = db.query(Patient).filter(Patient.patient_id == payload.patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    now = datetime.utcnow()
+    p_id = payload.patient_id
+
+    # 1. Present Illness
+    if payload.present:
+        existing = db.query(PresentIllness).filter(PresentIllness.patient_id == p_id).first()
+        if existing:
+            for k, v in payload.present.model_dump(exclude={"patient_id"}).items():
+                setattr(existing, k, v)
+            existing.updated_at = now
+        else:
+            db.add(PresentIllness(**payload.present.model_dump(), created_at=now, updated_at=now))
+
+    # 2. Past Medical/Surgical
+    if payload.past:
+        existing = db.query(PastMedicalSurgical).filter(PastMedicalSurgical.patient_id == p_id).first()
+        if existing:
+            for k, v in payload.past.model_dump(exclude={"patient_id"}).items():
+                setattr(existing, k, v)
+            existing.updated_at = now
+        else:
+            db.add(PastMedicalSurgical(**payload.past.model_dump(), created_at=now, updated_at=now))
+
+    # 3. Allergies
+    if payload.allergies:
+        existing = db.query(Allergies).filter(Allergies.patient_id == p_id).first()
+        if existing:
+            for k, v in payload.allergies.model_dump(exclude={"patient_id"}).items():
+                setattr(existing, k, v)
+            existing.updated_at = now
+        else:
+            db.add(Allergies(**payload.allergies.model_dump(), created_at=now, updated_at=now))
+
+    # 4. Vaccination
+    if payload.vaccination:
+        existing = db.query(Vaccination).filter(Vaccination.patient_id == p_id).first()
+        if existing:
+            for k, v in payload.vaccination.model_dump(exclude={"patient_id"}).items():
+                setattr(existing, k, v)
+            existing.updated_at = now
+        else:
+            db.add(Vaccination(**payload.vaccination.model_dump(), created_at=now, updated_at=now))
+
+    # 5. Developmental History
+    if payload.developmental:
+        existing = db.query(DevelopmentalHistory).filter(DevelopmentalHistory.patient_id == p_id).first()
+        if existing:
+            for k, v in payload.developmental.model_dump(exclude={"patient_id"}).items():
+                setattr(existing, k, v)
+            existing.updated_at = now
+        else:
+            db.add(DevelopmentalHistory(**payload.developmental.model_dump(), created_at=now, updated_at=now))
+
+    # CREATE ONLY ONE DOCTOR UPDATE
+    create_doctor_update(db, p_id, "Medical History")
+    
+    db.commit()
+    return {"detail": "Medical History submitted successfully"}
 
 
 @router.get("/patient/{patient_id}/summary", response_model=MedicalHistorySummary)

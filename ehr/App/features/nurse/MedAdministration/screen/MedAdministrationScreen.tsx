@@ -18,7 +18,12 @@ import PatientSearchBar from '@components/PatientSearchBar';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
-const MedAdministrationScreen = ({ onBack }: any) => {
+const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: {
+  onBack: any;
+  readOnly?: boolean;
+  patientId?: number;
+  initialPatientName?: string;
+}) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
@@ -108,6 +113,12 @@ const MedAdministrationScreen = ({ onBack }: any) => {
 
     return () => backHandler.remove();
   }, [onBack]);
+
+  useEffect(() => {
+    if (readOnly && patientId) {
+      handlePatientSelect(patientId, initialPatientName || '');
+    }
+  }, [readOnly, patientId]);
 
   const showAlert = (
     title: string,
@@ -231,6 +242,11 @@ const MedAdministrationScreen = ({ onBack }: any) => {
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>Medication {'\n'}Administration</Text>
               <Text style={styles.dateText}>{formatDate()}</Text>
+              {readOnly && (
+                <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
+                  [READ ONLY]
+                </Text>
+              )}
             </View>
           </View>
         </View>
@@ -251,11 +267,18 @@ const MedAdministrationScreen = ({ onBack }: any) => {
           scrollEnabled={scrollEnabled}
         >
           <View style={{ height: 20 }} />
-          <PatientSearchBar
-            initialPatientName={formData.patientName}
-            onPatientSelect={handlePatientSelect}
-            onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-          />
+          {!readOnly ? (
+            <PatientSearchBar
+              initialPatientName={formData.patientName}
+              onPatientSelect={handlePatientSelect}
+              onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+            />
+          ) : (
+            <View style={styles.staticPatientContainer}>
+              <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+              <Text style={styles.staticPatientName}>{initialPatientName || 'Unknown Patient'}</Text>
+            </View>
+          )}
 
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>DATE :</Text>
@@ -264,41 +287,45 @@ const MedAdministrationScreen = ({ onBack }: any) => {
             </View>
           </View>
 
-          <TouchableOpacity
-            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
-            onPress={() => {
-              if (!selectedPatientId) {
-                onDisabledPress();
-              } else {
-                toggleNA();
-              }
-            }}
-          >
+          {!readOnly && (
+            <TouchableOpacity
+              style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+              onPress={() => {
+                if (!selectedPatientId) {
+                  onDisabledPress();
+                } else {
+                  toggleNA();
+                }
+              }}
+            >
+              <Text
+                style={[
+                  styles.naText,
+                  !selectedPatientId && { color: theme.textMuted },
+                ]}
+              >
+                Mark all as N/A
+              </Text>
+              <Icon
+                name={isNA ? 'check-box' : 'check-box-outline-blank'}
+                size={22}
+                color={selectedPatientId ? theme.primary : theme.textMuted}
+              />
+            </TouchableOpacity>
+          )}
+
+          {!readOnly && (
             <Text
               style={[
-                styles.naText,
-                !selectedPatientId && { color: theme.textMuted },
+                styles.disabledTextAtBottom,
+                isNA && { color: theme.error },
               ]}
             >
-              Mark all as N/A
+              {isNA
+                ? 'All fields below are disabled.'
+                : 'Checking this will disable all fields below.'}
             </Text>
-            <Icon
-              name={isNA ? 'check-box' : 'check-box-outline-blank'}
-              size={22}
-              color={selectedPatientId ? theme.primary : theme.textMuted}
-            />
-          </TouchableOpacity>
-
-          <Text
-            style={[
-              styles.disabledTextAtBottom,
-              isNA && { color: theme.error },
-            ]}
-          >
-            {isNA
-              ? 'All fields below are disabled.'
-              : 'Checking this will disable all fields below.'}
-          </Text>
+          )}
 
           {/* Time Progress Banner */}
           <View style={styles.timeBanner}>
@@ -310,28 +337,28 @@ const MedAdministrationScreen = ({ onBack }: any) => {
             label="Medication"
             value={currentMed?.medication || ''}
             onChangeText={t => updateCurrentMed('medication', t)}
-            editable={!!selectedPatientId && !isNA}
+            editable={!!selectedPatientId && !isNA && !readOnly}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
             label="Dose"
             value={currentMed?.dose || ''}
             onChangeText={t => updateCurrentMed('dose', t)}
-            editable={!!selectedPatientId && !isNA}
+            editable={!!selectedPatientId && !isNA && !readOnly}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
             label="Route"
             value={currentMed?.route || ''}
             onChangeText={t => updateCurrentMed('route', t)}
-            editable={!!selectedPatientId && !isNA}
+            editable={!!selectedPatientId && !isNA && !readOnly}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
             label="Frequency"
             value={currentMed?.frequency || ''}
             onChangeText={t => updateCurrentMed('frequency', t)}
-            editable={!!selectedPatientId && !isNA}
+            editable={!!selectedPatientId && !isNA && !readOnly}
             onDisabledPress={onDisabledPress}
           />
           <MedAdministrationInputCard
@@ -339,43 +366,87 @@ const MedAdministrationScreen = ({ onBack }: any) => {
             value={currentMed?.comments || ''}
             onChangeText={t => updateCurrentMed('comments', t)}
             multiline
-            editable={!!selectedPatientId && !isNA}
+            editable={!!selectedPatientId && !isNA && !readOnly}
             onDisabledPress={onDisabledPress}
           />
 
-          {/* Footer Navigation Button */}
-          <TouchableOpacity
-            style={[
-              styles.actionBtn,
-              !selectedPatientId && {
-                backgroundColor: theme.buttonDisabledBg,
-                borderColor: theme.buttonDisabledBorder,
-              },
-            ]}
-            onPress={handleAction}
-            disabled={
-              !isFormValid &&
-              !isNA &&
-              !!selectedPatientId &&
-              currentMed.medication !== ''
-            }
-          >
-            <Text
+          {!readOnly ? (
+            <TouchableOpacity
               style={[
-                styles.actionBtnText,
-                !selectedPatientId && { color: theme.textMuted },
+                styles.actionBtn,
+                !selectedPatientId && {
+                  backgroundColor: theme.buttonDisabledBg,
+                  borderColor: theme.buttonDisabledBorder,
+                },
               ]}
+              onPress={handleAction}
+              disabled={
+                !isFormValid &&
+                !isNA &&
+                !!selectedPatientId &&
+                currentMed.medication !== ''
+              }
             >
-              {step === 2 ? 'SUBMIT' : 'NEXT'}
-            </Text>
-            {step < 2 && (
-              <Icon
-                name="chevron-right"
-                size={24}
-                color={selectedPatientId ? theme.primary : theme.textMuted}
-              />
-            )}
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.actionBtnText,
+                  !selectedPatientId && { color: theme.textMuted },
+                ]}
+              >
+                {step === 2 ? 'SUBMIT' : 'NEXT'}
+              </Text>
+              {step < 2 && (
+                <Icon
+                  name="chevron-right"
+                  size={24}
+                  color={selectedPatientId ? theme.primary : theme.textMuted}
+                />
+              )}
+            </TouchableOpacity>
+          ) : (
+            <View style={{ marginTop: 10 }}>
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+                <TouchableOpacity
+                  style={[
+                    styles.actionBtn,
+                    { flex: 1 },
+                    step === 0 && {
+                      backgroundColor: theme.buttonDisabledBg,
+                      borderColor: theme.buttonDisabledBorder,
+                    },
+                  ]}
+                  onPress={() => setStep(step - 1)}
+                  disabled={step === 0}
+                >
+                  <Text style={[styles.actionBtnText, step === 0 && { color: theme.textMuted }]}>
+                    ‹ PREV
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.actionBtn,
+                    { flex: 1 },
+                    step === 2 && {
+                      backgroundColor: theme.buttonDisabledBg,
+                      borderColor: theme.buttonDisabledBorder,
+                    },
+                  ]}
+                  onPress={() => setStep(step + 1)}
+                  disabled={step === 2}
+                >
+                  <Text style={[styles.actionBtnText, step === 2 && { color: theme.textMuted }]}>
+                    NEXT ›
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={onBack}
+              >
+                <Text style={styles.actionBtnText}>CLOSE</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </ScrollView>
         <LinearGradient
           colors={fadeColors}
@@ -488,6 +559,28 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       left: 0,
       right: 0,
       height: 60,
+    },
+    staticPatientContainer: {
+      marginBottom: 20,
+      backgroundColor: theme.card,
+      padding: 15,
+      borderRadius: 15,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    staticPatientLabel: {
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      fontSize: 12,
+      marginRight: 10,
+    },
+    staticPatientName: {
+      fontFamily: 'AlteHaasGrotesk',
+      color: theme.text,
+      fontSize: 16,
+      fontWeight: 'bold',
     },
   });
 

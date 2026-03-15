@@ -9,13 +9,39 @@
 ## 🔐 Authentication
 
 ### Login
+
 `POST /api/auth/login`
+
+```json
+{ "username": "doctor_username", "password": "password" }
+```
+
+Send the credentials in the **JSON request body**. Do **not** put the password in the URL query string.
+
+You may send either:
+
+```json
+{ "username": "doctor_username", "password": "password" }
+```
+
+or
+
 ```json
 { "email": "doctor@example.com", "password": "password" }
 ```
+
+The login identifier must match either the exact value in `users.username` or `users.email`.
+
 **Response:**
+
 ```json
-{ "access_token": "...", "role": "doctor", "full_name": "dr_username", "user_id": 2 }
+{
+  "access_token": "...",
+  "role": "doctor",
+  "full_name": "dr_username",
+  "email": "doctor@example.com",
+  "user_id": 2
+}
 ```
 
 ---
@@ -23,33 +49,46 @@
 ## 📊 Dashboard Stats
 
 ### Get Stats
+
 `GET /api/doctor/stats`
 
 **Response:**
+
 ```json
 {
   "total_patients": 120,
   "active_patients": 45,
-  "today_updates": 12
+  "today_updates": 12,
+  "unread_count": 7
 }
 ```
+
+| Field             | Description                                        |
+| ----------------- | -------------------------------------------------- |
+| `total_patients`  | All registered patients                            |
+| `active_patients` | Currently admitted patients                        |
+| `today_updates`   | Forms updated today across all types               |
+| `unread_count`    | Recent forms not yet marked as read by this doctor |
 
 ---
 
 ## 📋 Recent Forms Feed
 
 ### Get Recent Forms
+
 `GET /api/doctor/recent-forms`
 
-| Query Param | Type | Default | Description |
-|-------------|------|---------|-------------|
-| `type` | string | `all` | Form type filter: `vital-signs`, `physical-exam`, `adl`, `intake-output`, `lab-values`, `medication`, `ivs-lines` |
-| `patient` | string | `""` | Filter by patient name (partial match) |
-| `date` | date | `""` | Filter by date `YYYY-MM-DD` |
-| `page` | int | `1` | Page number |
-| `per_page` | int | `20` | Results per page (max 50) |
+| Query Param | Type   | Default | Description                                                                                                      |
+| ----------- | ------ | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| `type`      | string | `all`   | Form type: `vital-signs` · `physical-exam` · `adl` · `intake-output` · `lab-values` · `medication` · `ivs-lines` |
+| `read`      | string | `all`   | Read status filter: `all` · `unread` · `read`                                                                    |
+| `patient`   | string | `""`    | Filter by patient name (partial match)                                                                           |
+| `date`      | date   | `""`    | Filter by date `YYYY-MM-DD`                                                                                      |
+| `page`      | int    | `1`     | Page number                                                                                                      |
+| `per_page`  | int    | `20`    | Results per page (max 50)                                                                                        |
 
 **Response:**
+
 ```json
 {
   "data": [
@@ -58,8 +97,10 @@
       "type_key": "vital-signs",
       "patient_id": 7,
       "patient_name": "Dela Cruz, Juan M.",
-      "time": "2025-03-10 08:45:00",
-      "record_id": 42
+      "time": "2026-03-11 08:45:00",
+      "record_id": 42,
+      "is_read": false,
+      "is_today": true
     }
   ],
   "total": 150,
@@ -69,14 +110,108 @@
 }
 ```
 
+| Field       | Description                                                |
+| ----------- | ---------------------------------------------------------- |
+| `is_read`   | `true` if this doctor has marked this form as read         |
+| `is_today`  | `true` if the form was last updated today                  |
+| `record_id` | Use this with `POST /api/doctor/mark-read` to mark as read |
+
+**Filter examples:**
+
+```
+GET /api/doctor/recent-forms?read=unread
+GET /api/doctor/recent-forms?read=read&type=vital-signs
+GET /api/doctor/recent-forms?date=2026-03-11&patient=Cruz
+```
+
+---
+
+## ✅ Mark Form as Read
+
+### Mark as Read
+
+`POST /api/doctor/mark-read`
+
+Use `record_id` and `model_class` from the recent-forms or today-updates feed.
+
+| Field        | Type    | Required | Description                                 |
+| ------------ | ------- | -------- | ------------------------------------------- |
+| `model_type` | string  | ✅       | Full PHP model class name (see table below) |
+| `model_id`   | integer | ✅       | The `record_id` from the feed               |
+
+**Allowed `model_type` values:**
+
+| Form Type                 | `model_type` value                    |
+| ------------------------- | ------------------------------------- |
+| Vital Signs               | `App\Models\Vitals`                   |
+| Physical Exam             | `App\Models\PhysicalExam`             |
+| ADL                       | `App\Models\ActOfDailyLiving`         |
+| Intake & Output           | `App\Models\IntakeAndOutput`          |
+| Lab Values                | `App\Models\LabValues`                |
+| Medication Administration | `App\Models\MedicationAdministration` |
+| IVs & Lines               | `App\Models\IvsAndLine`               |
+
+**Request body:**
+
+```json
+{
+  "model_type": "App\\Models\\Vitals",
+  "model_id": 42
+}
+```
+
+**Response:**
+
+```json
+{ "success": true, "message": "Marked as read." }
+```
+
+> **Tip:** Call this immediately when the doctor opens/views a form item. Subsequent calls for the same form simply update `read_at` (idempotent).
+
+**React Native example:**
+
+```js
+await fetch(`${BASE_URL}/api/doctor/mark-read`, {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  },
+  body: JSON.stringify({
+    model_type: 'App\\Models\\Vitals',
+    model_id: item.record_id,
+  }),
+});
+```
+
+**Flutter example:**
+
+```dart
+await http.post(
+  Uri.parse('$baseUrl/api/doctor/mark-read'),
+  headers: {
+    'Authorization': 'Bearer $token',
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  body: jsonEncode({
+    'model_type': r'App\Models\Vitals',
+    'model_id': item['record_id'],
+  }),
+);
+```
+
 ---
 
 ## 📅 Today's Updates
 
 ### Get Today's Updates
+
 `GET /api/doctor/today-updates`
 
 **Response:**
+
 ```json
 {
   "data": [
@@ -85,24 +220,28 @@
       "type_key": "lab-values",
       "patient_id": 3,
       "patient_name": "Santos, Maria T.",
-      "time": "2025-03-10 09:10:00",
-      "record_id": 18
+      "time": "2026-03-12 09:10:00",
+      "record_id": 18,
+      "is_read": false
     }
   ],
   "total": 7
 }
 ```
 
+> `is_read` works the same as in Recent Forms — use `POST /api/doctor/mark-read` to mark items read.
+
 ---
 
 ## 👥 Patients
 
 ### List All Patients (Total Patients)
+
 `GET /api/doctor/patients`
 
-| Query Param | Description |
-|-------------|-------------|
-| `search` | Search by first/last name |
+| Query Param | Description               |
+| ----------- | ------------------------- |
+| `search`    | Search by first/last name |
 
 **Response:** Array of patient objects sorted alphabetically.
 
@@ -118,26 +257,29 @@
     "sex": "Male",
     "room_no": "101",
     "bed_no": "A",
-    "admission_date": "2025-01-01T00:00:00.000000Z",
+    "admission_date": "2026-01-01T00:00:00.000000Z",
     "is_active": true,
-    "days_admitted": 68
+    "days_admitted": 70
   }
 ]
 ```
 
 ### List Active Patients
+
 `GET /api/doctor/patients/active`
 
-Returns only currently admitted patients, sorted by most recent admission. Each object includes `days_admitted` field.
+Returns only currently admitted patients, sorted by most recent admission. Each object includes `days_admitted`.
 
 ---
 
 ## 🧑‍⚕️ Patient Details
 
 ### Get Patient Details
+
 `GET /api/doctor/patient/{id}`
 
 **Response:** Full patient object including:
+
 - Personal info (name, age, sex, birthdate, birthplace, religion, ethnicity, address)
 - Admission info (admission_date, room_no, bed_no, is_active, days_admitted)
 - Contact info (contact_name, contact_relationship, contact_number arrays)
@@ -153,8 +295,8 @@ Returns only currently admitted patients, sorted by most recent admission. Each 
   "middle_name": "Mayuga",
   "age": 30,
   "sex": "Male",
-  "admission_date": "2025-01-01T00:00:00.000000Z",
-  "days_admitted": 68,
+  "admission_date": "2026-01-01T00:00:00.000000Z",
+  "days_admitted": 70,
   "room_no": "101",
   "bed_no": "A",
   "is_active": true,
@@ -167,15 +309,17 @@ Returns only currently admitted patients, sorted by most recent admission. Each 
 ## 📂 Patient Form Records
 
 ### Get Patient Forms by Type
+
 `GET /api/doctor/patient/{patient_id}/forms/{type}`
 
-| Path Param | Values |
-|------------|--------|
-| `type` | `vital-signs` · `physical-exam` · `adl` · `intake-output` · `lab-values` · `medication` · `ivs-lines` |
+| Path Param | Values                                                                                                |
+| ---------- | ----------------------------------------------------------------------------------------------------- |
+| `type`     | `vital-signs` · `physical-exam` · `adl` · `intake-output` · `lab-values` · `medication` · `ivs-lines` |
 
-**Response:** Array of records for that form type. For assessment types (`vital-signs`, `physical-exam`, `adl`, `intake-output`, `lab-values`), each record includes its associated `nursing_diagnoses` object.
+**Response:** Array of records for that form type. For `vital-signs`, `physical-exam`, `adl`, `intake-output`, and `lab-values`, each record includes its `nursing_diagnoses` object.
 
 **Example:**
+
 ```
 GET /api/doctor/patient/7/forms/vital-signs
 GET /api/doctor/patient/7/forms/lab-values
@@ -183,15 +327,16 @@ GET /api/doctor/patient/7/forms/medication
 ```
 
 **Response (with nursing diagnoses):**
+
 ```json
 [
   {
     "id": 42,
     "patient_id": 7,
     "temperature": "37.5",
-    "heart_rate": "82",
+    "hr": "82",
     "alerts": "Normal vital signs.",
-    "updated_at": "2025-03-10T08:45:00.000000Z",
+    "updated_at": "2026-03-12T08:45:00.000000Z",
     "nursing_diagnoses": {
       "id": 8,
       "diagnosis": "...",
@@ -205,11 +350,68 @@ GET /api/doctor/patient/7/forms/medication
 
 ---
 
+## 📄 Patient PDF Report
+
+### Download Patient PDF
+
+`GET /api/doctor/patient/{patient_id}/pdf`
+
+Downloads a complete patient report as a **PDF file** (`application/pdf`). The PDF includes all patient data: vitals, physical exam, ADL, intake & output, lab values, IVs & lines, medication administration, medical history, diagnostics, discharge planning, and nursing diagnoses.
+
+**Response:** Binary PDF file stream with headers:
+
+```
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="{patient_name}_Results.pdf"
+```
+
+> **Note:** If the patient is not found, returns `404`.
+
+**React Native example (save to device):**
+
+```js
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+
+const downloadPatientPDF = async (patientId, patientName) => {
+  const url = `${BASE_URL}/api/doctor/patient/${patientId}/pdf`;
+  const fileUri = FileSystem.documentDirectory + `${patientName}_Results.pdf`;
+
+  const { uri } = await FileSystem.downloadAsync(url, fileUri, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  await Sharing.shareAsync(uri, { mimeType: 'application/pdf' });
+};
+```
+
+**Flutter example:**
+
+```dart
+import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+
+Future<void> downloadPatientPDF(int patientId, String patientName) async {
+  final dir = await getApplicationDocumentsDirectory();
+  final filePath = '${dir.path}/${patientName}_Results.pdf';
+
+  await Dio().download(
+    '$baseUrl/api/doctor/patient/$patientId/pdf',
+    filePath,
+    options: Options(headers: {'Authorization': 'Bearer $token'}),
+  );
+}
+```
+
+---
+
 ## ⚠️ Error Responses
 
-| Status | Meaning |
-|--------|---------|
-| `401` | Missing or invalid token |
-| `403` | Authenticated but not a doctor |
-| `404` | Resource not found |
-| `422` | Invalid form type parameter |
+| Status | Meaning                                             |
+| ------ | --------------------------------------------------- |
+| `401`  | Missing or invalid token                            |
+| `403`  | Authenticated but not a doctor                      |
+| `404`  | Resource not found                                  |
+| `422`  | Validation failed (invalid form type or model_type) |

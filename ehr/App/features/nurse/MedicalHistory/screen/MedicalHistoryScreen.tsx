@@ -27,6 +27,9 @@ import { useAppTheme } from '@App/theme/ThemeContext';
 
 interface MedicalHistoryProps {
   onBack: () => void;
+  readOnly?: boolean;
+  patientId?: number;
+  initialPatientName?: string;
 }
 
 const initialFormData = {
@@ -127,7 +130,7 @@ const FIELD_LABELS: Record<string, string> = {
   social: 'SOCIAL',
 };
 
-const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
+const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly = false, patientId, initialPatientName }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
@@ -203,6 +206,12 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
       setFormData(prev => ({ ...prev, [currentKey]: updatedSection }));
     }
   };
+
+  useEffect(() => {
+    if (readOnly && patientId) {
+      setSelectedPatientId(patientId);
+    }
+  }, [readOnly, patientId]);
 
   useEffect(() => {
     const backAction = () => {
@@ -371,6 +380,11 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>Medical History</Text>
               <Text style={styles.dateText}>{formatDate()}</Text>
+              {readOnly && (
+                <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
+                  [READ ONLY]
+                </Text>
+              )}
             </View>
           </View>
         </View>
@@ -393,8 +407,10 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
           <PatientSearchBar
             onPatientSelect={id => setSelectedPatientId(id)}
             onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+            initialPatientName={readOnly ? (initialPatientName || '') : undefined}
           />
 
+          {!readOnly && (
           <TouchableOpacity
             style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
             onPress={() => {
@@ -426,7 +442,9 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
               color={selectedPatientId ? theme.primary : theme.textMuted}
             />
           </TouchableOpacity>
+          )}
 
+          {!readOnly && (
           <Text
             style={[
               styles.disabledTextAtBottom,
@@ -437,6 +455,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
               ? 'All fields below are disabled.'
               : 'Checking this will disable all fields below.'}
           </Text>
+          )}
 
           <View style={styles.stepHeader}>
             <Text style={styles.stepHeaderText}>{steps[step].title}</Text>
@@ -454,7 +473,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
                 ] || ''
               }
               onChangeText={(val: string) => updateField(field, val)}
-              disabled={!selectedPatientId || isNAStep[currentStepKey]}
+              disabled={!selectedPatientId || isNAStep[currentStepKey] || readOnly}
               onDisabledPress={() => {
                 if (!selectedPatientId) {
                   showAlert(
@@ -466,13 +485,37 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack }) => {
             />
           ))}
 
-          <View style={styles.btnContainer}>
-            <Button
-              title={step === steps.length - 1 ? 'SUBMIT' : 'NEXT'}
-              onPress={handleNext}
-              disabled={!selectedPatientId}
-            />
-          </View>
+          {!readOnly ? (
+            <View style={styles.btnContainer}>
+              <Button
+                title={step === steps.length - 1 ? 'SUBMIT' : 'NEXT'}
+                onPress={handleNext}
+                disabled={!selectedPatientId}
+              />
+            </View>
+          ) : (
+            <View style={{ marginTop: 10 }}>
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+                <TouchableOpacity
+                  style={[styles.navBtn, step === 0 && { backgroundColor: theme.buttonDisabledBg, borderColor: theme.buttonDisabledBorder }]}
+                  onPress={() => { setStep(step - 1); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
+                  disabled={step === 0}
+                >
+                  <Text style={[styles.navBtnText, step === 0 && { color: theme.textMuted }]}>‹ PREV</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.navBtn, step === steps.length - 1 && { backgroundColor: theme.buttonDisabledBg, borderColor: theme.buttonDisabledBorder }]}
+                  onPress={() => { setStep(step + 1); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
+                  disabled={step === steps.length - 1}
+                >
+                  <Text style={[styles.navBtnText, step === steps.length - 1 && { color: theme.textMuted }]}>NEXT ›</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity style={styles.navBtn} onPress={onBack}>
+                <Text style={styles.navBtnText}>CLOSE</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <View style={{ height: 100 }} />
         </ScrollView>
         <LinearGradient
@@ -538,6 +581,21 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       textAlign: 'right',
     },
     btnContainer: { marginTop: 10 },
+    navBtn: {
+      flex: 1,
+      backgroundColor: theme.buttonBg,
+      height: 50,
+      borderRadius: 25,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.buttonBorder,
+    },
+    navBtnText: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 15,
+    },
     fadeBottom: {
       position: 'absolute',
       bottom: 0,
