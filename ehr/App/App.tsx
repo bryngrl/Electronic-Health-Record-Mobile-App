@@ -23,7 +23,6 @@ const MainApp = () => {
     Platform.OS !== 'android',
   );
 
-  // Determine the next screen once auth is ready
   const nextScreen = !user ? 'Login' : 'Home';
 
   const role = user?.role?.toLowerCase();
