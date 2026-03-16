@@ -82,8 +82,17 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
       fetchDataAlert(patientId);
       const data = await fetchLatestPhysicalExam(patientId);
       if (data) {
-        setExamId(data.id);
-        examIdRef.current = data.id;
+        const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+        const recordDate = (data.created_at || '').split('T')[0];
+        
+        if (recordDate === today) {
+          setExamId(data.id);
+          examIdRef.current = data.id;
+        } else {
+          setExamId(null);
+          examIdRef.current = null;
+        }
+
         const newFormData = {
           general_appearance: data.general_appearance || '',
           skin_condition: data.skin_condition || '',
@@ -164,8 +173,8 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
       const result = await analyzeField(
         parseInt(selectedPatientId, 10),
         examIdRef.current,
+        formDataRef.current,
         field,
-        val,
         alertKey!,
       );
 

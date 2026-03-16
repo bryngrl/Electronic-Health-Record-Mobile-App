@@ -31,30 +31,29 @@ export const usePhysicalExam = () => {
   const analyzeField = useCallback(async (
     patientId: number,
     examId: number | null,
+    fullData: any,
     fieldName: string,
-    finding: string,
     alertKey: string,
   ): Promise<{ alert: string | null; severity: string | null; examId: number | null } | null> => {
+    const finding = fullData[fieldName];
     if (!finding || finding.trim().length < 3 || finding === 'N/A') return null;
+    
     try {
+      const body = { ...fullData, patient_id: patientId };
+      const sanitized = sanitize(body);
+      
       let response;
       if (examId) {
-        response = await apiClient.put(`/physical-exam/${examId}/assessment`, {
-          patient_id: patientId,
-          [fieldName]: finding,
-        });
+        response = await apiClient.put(`/physical-exam/${examId}/assessment`, sanitized);
       } else {
-        response = await apiClient.post('/physical-exam', {
-          patient_id: patientId,
-          [fieldName]: finding,
-        });
+        response = await apiClient.post('/physical-exam', sanitized);
       }
 
       console.log(`[CDSS][${fieldName}] raw response:`, JSON.stringify(response.data, null, 2));
 
-      // Response: { message, data: { id, ...fields, ...alert_columns }, alerts: { alertKey: value } }
-      const alerts = response.data?.alerts || {};
-      const record = response.data?.data || {};
+      const data = response.data;
+      const record = data?.data || data || {};
+      const alerts = data?.alerts || record?.alerts || {};
 
       // Capture the record id so subsequent calls update, not create
       const returnedExamId: number | null = record?.id || null;
