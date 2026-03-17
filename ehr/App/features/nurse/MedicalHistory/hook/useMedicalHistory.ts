@@ -27,7 +27,9 @@ export const useMedicalHistory = () => {
       if (!endpoint) throw new Error(`Invalid step key: ${stepKey}`);
 
       const sanitizedData = sanitize(stepData);
-      const medicalId = stepData.medical_id || stepData.id;
+      
+      // Check if we have any existing data for this step (any non-N/A value or existing ID)
+      const hasExistingData = stepData.patient_id || stepData.medical_id || stepData.id || stepData.development_id;
 
       const payload = {
         patient_id: patientId,
@@ -35,9 +37,10 @@ export const useMedicalHistory = () => {
       };
 
       let response;
-      if (medicalId) {
-        // Update existing record
-        response = await apiClient.put(`${endpoint}/${medicalId}`, payload);
+      if (hasExistingData) {
+        // Update existing record using patientId as the unique identifier
+        // since backend models use patient_id as primaryKey
+        response = await apiClient.put(`${endpoint}/${patientId}`, payload);
       } else {
         // Create new record
         response = await apiClient.post(endpoint, payload);

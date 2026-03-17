@@ -313,25 +313,32 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
     const currentData = formData[currentKey as keyof typeof formData];
 
     try {
-      // Save only the current step
-      await saveMedicalHistoryStep(selectedPatientId, currentKey, currentData);
+      if (isModified) {
+        // Save only if the current step has been modified
+        await saveMedicalHistoryStep(selectedPatientId, currentKey, currentData);
 
-      // Update lastSavedData for this step immediately
-      setLastSavedData(prev => ({
-        ...prev,
-        [currentKey]: { ...currentData },
-      }));
+        // Update lastSavedData for this step immediately
+        setLastSavedData(prev => ({
+          ...prev,
+          [currentKey]: { ...currentData },
+        }));
+      }
 
       if (step < steps.length - 1) {
         setStep(step + 1);
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       } else {
-        showAlert(
-          'Success',
-          'Medical History has been saved successfully.',
-          'success',
-        );
-        loadPatientData(selectedPatientId);
+        if (isModified) {
+          showAlert(
+            'Success',
+            'Medical History has been saved successfully.',
+            'success',
+          );
+          loadPatientData(selectedPatientId);
+        } else {
+          // If it's the last step and no changes, just close
+          onBack();
+        }
       }
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to save history.');
@@ -515,7 +522,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
               <Button
                 title={step === steps.length - 1 ? 'SUBMIT' : 'NEXT'}
                 onPress={handleNext}
-                disabled={!isModified}
+                disabled={!selectedPatientId}
               />
             </View>
           ) : (
