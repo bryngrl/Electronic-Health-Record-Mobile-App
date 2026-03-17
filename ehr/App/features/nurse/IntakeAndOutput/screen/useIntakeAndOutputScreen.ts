@@ -105,7 +105,12 @@ export const useIntakeAndOutputScreen = (onBack: () => void, readOnly: boolean, 
         };
         const result = await analyzeField(payload);
         if (result) {
-          setBackendAlerts(prev => ({ ...prev, ...result.alerts }));
+          const updatedAlerts = { ...result.alerts };
+          // If current field is cleared, make sure its specific alert is also cleared locally
+          if (!value.trim()) {
+            updatedAlerts[`${field}_alert`] = null;
+          }
+          setBackendAlerts(prev => ({ ...prev, ...updatedAlerts }));
           setBackendSeverities(prev => ({ ...prev, [field]: result.severity }));
         }
         if (thisCount === analyzeCountRef.current) {

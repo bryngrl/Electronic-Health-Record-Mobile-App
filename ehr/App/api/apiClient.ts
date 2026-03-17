@@ -74,7 +74,7 @@ apiClient.interceptors.response.use(
         'No response from backend. Check if server is running on',
         HOST + ':' + BACKEND_PORT,
       );
-      if (Platform.OS === 'android' && host === '127.0.0.1') {
+      if (Platform.OS === 'android' && HOST === '127.0.0.1') {
         console.error(
           'Android USB tip: run `adb reverse tcp:8000 tcp:8000` from the project root.',
         );

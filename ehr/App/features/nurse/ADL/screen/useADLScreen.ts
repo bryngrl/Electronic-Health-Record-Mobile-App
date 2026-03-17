@@ -194,9 +194,9 @@ export const useADLScreen = (onBack: () => void) => {
     const alertKey = ALERT_KEY_MAP[field];
 
     fieldTimers.current[field] = setTimeout(async () => {
-      if (!selectedPatient?.id) return;
-      
-      const result = await analyzeField(
+      if (!selectedPatient) return;
+
+      const res = await analyzeField(
         selectedPatient.id,
         adlIdRef.current,
         formDataRef.current,
@@ -204,15 +204,22 @@ export const useADLScreen = (onBack: () => void) => {
         alertKey!,
       );
 
-      if (result) {
-        if (result.adlId && !adlIdRef.current) {
-          adlIdRef.current = result.adlId;
-          setAdlId(result.adlId);
+      if (res) {
+        if (res.adlId && !adlIdRef.current) {
+          adlIdRef.current = res.adlId;
+          setAdlId(res.adlId);
         }
 
         // Update ALL alerts from the response to keep everything in sync
-        setBackendAlerts(prev => ({ ...prev, ...result.alerts }));
-        setBackendSeverities(prev => ({ ...prev, [field]: result.severity }));
+        const updatedAlerts = { ...res.alerts };
+
+        // If current field is cleared, make sure its specific alert is also cleared locally
+        if (!val.trim()) {
+          updatedAlerts[alertKey!] = null;
+        }
+
+        setBackendAlerts(prev => ({ ...prev, ...updatedAlerts }));
+        setBackendSeverities(prev => ({ ...prev, [field]: res.severity }));
       }
     }, 800);
   };

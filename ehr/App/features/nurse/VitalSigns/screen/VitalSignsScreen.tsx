@@ -197,8 +197,13 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
         };
         const res = await analyzeField(payload);
         if (res) {
-          setBackendAlerts(prev => ({ ...prev, ...res.alerts }));
-          setRealtimeAlert(Object.values(res.alerts).filter(Boolean).join('\n'));
+          const updatedAlerts = { ...res.alerts };
+          // If current field is cleared, make sure its specific alert is also cleared locally
+          if (!value.trim()) {
+            updatedAlerts[`${key}_alert`] = null;
+          }
+          setBackendAlerts(prev => ({ ...prev, ...updatedAlerts }));
+          setRealtimeAlert(Object.values(updatedAlerts).filter(v => v && !v.toLowerCase().includes('no findings')).join('\n'));
           setRealtimeSeverity(res.severity);
         }
         if (thisCount === analyzeCountRef.current) {

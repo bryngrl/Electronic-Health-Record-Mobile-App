@@ -212,7 +212,14 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
         }
 
         // Update ALL alerts from the response to keep everything in sync
-        setBackendAlerts(prev => ({ ...prev, ...result.alerts }));
+        const updatedAlerts = { ...result.alerts };
+        
+        // If current field is cleared, make sure its specific alert is also cleared locally
+        if (!val.trim()) {
+          updatedAlerts[alertKey!] = null;
+        }
+
+        setBackendAlerts(prev => ({ ...prev, ...updatedAlerts }));
         setBackendSeverities(prev => ({ ...prev, [field]: result.severity }));
       }
     }, 800);

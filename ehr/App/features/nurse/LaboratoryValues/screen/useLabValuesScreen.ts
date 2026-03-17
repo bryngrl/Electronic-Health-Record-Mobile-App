@@ -106,7 +106,14 @@ export const useLabValuesScreen = (onBack: () => void) => {
         setLabId(res.labId);
       }
       // Update all alerts from the response
-      setBackendAlerts(prev => ({ ...prev, ...res.alerts }));
+      const updatedAlerts = { ...res.alerts };
+      
+      // If current field is cleared, make sure its specific alert is also cleared locally
+      if (!result.trim() && !normalRange.trim()) {
+        updatedAlerts[`${prefix}_alert`] = null;
+      }
+
+      setBackendAlerts(prev => ({ ...prev, ...updatedAlerts }));
       setBackendSeverities(prev => ({ ...prev, [`${prefix}_severity`]: res.severity }));
       setIsAlertLoading(false);
     }, 800);
