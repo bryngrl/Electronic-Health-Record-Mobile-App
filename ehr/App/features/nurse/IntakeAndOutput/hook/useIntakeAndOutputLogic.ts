@@ -23,6 +23,11 @@ export const useIntakeAndOutputLogic = () => {
     iv_fluids_volume: '',
     urine_output: '',
   });
+  const [lastSavedData, setLastSavedData] = useState<IntakeOutputData>({
+    oral_intake: '',
+    iv_fluids_volume: '',
+    urine_output: '',
+  });
   const [assessmentAlert, setAssessmentAlert] = useState<string | null>(null);
   const [assessmentSeverity, setAssessmentSeverity] = useState<string | null>(null);
   const [currentAlert, setBackendAlert] = useState<{
@@ -71,8 +76,10 @@ export const useIntakeAndOutputLogic = () => {
   );
 
   const isDataEntered = useMemo(() => {
-    return true; // Enable empty inputs as per requirement
-  }, []);
+    return Object.values(intakeOutput).some(
+      v => v && v.trim() !== '' && v !== 'N/A',
+    );
+  }, [intakeOutput]);
 
   const fetchLatestIntakeOutput = useCallback(async (patientId: number) => {
     try {
@@ -89,7 +96,11 @@ export const useIntakeAndOutputLogic = () => {
     }
   }, []);
 
-  const analyzeField = useCallback(async (payload: any): Promise<{ alert: string | null; severity: string | null } | null> => {
+  const analyzeField = useCallback(async (payload: any): Promise<{ 
+    alerts: Record<string, string | null>; 
+    severity: string | null; 
+    recordId: number | null 
+  } | null> => {
     try {
       const targetId = recordIdRef.current;
       let response;
@@ -98,17 +109,40 @@ export const useIntakeAndOutputLogic = () => {
       } else {
         response = await apiClient.post('/intake-and-output', payload);
       }
+      
       const data = response.data?.data || response.data;
-      if (data?.id && !recordIdRef.current) {
-        recordIdRef.current = data.id;
-        setRecordId(data.id);
+      const alertsObj = response.data?.alerts || data?.alerts || {};
+      const returnedId: number | null = data?.id || null;
+
+      if (returnedId && !recordIdRef.current) {
+        recordIdRef.current = returnedId;
+        setRecordId(returnedId);
       }
-      const alertText: string = (data?.alert || data?.assessment_alert || '').toString().trim();
-      if (!alertText || alertText === 'No findings.' || alertText === 'No Findings') {
-        return { alert: null, severity: null };
+
+      const allAlerts: Record<string, string | null> = {};
+      Object.keys(alertsObj).forEach(key => {
+        const val = alertsObj[key];
+        allAlerts[key] = (val && val !== 'No findings.' && val !== 'No Findings') ? val.toString().trim() : null;
+      });
+
+      // If specific alert keys are in data but not alertsObj, pull them in
+      ['oral_intake_alert', 'iv_fluids_volume_alert', 'urine_output_alert', 'alert', 'assessment_alert'].forEach(k => {
+        if (!allAlerts[k] && data[k] && data[k] !== 'No findings.' && data[k] !== 'No Findings') {
+          allAlerts[k] = data[k].toString().trim();
+        }
+      });
+
+      let severity = 'INFO';
+      const firstAlert = Object.values(allAlerts).find(v => v !== null);
+      if (firstAlert) {
+        severity = inferSeverity(firstAlert);
+      } else {
+        severity = null as any;
       }
-      return { alert: alertText, severity: inferSeverity(alertText) };
+
+      return { alerts: allAlerts, severity, recordId: returnedId };
     } catch (err) {
+      console.error('[IO analyzeField] error:', err);
       return null;
     }
   }, []);
@@ -149,6 +183,7 @@ export const useIntakeAndOutputLogic = () => {
         setAssessmentAlert(alertText);
         setAssessmentSeverity(inferSeverity(alertText));
       }
+      setLastSavedData({ ...intakeOutput });
       fetchLatestIntakeOutput(parseInt(selectedPatientId, 10));
       return data;
     } catch (e) {
@@ -173,19 +208,31 @@ export const useIntakeAndOutputLogic = () => {
       fetchDataAlert(id);
       const data = await fetchLatestIntakeOutput(id);
       if (data) {
-        recordIdRef.current = data.id;
-        setRecordId(data.id);
-        setIsExistingRecord(true);
+        const today = new Date().toLocaleDateString('en-CA');
+        const recordDate = (data.date || data.created_at || '').split('T')[0];
+
+        if (recordDate === today) {
+          recordIdRef.current = data.id;
+          setRecordId(data.id);
+          setIsExistingRecord(true);
+        } else {
+          recordIdRef.current = null;
+          setRecordId(null);
+          setIsExistingRecord(false);
+        }
+
         setCurrentDayNo(
           data.day_no !== undefined && data.day_no !== null
             ? String(data.day_no)
             : '',
         );
-        setIntakeOutput({
+        const initialData = {
           oral_intake: (data.oral_intake ?? '').toString(),
           iv_fluids_volume: (data.iv_fluids_volume ?? data.iv_fluids ?? '').toString(),
           urine_output: (data.urine_output ?? '').toString(),
-        });
+        };
+        setIntakeOutput(initialData);
+        setLastSavedData(initialData);
         if (data.assessment_alert) {
           setAssessmentAlert(data.assessment_alert);
           setAssessmentSeverity(inferSeverity(data.assessment_alert));
@@ -231,5 +278,6 @@ export const useIntakeAndOutputLogic = () => {
     setIsExistingRecord,
     ADPIE_STAGES,
     setIntakeOutput,
+    lastSavedData,
   };
 };

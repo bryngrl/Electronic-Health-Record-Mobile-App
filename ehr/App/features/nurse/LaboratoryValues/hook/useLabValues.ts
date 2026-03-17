@@ -97,17 +97,15 @@ export const useLabValues = () => {
   const analyzeLabField = useCallback(async (
     patientId: number,
     currentLabId: number | null,
+    fullData: any,
     prefix: string,
-    resultVal: string,
-    rangeVal: string,
-  ): Promise<{ alert: string | null; severity: string | null; labId: number | null } | null> => {
-    if (!resultVal || resultVal.trim().length < 1 || resultVal === 'N/A') return null;
+  ): Promise<{ 
+    alerts: Record<string, string | null>; 
+    severity: string | null; 
+    labId: number | null 
+  } | null> => {
     try {
-      const body = sanitize({
-        patient_id: patientId,
-        [`${prefix}_result`]: resultVal,
-        [`${prefix}_normal_range`]: rangeVal || 'N/A',
-      });
+      const body = sanitize({ ...fullData, patient_id: patientId });
       let response;
       if (currentLabId) {
         response = await apiClient.put(`/lab-values/${currentLabId}/assessment`, body);
@@ -115,17 +113,30 @@ export const useLabValues = () => {
         response = await apiClient.post('/lab-values', body);
       }
       const data = response.data?.data || response.data;
+      const alertsObj = response.data?.alerts || data?.alerts || {};
       const returnedLabId: number | null = data?.id || null;
-      const alertText: string = (data?.[`${prefix}_alert`] || '').toString().trim();
-      if (
-        !alertText ||
-        alertText.toLowerCase().includes('no findings') ||
-        alertText.toLowerCase().includes('no result') ||
-        alertText.toLowerCase() === 'normal'
-      ) {
-        return { alert: null, severity: null, labId: returnedLabId };
+
+      const allAlerts: Record<string, string | null> = {};
+      Object.keys(alertsObj).forEach(key => {
+        const val = alertsObj[key];
+        allAlerts[key] = (val && !val.toLowerCase().includes('no findings')) ? val.toString().trim() : null;
+      });
+
+      // Map from record directly if needed
+      const alertKey = `${prefix}_alert`;
+      if (!allAlerts[alertKey] && data[alertKey] && !data[alertKey].toLowerCase().includes('no findings')) {
+        allAlerts[alertKey] = data[alertKey].toString().trim();
       }
-      return { alert: alertText, severity: inferSeverity(alertText), labId: returnedLabId };
+
+      const alertText = allAlerts[alertKey] || '';
+      let severity = 'INFO';
+      if (alertText) {
+        severity = inferSeverity(alertText);
+      } else {
+        severity = null as any;
+      }
+
+      return { alerts: allAlerts, severity, labId: returnedLabId };
     } catch (e) {
       return null;
     }

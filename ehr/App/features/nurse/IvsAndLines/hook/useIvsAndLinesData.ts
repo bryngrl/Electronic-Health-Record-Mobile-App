@@ -12,6 +12,13 @@ const useIvsAndLinesData = () => {
   const [site, setSite] = useState('');
   const [status, setStatus] = useState('');
 
+  const [lastSavedData, setLastSavedData] = useState({
+    iv_fluid: '',
+    rate: '',
+    site: '',
+    status: '',
+  });
+
   // Track if we are editing an existing record
   const [recordId, setRecordId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,6 +31,7 @@ const useIvsAndLinesData = () => {
         setRate('');
         setSite('');
         setStatus('');
+        setLastSavedData({ iv_fluid: '', rate: '', site: '', status: '' });
         setRecordId(null);
         return;
       }
@@ -33,17 +41,24 @@ const useIvsAndLinesData = () => {
         // If there's at least one record, load the most recent one
         if (response.data) {
           const record = Array.isArray(response.data) ? response.data[0] : response.data;
-          setIvFluid(record.iv_fluid || '');
-          setRate(record.rate || '');
-          setSite(record.site || '');
-          setStatus(record.status || '');
+          const initialData = {
+            iv_fluid: record.iv_fluid || '',
+            rate: record.rate || '',
+            site: record.site || '',
+            status: record.status || '',
+          };
+          setIvFluid(initialData.iv_fluid);
+          setRate(initialData.rate);
+          setSite(initialData.site);
+          setStatus(initialData.status);
+          setLastSavedData(initialData);
           setRecordId(record.id);
         } else {
-          // Reset form for new patient
           setIvFluid('');
           setRate('');
           setSite('');
           setStatus('');
+          setLastSavedData({ iv_fluid: '', rate: '', site: '', status: '' });
           setRecordId(null);
         }
       } catch (err) {
@@ -64,7 +79,6 @@ const useIvsAndLinesData = () => {
     try {
       const sanitize = (val: string) => (val.trim() === '' ? 'N/A' : val);
 
-      let response;
       const payload = {
         iv_fluid: sanitize(ivFluid),
         rate: sanitize(rate),
@@ -72,9 +86,11 @@ const useIvsAndLinesData = () => {
         status: sanitize(status),
       };
 
+      let response;
       if (recordId) {
         // UPDATE existing record
         response = await apiClient.put(`/ivs-and-lines/${selectedPatientId}`, payload);
+        setLastSavedData({ ...payload });
         setIsSubmitting(false);
         return { action: 'update', data: response.data };
       } else {
@@ -83,6 +99,7 @@ const useIvsAndLinesData = () => {
         if (response.data?.id) {
             setRecordId(response.data.id);
         }
+        setLastSavedData({ ...payload });
         setIsSubmitting(false);
         return { action: 'create', data: response.data };
       }
@@ -93,6 +110,16 @@ const useIvsAndLinesData = () => {
       throw new Error(message);
     }
   };
+
+  const isModified = 
+    ivFluid !== lastSavedData.iv_fluid ||
+    rate !== lastSavedData.rate ||
+    site !== lastSavedData.site ||
+    status !== lastSavedData.status;
+
+  const isDataEntered = [ivFluid, rate, site, status].some(
+    v => v && v.trim() !== '' && v !== 'N/A',
+  );
 
   return {
     patientName,
@@ -110,6 +137,8 @@ const useIvsAndLinesData = () => {
     handleSubmit,
     isSubmitting,
     recordId,
+    isModified,
+    isDataEntered,
   };
 };
 

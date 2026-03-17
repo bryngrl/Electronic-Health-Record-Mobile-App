@@ -168,6 +168,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
   };
 
   const [formData, setFormData] = useState(initialFormData);
+  const [lastSavedData, setLastSavedData] = useState(initialFormData);
   const [isNAStep, setIsNAStep] = useState<Record<string, boolean>>({
     present: false,
     past: false,
@@ -257,8 +258,10 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
           newISNA[key] = allNA;
         });
         setIsNAStep(newISNA);
+        setLastSavedData(newFormData);
       } else {
         setFormData(initialFormData);
+        setLastSavedData(initialFormData);
         setIsNAStep({
           present: false,
           past: false,
@@ -313,6 +316,12 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
       // Save only the current step
       await saveMedicalHistoryStep(selectedPatientId, currentKey, currentData);
 
+      // Update lastSavedData for this step immediately
+      setLastSavedData(prev => ({
+        ...prev,
+        [currentKey]: { ...currentData },
+      }));
+
       if (step < steps.length - 1) {
         setStep(step + 1);
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
@@ -348,6 +357,22 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
 
   const currentStepKey = steps[step].key;
   const currentFields = STEP_FIELDS[currentStepKey];
+
+  const isModified = useMemo(() => {
+    if (!selectedPatientId) return false;
+    const currentData = formData[currentStepKey as keyof typeof formData];
+    const savedData = lastSavedData[currentStepKey as keyof typeof lastSavedData];
+    return JSON.stringify(currentData) !== JSON.stringify(savedData);
+  }, [formData, lastSavedData, currentStepKey, selectedPatientId]);
+
+  const isDataEntered = useMemo(() => {
+    const currentData = formData[currentStepKey as keyof typeof formData];
+    return Object.values(currentData).some(
+      v => typeof v === 'string' && v.trim() !== '' && v !== 'N/A',
+    );
+  }, [formData, currentStepKey]);
+
+  const isNA = isNAStep[currentStepKey];
 
   const fadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
@@ -490,7 +515,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
               <Button
                 title={step === steps.length - 1 ? 'SUBMIT' : 'NEXT'}
                 onPress={handleNext}
-                disabled={!selectedPatientId}
+                disabled={!isModified}
               />
             </View>
           ) : (

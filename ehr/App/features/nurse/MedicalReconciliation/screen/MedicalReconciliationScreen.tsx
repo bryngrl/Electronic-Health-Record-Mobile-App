@@ -67,6 +67,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
     successMessage,
     successVisible,
     setSuccessVisible,
+    isModified,
   } = useMedicalReconLogic();
 
   const [isMenuVisible, setIsMenuVisible] = useState(false);
@@ -353,11 +354,11 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
           <TouchableOpacity
             style={[
               styles.actionBtn,
-              (isSubmitting || !patientId) &&
-                { borderColor: theme.buttonDisabledBorder, backgroundColor: theme.buttonBg },
+              !isModified &&
+                { borderColor: theme.buttonDisabledBorder, backgroundColor: theme.buttonDisabledBg },
             ]}
             onPress={handleNextPress}
-            disabled={isSubmitting || !patientId}
+            disabled={isSubmitting || !isModified}
           >
             {isSubmitting ? (
               <ActivityIndicator size="small" color={theme.primary} />
@@ -366,7 +367,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
                 <Text
                   style={[
                     styles.btnText,
-                    (isSubmitting || !patientId) && {
+                    !isModified && {
                       color: theme.textMuted,
                     },
                   ]}
@@ -377,7 +378,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
                   <Text
                     style={[
                       styles.chevron,
-                      (isSubmitting || !patientId) && {
+                      !isModified && {
                         color: theme.textMuted,
                       },
                     ]}

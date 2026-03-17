@@ -16,6 +16,7 @@ interface ADLCardsSectionProps {
   handleCDSSPress: () => void;
   handleSave: () => void;
   isDataEntered: boolean;
+  isModified: boolean;
   adlId: number | null;
   isExistingRecord: boolean;
   readOnly?: boolean;
@@ -35,6 +36,7 @@ const ADLCardsSection: React.FC<ADLCardsSectionProps> = ({
   handleCDSSPress,
   handleSave,
   isDataEntered,
+  isModified,
   adlId,
   isExistingRecord,
   readOnly = false,
@@ -63,18 +65,18 @@ const ADLCardsSection: React.FC<ADLCardsSectionProps> = ({
           <TouchableOpacity
             style={[
               styles.cdssBtn,
-              (!selectedPatient || !isDataEntered) && {
+              !isModified && {
                 backgroundColor: theme.buttonDisabledBg,
                 borderColor: theme.buttonDisabledBorder,
               },
             ]}
             onPress={handleCDSSPress}
-            disabled={!selectedPatient || !isDataEntered}
+            disabled={!isModified}
           >
             <Text
               style={[
                 styles.cdssText,
-                (!selectedPatient || !isDataEntered) && { color: theme.textMuted },
+                !isModified && { color: theme.textMuted },
               ]}
             >
               CDSS
@@ -83,18 +85,18 @@ const ADLCardsSection: React.FC<ADLCardsSectionProps> = ({
           <TouchableOpacity
             style={[
               styles.submitBtn,
-              !selectedPatient && {
+              !isModified && {
                 backgroundColor: theme.buttonDisabledBg,
                 borderColor: theme.buttonDisabledBorder,
               },
             ]}
             onPress={handleSave}
-            disabled={!selectedPatient}
+            disabled={!isModified}
           >
             <Text
               style={[
                 styles.submitText,
-                !selectedPatient && { color: theme.textMuted },
+                !isModified && { color: theme.textMuted },
               ]}
             >
               {isExistingRecord ? 'UPDATE' : 'SUBMIT'}

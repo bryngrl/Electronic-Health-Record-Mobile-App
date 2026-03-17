@@ -40,6 +40,7 @@ export const useADLScreen = (onBack: () => void) => {
   const [backendSeverities, setBackendSeverities] = useState<Record<string, string | null>>({});
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
+  const [lastSavedData, setLastSavedData] = useState(initialFormData);
   const [isNA, setIsNA] = useState(false);
 
   useEffect(() => { formDataRef.current = formData; }, [formData]);
@@ -53,24 +54,51 @@ export const useADLScreen = (onBack: () => void) => {
     return () => backHandler.remove();
   }, [onBack]);
 
-  const toggleNA = () => {
+  const toggleNA = async () => {
     const newState = !isNA;
     setIsNA(newState);
     Object.values(fieldTimers.current).forEach(clearTimeout);
     fieldTimers.current = {};
+    
+    let updatedFormData: typeof initialFormData;
     if (newState) {
       preNASnapshotRef.current = { ...formData };
       const allNA = { ...formData };
       Object.keys(initialFormData).forEach(key => { (allNA as any)[key] = 'N/A'; });
-      setFormData(allNA);
-      formDataRef.current = allNA;
+      updatedFormData = allNA;
     } else {
-      const restored = preNASnapshotRef.current
+      updatedFormData = preNASnapshotRef.current
         ? { ...preNASnapshotRef.current }
         : { ...initialFormData };
       preNASnapshotRef.current = null;
-      setFormData(restored);
-      formDataRef.current = restored;
+    }
+    
+    setFormData(updatedFormData);
+    formDataRef.current = updatedFormData;
+
+    // Automatically save N/A state if a patient is selected
+    if (selectedPatient?.id) {
+      try {
+        const result = await saveADLAssessment(
+          { patient_id: selectedPatient.id, ...updatedFormData },
+          adlIdRef.current,
+        );
+        const record = result?.data || result;
+        if (record?.id) {
+          setAdlId(record.id);
+          adlIdRef.current = record.id;
+        }
+        // Update alerts from N/A state
+        const alerts = result?.alerts || record?.alerts || {};
+        const updatedAlerts: Record<string, string | null> = {};
+        Object.entries(ALERT_KEY_MAP).forEach(([_, alertKey]) => {
+          const v = alerts[alertKey] ?? record?.[alertKey];
+          updatedAlerts[alertKey] = isValidAlert(v) ? v : null;
+        });
+        setBackendAlerts(updatedAlerts);
+      } catch {
+        console.error('Failed to auto-save N/A state');
+      }
     }
   };
 
@@ -82,9 +110,19 @@ export const useADLScreen = (onBack: () => void) => {
     fetchDataAlert(patientId);
     const data = await fetchLatestADL(patientId);
     if (data) {
-      setAdlId(data.id);
-      adlIdRef.current = data.id;
-      setIsExistingRecord(true);
+      const today = new Date().toLocaleDateString('en-CA');
+      const recordDate = (data.date || data.created_at || '').split('T')[0];
+
+      if (recordDate === today) {
+        setAdlId(data.id);
+        adlIdRef.current = data.id;
+        setIsExistingRecord(true);
+      } else {
+        setAdlId(null);
+        adlIdRef.current = null;
+        setIsExistingRecord(false);
+      }
+
       const newFormData = {
         mobility_assessment:      data.mobility_assessment || '',
         hygiene_assessment:       data.hygiene_assessment || '',
@@ -95,11 +133,13 @@ export const useADLScreen = (onBack: () => void) => {
         pain_level_assessment:    data.pain_level_assessment || '',
       };
       setFormData(newFormData);
+      setLastSavedData(newFormData);
       formDataRef.current = newFormData;
       setIsNA(Object.values(newFormData).every(v => v === 'N/A'));
       const loaded: Record<string, string | null> = {};
       Object.entries(ALERT_KEY_MAP).forEach(([_, alertKey]) => {
-        loaded[alertKey] = isValidAlert(data[alertKey]) ? data[alertKey] : null;
+        const v = data[alertKey];
+        loaded[alertKey] = isValidAlert(v) ? v : null;
       });
       setBackendAlerts(loaded);
     } else {
@@ -114,7 +154,7 @@ export const useADLScreen = (onBack: () => void) => {
       Object.values(fieldTimers.current).forEach(clearTimeout);
       fieldTimers.current = {};
     }
-  }, [fetchLatestADL, fetchDataAlert]);
+  }, [fetchLatestADL, fetchDataAlert, analyzeField]);
 
   useEffect(() => {
     if (selectedPatient?.id !== prevPatientIdRef.current) {
@@ -126,6 +166,7 @@ export const useADLScreen = (onBack: () => void) => {
         adlIdRef.current = null;
         setIsExistingRecord(false);
         setFormData(initialFormData);
+        setLastSavedData(initialFormData);
         setIsNA(false);
         setBackendAlerts({});
         setBackendSeverities({});
@@ -151,30 +192,28 @@ export const useADLScreen = (onBack: () => void) => {
     if (fieldTimers.current[field]) clearTimeout(fieldTimers.current[field]);
 
     const alertKey = ALERT_KEY_MAP[field];
-    if (!val || val.trim().length < 3 || val === 'N/A') {
-      if (alertKey) setBackendAlerts(prev => ({ ...prev, [alertKey]: null }));
-      return;
-    }
 
     fieldTimers.current[field] = setTimeout(async () => {
       if (!selectedPatient?.id) return;
+      
       const result = await analyzeField(
         selectedPatient.id,
         adlIdRef.current,
+        formDataRef.current,
         field,
-        val,
         alertKey!,
       );
 
-      if (result?.adlId && !adlIdRef.current) {
-        adlIdRef.current = result.adlId;
-        setAdlId(result.adlId);
-      }
+      if (result) {
+        if (result.adlId && !adlIdRef.current) {
+          adlIdRef.current = result.adlId;
+          setAdlId(result.adlId);
+        }
 
-      if (alertKey) {
-        setBackendAlerts(prev => ({ ...prev, [alertKey]: result?.alert ?? null }));
+        // Update ALL alerts from the response to keep everything in sync
+        setBackendAlerts(prev => ({ ...prev, ...result.alerts }));
+        setBackendSeverities(prev => ({ ...prev, [field]: result.severity }));
       }
-      setBackendSeverities(prev => ({ ...prev, [field]: result?.severity ?? null }));
     }, 800);
   };
 
@@ -193,6 +232,7 @@ export const useADLScreen = (onBack: () => void) => {
         setAdlId(id);
         adlIdRef.current = id;
         setIsAdpieActive(true);
+        setLastSavedData({ ...formDataRef.current });
         const updated: Record<string, string | null> = { ...backendAlerts };
         Object.entries(ALERT_KEY_MAP).forEach(([_, alertKey]) => {
           const v = record?.[alertKey];
@@ -223,6 +263,7 @@ export const useADLScreen = (onBack: () => void) => {
         setAdlId(newId);
         adlIdRef.current = newId;
         setIsExistingRecord(true);
+        setLastSavedData({ ...formDataRef.current });
         fetchDataAlert(selectedPatient.id);
         const updated: Record<string, string | null> = { ...backendAlerts };
         Object.entries(ALERT_KEY_MAP).forEach(([_, alertKey]) => {
@@ -264,6 +305,10 @@ export const useADLScreen = (onBack: () => void) => {
     v => v && v.trim().length > 0 && v !== 'N/A',
   );
 
+  const isModified = Object.keys(formData).some(
+    key => (formData as any)[key] !== (lastSavedData as any)[key]
+  );
+
   return {
     searchText, setSearchText,
     selectedPatient, setSelectedPatient,
@@ -276,5 +321,6 @@ export const useADLScreen = (onBack: () => void) => {
     toggleNA, loadPatientData, getBackendAlert, getBackendSeverity,
     updateField, handleCDSSPress, handleSave,
     generateFindingsSummary, isDataEntered, calculateDayNumber,
+    isModified,
   };
 };

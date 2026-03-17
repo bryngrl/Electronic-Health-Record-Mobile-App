@@ -15,6 +15,7 @@ interface ExamCardsSectionProps {
   handleCDSSPress: () => void;
   handleSave: () => void;
   isDataEntered: boolean;
+  isModified: boolean;
   readOnly?: boolean;
   onBack?: () => void;
 }
@@ -32,6 +33,7 @@ const ExamCardsSection: React.FC<ExamCardsSectionProps> = ({
   handleCDSSPress,
   handleSave,
   isDataEntered,
+  isModified,
   readOnly = false,
   onBack,
 }) => {
@@ -73,18 +75,18 @@ const ExamCardsSection: React.FC<ExamCardsSectionProps> = ({
           <TouchableOpacity
             style={[
               styles.cdssBtn,
-              (!selectedPatientId || !isDataEntered) && {
+              !isModified && {
                 backgroundColor: theme.buttonDisabledBg,
                 borderColor: theme.buttonDisabledBorder,
               },
             ]}
             onPress={handleCDSSPress}
-            disabled={!selectedPatientId || !isDataEntered}
+            disabled={!isModified}
           >
             <Text
               style={[
                 styles.cdssText,
-                (!selectedPatientId || !isDataEntered) && { color: theme.textMuted },
+                !isModified && { color: theme.textMuted },
               ]}
             >
               CDSS
@@ -93,18 +95,18 @@ const ExamCardsSection: React.FC<ExamCardsSectionProps> = ({
           <TouchableOpacity
             style={[
               styles.submitBtn,
-              !selectedPatientId && {
+              !isModified && {
                 backgroundColor: theme.buttonDisabledBg,
                 borderColor: theme.buttonDisabledBorder,
               },
             ]}
             onPress={handleSave}
-            disabled={!selectedPatientId}
+            disabled={!isModified}
           >
             <Text
               style={[
                 styles.submitText,
-                !selectedPatientId && { color: theme.textMuted },
+                !isModified && { color: theme.textMuted },
               ]}
             >
               SUBMIT

@@ -40,6 +40,8 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
     nextStep,
     saveMedAdministration,
     fetchPatientData,
+    isModified,
+    isDataEntered,
   } = useMedAdministration();
 
   const [scrollEnabled, setScrollEnabled] = useState(true);
@@ -374,23 +376,18 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
             <TouchableOpacity
               style={[
                 styles.actionBtn,
-                !selectedPatientId && {
+                !isModified && {
                   backgroundColor: theme.buttonDisabledBg,
                   borderColor: theme.buttonDisabledBorder,
                 },
               ]}
               onPress={handleAction}
-              disabled={
-                !isFormValid &&
-                !isNA &&
-                !!selectedPatientId &&
-                currentMed.medication !== ''
-              }
+              disabled={!isModified}
             >
               <Text
                 style={[
                   styles.actionBtnText,
-                  !selectedPatientId && { color: theme.textMuted },
+                  !isModified && { color: theme.textMuted },
                 ]}
               >
                 {step === 2 ? 'SUBMIT' : 'NEXT'}
@@ -399,7 +396,7 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
                 <Icon
                   name="chevron-right"
                   size={24}
-                  color={selectedPatientId ? theme.primary : theme.textMuted}
+                  color={isModified ? theme.primary : theme.textMuted}
                 />
               )}
             </TouchableOpacity>

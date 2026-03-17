@@ -60,6 +60,7 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
     handleNextOrSave,
     generateFindingsSummary,
     isAlertLoading,
+    isModified,
   } = useLabValuesScreen(onBack);
 
   useEffect(() => {
@@ -302,18 +303,18 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
                   <TouchableOpacity
                     style={[
                       styles.cdssBtn,
-                      (!selectedPatientId || (!hasInputData && !isNA)) && {
+                      !isModified && {
                         backgroundColor: theme.buttonDisabledBg,
                         borderColor: theme.buttonDisabledBorder,
                       },
                     ]}
                     onPress={handleCDSSPress}
-                    disabled={!selectedPatientId}
+                    disabled={!isModified}
                   >
                     <Text
                       style={[
                         styles.cdssText,
-                        (!selectedPatientId || (!hasInputData && !isNA))
+                        !isModified
                           ? { color: theme.textMuted }
                           : { color: theme.primary },
                       ]}
@@ -324,18 +325,18 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
                   <TouchableOpacity
                     style={[
                       styles.submitBtn,
-                      !selectedPatientId && {
+                      !isModified && {
                         backgroundColor: theme.buttonDisabledBg,
                         borderColor: theme.buttonDisabledBorder,
                       },
                     ]}
                     onPress={handleNextOrSave}
-                    disabled={!selectedPatientId}
+                    disabled={!isModified}
                   >
                     <Text
                       style={[
                         styles.submitText,
-                        !selectedPatientId && { color: theme.textMuted },
+                        !isModified && { color: theme.textMuted },
                       ]}
                     >
                       {isExistingRecord ? 'UPDATE' : 'SUBMIT'}
@@ -346,7 +347,7 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
                 <TouchableOpacity
                   style={[
                     styles.nextBtn,
-                    !selectedPatientId && {
+                    !isModified && {
                       backgroundColor: theme.buttonDisabledBg,
                       borderColor: theme.buttonDisabledBorder,
                     },
@@ -355,12 +356,12 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
                     await handleNextOrSave();
                     scrollViewRef.current?.scrollTo({ y: 0, animated: true });
                   }}
-                  disabled={!selectedPatientId}
+                  disabled={!isModified}
                 >
                   <Text
                     style={[
                       styles.nextText,
-                      !selectedPatientId && { color: theme.textMuted },
+                      !isModified && { color: theme.textMuted },
                     ]}
                   >
                     NEXT
@@ -368,7 +369,7 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
                   <Icon
                     name="chevron-right"
                     size={20}
-                    color={selectedPatientId ? theme.primary : theme.textMuted}
+                    color={isModified ? theme.primary : theme.textMuted}
                   />
                 </TouchableOpacity>
               )}

@@ -99,6 +99,15 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
     null,
   );
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  const isModified = useMemo(() => {
+    return hasChanges;
+  }, [hasChanges]);
+
+  const isDataEntered = useMemo(() => {
+    return diagnostics.length > 0;
+  }, [diagnostics]);
 
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
@@ -143,6 +152,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
   useEffect(() => {
     if (selectedPatientId) {
       fetchDiagnostics(selectedPatientId);
+      setHasChanges(false);
     }
   }, [selectedPatientId, fetchDiagnostics]);
 
@@ -159,6 +169,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
     }
     const result = await uploadDiagnostic(selectedPatientId, imageType);
     if (result && result.success) {
+      setHasChanges(true);
       showAlert('Success', 'Image added successfully.', 'success');
     } else if (result && result.error) {
       const msg =
@@ -181,6 +192,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
         hideAlert();
         const result = await deleteDiagnostic(diagnosticId);
         if (result.success) {
+          setHasChanges(true);
           await fetchDiagnostics(selectedPatientId);
           showAlert('Deleted', 'Image has been removed.', 'success');
         } else {
@@ -193,6 +205,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
   const handlePatientSelect = (id: number | null, name: string) => {
     setSelectedPatientId(id ? id.toString() : null);
     setSearchText(name);
+    setHasChanges(false);
   };
 
   const diagnosticTypes = [
@@ -431,25 +444,29 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
           <TouchableOpacity
             style={[
               styles.submitButton,
-              (!selectedPatientId && !readOnly) && styles.disabledButton,
+              !readOnly && !isModified && {
+                backgroundColor: theme.buttonDisabledBg,
+                borderColor: theme.buttonDisabledBorder,
+              },
             ]}
-            disabled={!selectedPatientId && !readOnly}
+            disabled={!readOnly && !isModified}
             onPress={() => {
               if (readOnly) {
-                  onBack();
+                onBack();
               } else if (selectedPatientId) {
                 showAlert(
                   'Success',
                   'Diagnostic records have been saved successfully.',
                   'success',
                 );
+                setHasChanges(false);
               }
             }}
           >
             <Text
               style={[
                 styles.submitText,
-                (!selectedPatientId && !readOnly) && { color: theme.textMuted },
+                !readOnly && !isModified && { color: theme.textMuted },
               ]}
             >
               {readOnly ? 'CLOSE' : 'SUBMIT'}

@@ -52,6 +52,7 @@ export const useVitalSignsLogic = () => {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
   const [vitalsHistory, setVitalsHistory] = useState<Record<string, Vitals>>({});
+  const [lastSavedVitals, setLastSavedVitals] = useState<Record<string, Vitals>>({});
   const [currentVitals, setCurrentVitals] = useState<Vitals>(initialVitals);
   const [currentTimeIndex, setCurrentTimeIndex] = useState(0);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
@@ -85,12 +86,16 @@ export const useVitalSignsLogic = () => {
   };
 
   const isDataEntered = useMemo(() => {
-    return true; 
-  }, []);
+    return Object.values(currentVitals).some(
+      v => v && v.trim() !== '' && v !== 'N/A',
+    );
+  }, [currentVitals]);
 
   const isDataComplete = useMemo(() => {
-    return true; 
-  }, []);
+    return Object.values(currentVitals).every(
+      v => v && v.trim() !== '',
+    );
+  }, [currentVitals]);
 
   const loadPatientData = async (patientId: string) => {
     try {
@@ -119,6 +124,7 @@ export const useVitalSignsLogic = () => {
       });
       
       setVitalsHistory(history);
+      setLastSavedVitals(JSON.parse(JSON.stringify(history)));
       
       if (Object.keys(history).length > 0) {
         setIsExistingRecord(true);
@@ -147,7 +153,11 @@ export const useVitalSignsLogic = () => {
     }
   };
 
-  const analyzeField = useCallback(async (payload: any): Promise<{ alert: string | null; severity: string | null } | null> => {
+  const analyzeField = useCallback(async (payload: any): Promise<{ 
+    alerts: Record<string, string | null>; 
+    severity: string | null; 
+    recordId: number | null 
+  } | null> => {
     try {
       const today = new Date().toLocaleDateString('en-CA');
       const payloadTime = (payload.time || '').substring(0, 5);
@@ -168,19 +178,33 @@ export const useVitalSignsLogic = () => {
 
       const response = await apiClient.put(`/vital-signs/${targetId}/assessment`, payload);
       const data = response.data?.data || response.data;
-      const alertText: string = (data?.alerts || data?.assessment_alert || data?.alert || '').toString().trim();
-      console.log('[VS analyzeField] raw response data:', JSON.stringify(data));
-      console.log('[VS analyzeField] alert text:', alertText || '(empty)');
-      if (
-        !alertText ||
-        alertText.toLowerCase().includes('no findings') ||
-        alertText.toLowerCase().includes('no result') ||
-        alertText.toLowerCase() === 'normal'
-      ) {
-        return { alert: null, severity: null };
+      const alertsObj = response.data?.alerts || data?.alerts || {};
+      const returnedId: number | null = data?.id || null;
+
+      const allAlerts: Record<string, string | null> = {};
+      Object.keys(alertsObj).forEach(key => {
+        const val = alertsObj[key];
+        allAlerts[key] = (val && !val.toLowerCase().includes('no findings')) ? val.toString().trim() : null;
+      });
+
+      // Map common keys if needed
+      ['assessment_alert', 'alert'].forEach(k => {
+        if (!allAlerts[k] && data[k] && !data[k].toLowerCase().includes('no findings')) {
+          allAlerts[k] = data[k].toString().trim();
+        }
+      });
+
+      let severity = 'INFO';
+      const firstAlert = Object.values(allAlerts).find(v => v !== null);
+      if (firstAlert) {
+        severity = inferSeverity(firstAlert);
+      } else {
+        severity = null as any;
       }
-      return { alert: alertText, severity: inferSeverity(alertText) };
+
+      return { alerts: allAlerts, severity, recordId: returnedId };
     } catch (err) {
+      console.error('[VS analyzeField] error:', err);
       return null;
     }
   }, [existingRecords]);
@@ -210,7 +234,6 @@ export const useVitalSignsLogic = () => {
     });
 
     try {
-      // Check if we have an existing record for this patient, date, and time slot
       const existingRecord = existingRecords.find(r => {
         const recDate = (r.date || r.created_at).split('T')[0];
         return recDate === today && (r.time || '').substring(0, 5) === time24.substring(0, 5);
@@ -225,10 +248,9 @@ export const useVitalSignsLogic = () => {
       
       const data = response.data?.data || response.data;
       
-      // Refresh local records list after save
       await loadPatientData(selectedPatientId);
       
-      const alertText: string = (data?.alerts || data?.assessment_alert || data?.alert || '').toString().trim();
+      const alertText: string = (data?.assessment_alert || data?.alert || '').toString().trim();
       if (alertText && !alertText.toLowerCase().includes('no findings')) {
         const isCritical = alertText.includes('🔴') || alertText.toUpperCase().includes('CRITICAL');
         const alertObj: { title: string, message: string, type: 'success' | 'error' } = {
@@ -242,7 +264,7 @@ export const useVitalSignsLogic = () => {
         setRealtimeSeverity(inferSeverity(alertText));
       }
       setIsExistingRecord(true);
-      return data;
+      return response.data;
     } catch (e: any) {
       console.error('API Error saving vital signs:', e?.response?.data || e.message);
       setBackendAlert({
@@ -323,6 +345,7 @@ export const useVitalSignsLogic = () => {
       loadPatientData(id);
     } else {
       setVitalsHistory({});
+      setLastSavedVitals({});
       setCurrentVitals(initialVitals);
       setExistingRecords([]);
     }
@@ -344,11 +367,24 @@ export const useVitalSignsLogic = () => {
     setPatientName('');
     setSelectedPatientId(null);
     setVitalsHistory({});
+    setLastSavedVitals({});
     setCurrentVitals(initialVitals);
     setCurrentTimeIndex(0);
     setBackendAlert(null);
     setExistingRecords([]);
   };
+
+  const isModified = useMemo(() => {
+    if (!selectedPatientId) return false;
+    const saved = lastSavedVitals[currentTime] || initialVitals;
+    return (
+      currentVitals.temperature !== saved.temperature ||
+      currentVitals.hr !== saved.hr ||
+      currentVitals.rr !== saved.rr ||
+      currentVitals.bp !== saved.bp ||
+      currentVitals.spo2 !== saved.spo2
+    );
+  }, [currentVitals, lastSavedVitals, currentTime, selectedPatientId]);
 
   const updateDPIE = useCallback(async (recordId: number, stepKey: string, text: string) => {
     try {
@@ -395,5 +431,6 @@ export const useVitalSignsLogic = () => {
     existingRecords,
     isExistingRecord,
     setIsExistingRecord,
+    isModified,
   };
 };

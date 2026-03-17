@@ -75,6 +75,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     assessmentSeverity,
     assessmentAlert,
     isAlertActive,
+    isModified,
   } = useIntakeAndOutputScreen(onBack, readOnly, patientId, initialPatientName);
 
   const fadeColors = isDarkMode
@@ -276,18 +277,18 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.cdssButton,
-                    (!selectedPatientId || (!isDataEntered && !isNA)) && {
+                    !isModified && {
                       backgroundColor: theme.buttonDisabledBg,
                       borderColor: theme.buttonDisabledBorder,
                     },
                   ]}
                   onPress={handleCDSSPress}
-                  disabled={!selectedPatientId}
+                  disabled={!isModified}
                 >
                   <Text
                     style={[
                       styles.cdssBtnText,
-                      !selectedPatientId || (!isDataEntered && !isNA)
+                      !isModified
                         ? { color: theme.textMuted }
                         : { color: theme.primary },
                     ]}
@@ -298,13 +299,13 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.submitButton,
-                    !selectedPatientId && {
+                    !isModified && {
                       backgroundColor: theme.buttonDisabledBg,
                       borderColor: theme.buttonDisabledBorder,
                     },
                   ]}
                   onPress={handleSubmit}
-                  disabled={!selectedPatientId || loading}
+                  disabled={!isModified || loading}
                 >
                   {loading ? (
                     <ActivityIndicator size="small" color={theme.primary} />
@@ -312,7 +313,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                     <Text
                       style={[
                         styles.submitBtnText,
-                        !selectedPatientId && { color: theme.textMuted },
+                        !isModified && { color: theme.textMuted },
                       ]}
                     >
                       {isExistingRecord ? 'UPDATE' : 'SUBMIT'}

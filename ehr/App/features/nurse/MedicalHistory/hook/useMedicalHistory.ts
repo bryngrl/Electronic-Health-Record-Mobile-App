@@ -27,13 +27,21 @@ export const useMedicalHistory = () => {
       if (!endpoint) throw new Error(`Invalid step key: ${stepKey}`);
 
       const sanitizedData = sanitize(stepData);
-      
+      const medicalId = stepData.medical_id || stepData.id;
+
       const payload = {
         patient_id: patientId,
         ...sanitizedData
       };
 
-      const response = await apiClient.post(endpoint, payload);
+      let response;
+      if (medicalId) {
+        // Update existing record
+        response = await apiClient.put(`${endpoint}/${medicalId}`, payload);
+      } else {
+        // Create new record
+        response = await apiClient.post(endpoint, payload);
+      }
       return response.data;
     } catch (err: any) {
       console.error(`Error saving medical history step (${stepKey}):`, err?.response?.data || err.message);

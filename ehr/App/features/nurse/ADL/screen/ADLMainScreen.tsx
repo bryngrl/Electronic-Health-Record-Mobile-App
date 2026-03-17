@@ -39,9 +39,11 @@ const ADLScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: 
     adlId, isExistingRecord,
     isAdpieActive, setIsAdpieActive,
     formData, isNA, getBackendAlert, getBackendSeverity,
-    toggleNA, updateField, handleCDSSPress, handleSave,
+    updateField, handleCDSSPress, handleSave,
     generateFindingsSummary, isDataEntered, calculateDayNumber,
-  } = useADLScreen(onBack);
+    isModified,
+    } = useADLScreen(onBack);
+
 
   useEffect(() => {
     if (readOnly && patientId) {
@@ -197,6 +199,7 @@ const ADLScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: 
             handleCDSSPress={handleCDSSPress}
             handleSave={handleSave}
             isDataEntered={isDataEntered}
+            isModified={isModified}
             adlId={adlId}
             isExistingRecord={isExistingRecord}
             readOnly={readOnly}

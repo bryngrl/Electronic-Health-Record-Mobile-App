@@ -27,17 +27,18 @@ export const usePhysicalExam = () => {
 
   // Analyze a single field in real-time by saving to the backend (which runs CDSS automatically).
   // Uses PUT /{id}/assessment if examId exists, else POST /physical-exam.
-  // Returns { alert, severity } for the specific field, or null if no finding.
+  // Returns all alerts and severity for the specific field, plus the examId.
   const analyzeField = useCallback(async (
     patientId: number,
     examId: number | null,
     fullData: any,
     fieldName: string,
     alertKey: string,
-  ): Promise<{ alert: string | null; severity: string | null; examId: number | null } | null> => {
-    const finding = fullData[fieldName];
-    if (!finding || finding.trim().length < 3 || finding === 'N/A') return null;
-    
+  ): Promise<{ 
+    alerts: Record<string, string | null>; 
+    severity: string | null; 
+    examId: number | null 
+  } | null> => {
     try {
       const body = { ...fullData, patient_id: patientId };
       const sanitized = sanitize(body);
@@ -53,40 +54,51 @@ export const usePhysicalExam = () => {
 
       const data = response.data;
       const record = data?.data || data || {};
-      const alerts = data?.alerts || record?.alerts || {};
+      const alertsObj = data?.alerts || record?.alerts || {};
 
       // Capture the record id so subsequent calls update, not create
       const returnedExamId: number | null = record?.id || null;
 
-      // alerts object is preferred; fall back to the data record
-      const alertText: string = (alerts[alertKey] || record[alertKey] || '').toString().trim();
-      console.log(`[CDSS][${fieldName}] alertKey="${alertKey}" → alertText="${alertText}"`);
+      // Map all alerts from the response
+      const allAlerts: Record<string, string | null> = {};
+      Object.keys(alertsObj).forEach(key => {
+        const val = alertsObj[key];
+        allAlerts[key] = (val && val !== 'No Findings') ? val.toString().trim() : null;
+      });
 
-      if (!alertText || alertText === 'No Findings') return { alert: null, severity: null, examId: returnedExamId };
+      // Also check record directly for alert keys if not in alertsObj
+      if (alertKey && !allAlerts[alertKey] && record[alertKey] && record[alertKey] !== 'No Findings') {
+        allAlerts[alertKey] = record[alertKey].toString().trim();
+      }
 
-      // Infer severity from alert text keywords from YAML rules
-      const upper = alertText.toUpperCase();
+      // Infer severity for the CURRENT field for UI highlighting
+      const currentAlertText = allAlerts[alertKey] || '';
       let severity = 'INFO';
-      if (
-        upper.includes('URGENT') || upper.includes('CRITICAL') ||
-        upper.includes('IMMEDIATELY') || upper.includes('EMERGENCY') ||
-        upper.includes('PERITONITIS') || upper.includes('SEPSIS')
-      ) {
-        severity = 'CRITICAL';
-      } else if (
-        upper.includes('EVALUATE') || upper.includes('MONITOR') ||
-        upper.includes('ASSESS') || upper.includes('REFER') ||
-        upper.includes('DISEASE') || upper.includes('INFECTION') ||
-        upper.includes('ABNORMAL') || upper.includes('SUSPECTED') ||
-        upper.includes('LIVER') || upper.includes('HEMOLYSIS') ||
-        upper.includes('JAUNDICE') || upper.includes('PALLOR') ||
-        upper.includes('TREAT') || upper.includes('ELEVATED')
-      ) {
-        severity = 'WARNING';
+      if (currentAlertText) {
+        const upper = currentAlertText.toUpperCase();
+        if (
+          upper.includes('URGENT') || upper.includes('CRITICAL') ||
+          upper.includes('IMMEDIATELY') || upper.includes('EMERGENCY') ||
+          upper.includes('PERITONITIS') || upper.includes('SEPSIS')
+        ) {
+          severity = 'CRITICAL';
+        } else if (
+          upper.includes('EVALUATE') || upper.includes('MONITOR') ||
+          upper.includes('ASSESS') || upper.includes('REFER') ||
+          upper.includes('DISEASE') || upper.includes('INFECTION') ||
+          upper.includes('ABNORMAL') || upper.includes('SUSPECTED') ||
+          upper.includes('LIVER') || upper.includes('HEMOLYSIS') ||
+          upper.includes('JAUNDICE') || upper.includes('PALLOR') ||
+          upper.includes('TREAT') || upper.includes('ELEVATED')
+        ) {
+          severity = 'WARNING';
+        }
+      } else {
+        severity = null as any;
       }
 
       console.log(`[CDSS][${fieldName}] severity="${severity}"`);
-      return { alert: alertText, severity, examId: returnedExamId };
+      return { alerts: allAlerts, severity, examId: returnedExamId };
     } catch (e) {
       console.error(`[CDSS][${fieldName}] error:`, e);
       return null;

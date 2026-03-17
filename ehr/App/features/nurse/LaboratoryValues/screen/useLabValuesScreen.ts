@@ -73,19 +73,30 @@ export const useLabValuesScreen = (onBack: () => void) => {
     const prefix = getTestPrefix(LAB_TESTS[selectedTestIndex]);
     setResult(allLabData[`${prefix}_result`] || (isNA ? 'N/A' : ''));
     setNormalRange(allLabData[`${prefix}_normal_range`] || (isNA ? 'N/A' : ''));
-  }, [selectedTestIndex, allLabData]);
+  }, [selectedTestIndex, allLabData, isNA]);
+
+  const allLabDataRef = useRef(allLabData);
+  useEffect(() => {
+    const prefix = getTestPrefix(LAB_TESTS[selectedTestIndex]);
+    const updated = {
+      ...allLabData,
+      [`${prefix}_result`]: result,
+      [`${prefix}_normal_range`]: normalRange,
+    };
+    allLabDataRef.current = updated;
+  }, [allLabData, result, normalRange, selectedTestIndex]);
 
   // Real-time debounce: auto-analyze after user types result/range
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    if (!selectedPatientId || !result || !result.trim() || result === 'N/A') return;
+    if (!selectedPatientId) return;
 
     const prefix = getTestPrefix(LAB_TESTS[selectedTestIndex]);
     const patientId = selectedPatientId;
 
     setIsAlertLoading(true);
     debounceTimer.current = setTimeout(async () => {
-      const res = await analyzeLabField(patientId, labIdRef.current, prefix, result, normalRange);
+      const res = await analyzeLabField(patientId, labIdRef.current, allLabDataRef.current, prefix);
       if (!res) {
         setIsAlertLoading(false);
         return;
@@ -94,7 +105,8 @@ export const useLabValuesScreen = (onBack: () => void) => {
         labIdRef.current = res.labId;
         setLabId(res.labId);
       }
-      setBackendAlerts(prev => ({ ...prev, [`${prefix}_alert`]: res.alert }));
+      // Update all alerts from the response
+      setBackendAlerts(prev => ({ ...prev, ...res.alerts }));
       setBackendSeverities(prev => ({ ...prev, [`${prefix}_severity`]: res.severity }));
       setIsAlertLoading(false);
     }, 800);
@@ -102,7 +114,7 @@ export const useLabValuesScreen = (onBack: () => void) => {
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [result, normalRange, selectedTestIndex, selectedPatientId]);
+  }, [result, normalRange, selectedTestIndex, selectedPatientId, analyzeLabField]);
 
   const handlePatientSelect = useCallback(async (
     id: number | null,
@@ -117,6 +129,7 @@ export const useLabValuesScreen = (onBack: () => void) => {
       labIdRef.current = null;
       setIsExistingRecord(false);
       setAllLabData({});
+      allLabDataRef.current = {};
       setBackendAlerts({});
       setBackendSeverities({});
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -127,15 +140,26 @@ export const useLabValuesScreen = (onBack: () => void) => {
     const data = await fetchLatestLabValues(id);
 
     if (data && data.id) {
-      setLabId(data.id);
-      labIdRef.current = data.id;
-      setIsExistingRecord(true);
+      const today = new Date().toLocaleDateString('en-CA');
+      const recordDate = (data.created_at || '').split('T')[0];
+
+      if (recordDate === today) {
+        setLabId(data.id);
+        labIdRef.current = data.id;
+        setIsExistingRecord(true);
+      } else {
+        setLabId(null);
+        labIdRef.current = null;
+        setIsExistingRecord(false);
+      }
       setAllLabData(data);
-      // Load existing alerts, null-out empty/normal values
+      allLabDataRef.current = data;
+      // Load existing alerts
       const loaded: Record<string, string | null> = {};
       LAB_TESTS.forEach(test => {
         const p = getTestPrefix(test);
-        loaded[`${p}_alert`] = isValidAlert(data[`${p}_alert`]) ? data[`${p}_alert`] : null;
+        const alertKey = `${p}_alert`;
+        loaded[alertKey] = isValidAlert(data[alertKey]) ? data[alertKey] : null;
       });
       setBackendAlerts(loaded);
     } else {
@@ -143,22 +167,60 @@ export const useLabValuesScreen = (onBack: () => void) => {
       labIdRef.current = null;
       setIsExistingRecord(false);
       setAllLabData({});
+      allLabDataRef.current = {};
       setBackendAlerts({});
       setBackendSeverities({});
     }
   }, [fetchDataAlert, fetchLatestLabValues]);
 
-  const toggleNA = () => {
+  const toggleNA = async () => {
     const newState = !isNA;
     setIsNA(newState);
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    
+    let updatedResult: string;
+    let updatedRange: string;
+
     if (newState) {
-      setResult('N/A');
-      setNormalRange('N/A');
+      updatedResult = 'N/A';
+      updatedRange = 'N/A';
     } else {
       const prefix = getTestPrefix(LAB_TESTS[selectedTestIndex]);
-      setResult(allLabData[`${prefix}_result`] || '');
-      setNormalRange(allLabData[`${prefix}_normal_range`] || '');
+      updatedResult = allLabData[`${prefix}_result`] || '';
+      updatedRange = allLabData[`${prefix}_normal_range`] || '';
+    }
+
+    setResult(updatedResult);
+    setNormalRange(updatedRange);
+
+    if (selectedPatientId) {
+      try {
+        const prefix = getTestPrefix(LAB_TESTS[selectedTestIndex]);
+        const payload = {
+          ...allLabDataRef.current,
+          patient_id: selectedPatientId,
+          [`${prefix}_result`]: updatedResult,
+          [`${prefix}_normal_range`]: updatedRange,
+        };
+        const saveResult = await saveLabAssessment(payload, labIdRef.current);
+        const record = saveResult?.data || saveResult;
+        if (record?.id) {
+          setLabId(record.id);
+          labIdRef.current = record.id;
+          setAllLabData(prev => ({ ...prev, ...record }));
+        }
+        const alerts = saveResult?.alerts || record?.alerts || {};
+        const updatedAlerts: Record<string, string | null> = {};
+        LAB_TESTS.forEach(test => {
+          const p = getTestPrefix(test);
+          const alertKey = `${p}_alert`;
+          const v = alerts[alertKey] ?? record?.[alertKey];
+          updatedAlerts[alertKey] = isValidAlert(v) ? v : null;
+        });
+        setBackendAlerts(updatedAlerts);
+      } catch {
+        console.error('Failed to auto-save N/A state');
+      }
     }
   };
 
@@ -181,7 +243,7 @@ export const useLabValuesScreen = (onBack: () => void) => {
         const existingAlert = backendAlerts[`${prefix}_alert`];
         if (existingAlert) setPassedAlert(existingAlert);
       }
-    } catch (e) {
+    } catch {
       showAlert('Error', 'Could not initiate clinical support.');
     }
   };
@@ -218,7 +280,7 @@ export const useLabValuesScreen = (onBack: () => void) => {
       } else {
         setSelectedTestIndex(prev => prev + 1);
       }
-    } catch (e) {
+    } catch {
       showAlert('Error', 'Submission failed. Please check your connection.');
     }
   };
@@ -230,6 +292,14 @@ export const useLabValuesScreen = (onBack: () => void) => {
     if (dataAlert) findings.push(dataAlert);
     return findings.join('. ');
   };
+
+  const isModified = useMemo(() => {
+    if (!selectedPatientId) return false;
+    const prefix = getTestPrefix(LAB_TESTS[selectedTestIndex]);
+    const savedResult = allLabData[`${prefix}_result`] || (isNA ? 'N/A' : '');
+    const savedRange = allLabData[`${prefix}_normal_range`] || (isNA ? 'N/A' : '');
+    return result !== savedResult || normalRange !== savedRange;
+  }, [result, normalRange, allLabData, selectedTestIndex, isNA, selectedPatientId]);
 
   return {
     searchText, setSearchText,
@@ -255,5 +325,6 @@ export const useLabValuesScreen = (onBack: () => void) => {
     handleCDSSPress,
     handleNextOrSave,
     generateFindingsSummary,
+    isModified,
   };
 };

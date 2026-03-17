@@ -32,6 +32,17 @@ export const useMedicalReconLogic = () => {
     2: { ...initialEntry }
   });
 
+  const [lastSavedReconData, setLastSavedReconData] = useState<Record<number, ReconEntry>>({
+    0: { ...initialEntry },
+    1: { ...initialEntry },
+    2: { ...initialEntry }
+  });
+
+  const isModified = useMemo(() => {
+    if (!patientId) return false;
+    return JSON.stringify(reconData) !== JSON.stringify(lastSavedReconData);
+  }, [reconData, lastSavedReconData, patientId]);
+
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
     title: string;
@@ -61,7 +72,7 @@ export const useMedicalReconLogic = () => {
       const home = (Array.isArray(homeList) && homeList.length > 0) ? homeList[0] : {};
       const changes = (Array.isArray(changesList) && changesList.length > 0) ? changesList[0] : {};
 
-      setReconData({
+      const newData = {
         0: {
           med: current.current_med === 'N/A' ? '' : current.current_med || '',
           dose: current.current_dose === 'N/A' ? '' : current.current_dose || '',
@@ -86,7 +97,10 @@ export const useMedicalReconLogic = () => {
           indication: '',
           extra: changes.change_text === 'N/A' ? '' : changes.change_text || ''
         }
-      });
+      };
+
+      setReconData(newData);
+      setLastSavedReconData(JSON.parse(JSON.stringify(newData)));
     } catch (error) {
       console.error('Error fetching patient medications:', error);
     } finally {
@@ -214,6 +228,11 @@ export const useMedicalReconLogic = () => {
       1: { ...initialEntry },
       2: { ...initialEntry }
     });
+    setLastSavedReconData({
+      0: { ...initialEntry },
+      1: { ...initialEntry },
+      2: { ...initialEntry }
+    });
   }, []);
 
   return {
@@ -237,6 +256,7 @@ export const useMedicalReconLogic = () => {
     RECON_STAGES,
     successMessage,
     successVisible,
-    setSuccessVisible
+    setSuccessVisible,
+    isModified
   };
 };

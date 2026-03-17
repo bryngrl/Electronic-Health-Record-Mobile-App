@@ -46,20 +46,18 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack, readOnly = fa
     toggleNA,
     getBackendAlert,
     getBackendSeverity,
-    updateField,
-    handleCDSSPress,
-    handleSave,
-    generateFindingsSummary,
-    isDataEntered,
-    getCurrentDate,
-  } = usePhysicalExamScreen(onBack);
+    updateField, handleCDSSPress, handleSave,
+    generateFindingsSummary, isDataEntered, getCurrentDate,
+    isModified,
+    } = usePhysicalExamScreen(onBack);
+
 
   useEffect(() => {
     if (readOnly && patientId) {
       setSelectedPatientId(patientId);
       setSearchText(initialPatientName || '');
     }
-  }, [readOnly, patientId]);
+  }, [readOnly, patientId, setSelectedPatientId, setSearchText, initialPatientName]);
 
   const fadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
@@ -174,6 +172,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack, readOnly = fa
               handleCDSSPress={handleCDSSPress}
               handleSave={handleSave}
               isDataEntered={isDataEntered}
+              isModified={isModified}
               readOnly={readOnly}
               onBack={onBack}
             />

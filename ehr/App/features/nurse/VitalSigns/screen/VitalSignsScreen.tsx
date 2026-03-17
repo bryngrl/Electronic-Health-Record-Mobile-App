@@ -12,15 +12,12 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  Pressable,
   StatusBar,
-  ActivityIndicator,
   Modal,
   FlatList,
   Image,
   Dimensions,
   BackHandler,
-  Platform,
   Animated,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -82,7 +79,6 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     selectTime,
     TIME_SLOTS,
     isDataEntered,
-    isDataComplete,
     currentAlert,
     backendSeverity,
     realtimeAlert,
@@ -95,9 +91,9 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     isMenuVisible,
     setIsMenuVisible,
     reset,
-    existingRecords,
     isExistingRecord,
     setIsExistingRecord,
+    isModified,
   } = useVitalSignsLogic();
 
   const [chartIndex, setChartIndex] = useState(0);
@@ -111,20 +107,73 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [recordId, setRecordId] = useState<number | null>(null);
   const [isNA, setIsNA] = useState(false);
+  const toggleNA = useCallback(async () => {
+    const newState = !isNA;
+    setIsNA(newState);
+    
+    const naVitals = {
+      temperature: 'N/A',
+      hr: 'N/A',
+      rr: 'N/A',
+      bp: 'N/A',
+      spo2: 'N/A',
+    };
+
+    if (newState) {
+      // Apply N/A to all fields
+      Object.keys(naVitals).forEach(key => {
+        handleUpdateVital(key as any, 'N/A');
+      });
+      
+      // Immediately sync to backend
+      if (selectedPatientId) {
+        const today = new Date().toLocaleDateString('en-CA');
+        const time24 = convertTo24h(currentTime);
+        const dayNo = parseInt(calculateDayNumber(), 10) || 1;
+        
+        const payload = {
+          patient_id: parseInt(selectedPatientId, 10),
+          date: today,
+          time: time24,
+          day_no: dayNo,
+          ...naVitals,
+        };
+        
+        await saveAssessment(dayNo); // This will use the current state which we just updated
+      }
+    }
+  }, [isNA, handleUpdateVital, selectedPatientId, currentTime, calculateDayNumber, saveAssessment]);
+
   const [isAlertLoading, setIsAlertLoading] = useState(false);
   const fieldTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const analyzeCountRef = useRef(0);
   const bellFadeAnim = useRef(new Animated.Value(1)).current;
 
+  const vitalsRef = useRef(vitals);
+  useEffect(() => { vitalsRef.current = vitals; }, [vitals]);
+
+  const [backendAlerts, setBackendAlerts] = useState<Record<string, string | null>>({});
+
   useEffect(() => {
     if (readOnly && patientId) {
       setSelectedPatient(patientId.toString(), initialPatientName || '');
     }
-  }, [readOnly, patientId]);
+  }, [readOnly, patientId, setSelectedPatient, initialPatientName]);
+
+  const calculateDayNumber = useCallback(() => {
+    if (!selectedPatient?.admission_date) return '';
+    const admission = new Date(selectedPatient.admission_date);
+    const today = new Date();
+    admission.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    const diffTime = today.getTime() - admission.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays > 0 ? diffDays.toString() : '1';
+  }, [selectedPatient]);
 
   const handleVitalChange = useCallback(
     (key: string, value: string) => {
-      handleUpdateVital(key, value);
+      handleUpdateVital(key as any, value);
       if (!selectedPatientId) return;
       if (fieldTimers.current[key]) clearTimeout(fieldTimers.current[key]);
       setIsAlertLoading(true);
@@ -133,8 +182,9 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
       fieldTimers.current[key] = setTimeout(async () => {
         const today = new Date().toLocaleDateString('en-CA');
         const time24 = convertTo24h(TIME_SLOTS[currentTimeIndex]);
+        const currentData = { ...vitalsRef.current, [key]: value };
         const sanitized: Record<string, string> = {};
-        Object.entries({ ...vitals, [key]: value }).forEach(([k, v]) => {
+        Object.entries(currentData).forEach(([k, v]) => {
           sanitized[k] = v && v.trim() ? v : 'N/A';
         });
         const dayNo = parseInt(calculateDayNumber(), 10) || 1;
@@ -147,7 +197,8 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
         };
         const res = await analyzeField(payload);
         if (res) {
-          setRealtimeAlert(res.alert);
+          setBackendAlerts(prev => ({ ...prev, ...res.alerts }));
+          setRealtimeAlert(Object.values(res.alerts).filter(Boolean).join('\n'));
           setRealtimeSeverity(res.severity);
         }
         if (thisCount === analyzeCountRef.current) {
@@ -157,49 +208,15 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     },
     [
       selectedPatientId,
-      vitals,
       analyzeField,
       handleUpdateVital,
       TIME_SLOTS,
       currentTimeIndex,
       setRealtimeAlert,
       setRealtimeSeverity,
+      calculateDayNumber,
     ],
   );
-
-  const toggleNA = () => {
-    const newState = !isNA;
-    setIsNA(newState);
-    if (newState) {
-      vitalKeys.forEach(k => handleUpdateVital(k, 'N/A'));
-    } else {
-      vitalKeys.forEach(k => {
-        if (vitals[k] === 'N/A') {
-          handleUpdateVital(k, '');
-        }
-      });
-    }
-  };
-
-  useEffect(() => {
-    if (selectedPatientId) {
-      const allNA = Object.values(vitals).every(v => v === 'N/A');
-      setIsNA(allNA);
-    } else {
-      setIsNA(false);
-    }
-  }, [selectedPatientId, vitals]);
-
-  const calculateDayNumber = () => {
-    if (!selectedPatient?.admission_date) return '';
-    const admission = new Date(selectedPatient.admission_date);
-    const today = new Date();
-    admission.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-    const diffTime = today.getTime() - admission.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays > 0 ? diffDays.toString() : '1';
-  };
 
   const scrollChart = (direction: 'next' | 'prev') => {
     const nextIdx = direction === 'next' ? chartIndex + 1 : chartIndex - 1;
@@ -305,7 +322,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     }
     onBack();
     return true;
-  }, [isAdpieActive, isMenuVisible, onBack]);
+  }, [isAdpieActive, isMenuVisible, onBack, setIsMenuVisible]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
@@ -650,18 +667,18 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                   <TouchableOpacity
                     style={[
                       styles.cdssButton,
-                      (!selectedPatientId || (!isDataEntered && !isNA)) && {
+                      !isModified && {
                         backgroundColor: theme.buttonDisabledBg,
                         borderColor: theme.buttonDisabledBorder,
                       },
                     ]}
                     onPress={handleCDSSPress}
-                    disabled={!selectedPatientId}
+                    disabled={!isModified}
                   >
                     <Text
                       style={[
                         styles.cdssBtnText,
-                        (!selectedPatientId || (!isDataEntered && !isNA)) && {
+                        !isModified && {
                           color: theme.textMuted,
                         },
                       ]}
@@ -672,18 +689,18 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                   <TouchableOpacity
                     style={[
                       styles.submitButton,
-                      !selectedPatientId && {
+                      !isModified && {
                         backgroundColor: theme.buttonDisabledBg,
                         borderColor: theme.buttonDisabledBorder,
                       },
                     ]}
                     onPress={handleSubmitPress}
-                    disabled={!selectedPatientId}
+                    disabled={!isModified}
                   >
                     <Text
                       style={[
                         styles.submitBtnText,
-                        !selectedPatientId && { color: theme.textMuted },
+                        !isModified && { color: theme.textMuted },
                       ]}
                     >
                       SUBMIT
@@ -694,18 +711,18 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.nextButton,
-                    !selectedPatientId && {
+                    !isModified && {
                       backgroundColor: theme.buttonDisabledBg,
                       borderColor: theme.buttonDisabledBorder,
                     },
                   ]}
                   onPress={handleNextPress}
-                  disabled={!selectedPatientId}
+                  disabled={!isModified}
                 >
                   <Text
                     style={[
                       styles.nextBtnText,
-                      !selectedPatientId && { color: theme.textMuted },
+                      !isModified && { color: theme.textMuted },
                     ]}
                   >
                     NEXT ›
@@ -880,7 +897,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
   );
 };
 
-const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
+const createStyles = (theme: any, commonStyles: any, _isDarkMode: boolean) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: theme.background },
     scrollContent: { paddingHorizontal: 40, paddingBottom: 20 },

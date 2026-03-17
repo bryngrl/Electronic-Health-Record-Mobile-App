@@ -60,6 +60,8 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
     setStatus,
     handleSubmit,
     isSubmitting,
+    isModified,
+    isDataEntered,
   } = useIvsAndLinesData();
 
   // SweetAlert State
@@ -367,13 +369,13 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
           <TouchableOpacity
             style={[
               styles.submitButton,
-              (!selectedPatientId && !readOnly) && {
+              !readOnly && !isModified && {
                 backgroundColor: theme.buttonDisabledBg,
                 borderColor: theme.buttonDisabledBorder,
               },
             ]}
             onPress={handleFormSubmit}
-            disabled={isSubmitting || (!selectedPatientId && !readOnly)}
+            disabled={isSubmitting || (!readOnly && !isModified)}
           >
             {isSubmitting ? (
               <ActivityIndicator color={theme.primary} />
@@ -381,7 +383,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
               <Text
                 style={[
                   styles.submitButtonText,
-                  (!selectedPatientId && !readOnly) && { color: theme.textMuted },
+                  !readOnly && !isModified && { color: theme.textMuted },
                 ]}
               >
                 {readOnly ? 'CLOSE' : 'SUBMIT'}
