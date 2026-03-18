@@ -28,13 +28,19 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
   const [animationDone, setAnimationDone] = useState(false);
 
   const LOGO_TARGET_Y = -(height * 0.31);
-  const goesToLogin = nextScreen === 'Login';
 
   useEffect(() => {
     if (Platform.OS !== 'android') {
       onAnimationFinish();
       return;
     }
+
+    // Wait for nextScreen to be determined (auth check finished)
+    if (nextScreen === undefined) {
+      return;
+    }
+
+    const goesToLogin = nextScreen === 'Login';
 
     if (goesToLogin) {
       // Full animation: circle expand → logo fade in → logo moves up
@@ -94,7 +100,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({
         onAnimationFinish();
       });
     }
-  }, []);
+  }, [nextScreen]);
 
   if (Platform.OS !== 'android' || animationDone) {
     return null;
