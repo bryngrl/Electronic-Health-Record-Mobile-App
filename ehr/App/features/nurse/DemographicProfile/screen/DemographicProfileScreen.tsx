@@ -330,7 +330,7 @@ const createStyles = (theme: any, commonStyles: any) =>
 
     title: commonStyles.title,
 
-    dotsIcon: { width: 24, height: 24, resizeMode: 'contain', marginTop: 5 },
+    dotsIcon: { width: 18, height: 18, resizeMode: 'contain', marginTop: 5 },
 
     menuPopup: {
       position: 'absolute',

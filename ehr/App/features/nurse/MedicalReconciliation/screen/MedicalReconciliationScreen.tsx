@@ -26,6 +26,8 @@ import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
+const dotsIcon = require('@assets/icons/dots_icon.png');
+
 interface MedicalReconciliationProps {
   onBack: () => void;
   readOnly?: boolean;
@@ -224,7 +226,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
             </View>
             {!readOnly && (
               <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
-                <Icon name="more-vert" size={35} color={theme.primary} />
+                <Image source={dotsIcon} style={styles.dotsIcon} />
               </TouchableOpacity>
             )}
           </View>
@@ -470,7 +472,11 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
         title={successMessage.title}
         message={successMessage.message}
         type="success"
-        onConfirm={() => setSuccessVisible(false)}
+        onConfirm={() => {
+          setSuccessVisible(false);
+          setStageIndex(0);
+          scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        }}
       />
     </SafeAreaView>
   );
@@ -581,6 +587,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       right: 0,
       height: 60,
     },
+    dotsIcon: { width: 18, height: 18, resizeMode: 'contain', marginTop: 8 },
   });
 
 export default MedicalReconciliationScreen;

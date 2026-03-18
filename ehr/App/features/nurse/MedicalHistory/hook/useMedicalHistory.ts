@@ -46,6 +46,13 @@ export const useMedicalHistory = () => {
         // Create new record
         response = await apiClient.post(endpoint, payload);
       }
+
+      // Refresh cache after successful save to ensure "new data" is available
+      const freshData = await apiClient.get(`/medical-history/patient/${patientId}`);
+      if (freshData.data) {
+        await saveDataToCache('medical-history', patientId, freshData.data);
+      }
+
       return response.data;
     } catch (err: any) {
       console.error(`Error saving medical history step (${stepKey}):`, err?.response?.data || err.message);

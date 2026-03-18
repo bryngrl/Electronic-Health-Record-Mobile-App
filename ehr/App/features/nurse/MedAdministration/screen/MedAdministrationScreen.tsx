@@ -9,6 +9,8 @@ import {
   StatusBar,
   TouchableOpacity,
   BackHandler,
+  Modal,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MedAdministrationInputCard from '../components/MedAdministrationInputCard';
@@ -17,6 +19,8 @@ import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAppTheme } from '@App/theme/ThemeContext';
+
+const dotsIcon = require('@assets/icons/dots_icon.png');
 
 const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: {
   onBack: any;
@@ -46,6 +50,7 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
 
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [isNA, setIsNA] = useState(false);
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   
   // Dedicated state for selected patient ID to trigger fetching properly
@@ -102,19 +107,23 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
     type: 'error',
   });
 
-  useEffect(() => {
-    const backAction = () => {
-      onBack();
+  const handleBackPress = useCallback(() => {
+    if (isMenuVisible) {
+      setIsMenuVisible(false);
       return true;
-    };
+    }
+    onBack();
+    return true;
+  }, [isMenuVisible, onBack]);
 
+  useEffect(() => {
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
-      backAction,
+      handleBackPress,
     );
 
     return () => backHandler.remove();
-  }, [onBack]);
+  }, [handleBackPress]);
 
   useEffect(() => {
     if (readOnly && patientId) {
@@ -153,16 +162,15 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
         patient_id: null,
         patientName: '',
         medications: [
-          { medication: '', dose: '', route: '', frequency: '', comments: '' },
-          { medication: '', dose: '', route: '', frequency: '', comments: '' },
-          { medication: '', dose: '', route: '', frequency: '', comments: '' },
+          { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
+          { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
+          { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
         ],
       }));
     }
   };
 
   const currentMed = formData.medications[step];
-  const isFormValid = !!selectedPatientId;
 
   const handleAction = async () => {
     if (!selectedPatientId) {
@@ -173,8 +181,13 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
     }
 
     try {
-      // Save current step data (uses POST updateOrCreate as per API guide)
-      await saveMedAdministration();
+      if (isModified) {
+        // Save current step data (uses POST updateOrCreate as per API guide)
+        await saveMedAdministration();
+
+        // Re-fetch data to ensure everything is in sync with server and cache
+        await fetchPatientData(selectedPatientId, formData.date);
+      }
 
       if (step === 2) {
         showAlert(
@@ -182,9 +195,9 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
           'Medication Administration records saved successfully.',
           'success',
         );
+        // Reset to first stage after final submission
+        setStep(0);
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-        // Refresh data to show what was saved
-        fetchPatientData(selectedPatientId, formData.date);
       } else {
         nextStep();
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
@@ -195,6 +208,21 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
         error.message || 'Failed to save medication administration.',
       );
     }
+  };
+
+  const handleSelectStage = async (index: number) => {
+    if (isModified && selectedPatientId) {
+      try {
+        await saveMedAdministration();
+        await fetchPatientData(selectedPatientId, formData.date);
+      } catch (error: any) {
+        showAlert('Error', error.message || 'Failed to auto-save before navigation.');
+        return;
+      }
+    }
+    setStep(index);
+    setIsMenuVisible(false);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const formatDate = () => {
@@ -250,6 +278,11 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
                 </Text>
               )}
             </View>
+            {!readOnly && (
+              <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
+                <Image source={dotsIcon} style={styles.dotsIcon} />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
         <LinearGradient
@@ -401,46 +434,57 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
               )}
             </TouchableOpacity>
           ) : (
-            <View style={{ marginTop: 10 }}>
+            <View style={{ marginTop: 20 }}>
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
                 <TouchableOpacity
                   style={[
-                    styles.actionBtn,
-                    { flex: 1 },
+                    styles.navBtn,
                     step === 0 && {
                       backgroundColor: theme.buttonDisabledBg,
                       borderColor: theme.buttonDisabledBorder,
                     },
                   ]}
-                  onPress={() => setStep(step - 1)}
+                  onPress={() => {
+                    setStep(step - 1);
+                    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                  }}
                   disabled={step === 0}
                 >
-                  <Text style={[styles.actionBtnText, step === 0 && { color: theme.textMuted }]}>
+                  <Text
+                    style={[
+                      styles.navBtnText,
+                      step === 0 && { color: theme.textMuted },
+                    ]}
+                  >
                     ‹ PREV
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
-                    styles.actionBtn,
-                    { flex: 1 },
+                    styles.navBtn,
                     step === 2 && {
                       backgroundColor: theme.buttonDisabledBg,
                       borderColor: theme.buttonDisabledBorder,
                     },
                   ]}
-                  onPress={() => setStep(step + 1)}
+                  onPress={() => {
+                    setStep(step + 1);
+                    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                  }}
                   disabled={step === 2}
                 >
-                  <Text style={[styles.actionBtnText, step === 2 && { color: theme.textMuted }]}>
+                  <Text
+                    style={[
+                      styles.navBtnText,
+                      step === 2 && { color: theme.textMuted },
+                    ]}
+                  >
                     NEXT ›
                   </Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={styles.actionBtn}
-                onPress={onBack}
-              >
-                <Text style={styles.actionBtnText}>CLOSE</Text>
+              <TouchableOpacity style={styles.navBtn} onPress={onBack}>
+                <Text style={styles.navBtnText}>CLOSE</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -451,6 +495,39 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
           pointerEvents="none"
         />
       </View>
+
+      {/* Options Menu Modal */}
+      <Modal transparent visible={isMenuVisible} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.menuContainer}>
+            <Text style={styles.menuTitle}>SELECT TIME SLOT</Text>
+            <ScrollView>
+              {timeSlots.map((item: string, index: number) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.menuItem}
+                  onPress={() => handleSelectStage(index)}
+                >
+                  <Text
+                    style={[
+                      styles.menuItemText,
+                      step === index && styles.activeMenuText,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.closeMenuBtn}
+              onPress={() => setIsMenuVisible(false)}
+            >
+              <Text style={styles.closeMenuText}>CLOSE</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <SweetAlert
         visible={alertConfig.visible}
@@ -475,6 +552,27 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontFamily: 'AlteHaasGroteskBold',
       color: theme.textMuted,
     },
+    section: { marginBottom: 15, zIndex: 10 },
+    sectionLabel: {
+      fontSize: 14,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      marginBottom: 8,
+    },
+    pillInput: {
+      height: 45,
+      borderRadius: 25,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      backgroundColor: theme.card,
+      justifyContent: 'center',
+      paddingHorizontal: 20,
+    },
+    dateVal: {
+      color: theme.text,
+      fontFamily: 'AlteHaasGrotesk',
+      fontSize: 14,
+    },
     naRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -495,33 +593,12 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       textAlign: 'right',
       marginBottom: 15,
     },
-    section: { marginBottom: 15, zIndex: 10 },
-    sectionLabel: {
-      fontSize: 14,
-      fontFamily: 'AlteHaasGroteskBold',
-      color: theme.primary,
-      marginBottom: 8,
-    },
-    pillInput: {
-      borderWidth: 1.5,
-      borderColor: theme.border,
-      borderRadius: 25,
-      height: 45,
-      paddingHorizontal: 20,
-      justifyContent: 'center',
-      backgroundColor: theme.card,
-    },
-    dateVal: {
-      color: theme.text,
-      fontFamily: 'AlteHaasGrotesk',
-      fontSize: 14,
-    },
     timeBanner: {
       backgroundColor: theme.tableHeader,
       paddingVertical: 10,
-      borderRadius: 20,
+      borderRadius: 25,
       alignItems: 'center',
-      marginVertical: 15,
+      marginBottom: 20,
     },
     timeText: {
       color: theme.secondary,
@@ -529,26 +606,35 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontSize: 14,
     },
     actionBtn: {
-      height: 52,
       backgroundColor: theme.buttonBg,
-      borderRadius: 26,
+      height: 55,
+      borderRadius: 27.5,
       flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: theme.buttonBorder,
+      marginTop: 20,
+    },
+    actionBtnText: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 18,
+    },
+    navBtn: {
+      flex: 1,
+      backgroundColor: theme.buttonBg,
+      height: 50,
+      borderRadius: 25,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
       borderColor: theme.buttonBorder,
-      marginTop: 10,
     },
-    disabledButton: {
-      backgroundColor: theme.card,
-      borderColor: theme.border,
-      opacity: 0.6,
-    },
-    actionBtnText: {
+    navBtnText: {
       color: theme.primary,
-      fontWeight: 'bold',
+      fontFamily: 'AlteHaasGroteskBold',
       fontSize: 15,
-      marginRight: 5,
     },
     fadeBottom: {
       position: 'absolute',
@@ -557,6 +643,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       right: 0,
       height: 60,
     },
+    dotsIcon: { width: 18, height: 18, resizeMode: 'contain', marginTop: 8 },
     staticPatientContainer: {
       marginBottom: 20,
       backgroundColor: theme.card,
@@ -579,6 +666,47 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontSize: 16,
       fontWeight: 'bold',
     },
+    // Menu Modal Styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: theme.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    menuContainer: {
+      width: '85%',
+      backgroundColor: theme.card,
+      borderRadius: 25,
+      padding: 25,
+      maxHeight: '80%',
+    },
+    menuTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: theme.primary,
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    menuItem: {
+      paddingVertical: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    menuItemText: { 
+      fontSize: 16, 
+      color: theme.text, 
+      textAlign: 'center',
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+    activeMenuText: { color: theme.secondary, fontWeight: 'bold' },
+    closeMenuBtn: {
+      marginTop: 20,
+      backgroundColor: theme.surface,
+      paddingVertical: 12,
+      borderRadius: 20,
+      alignItems: 'center',
+    },
+    closeMenuText: { color: theme.primary, fontWeight: 'bold' },
   });
 
 export default MedAdministrationScreen;

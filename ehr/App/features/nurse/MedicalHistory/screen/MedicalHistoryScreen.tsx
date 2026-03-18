@@ -15,6 +15,8 @@ import {
   StatusBar,
   BackHandler,
   Platform,
+  Modal,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -24,6 +26,8 @@ import { useMedicalHistory } from '../hook/useMedicalHistory';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
+
+const dotsIcon = require('@assets/icons/dots_icon.png');
 
 interface MedicalHistoryProps {
   onBack: () => void;
@@ -181,6 +185,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
     vaccination: false,
     developmental: false,
   });
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
 
   const toggleNA = () => {
     const currentKey = steps[step].key;
@@ -213,25 +218,22 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
     }
   };
 
-  useEffect(() => {
-    if (readOnly && patientId) {
-      setSelectedPatientId(patientId);
-    }
-  }, [readOnly, patientId]);
-
-  useEffect(() => {
-    const backAction = () => {
-      onBack();
+  const handleBackPress = useCallback(() => {
+    if (isMenuVisible) {
+      setIsMenuVisible(false);
       return true;
-    };
+    }
+    onBack();
+    return true;
+  }, [isMenuVisible, onBack]);
 
+  useEffect(() => {
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
-      backAction,
+      handleBackPress,
     );
-
     return () => backHandler.remove();
-  }, [onBack]);
+  }, [handleBackPress]);
 
   const loadPatientData = useCallback(
     async (patientId: number) => {
@@ -333,32 +335,45 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
           currentData,
         );
 
-        // Update lastSavedData for this step immediately
-        setLastSavedData(prev => ({
-          ...prev,
-          [currentKey]: { ...currentData },
-        }));
+        // Re-fetch data to ensure everything is in sync with server and cache
+        await loadPatientData(selectedPatientId);
       }
 
       if (step < steps.length - 1) {
         setStep(step + 1);
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       } else {
-        if (isModified) {
-          showAlert(
-            'Success',
-            'Medical History has been saved successfully.',
-            'success',
-          );
-          loadPatientData(selectedPatientId);
-        } else {
-          // If it's the last step and no changes, just close
-          onBack();
-        }
+        // Final submission alert
+        showAlert(
+          'Success',
+          'Medical History has been saved successfully.',
+          'success',
+        );
+        // After final submission, reset to first form as requested
+        setStep(0);
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to save history.');
     }
+  };
+
+  const handleSelectStage = async (index: number) => {
+    if (isModified && selectedPatientId) {
+      try {
+        const currentKey = steps[step].key;
+        const currentData = formData[currentKey as keyof typeof formData];
+        await saveMedicalHistoryStep(selectedPatientId, currentKey, currentData);
+        await loadPatientData(selectedPatientId);
+        // Removed showAlert here as per user request (no alert on page change)
+      } catch (error: any) {
+        showAlert('Error', error.message || 'Failed to auto-save before navigation.');
+        return;
+      }
+    }
+    setStep(index);
+    setIsMenuVisible(false);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const formatDate = () => {
@@ -442,6 +457,11 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
                 </Text>
               )}
             </View>
+            {!readOnly && (
+              <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
+                <Image source={dotsIcon} style={styles.dotsIcon} />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
         <LinearGradient
@@ -630,6 +650,41 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
         />
       </View>
 
+      {/* Options Menu Modal */}
+      <Modal transparent visible={isMenuVisible} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.menuContainer}>
+            <Text style={styles.menuTitle}>SELECT STAGE</Text>
+
+            <ScrollView>
+              {steps.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.menuItem}
+                  onPress={() => handleSelectStage(index)}
+                >
+                  <Text
+                    style={[
+                      styles.menuItemText,
+                      step === index && styles.activeMenuText,
+                    ]}
+                  >
+                    {item.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.closeMenuBtn}
+              onPress={() => setIsMenuVisible(false)}
+            >
+              <Text style={styles.closeMenuText}>CLOSE</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <SweetAlert
         visible={alertConfig.visible}
         title={alertConfig.title}
@@ -728,6 +783,48 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       right: 0,
       height: 60,
     },
+    dotsIcon: { width: 18, height: 18, resizeMode: 'contain', marginTop: 15 },
+    // Menu Modal Styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: theme.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    menuContainer: {
+      width: '85%',
+      backgroundColor: theme.card,
+      borderRadius: 25,
+      padding: 25,
+      maxHeight: '80%',
+    },
+    menuTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: theme.primary,
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    menuItem: {
+      paddingVertical: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    menuItemText: { 
+      fontSize: 16, 
+      color: theme.text, 
+      textAlign: 'center',
+      fontFamily: 'AlteHaasGroteskBold',
+    },
+    activeMenuText: { color: theme.secondary, fontWeight: 'bold' },
+    closeMenuBtn: {
+      marginTop: 20,
+      backgroundColor: theme.surface,
+      paddingVertical: 12,
+      borderRadius: 20,
+      alignItems: 'center',
+    },
+    closeMenuText: { color: theme.primary, fontWeight: 'bold' },
   });
 
 export default MedicalHistoryScreen;

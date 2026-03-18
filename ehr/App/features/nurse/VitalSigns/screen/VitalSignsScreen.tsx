@@ -34,6 +34,8 @@ import ADPIEScreen from '@components/ADPIEScreen';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
+const dotsIcon = require('@assets/icons/dots_icon.png');
+
 const { width } = Dimensions.get('window');
 const ITEM_WIDTH = width * 0.72;
 const ITEM_SPACING = 15;
@@ -423,7 +425,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
               )}
             </View>
             <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
-              <Text style={styles.menuDots}>⋮</Text>
+              <Image source={dotsIcon} style={styles.dotsIcon} />
             </TouchableOpacity>
           </View>
         </View>
@@ -916,7 +918,7 @@ const createStyles = (theme: any, commonStyles: any, _isDarkMode: boolean) =>
       fontSize: 13,
       fontFamily: 'AlteHaasGroteskBold',
     },
-    menuDots: { fontSize: 28, color: theme.primary },
+    dotsIcon: { width: 18, height: 18, resizeMode: 'contain', marginTop: 8 },
     fieldLabel: {
       color: theme.primary,
       fontFamily: 'AlteHaasGroteskBold',
