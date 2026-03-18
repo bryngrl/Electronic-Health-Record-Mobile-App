@@ -39,11 +39,13 @@ const LabValuesScreen = ({
   readOnly = false,
   patientId,
   initialPatientName,
+  admissionDate,
 }: {
   onBack: any;
   readOnly?: boolean;
   patientId?: number;
   initialPatientName?: string;
+  admissionDate?: string;
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
@@ -347,7 +349,7 @@ const LabValuesScreen = ({
               onRangeChange={setNormalRange}
               disabled={!selectedPatientId || isNA || readOnly}
               onDisabledPress={() => {
-                if (!selectedPatientId) {
+                if (!selectedPatientId && !readOnly) {
                   showAlert(
                     'Patient Required',
                     'Please select a patient first in the search bar.',
@@ -452,14 +454,79 @@ const LabValuesScreen = ({
                 )}
               </View>
             ) : (
-              <TouchableOpacity
-                style={[styles.submitBtn, { marginTop: 10 }]}
-                onPress={onBack}
-              >
-                <Text style={[styles.submitText, { color: theme.primary }]}>
-                  CLOSE
-                </Text>
-              </TouchableOpacity>
+              <View>
+                <View style={[styles.footerRow, { marginTop: 10 }]}>
+                  <TouchableOpacity
+                    style={[
+                      styles.nextBtn,
+                      selectedTestIndex === 0 && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
+                    ]}
+                    onPress={() => {
+                      if (selectedTestIndex > 0) {
+                        setSelectedTestIndex(prev => prev - 1);
+                        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                      }
+                    }}
+                    disabled={selectedTestIndex === 0}
+                  >
+                    <Icon
+                      name="chevron-left"
+                      size={20}
+                      color={selectedTestIndex > 0 ? theme.primary : theme.textMuted}
+                    />
+                    <Text
+                      style={[
+                        styles.nextText,
+                        selectedTestIndex === 0 && { color: theme.textMuted },
+                      ]}
+                    >
+                      PREV
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.nextBtn,
+                      selectedTestIndex === LAB_TESTS.length - 1 && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
+                    ]}
+                    onPress={() => {
+                      if (selectedTestIndex < LAB_TESTS.length - 1) {
+                        setSelectedTestIndex(prev => prev + 1);
+                        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                      }
+                    }}
+                    disabled={selectedTestIndex === LAB_TESTS.length - 1}
+                  >
+                    <Text
+                      style={[
+                        styles.nextText,
+                        selectedTestIndex === LAB_TESTS.length - 1 && { color: theme.textMuted },
+                      ]}
+                    >
+                      NEXT
+                    </Text>
+                    <Icon
+                      name="chevron-right"
+                      size={20}
+                      color={selectedTestIndex < LAB_TESTS.length - 1 ? theme.primary : theme.textMuted}
+                    />
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  style={[styles.submitBtn, { marginTop: 10 }]}
+                  onPress={onBack}
+                >
+                  <Text style={[styles.submitText, { color: theme.primary }]}>
+                    CLOSE
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
           </ScrollView>
           <LinearGradient

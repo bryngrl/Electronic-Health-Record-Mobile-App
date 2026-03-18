@@ -100,6 +100,8 @@ const DoctorHomeScreen = ({
     onNavigate(route, {
       patientId: item.patient_id,
       patientName: item.name,
+      recordId: item.record_id,
+      recordDate: item.time_raw || item.time, // Passing raw time if available
     });
   };
 
@@ -358,7 +360,13 @@ const DoctorHomeScreen = ({
                   <View style={styles.patientRightContainer}>
                     <View style={styles.patientRight}>
                       <View style={styles.badge}>
-                        <Text style={styles.badgeText}>{item.type}</Text>
+                        <Text
+                          style={styles.badgeText}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {item.type}
+                        </Text>
                       </View>
                       <Text style={styles.timeText}>{item.time}</Text>
                     </View>

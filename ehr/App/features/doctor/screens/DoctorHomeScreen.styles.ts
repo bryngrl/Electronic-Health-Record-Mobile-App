@@ -173,9 +173,9 @@ export const createStyles = (theme: any, _isDarkMode: boolean) =>
     readStatusDot: {
       backgroundColor: 'transparent',
     },
-    avatarContainer: { marginHorizontal: 10 },
+    avatarContainer: { marginHorizontal: 5 },
     patientName: {
-      fontSize: 14,
+      fontSize: 13,
       color: theme.text,
       fontFamily: 'AlteHaasGrotesk',
     },
@@ -189,19 +189,27 @@ export const createStyles = (theme: any, _isDarkMode: boolean) =>
       opacity: 0.95,
       marginLeft: 12,
     },
-    patientRightContainer: { flexDirection: 'row', alignItems: 'center' },
-    patientRight: { alignItems: 'flex-end' },
+    patientRightContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      width: 100,
+      justifyContent: 'flex-end',
+    },
+    patientRight: { alignItems: 'flex-end', width: '100%' },
     badge: {
       backgroundColor: theme.updateBadgeBg,
-      paddingHorizontal: 11,
+      paddingHorizontal: 8,
       paddingVertical: 5,
       borderRadius: 12,
       marginBottom: 4,
+      width: '100%',
+      alignItems: 'center',
     },
     badgeText: {
       color: theme.updateBadgeText,
       fontSize: 11,
       fontFamily: 'AlteHaasGroteskBold',
+      textAlign: 'center',
     },
     timeText: {
       color: theme.textMuted,

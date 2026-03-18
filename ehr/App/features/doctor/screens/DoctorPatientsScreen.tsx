@@ -202,7 +202,11 @@ const DoctorPatientsScreen = ({
       const patientName = `${selectedPatient.first_name ?? ''} ${
         selectedPatient.last_name ?? ''
       }`.trim();
-      onNavigate(route, { patientId, patientName });
+      onNavigate(route, { 
+        patientId, 
+        patientName,
+        admissionDate: selectedPatient.admission_date
+      });
     }
   };
 

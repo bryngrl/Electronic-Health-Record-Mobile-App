@@ -24,9 +24,10 @@ interface PhysicalExamProps {
   readOnly?: boolean;
   patientId?: string;
   initialPatientName?: string;
+  admissionDate?: string;
 }
 
-const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack, readOnly = false, patientId, initialPatientName }) => {
+const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack, readOnly = false, patientId, initialPatientName, admissionDate }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),

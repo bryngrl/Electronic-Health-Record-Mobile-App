@@ -32,6 +32,7 @@ interface IntakeAndOutputScreenProps {
   readOnly?: boolean;
   patientId?: number;
   initialPatientName?: string;
+  admissionDate?: string;
 }
 
 const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
@@ -39,6 +40,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
   readOnly = false,
   patientId,
   initialPatientName,
+  admissionDate,
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
@@ -80,7 +82,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
     isModified,
     loadingMessage,
     screenOpacity,
-  } = useIntakeAndOutputScreen(onBack, readOnly, patientId, initialPatientName);
+  } = useIntakeAndOutputScreen(onBack, readOnly, patientId, initialPatientName, admissionDate);
 
   const fadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
@@ -236,7 +238,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                 onChangeText={text => handleFieldChange('oral_intake', text)}
                 disabled={!selectedPatientId || isNA || readOnly}
                 onDisabledPress={() => {
-                  if (!selectedPatientId) {
+                  if (!selectedPatientId && !readOnly) {
                     setAlertVisible(true);
                   }
                 }}
@@ -248,7 +250,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                 onChangeText={text => handleFieldChange('iv_fluids_volume', text)}
                 disabled={!selectedPatientId || isNA || readOnly}
                 onDisabledPress={() => {
-                  if (!selectedPatientId) {
+                  if (!selectedPatientId && !readOnly) {
                     setAlertVisible(true);
                   }
                 }}
@@ -260,7 +262,7 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                 onChangeText={text => handleFieldChange('urine_output', text)}
                 disabled={!selectedPatientId || isNA || readOnly}
                 onDisabledPress={() => {
-                  if (!selectedPatientId) {
+                  if (!selectedPatientId && !readOnly) {
                     setAlertVisible(true);
                   }
                 }}

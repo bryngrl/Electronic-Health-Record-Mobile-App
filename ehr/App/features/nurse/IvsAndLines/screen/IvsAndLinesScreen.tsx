@@ -200,11 +200,13 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
   };
 
   const showDisabledAlert = () => {
-    showAlert(
-      'Patient Required',
-      'Please select a patient first in the search bar.',
-      'error',
-    );
+    if (!readOnly) {
+      showAlert(
+        'Patient Required',
+        'Please select a patient first in the search bar.',
+        'error',
+      );
+    }
   };
 
   const handleFormSubmit = async () => {

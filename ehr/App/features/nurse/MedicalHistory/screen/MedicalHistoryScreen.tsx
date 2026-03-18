@@ -42,6 +42,7 @@ interface MedicalHistoryProps {
   readOnly?: boolean;
   patientId?: number;
   initialPatientName?: string;
+  admissionDate?: string;
 }
 
 const initialFormData = {
@@ -166,6 +167,12 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const prevPatientIdRef = useRef<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (readOnly && patientId) {
+      setSelectedPatientId(patientId);
+    }
+  }, [readOnly, patientId]);
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -584,7 +591,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
                 !selectedPatientId || isNAStep[currentStepKey] || readOnly
               }
               onDisabledPress={() => {
-                if (!selectedPatientId) {
+                if (!selectedPatientId && !readOnly) {
                   showAlert(
                     'Patient Required',
                     'Please select a patient first in the search bar.',

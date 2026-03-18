@@ -59,6 +59,7 @@ interface VitalSignsScreenProps {
   readOnly?: boolean;
   patientId?: number;
   initialPatientName?: string;
+  admissionDate?: string;
 }
 
 const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
@@ -66,6 +67,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
   readOnly = false,
   patientId,
   initialPatientName,
+  admissionDate,
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
@@ -192,9 +194,9 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
 
   useEffect(() => {
     if (readOnly && patientId) {
-      setSelectedPatient(patientId.toString(), initialPatientName || '');
+      setSelectedPatient(patientId.toString(), initialPatientName || '', admissionDate);
     }
-  }, [readOnly, patientId, setSelectedPatient, initialPatientName]);
+  }, [readOnly, patientId, setSelectedPatient, initialPatientName, admissionDate]);
 
   const handleVitalChange = useCallback(
     (key: string, value: string) => {
@@ -646,7 +648,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                 onChangeText={v => handleVitalChange('temperature', v)}
                 disabled={!selectedPatientId || isNA || readOnly}
                 onDisabledPress={() => {
-                  if (!selectedPatientId) {
+                  if (!selectedPatientId && !readOnly) {
                     setAlertVisible(true);
                   }
                 }}
@@ -657,7 +659,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                 onChangeText={v => handleVitalChange('hr', v)}
                 disabled={!selectedPatientId || isNA || readOnly}
                 onDisabledPress={() => {
-                  if (!selectedPatientId) {
+                  if (!selectedPatientId && !readOnly) {
                     setAlertVisible(true);
                   }
                 }}
@@ -668,7 +670,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                 onChangeText={v => handleVitalChange('rr', v)}
                 disabled={!selectedPatientId || isNA || readOnly}
                 onDisabledPress={() => {
-                  if (!selectedPatientId) {
+                  if (!selectedPatientId && !readOnly) {
                     setAlertVisible(true);
                   }
                 }}
@@ -680,7 +682,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                 keyboardType="numbers-and-punctuation"
                 disabled={!selectedPatientId || isNA || readOnly}
                 onDisabledPress={() => {
-                  if (!selectedPatientId) {
+                  if (!selectedPatientId && !readOnly) {
                     setAlertVisible(true);
                   }
                 }}
@@ -691,7 +693,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                 onChangeText={v => handleVitalChange('spo2', v)}
                 disabled={!selectedPatientId || isNA || readOnly}
                 onDisabledPress={() => {
-                  if (!selectedPatientId) {
+                  if (!selectedPatientId && !readOnly) {
                     setAlertVisible(true);
                   }
                 }}

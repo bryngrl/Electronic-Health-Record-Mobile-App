@@ -24,11 +24,13 @@ const ADLScreen = ({
   readOnly = false,
   patientId,
   initialPatientName,
+  admissionDate,
 }: {
   onBack: any;
   readOnly?: boolean;
   patientId?: number;
   initialPatientName?: string;
+  admissionDate?: string;
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(

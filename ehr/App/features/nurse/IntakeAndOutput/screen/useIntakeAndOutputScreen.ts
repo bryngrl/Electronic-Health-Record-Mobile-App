@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { BackHandler, Animated, ScrollView } from 'react-native';
 import { useIntakeAndOutputLogic } from '../hook/useIntakeAndOutputLogic';
 
-export const useIntakeAndOutputScreen = (onBack: () => void, readOnly: boolean, patientId?: number, initialPatientName?: string) => {
+export const useIntakeAndOutputScreen = (onBack: () => void, readOnly: boolean, patientId?: number, initialPatientName?: string, admissionDate?: string) => {
   const {
     patientName,
     selectedPatientId,
@@ -67,9 +67,9 @@ export const useIntakeAndOutputScreen = (onBack: () => void, readOnly: boolean, 
 
   useEffect(() => {
     if (readOnly && patientId) {
-      handleSelectPatient(patientId, initialPatientName || '', null);
+      handleSelectPatient(patientId, initialPatientName || '', { admission_date: admissionDate });
     }
-  }, [readOnly, patientId]);
+  }, [readOnly, patientId, admissionDate]);
 
   const calculateDayNumber = useCallback(() => {
     if (!selectedPatient?.admission_date) return '';

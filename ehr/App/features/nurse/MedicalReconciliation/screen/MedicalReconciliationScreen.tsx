@@ -46,6 +46,7 @@ interface MedicalReconciliationProps {
   readOnly?: boolean;
   patientId?: number;
   initialPatientName?: string;
+  admissionDate?: string;
 }
 
 const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
@@ -53,6 +54,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
   readOnly = false,
   patientId: patientIdProp,
   initialPatientName,
+  admissionDate,
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
@@ -101,7 +103,30 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
       setPatientId(patientIdProp);
       setPatientName(initialPatientName || '');
     }
-  }, [readOnly, patientIdProp]);
+  }, [readOnly, patientIdProp, initialPatientName]);
+
+  const calculateDayNumber = useCallback(() => {
+    const dateToUse = admissionDate;
+    if (!dateToUse) return '';
+    try {
+      const admission = new Date(dateToUse);
+      const today = new Date();
+      admission.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      const diffTime = today.getTime() - admission.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      return diffDays > 0 ? diffDays.toString() : '1';
+    } catch (e) {
+      console.error('Error calculating day_no:', e);
+      return '1';
+    }
+  }, [admissionDate]);
+
+  const patientRequired = () => {
+    if (!readOnly) {
+      triggerPatientAlert();
+    }
+  };
 
   const toggleNA = () => {
     const newState = !isNA;
@@ -291,6 +316,13 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
             onPatientSelect={handlePatientSelect}
             onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
           />
+
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>DAY NO :</Text>
+            <View style={styles.pillInput}>
+              <Text style={styles.dateVal}>{calculateDayNumber()}</Text>
+            </View>
+          </View>
 
           {!readOnly && (
             <TouchableOpacity
@@ -569,6 +601,27 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       color: theme.textMuted,
       fontFamily: 'AlteHaasGroteskBold',
       fontSize: 13,
+    },
+    section: { marginBottom: 15, zIndex: 10 },
+    sectionLabel: {
+      fontSize: 14,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      marginBottom: 8,
+    },
+    pillInput: {
+      height: 45,
+      borderRadius: 25,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      backgroundColor: theme.card,
+      justifyContent: 'center',
+      paddingHorizontal: 20,
+    },
+    dateVal: {
+      color: theme.text,
+      fontFamily: 'AlteHaasGrotesk',
+      fontSize: 14,
     },
     naRow: {
       flexDirection: 'row',

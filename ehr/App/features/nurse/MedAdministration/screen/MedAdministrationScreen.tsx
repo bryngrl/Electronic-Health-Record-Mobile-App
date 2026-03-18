@@ -265,10 +265,12 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
   };
 
   const onDisabledPress = () => {
-    showAlert(
-      'Patient Required',
-      'Please select a patient first in the search bar.',
-    );
+    if (!readOnly) {
+      showAlert(
+        'Patient Required',
+        'Please select a patient first in the search bar.',
+      );
+    }
   };
 
   const fadeColors = isDarkMode

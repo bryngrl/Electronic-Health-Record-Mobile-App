@@ -43,7 +43,7 @@ const ADLCardsSection: React.FC<ADLCardsSectionProps> = ({
   onBack,
 }) => {
   const patientRequired = () =>
-    !selectedPatient && showAlert('Patient Required', 'Please select a patient first.');
+    !selectedPatient && !readOnly && showAlert('Patient Required', 'Please select a patient first.');
 
   return (
     <>
