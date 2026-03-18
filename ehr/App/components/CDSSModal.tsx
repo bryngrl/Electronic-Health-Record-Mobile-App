@@ -186,7 +186,13 @@ const styles = StyleSheet.create({
   bulletRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+  normalRow: {
+    marginBottom: 10,
+  },
+  textContent: {
+    flex: 1,
   },
   bullet: {
     fontSize: 16,

@@ -61,9 +61,8 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
     list: { paddingBottom: 100, flexGrow: 1 },
     emptyContainer: {
       flex: 1,
-      justifyContent: 'center',
       alignItems: 'center',
-      marginTop: -100,
+      paddingTop: 150,
     },
     emptyText: {
       marginTop: 10,
