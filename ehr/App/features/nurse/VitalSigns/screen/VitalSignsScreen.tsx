@@ -38,6 +38,7 @@ import SweetAlert from '@components/SweetAlert';
 import CDSSModal from '@components/CDSSModal';
 import ADPIEScreen from '@components/ADPIEScreen';
 import PatientSearchBar from '@components/PatientSearchBar';
+import LoadingOverlay from '@components/LoadingOverlay';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
 const dotsIcon = require('@assets/icons/dots_icon.png');
@@ -173,6 +174,9 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     vitals,
   ]);
   const [isAlertLoading, setIsAlertLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Processing...');
+  const screenOpacity = useRef(new Animated.Value(1)).current;
   const fieldTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const analyzeCountRef = useRef(0);
   const bellFadeAnim = useRef(new Animated.Value(1)).current;
@@ -301,24 +305,29 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     Object.values(fieldTimers.current).forEach(t => clearTimeout(t));
     fieldTimers.current = {};
 
-    const res = await (saveAllAssessments
-      ? saveAllAssessments(dayNo)
-      : saveAssessment(dayNo));
-    const actualData = res?.data || res;
-    const id = actualData?.id || actualData?.vital_id;
+    setIsLoading(true);
+    try {
+      const res = await (saveAllAssessments
+        ? saveAllAssessments(dayNo)
+        : saveAssessment(dayNo));
+      const actualData = res?.data || res;
+      const id = actualData?.id || actualData?.vital_id;
 
-    if (id) {
-      setRecordId(id);
-      setIsExistingRecord(true);
-      setSuccessMessage({
-        title: isExistingRecord
-          ? 'Successfully Updated'
-          : 'Successfully Submitted',
-        message: isExistingRecord
-          ? 'Vital signs updated successfully.'
-          : 'Vital signs submitted successfully.',
-      });
-      setSuccessVisible(true);
+      if (id) {
+        setRecordId(id);
+        setIsExistingRecord(true);
+        setSuccessMessage({
+          title: isExistingRecord
+            ? 'Successfully Updated'
+            : 'Successfully Submitted',
+          message: isExistingRecord
+            ? 'Vital signs updated successfully.'
+            : 'Vital signs submitted successfully.',
+        });
+        setSuccessVisible(true);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -326,14 +335,30 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     if (!selectedPatientId) {
       return setAlertVisible(true);
     }
-    const res = await saveAssessment(dayNo);
-    if (res && res.id) {
-      setRecordId(res.id);
-      setIsAdpieActive(true);
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-    } else if (recordId) {
-      setIsAdpieActive(true);
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    setIsLoading(true);
+    setLoadingMessage('Saving Assessment...');
+    try {
+      const res = await saveAssessment(dayNo);
+      const actualData = res?.data || res;
+      const id = actualData?.id || actualData?.vital_id;
+      if (id || recordId) {
+        if (id) setRecordId(id);
+        setLoadingMessage('Initializing ADPIE...');
+        Animated.timing(screenOpacity, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }).start(() => {
+          setIsAdpieActive(true);
+          screenOpacity.setValue(1);
+          setIsLoading(false);
+        });
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      } else {
+        setIsLoading(false);
+      }
+    } catch {
+      setIsLoading(false);
     }
   };
 
@@ -405,415 +430,418 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.root}>
+      <LoadingOverlay visible={isLoading} message={loadingMessage} />
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor="transparent"
         translucent={true}
       />
-      <View style={{ zIndex: 10 }}>
-        <View
-          style={{
-            paddingHorizontal: 40,
-            backgroundColor: theme.background,
-            paddingBottom: 15,
-          }}
-        >
-          <View style={[styles.header, { marginBottom: 0 }]}>
-            <View>
-              <Text style={styles.title}>Vital Signs</Text>
-              <Text style={styles.subDate}>
-                {new Date().toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </Text>
-              {readOnly && (
-                <Text
-                  style={{
-                    fontSize: 14,
-                    color: '#E8572A',
-                    fontFamily: 'AlteHaasGroteskBold',
-                    marginTop: 5,
-                  }}
-                >
-                  [READ ONLY]
-                </Text>
-              )}
-            </View>
-            <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
-              <Image source={dotsIcon} style={styles.dotsIcon} />
-            </TouchableOpacity>
-          </View>
-        </View>
-        <LinearGradient
-          colors={headerFadeColors}
-          style={{ height: 20 }}
-          pointerEvents="none"
-        />
-      </View>
-
-      <View style={{ flex: 1, marginTop: -20 }}>
-        <ScrollView
-          ref={scrollViewRef}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          scrollEnabled={scrollEnabled}
-        >
-          <View style={{ height: 20 }} />
-          {!readOnly ? (
-            <PatientSearchBar
-              onPatientSelect={(id, name, patientObj) => {
-                setSelectedPatient(
-                  id ? id.toString() : null,
-                  name,
-                  patientObj?.admission_date,
-                );
-                setSelectedPatientFull(patientObj);
-              }}
-              onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-              initialPatientName={patientName}
-            />
-          ) : (
-            <View style={styles.staticPatientContainer}>
-              <Text style={styles.staticPatientLabel}>PATIENT:</Text>
-              <Text style={styles.staticPatientName}>
-                {initialPatientName || 'Unknown Patient'}
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.row}>
-            <View style={{ flex: 1.2, marginRight: 10 }}>
-              <Text style={styles.fieldLabel}>DATE :</Text>
-              <View style={styles.pillInput}>
-                <Text style={styles.dateVal}>
+      <Animated.View style={{ flex: 1, opacity: screenOpacity }}>
+        <View style={{ zIndex: 10 }}>
+          <View
+            style={{
+              paddingHorizontal: 40,
+              backgroundColor: theme.background,
+              paddingBottom: 15,
+            }}
+          >
+            <View style={[styles.header, { marginBottom: 0 }]}>
+              <View>
+                <Text style={styles.title}>Vital Signs</Text>
+                <Text style={styles.subDate}>
                   {new Date().toLocaleDateString('en-US', {
+                    weekday: 'long',
                     month: 'long',
                     day: 'numeric',
-                    year: 'numeric',
                   })}
                 </Text>
+                {readOnly && (
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: '#E8572A',
+                      fontFamily: 'AlteHaasGroteskBold',
+                      marginTop: 5,
+                    }}
+                  >
+                    [READ ONLY]
+                  </Text>
+                )}
               </View>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.fieldLabel}>DAY NO :</Text>
-              <View style={[styles.pillInput, styles.dropdownRow]}>
-                <Text style={styles.dateVal}>{dayNo}</Text>
-                <Image
-                  source={arrowIcon}
-                  style={[
-                    styles.arrowIconImage,
-                    { tintColor: theme.textMuted },
-                  ]}
-                />
-              </View>
+              <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
+                <Image source={dotsIcon} style={styles.dotsIcon} />
+              </TouchableOpacity>
             </View>
           </View>
+          <LinearGradient
+            colors={headerFadeColors}
+            style={{ height: 20 }}
+            pointerEvents="none"
+          />
+        </View>
 
-          <View style={styles.chartCarousel}>
-            {chartIndex > 0 && (
-              <TouchableOpacity
-                style={[styles.navArrow, { left: -10 }]}
-                onPress={() => scrollChart('prev')}
-              >
-                <View style={styles.arrowCircle}>
-                  <Image
-                    source={backArrow}
-                    style={[styles.arrowImg, { tintColor: theme.primary }]}
-                  />
-                </View>
-              </TouchableOpacity>
+        <View style={{ flex: 1, marginTop: -20 }}>
+          <ScrollView
+            ref={scrollViewRef}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            scrollEnabled={scrollEnabled}
+          >
+            <View style={{ height: 20 }} />
+            {!readOnly ? (
+              <PatientSearchBar
+                onPatientSelect={(id, name, patientObj) => {
+                  setSelectedPatient(
+                    id ? id.toString() : null,
+                    name,
+                    patientObj?.admission_date,
+                  );
+                  setSelectedPatientFull(patientObj);
+                }}
+                onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+                initialPatientName={patientName}
+              />
+            ) : (
+              <View style={styles.staticPatientContainer}>
+                <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+                <Text style={styles.staticPatientName}>
+                  {initialPatientName || 'Unknown Patient'}
+                </Text>
+              </View>
             )}
 
-            <FlatList
-              ref={chartListRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={SNAP_INTERVAL}
-              decelerationRate="fast"
-              data={vitalKeys}
-              extraData={vitals}
-              keyExtractor={item => item}
-              contentContainerStyle={{ paddingRight: 60 }}
-              onMomentumScrollEnd={ev => {
-                const newIndex = Math.round(
-                  ev.nativeEvent.contentOffset.x / SNAP_INTERVAL,
-                );
-                setChartIndex(newIndex);
-              }}
-              renderItem={({ item }) => (
-                <View style={{ width: ITEM_WIDTH, marginRight: ITEM_SPACING }}>
-                  <PreciseVitalChart
-                    label={item.toUpperCase()}
-                    data={chartData[item]}
+            <View style={styles.row}>
+              <View style={{ flex: 1.2, marginRight: 10 }}>
+                <Text style={styles.fieldLabel}>DATE :</Text>
+                <View style={styles.pillInput}>
+                  <Text style={styles.dateVal}>
+                    {new Date().toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </Text>
+                </View>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldLabel}>DAY NO :</Text>
+                <View style={[styles.pillInput, styles.dropdownRow]}>
+                  <Text style={styles.dateVal}>{dayNo}</Text>
+                  <Image
+                    source={arrowIcon}
+                    style={[
+                      styles.arrowIconImage,
+                      { tintColor: theme.textMuted },
+                    ]}
                   />
                 </View>
+              </View>
+            </View>
+
+            <View style={styles.chartCarousel}>
+              {chartIndex > 0 && (
+                <TouchableOpacity
+                  style={[styles.navArrow, { left: -10 }]}
+                  onPress={() => scrollChart('prev')}
+                >
+                  <View style={styles.arrowCircle}>
+                    <Image
+                      source={backArrow}
+                      style={[styles.arrowImg, { tintColor: theme.primary }]}
+                    />
+                  </View>
+                </TouchableOpacity>
               )}
-            />
 
-            {chartIndex < vitalKeys.length - 1 && (
+              <FlatList
+                ref={chartListRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                snapToInterval={SNAP_INTERVAL}
+                decelerationRate="fast"
+                data={vitalKeys}
+                extraData={vitals}
+                keyExtractor={item => item}
+                contentContainerStyle={{ paddingRight: 60 }}
+                onMomentumScrollEnd={ev => {
+                  const newIndex = Math.round(
+                    ev.nativeEvent.contentOffset.x / SNAP_INTERVAL,
+                  );
+                  setChartIndex(newIndex);
+                }}
+                renderItem={({ item }) => (
+                  <View style={{ width: ITEM_WIDTH, marginRight: ITEM_SPACING }}>
+                    <PreciseVitalChart
+                      label={item.toUpperCase()}
+                      data={chartData[item]}
+                    />
+                  </View>
+                )}
+              />
+
+              {chartIndex < vitalKeys.length - 1 && (
+                <TouchableOpacity
+                  style={[styles.navArrow, { right: 0 }]}
+                  onPress={() => scrollChart('next')}
+                >
+                  <View style={styles.arrowCircle}>
+                    <Image
+                      source={nextArrow}
+                      style={[styles.arrowImg, { tintColor: theme.primary }]}
+                    />
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {!readOnly && (
               <TouchableOpacity
-                style={[styles.navArrow, { right: 0 }]}
-                onPress={() => scrollChart('next')}
+                style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+                onPress={() => {
+                  if (!selectedPatientId) {
+                    setAlertVisible(true);
+                  } else {
+                    toggleNA();
+                  }
+                }}
               >
-                <View style={styles.arrowCircle}>
-                  <Image
-                    source={nextArrow}
-                    style={[styles.arrowImg, { tintColor: theme.primary }]}
-                  />
-                </View>
+                <Text
+                  style={[
+                    styles.naText,
+                    !selectedPatientId && { color: theme.textMuted },
+                  ]}
+                >
+                  Mark all as N/A
+                </Text>
+                <Icon
+                  name={isNA ? 'check-box' : 'check-box-outline-blank'}
+                  size={22}
+                  color={selectedPatientId ? theme.primary : theme.textMuted}
+                />
               </TouchableOpacity>
             )}
-          </View>
 
-          {!readOnly && (
-            <TouchableOpacity
-              style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
-              onPress={() => {
-                if (!selectedPatientId) {
-                  setAlertVisible(true);
-                } else {
-                  toggleNA();
-                }
-              }}
-            >
+            {!readOnly && (
               <Text
                 style={[
-                  styles.naText,
-                  !selectedPatientId && { color: theme.textMuted },
+                  styles.disabledTextAtBottom,
+                  isNA && { color: theme.error },
                 ]}
               >
-                Mark all as N/A
+                {isNA
+                  ? 'All fields below are disabled.'
+                  : 'Checking this will disable all fields below.'}
               </Text>
-              <Icon
-                name={isNA ? 'check-box' : 'check-box-outline-blank'}
-                size={22}
-                color={selectedPatientId ? theme.primary : theme.textMuted}
+            )}
+
+            <View style={styles.timeBanner}>
+              <Text style={styles.timeText}>{currentTime}</Text>
+            </View>
+
+            <View style={{ opacity: 1 }}>
+              <VitalCard
+                label="Temperature"
+                value={vitals.temperature}
+                onChangeText={v => handleVitalChange('temperature', v)}
+                disabled={!selectedPatientId || isNA || readOnly}
+                onDisabledPress={() => {
+                  if (!selectedPatientId) {
+                    setAlertVisible(true);
+                  }
+                }}
               />
-            </TouchableOpacity>
-          )}
+              <VitalCard
+                label="HR"
+                value={vitals.hr}
+                onChangeText={v => handleVitalChange('hr', v)}
+                disabled={!selectedPatientId || isNA || readOnly}
+                onDisabledPress={() => {
+                  if (!selectedPatientId) {
+                    setAlertVisible(true);
+                  }
+                }}
+              />
+              <VitalCard
+                label="RR"
+                value={vitals.rr}
+                onChangeText={v => handleVitalChange('rr', v)}
+                disabled={!selectedPatientId || isNA || readOnly}
+                onDisabledPress={() => {
+                  if (!selectedPatientId) {
+                    setAlertVisible(true);
+                  }
+                }}
+              />
+              <VitalCard
+                label="BP"
+                value={vitals.bp}
+                onChangeText={v => handleVitalChange('bp', v)}
+                keyboardType="numbers-and-punctuation"
+                disabled={!selectedPatientId || isNA || readOnly}
+                onDisabledPress={() => {
+                  if (!selectedPatientId) {
+                    setAlertVisible(true);
+                  }
+                }}
+              />
+              <VitalCard
+                label="SP02"
+                value={vitals.spo2}
+                onChangeText={v => handleVitalChange('spo2', v)}
+                disabled={!selectedPatientId || isNA || readOnly}
+                onDisabledPress={() => {
+                  if (!selectedPatientId) {
+                    setAlertVisible(true);
+                  }
+                }}
+              />
+            </View>
 
-          {!readOnly && (
-            <Text
-              style={[
-                styles.disabledTextAtBottom,
-                isNA && { color: theme.error },
-              ]}
-            >
-              {isNA
-                ? 'All fields below are disabled.'
-                : 'Checking this will disable all fields below.'}
-            </Text>
-          )}
-
-          <View style={styles.timeBanner}>
-            <Text style={styles.timeText}>{currentTime}</Text>
-          </View>
-
-          <View style={{ opacity: 1 }}>
-            <VitalCard
-              label="Temperature"
-              value={vitals.temperature}
-              onChangeText={v => handleVitalChange('temperature', v)}
-              disabled={!selectedPatientId || isNA || readOnly}
-              onDisabledPress={() => {
-                if (!selectedPatientId) {
-                  setAlertVisible(true);
-                }
-              }}
-            />
-            <VitalCard
-              label="HR"
-              value={vitals.hr}
-              onChangeText={v => handleVitalChange('hr', v)}
-              disabled={!selectedPatientId || isNA || readOnly}
-              onDisabledPress={() => {
-                if (!selectedPatientId) {
-                  setAlertVisible(true);
-                }
-              }}
-            />
-            <VitalCard
-              label="RR"
-              value={vitals.rr}
-              onChangeText={v => handleVitalChange('rr', v)}
-              disabled={!selectedPatientId || isNA || readOnly}
-              onDisabledPress={() => {
-                if (!selectedPatientId) {
-                  setAlertVisible(true);
-                }
-              }}
-            />
-            <VitalCard
-              label="BP"
-              value={vitals.bp}
-              onChangeText={v => handleVitalChange('bp', v)}
-              keyboardType="numbers-and-punctuation"
-              disabled={!selectedPatientId || isNA || readOnly}
-              onDisabledPress={() => {
-                if (!selectedPatientId) {
-                  setAlertVisible(true);
-                }
-              }}
-            />
-            <VitalCard
-              label="SP02"
-              value={vitals.spo2}
-              onChangeText={v => handleVitalChange('spo2', v)}
-              disabled={!selectedPatientId || isNA || readOnly}
-              onDisabledPress={() => {
-                if (!selectedPatientId) {
-                  setAlertVisible(true);
-                }
-              }}
-            />
-          </View>
-
-          {!readOnly ? (
-            <View style={styles.footerAction}>
-              <Animated.View style={{ opacity: bellFadeAnim }}>
-                <TouchableOpacity
-                  style={styles.alertIcon}
-                  disabled={!isDataEntered}
-                  onPress={handleAlertPress}
-                >
-                  <Image
-                    source={
-                      isAlertActive
-                        ? alertBellActiveIcon
-                        : alertBellInactiveIcon
-                    }
-                    style={styles.fullImg}
-                  />
-                </TouchableOpacity>
-              </Animated.View>
-
-              {isLastTimeSlot ? (
-                <View style={styles.buttonGroup}>
+            {!readOnly ? (
+              <View style={styles.footerAction}>
+                <Animated.View style={{ opacity: bellFadeAnim }}>
                   <TouchableOpacity
-                    style={[
-                      styles.cdssButton,
-                      !isDataEntered && {
-                        backgroundColor: theme.buttonDisabledBg,
-                        borderColor: theme.buttonDisabledBorder,
-                      },
-                    ]}
-                    onPress={handleCDSSPress}
+                    style={styles.alertIcon}
                     disabled={!isDataEntered}
+                    onPress={handleAlertPress}
                   >
-                    <Text
+                    <Image
+                      source={
+                        isAlertActive
+                          ? alertBellActiveIcon
+                          : alertBellInactiveIcon
+                      }
+                      style={styles.fullImg}
+                    />
+                  </TouchableOpacity>
+                </Animated.View>
+
+                {isLastTimeSlot ? (
+                  <View style={styles.buttonGroup}>
+                    <TouchableOpacity
                       style={[
-                        styles.cdssBtnText,
+                        styles.cdssButton,
                         !isDataEntered && {
-                          color: theme.textMuted,
+                          backgroundColor: theme.buttonDisabledBg,
+                          borderColor: theme.buttonDisabledBorder,
                         },
                       ]}
+                      onPress={handleCDSSPress}
+                      disabled={!isDataEntered}
                     >
-                      CDSS
-                    </Text>
-                  </TouchableOpacity>
+                      <Text
+                        style={[
+                          styles.cdssBtnText,
+                          !isDataEntered && {
+                            color: theme.textMuted,
+                          },
+                        ]}
+                      >
+                        CDSS
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.submitButton,
+                        !isModified && {
+                          backgroundColor: theme.buttonDisabledBg,
+                          borderColor: theme.buttonDisabledBorder,
+                        },
+                      ]}
+                      onPress={handleSubmitPress}
+                      disabled={!isModified}
+                    >
+                      <Text
+                        style={[
+                          styles.submitBtnText,
+                          !isModified && { color: theme.textMuted },
+                        ]}
+                      >
+                        SUBMIT
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
                   <TouchableOpacity
                     style={[
-                      styles.submitButton,
+                      styles.nextButton,
                       !isModified && {
                         backgroundColor: theme.buttonDisabledBg,
                         borderColor: theme.buttonDisabledBorder,
                       },
                     ]}
-                    onPress={handleSubmitPress}
+                    onPress={handleNextPress}
                     disabled={!isModified}
                   >
                     <Text
                       style={[
-                        styles.submitBtnText,
+                        styles.nextBtnText,
                         !isModified && { color: theme.textMuted },
                       ]}
                     >
-                      SUBMIT
+                      NEXT ›
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <View style={{ marginTop: 20 }}>
+                <View style={[styles.footerAction, { marginBottom: 10 }]}>
+                  <TouchableOpacity
+                    style={[
+                      styles.nextButton,
+                      isFirstTimeSlot && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
+                    ]}
+                    onPress={handlePrevPress}
+                    disabled={isFirstTimeSlot}
+                  >
+                    <Text
+                      style={[
+                        styles.nextBtnText,
+                        isFirstTimeSlot && { color: theme.textMuted },
+                      ]}
+                    >
+                      ‹ PREV
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.nextButton,
+                      isLastTimeSlot && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
+                    ]}
+                    onPress={handleNextPress}
+                    disabled={isLastTimeSlot}
+                  >
+                    <Text
+                      style={[
+                        styles.nextBtnText,
+                        isLastTimeSlot && { color: theme.textMuted },
+                      ]}
+                    >
+                      NEXT ›
                     </Text>
                   </TouchableOpacity>
                 </View>
-              ) : (
-                <TouchableOpacity
-                  style={[
-                    styles.nextButton,
-                    !isModified && {
-                      backgroundColor: theme.buttonDisabledBg,
-                      borderColor: theme.buttonDisabledBorder,
-                    },
-                  ]}
-                  onPress={handleNextPress}
-                  disabled={!isModified}
-                >
-                  <Text
-                    style={[
-                      styles.nextBtnText,
-                      !isModified && { color: theme.textMuted },
-                    ]}
-                  >
-                    NEXT ›
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : (
-            <View style={{ marginTop: 20 }}>
-              <View style={[styles.footerAction, { marginBottom: 10 }]}>
-                <TouchableOpacity
-                  style={[
-                    styles.nextButton,
-                    isFirstTimeSlot && {
-                      backgroundColor: theme.buttonDisabledBg,
-                      borderColor: theme.buttonDisabledBorder,
-                    },
-                  ]}
-                  onPress={handlePrevPress}
-                  disabled={isFirstTimeSlot}
-                >
-                  <Text
-                    style={[
-                      styles.nextBtnText,
-                      isFirstTimeSlot && { color: theme.textMuted },
-                    ]}
-                  >
-                    ‹ PREV
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.nextButton,
-                    isLastTimeSlot && {
-                      backgroundColor: theme.buttonDisabledBg,
-                      borderColor: theme.buttonDisabledBorder,
-                    },
-                  ]}
-                  onPress={handleNextPress}
-                  disabled={isLastTimeSlot}
-                >
-                  <Text
-                    style={[
-                      styles.nextBtnText,
-                      isLastTimeSlot && { color: theme.textMuted },
-                    ]}
-                  >
-                    NEXT ›
-                  </Text>
+                <TouchableOpacity style={styles.submitButton} onPress={onBack}>
+                  <Text style={styles.submitBtnText}>CLOSE</Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.submitButton} onPress={onBack}>
-                <Text style={styles.submitBtnText}>CLOSE</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </ScrollView>
-        <LinearGradient
-          colors={fadeColors}
-          style={styles.fadeBottom}
-          pointerEvents="none"
-        />
-      </View>
+            )}
+          </ScrollView>
+          <LinearGradient
+            colors={fadeColors}
+            style={styles.fadeBottom}
+            pointerEvents="none"
+          />
+        </View>
+      </Animated.View>
 
       <SweetAlert
         visible={alertVisible}

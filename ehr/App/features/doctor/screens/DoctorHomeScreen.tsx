@@ -250,7 +250,9 @@ const DoctorHomeScreen = ({
           </TouchableOpacity>
         </View>
 
-        <View style={styles.searchContainer}>
+        {/* !!! SEARCH BAR !!! */}
+
+        {/* <View style={styles.searchContainer}>
           <View style={styles.searchBarWrapper}>
             <Ionicons
               name="search-outline"
@@ -266,8 +268,7 @@ const DoctorHomeScreen = ({
               onChangeText={setSearchQuery}
             />
           </View>
-        </View>
-
+        </View> */}
         <View style={styles.statsContainer}>
           <View style={styles.greenVerticalLine} />
           <View style={styles.statsRow}>
@@ -288,7 +289,6 @@ const DoctorHomeScreen = ({
             />
           </View>
         </View>
-
         <View style={styles.stickyControls}>
           <View style={styles.filterHeader}>
             <Text style={styles.sectionTitle}>Patient Updates</Text>
@@ -323,7 +323,6 @@ const DoctorHomeScreen = ({
             ))}
           </View>
         </View>
-
         <View style={styles.listContainer}>
           {filteredUpdates.length > 0
             ? filteredUpdates.map((item, index) => (

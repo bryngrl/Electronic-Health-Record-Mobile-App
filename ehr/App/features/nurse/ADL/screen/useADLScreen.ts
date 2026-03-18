@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { BackHandler } from 'react-native';
+import { BackHandler, Animated } from 'react-native';
 import { useADL } from '../hook/useADL';
 import { initialFormData, ALERT_KEY_MAP } from './constants';
 
@@ -36,21 +36,35 @@ export const useADLScreen = (onBack: () => void) => {
 
   const [adlId, setAdlId] = useState<number | null>(null);
   const [isExistingRecord, setIsExistingRecord] = useState(false);
-  const [backendAlerts, setBackendAlerts] = useState<Record<string, string | null>>({});
-  const [backendSeverities, setBackendSeverities] = useState<Record<string, string | null>>({});
+  const [backendAlerts, setBackendAlerts] = useState<
+    Record<string, string | null>
+  >({});
+  const [backendSeverities, setBackendSeverities] = useState<
+    Record<string, string | null>
+  >({});
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
   const [lastSavedData, setLastSavedData] = useState(initialFormData);
   const [isNA, setIsNA] = useState(false);
-
-  useEffect(() => { formDataRef.current = formData; }, [formData]);
-  useEffect(() => { adlIdRef.current = adlId; }, [adlId]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Processing...');
+  const screenOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      onBack();
-      return true;
-    });
+    formDataRef.current = formData;
+  }, [formData]);
+  useEffect(() => {
+    adlIdRef.current = adlId;
+  }, [adlId]);
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        onBack();
+        return true;
+      },
+    );
     return () => backHandler.remove();
   }, [onBack]);
 
@@ -59,12 +73,14 @@ export const useADLScreen = (onBack: () => void) => {
     setIsNA(newState);
     Object.values(fieldTimers.current).forEach(clearTimeout);
     fieldTimers.current = {};
-    
+
     let updatedFormData: typeof initialFormData;
     if (newState) {
       preNASnapshotRef.current = { ...formData };
       const allNA = { ...formData };
-      Object.keys(initialFormData).forEach(key => { (allNA as any)[key] = 'N/A'; });
+      Object.keys(initialFormData).forEach(key => {
+        (allNA as any)[key] = 'N/A';
+      });
       updatedFormData = allNA;
     } else {
       updatedFormData = preNASnapshotRef.current
@@ -72,7 +88,7 @@ export const useADLScreen = (onBack: () => void) => {
         : { ...initialFormData };
       preNASnapshotRef.current = null;
     }
-    
+
     setFormData(updatedFormData);
     formDataRef.current = updatedFormData;
 
@@ -103,58 +119,65 @@ export const useADLScreen = (onBack: () => void) => {
   };
 
   const isValidAlert = (v: any) =>
-    v && typeof v === 'string' && v.trim() !== '' && v !== 'No findings.' && v !== 'No Findings';
+    v &&
+    typeof v === 'string' &&
+    v.trim() !== '' &&
+    v !== 'No findings.' &&
+    v !== 'No Findings';
 
-  const loadPatientData = useCallback(async (patientId: number) => {
-    preNASnapshotRef.current = null;
-    fetchDataAlert(patientId);
-    const data = await fetchLatestADL(patientId);
-    if (data) {
-      const today = new Date().toLocaleDateString('en-CA');
-      const recordDate = (data.date || data.created_at || '').split('T')[0];
+  const loadPatientData = useCallback(
+    async (patientId: number) => {
+      preNASnapshotRef.current = null;
+      fetchDataAlert(patientId);
+      const data = await fetchLatestADL(patientId);
+      if (data) {
+        const today = new Date().toLocaleDateString('en-CA');
+        const recordDate = (data.date || data.created_at || '').split('T')[0];
 
-      if (recordDate === today) {
-        setAdlId(data.id);
-        adlIdRef.current = data.id;
-        setIsExistingRecord(true);
+        if (recordDate === today) {
+          setAdlId(data.id);
+          adlIdRef.current = data.id;
+          setIsExistingRecord(true);
+        } else {
+          setAdlId(null);
+          adlIdRef.current = null;
+          setIsExistingRecord(false);
+        }
+
+        const newFormData = {
+          mobility_assessment: data.mobility_assessment || '',
+          hygiene_assessment: data.hygiene_assessment || '',
+          toileting_assessment: data.toileting_assessment || '',
+          feeding_assessment: data.feeding_assessment || '',
+          hydration_assessment: data.hydration_assessment || '',
+          sleep_pattern_assessment: data.sleep_pattern_assessment || '',
+          pain_level_assessment: data.pain_level_assessment || '',
+        };
+        setFormData(newFormData);
+        setLastSavedData(newFormData);
+        formDataRef.current = newFormData;
+        setIsNA(Object.values(newFormData).every(v => v === 'N/A'));
+        const loaded: Record<string, string | null> = {};
+        Object.entries(ALERT_KEY_MAP).forEach(([_, alertKey]) => {
+          const v = data[alertKey];
+          loaded[alertKey] = isValidAlert(v) ? v : null;
+        });
+        setBackendAlerts(loaded);
       } else {
         setAdlId(null);
         adlIdRef.current = null;
         setIsExistingRecord(false);
+        setFormData(initialFormData);
+        formDataRef.current = initialFormData;
+        setIsNA(false);
+        setBackendAlerts({});
+        setBackendSeverities({});
+        Object.values(fieldTimers.current).forEach(clearTimeout);
+        fieldTimers.current = {};
       }
-
-      const newFormData = {
-        mobility_assessment:      data.mobility_assessment || '',
-        hygiene_assessment:       data.hygiene_assessment || '',
-        toileting_assessment:     data.toileting_assessment || '',
-        feeding_assessment:       data.feeding_assessment || '',
-        hydration_assessment:     data.hydration_assessment || '',
-        sleep_pattern_assessment: data.sleep_pattern_assessment || '',
-        pain_level_assessment:    data.pain_level_assessment || '',
-      };
-      setFormData(newFormData);
-      setLastSavedData(newFormData);
-      formDataRef.current = newFormData;
-      setIsNA(Object.values(newFormData).every(v => v === 'N/A'));
-      const loaded: Record<string, string | null> = {};
-      Object.entries(ALERT_KEY_MAP).forEach(([_, alertKey]) => {
-        const v = data[alertKey];
-        loaded[alertKey] = isValidAlert(v) ? v : null;
-      });
-      setBackendAlerts(loaded);
-    } else {
-      setAdlId(null);
-      adlIdRef.current = null;
-      setIsExistingRecord(false);
-      setFormData(initialFormData);
-      formDataRef.current = initialFormData;
-      setIsNA(false);
-      setBackendAlerts({});
-      setBackendSeverities({});
-      Object.values(fieldTimers.current).forEach(clearTimeout);
-      fieldTimers.current = {};
-    }
-  }, [fetchLatestADL, fetchDataAlert, analyzeField]);
+    },
+    [fetchLatestADL, fetchDataAlert, analyzeField],
+  );
 
   useEffect(() => {
     if (selectedPatient?.id !== prevPatientIdRef.current) {
@@ -179,7 +202,9 @@ export const useADLScreen = (onBack: () => void) => {
   const getBackendAlert = (field: string): string | null => {
     const alertKey = ALERT_KEY_MAP[field];
     if (!alertKey) return null;
-    return isValidAlert(backendAlerts[alertKey]) ? backendAlerts[alertKey] : null;
+    return isValidAlert(backendAlerts[alertKey])
+      ? backendAlerts[alertKey]
+      : null;
   };
 
   const getBackendSeverity = (field: string): string | null =>
@@ -226,8 +251,13 @@ export const useADLScreen = (onBack: () => void) => {
 
   const handleCDSSPress = async () => {
     if (!selectedPatient) {
-      return showAlert('Patient Required', 'Please select a patient first in the search bar.');
+      return showAlert(
+        'Patient Required',
+        'Please select a patient first in the search bar.',
+      );
     }
+    setIsLoading(true);
+    setLoadingMessage('Saving Assessment...');
     try {
       const result = await saveADLAssessment(
         { patient_id: selectedPatient.id, ...formDataRef.current },
@@ -238,7 +268,18 @@ export const useADLScreen = (onBack: () => void) => {
       if (id) {
         setAdlId(id);
         adlIdRef.current = id;
-        setIsAdpieActive(true);
+        setLoadingMessage('Initializing ADPIE...');
+
+        Animated.timing(screenOpacity, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }).start(() => {
+          setIsAdpieActive(true);
+          screenOpacity.setValue(1);
+          setIsLoading(false);
+        });
+
         setLastSavedData({ ...formDataRef.current });
         const updated: Record<string, string | null> = { ...backendAlerts };
         Object.entries(ALERT_KEY_MAP).forEach(([_, alertKey]) => {
@@ -247,17 +288,24 @@ export const useADLScreen = (onBack: () => void) => {
         });
         setBackendAlerts(updated);
       } else {
+        setIsLoading(false);
         showAlert('Error', 'Could not retrieve assessment ID.');
       }
     } catch (e) {
+      setIsLoading(false);
       showAlert('Error', 'Could not initiate clinical support.');
     }
   };
 
   const handleSave = async () => {
     if (!selectedPatient) {
-      return showAlert('Patient Required', 'Please select a patient first in the search bar.');
+      return showAlert(
+        'Patient Required',
+        'Please select a patient first in the search bar.',
+      );
     }
+    setIsLoading(true);
+    setLoadingMessage('Saving ADL Assessment...');
     try {
       const isUpdate = isExistingRecord;
       const result = await saveADLAssessment(
@@ -279,12 +327,16 @@ export const useADLScreen = (onBack: () => void) => {
         });
         setBackendAlerts(updated);
       }
+      setIsLoading(false);
       showAlert(
         isUpdate ? 'Successfully Updated' : 'Successfully Submitted',
-        `ADL Assessment has been ${isUpdate ? 'updated' : 'submitted'} successfully.`,
+        `ADL Assessment has been ${
+          isUpdate ? 'updated' : 'submitted'
+        } successfully.`,
         'success',
       );
     } catch (e) {
+      setIsLoading(false);
       showAlert('Error', 'Submission failed. Please check your connection.');
     }
   };
@@ -295,16 +347,26 @@ export const useADLScreen = (onBack: () => void) => {
     const today = new Date();
     admission.setHours(0, 0, 0, 0);
     today.setHours(0, 0, 0, 0);
-    const diffDays = Math.floor((today.getTime() - admission.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const diffDays =
+      Math.floor(
+        (today.getTime() - admission.getTime()) / (1000 * 60 * 60 * 24),
+      ) + 1;
     return diffDays > 0 ? diffDays.toString() : '1';
   };
 
   const generateFindingsSummary = () => {
     const findings = Object.entries(formDataRef.current)
       .filter(([_, v]) => v && v.trim() !== '' && v !== 'N/A')
-      .map(([key, v]) => `${key.replace(/_assessment/g, '').replace(/_/g, ' ').toUpperCase()}: ${v}`);
-    const alerts = Object.values(backendAlerts)
-      .filter((v): v is string => typeof v === 'string' && v.trim() !== '');
+      .map(
+        ([key, v]) =>
+          `${key
+            .replace(/_assessment/g, '')
+            .replace(/_/g, ' ')
+            .toUpperCase()}: ${v}`,
+      );
+    const alerts = Object.values(backendAlerts).filter(
+      (v): v is string => typeof v === 'string' && v.trim() !== '',
+    );
     return [...findings, ...alerts].join('. ');
   };
 
@@ -313,21 +375,40 @@ export const useADLScreen = (onBack: () => void) => {
   );
 
   const isModified = Object.keys(formData).some(
-    key => (formData as any)[key] !== (lastSavedData as any)[key]
+    key => (formData as any)[key] !== (lastSavedData as any)[key],
   );
 
   return {
-    searchText, setSearchText,
-    selectedPatient, setSelectedPatient,
-    scrollEnabled, setScrollEnabled,
-    alertConfig, setAlertConfig,
+    searchText,
+    setSearchText,
+    selectedPatient,
+    setSelectedPatient,
+    scrollEnabled,
+    setScrollEnabled,
+    alertConfig,
+    setAlertConfig,
     showAlert,
-    adlId, isExistingRecord,
-    isAdpieActive, setIsAdpieActive,
-    formData, isNA, backendAlerts, dataAlert,
-    toggleNA, loadPatientData, getBackendAlert, getBackendSeverity,
-    updateField, handleCDSSPress, handleSave,
-    generateFindingsSummary, isDataEntered, calculateDayNumber,
+    adlId,
+    isExistingRecord,
+    isAdpieActive,
+    setIsAdpieActive,
+    formData,
+    isNA,
+    backendAlerts,
+    dataAlert,
+    toggleNA,
+    loadPatientData,
+    getBackendAlert,
+    getBackendSeverity,
+    updateField,
+    handleCDSSPress,
+    handleSave,
+    generateFindingsSummary,
+    isDataEntered,
+    calculateDayNumber,
     isModified,
+    isLoading,
+    loadingMessage,
+    screenOpacity,
   };
 };

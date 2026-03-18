@@ -21,6 +21,7 @@ export const useIntakeAndOutputScreen = (onBack: () => void, readOnly: boolean, 
     triggerPatientAlert,
     loading,
     recordId,
+    setRecordId,
     currentDayNo,
     isExistingRecord,
     setIsExistingRecord,
@@ -51,6 +52,8 @@ export const useIntakeAndOutputScreen = (onBack: () => void, readOnly: boolean, 
   const [backendAlert, setLocalBackendAlert] = useState<string | null>(null);
   const [backendSeverity, setLocalBackendSeverity] = useState<string | null>(null);
   const [isAlertLoading, setIsAlertLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Processing...');
+  const screenOpacity = useRef(new Animated.Value(1)).current;
   const analyzeCountRef = useRef(0);
   const bellFadeAnim = useRef(new Animated.Value(1)).current;
   const intakeOutputRef = useRef(intakeOutput);
@@ -227,13 +230,31 @@ export const useIntakeAndOutputScreen = (onBack: () => void, readOnly: boolean, 
     setCdssModalVisible(true);
   };
 
-  const handleCDSSPress = () => {
+  const handleCDSSPress = async () => {
     if (!selectedPatientId) {
       triggerPatientAlert();
       setAlertVisible(true);
       return;
     }
-    setCdssModalVisible(true);
+    const dayNo = parseInt(calculateDayNumber(), 10) || 1;
+    setLoadingMessage('Saving Assessment...');
+    const res = await saveAssessment(dayNo);
+    const actualData = res?.data || res;
+    const id = actualData?.id || recordId;
+    if (id) {
+      setRecordId(id);
+      setLoadingMessage('Initializing ADPIE...');
+      
+      Animated.timing(screenOpacity, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }).start(() => {
+        setIsAdpieActive(true);
+        screenOpacity.setValue(1);
+      });
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    }
   };
 
   const handleSubmit = async () => {
@@ -243,6 +264,7 @@ export const useIntakeAndOutputScreen = (onBack: () => void, readOnly: boolean, 
       return;
     }
     const dayNo = parseInt(calculateDayNumber(), 10) || 1;
+    setLoadingMessage('Saving Record...');
     const res = await saveAssessment(dayNo);
     if (res) {
       setSuccessMessage({
@@ -318,5 +340,7 @@ export const useIntakeAndOutputScreen = (onBack: () => void, readOnly: boolean, 
     assessmentAlert,
     isAlertActive,
     isModified,
+    loadingMessage,
+    screenOpacity,
   };
 };

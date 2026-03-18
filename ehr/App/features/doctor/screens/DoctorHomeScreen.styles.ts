@@ -112,7 +112,7 @@ export const createStyles = (theme: any, _isDarkMode: boolean) =>
       backgroundColor: theme.background,
       paddingBottom: 18,
     },
-    chipsRow: { flexDirection: 'row', marginBottom: 10, paddingBottom: 10 },
+    chipsRow: { flexDirection: 'row', marginBottom: -5, paddingBottom: -5 },
     stickyOverlay: {
       position: 'absolute',
       top: 0,

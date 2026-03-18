@@ -17,6 +17,7 @@ import apiClient from '@api/apiClient';
 import LinearGradient from 'react-native-linear-gradient';
 import CDSSGuidanceModal from '@components/CDSSGuidanceModal';
 import SweetAlert from '@components/SweetAlert';
+import LoadingOverlay from '@components/LoadingOverlay';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
 const STEPS = [
@@ -344,16 +345,8 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
 
   if (initLoading) {
     return (
-      <View
-        style={[
-          styles.safeArea,
-          { justifyContent: 'center', alignItems: 'center' },
-        ]}
-      >
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={{ marginTop: 10, color: theme.text }}>
-          Initializing ADPIE...
-        </Text>
+      <View style={styles.safeArea}>
+        <LoadingOverlay visible={true} message="Initializing ADPIE..." />
       </View>
     );
   }
@@ -362,6 +355,7 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <LoadingOverlay visible={loading} message="Saving progress..." />
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor="transparent"
@@ -529,18 +523,14 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
               onPress={handleNext}
               disabled={isNextDisabled}
             >
-              {loading ? (
-                <ActivityIndicator size="small" color={theme.primary} />
-              ) : (
-                <Text
-                  style={[
-                    styles.nextText,
-                    isNextDisabled && { color: theme.textMuted },
-                  ]}
-                >
-                  {currentIdx === 3 ? 'SUBMIT' : 'NEXT'}
-                </Text>
-              )}
+              <Text
+                style={[
+                  styles.nextText,
+                  isNextDisabled && { color: theme.textMuted },
+                ]}
+              >
+                {currentIdx === 3 ? 'SUBMIT' : 'NEXT'}
+              </Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

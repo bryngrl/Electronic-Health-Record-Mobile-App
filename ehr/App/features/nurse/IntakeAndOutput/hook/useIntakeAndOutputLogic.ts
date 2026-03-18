@@ -291,6 +291,7 @@ export const useIntakeAndOutputLogic = () => {
     triggerPatientAlert,
     loading,
     recordId,
+    setRecordId,
     currentDayNo,
     isExistingRecord,
     setIsExistingRecord,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { BackHandler } from 'react-native';
+import { BackHandler, Animated } from 'react-native';
 import { usePhysicalExam } from '../hook/usePhysicalExam';
 import { initialFormData, ALERT_KEY_MAP } from './constants';
 
@@ -42,6 +42,9 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
   const [formData, setFormData] = useState(initialFormData);
   const [lastSavedData, setLastSavedData] = useState(initialFormData);
   const [isNA, setIsNA] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Processing...');
+  const screenOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => { formDataRef.current = formData; }, [formData]);
   useEffect(() => { examIdRef.current = examId; }, [examId]);
@@ -229,6 +232,8 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
     if (!selectedPatientId) {
       return showAlert('Patient Required', 'Please select a patient first in the search bar.');
     }
+    setIsLoading(true);
+    setLoadingMessage('Saving Assessment...');
     try {
       const result = await saveAssessment(
         { patient_id: selectedPatientId, ...formData },
@@ -239,7 +244,18 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
       if (id) {
         setExamId(id);
         examIdRef.current = id;
-        setIsAdpieActive(true);
+        setLoadingMessage('Initializing ADPIE...');
+        
+        Animated.timing(screenOpacity, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }).start(() => {
+          setIsAdpieActive(true);
+          screenOpacity.setValue(1);
+          setIsLoading(false);
+        });
+
         setLastSavedData({ ...formDataRef.current });
         // Load updated alerts from save response
         const alerts = result?.alerts || {};
@@ -250,9 +266,11 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
         });
         setBackendAlerts(updated);
       } else {
+        setIsLoading(false);
         showAlert('Error', 'Could not retrieve assessment ID.');
       }
     } catch {
+      setIsLoading(false);
       showAlert('Error', 'Could not initiate clinical support.');
     }
   };
@@ -261,6 +279,8 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
     if (!selectedPatientId) {
       return showAlert('Patient Required', 'Please select a patient first in the search bar.');
     }
+    setIsLoading(true);
+    setLoadingMessage('Saving Physical Exam...');
     try {
       const result = await saveAssessment(
         { patient_id: selectedPatientId, ...formData },
@@ -283,12 +303,14 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
         });
         setBackendAlerts(updated);
       }
+      setIsLoading(false);
       showAlert(
         isUpdate ? 'Successfully Updated' : 'Successfully Submitted',
         `Physical Exam has been ${isUpdate ? 'updated' : 'submitted'} successfully.`,
         'success',
       );
     } catch {
+      setIsLoading(false);
       showAlert('Error', 'Submission failed. Please check your connection.');
     }
   };
@@ -327,5 +349,6 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
     updateField, handleCDSSPress, handleSave,
     generateFindingsSummary, isDataEntered, getCurrentDate,
     isModified,
+    isLoading, loadingMessage, screenOpacity,
   };
 };

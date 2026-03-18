@@ -20,6 +20,7 @@ import CDSSModal from '@components/CDSSModal';
 import ADPIEScreen from '@components/ADPIEScreen';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
+import LoadingOverlay from '@components/LoadingOverlay';
 import { useAppTheme } from '@App/theme/ThemeContext';
 import { useLabValuesScreen } from './useLabValuesScreen';
 import { LAB_TESTS, LAB_CATEGORIES, getTestPrefix } from './constants';
@@ -33,14 +34,22 @@ const alertBellActiveIcon = require('@assets/icons/alert_bell_icon.png');
 const alertBellInactiveIcon = require('@assets/icons/alert_bell_icon_inactive.png');
 const dotsIcon = require('@assets/icons/dots_icon.png');
 
-const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: {
+const LabValuesScreen = ({
+  onBack,
+  readOnly = false,
+  patientId,
+  initialPatientName,
+}: {
   onBack: any;
   readOnly?: boolean;
   patientId?: number;
   initialPatientName?: string;
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
-  const styles = useMemo(() => createStyles(theme, commonStyles, isDarkMode), [theme, commonStyles, isDarkMode]);
+  const styles = useMemo(
+    () => createStyles(theme, commonStyles, isDarkMode),
+    [theme, commonStyles, isDarkMode],
+  );
   const dotsModalStyles = useMemo(
     () => createDotsSettingsModalStyle(theme),
     [theme],
@@ -52,19 +61,28 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
   const {
     searchText,
     selectedPatientId,
-    scrollEnabled, setScrollEnabled,
-    isNA, toggleNA,
+    scrollEnabled,
+    setScrollEnabled,
+    isNA,
+    toggleNA,
     labId,
     isExistingRecord,
-    selectedTestIndex, setSelectedTestIndex,
-    result, setResult,
-    normalRange, setNormalRange,
+    selectedTestIndex,
+    setSelectedTestIndex,
+    result,
+    setResult,
+    normalRange,
+    setNormalRange,
     backendAlerts,
     backendSeverities,
-    isAdpieActive, setIsAdpieActive,
-    showLabList, setShowLabList,
-    passedAlert, setPassedAlert,
-    alertConfig, setAlertConfig,
+    isAdpieActive,
+    setIsAdpieActive,
+    showLabList,
+    setShowLabList,
+    passedAlert,
+    setPassedAlert,
+    alertConfig,
+    setAlertConfig,
     showAlert,
     dataAlert,
     handlePatientSelect,
@@ -74,6 +92,9 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
     isAlertLoading,
     isModified,
     isDataEntered,
+    isLoading,
+    loadingMessage,
+    screenOpacity,
   } = useLabValuesScreen(onBack);
 
   useEffect(() => {
@@ -109,7 +130,11 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
 
   const fadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
-    : ['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 1)'];
+    : [
+        'rgba(255, 255, 255, 0)',
+        'rgba(255, 255, 255, 0.8)',
+        'rgba(255, 255, 255, 1)',
+      ];
 
   const headerFadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
@@ -134,294 +159,316 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <LoadingOverlay visible={isLoading} message={loadingMessage} />
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor="transparent"
         translucent={true}
       />
-      <View style={{ zIndex: 10 }}>
-        <View
-          style={{
-            paddingHorizontal: 40,
-            backgroundColor: theme.background,
-            paddingBottom: 15,
-          }}
-        >
-          <View style={[styles.header, { marginBottom: 0 }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.title}>Laboratory Values</Text>
-              <Text style={styles.dateText}>
-                {new Date().toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </Text>
-              {readOnly && (
-                <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
-                  [READ ONLY]
-                </Text>
-              )}
-            </View>
-            <TouchableOpacity onPress={() => setShowLabList(!showLabList)}>
-              <Image source={dotsIcon} style={styles.dotsIcon} />
-            </TouchableOpacity>
-          </View>
-        </View>
-        <LinearGradient
-          colors={headerFadeColors}
-          style={{ height: 20 }}
-          pointerEvents="none"
-        />
-      </View>
-
-      <View style={{ flex: 1, marginTop: -20 }}>
-        <ScrollView
-          ref={scrollViewRef}
-          keyboardShouldPersistTaps="handled"
-          style={styles.container}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={scrollEnabled}
-        >
-          <View style={{ height: 20 }} />
-      <Modal
-        transparent
-        visible={showLabList}
-        animationType="fade"
-        statusBarTranslucent
-      >
-        <Pressable style={dotsModalStyles.modalOverlay} onPress={() => setShowLabList(false)}>
-          <BlurView style={dotsModalStyles.blurView} {...blurProps} />
-          <Pressable style={dotsModalStyles.menuContainer} onPress={e => e.stopPropagation()}>
-            <Text style={dotsModalStyles.menuTitle}>SELECT LABORATORY</Text>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {LAB_CATEGORIES.map((category, catIndex) => (
-                <View key={catIndex}>
-                  <View style={styles.categoryHeader}>
-                    <Text style={styles.categoryHeaderText}>
-                      {category.title}
-                    </Text>
-                  </View>
-                  {category.tests.map(test => {
-                    const globalIndex = LAB_TESTS.indexOf(test);
-                    return (
-                      <TouchableOpacity
-                        key={globalIndex}
-                        style={dotsModalStyles.menuItem}
-                        onPress={() => {
-                          setSelectedTestIndex(globalIndex);
-                          setShowLabList(false);
-                        }}
-                      >
-                        <Text
-                          style={[
-                            dotsModalStyles.menuItemText,
-                            selectedTestIndex === globalIndex &&
-                              dotsModalStyles.activeMenuText,
-                          ]}
-                        >
-                          {test}
-                        </Text>
-                      </TouchableOpacity>
-                    );
+      <Animated.View style={{ flex: 1, opacity: screenOpacity }}>
+        <View style={{ zIndex: 10 }}>
+          <View
+            style={{
+              paddingHorizontal: 40,
+              backgroundColor: theme.background,
+              paddingBottom: 15,
+            }}
+          >
+            <View style={[styles.header, { marginBottom: 0 }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.title}>Laboratory Values</Text>
+                <Text style={styles.dateText}>
+                  {new Date().toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
                   })}
-                </View>
-              ))}
-            </ScrollView>
-            <TouchableOpacity
-              style={dotsModalStyles.closeMenuBtn}
-              onPress={() => setShowLabList(false)}
-            >
-              <Icon name="close" size={20} color={theme.primary} />
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-          {!readOnly ? (
-            <PatientSearchBar
-              initialPatientName={searchText}
-              onPatientSelect={handlePatientSelect}
-              onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-            />
-          ) : (
-            <View style={styles.staticPatientContainer}>
-              <Text style={styles.staticPatientLabel}>PATIENT:</Text>
-              <Text style={styles.staticPatientName}>{initialPatientName || 'Unknown Patient'}</Text>
+                </Text>
+                {readOnly && (
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: '#E8572A',
+                      fontFamily: 'AlteHaasGroteskBold',
+                      marginTop: 5,
+                    }}
+                  >
+                    [READ ONLY]
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity onPress={() => setShowLabList(!showLabList)}>
+                <Image source={dotsIcon} style={styles.dotsIcon} />
+              </TouchableOpacity>
             </View>
-          )}
+          </View>
+          <LinearGradient
+            colors={headerFadeColors}
+            style={{ height: 20 }}
+            pointerEvents="none"
+          />
+        </View>
 
-          {!readOnly && (
-            <TouchableOpacity
-              style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
-              onPress={() => {
+        <View style={{ flex: 1, marginTop: -20 }}>
+          <ScrollView
+            ref={scrollViewRef}
+            keyboardShouldPersistTaps="handled"
+            style={styles.container}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={scrollEnabled}
+          >
+            <View style={{ height: 20 }} />
+            <Modal
+              transparent
+              visible={showLabList}
+              animationType="fade"
+              statusBarTranslucent
+            >
+              <Pressable
+                style={dotsModalStyles.modalOverlay}
+                onPress={() => setShowLabList(false)}
+              >
+                <BlurView style={dotsModalStyles.blurView} {...blurProps} />
+                <Pressable
+                  style={dotsModalStyles.menuContainer}
+                  onPress={e => e.stopPropagation()}
+                >
+                  <Text style={dotsModalStyles.menuTitle}>
+                    SELECT LABORATORY
+                  </Text>
+                  <ScrollView showsVerticalScrollIndicator={false}>
+                    {LAB_CATEGORIES.map((category, catIndex) => (
+                      <View key={catIndex}>
+                        <View style={styles.categoryHeader}>
+                          <Text style={styles.categoryHeaderText}>
+                            {category.title}
+                          </Text>
+                        </View>
+                        {category.tests.map(test => {
+                          const globalIndex = LAB_TESTS.indexOf(test);
+                          return (
+                            <TouchableOpacity
+                              key={globalIndex}
+                              style={dotsModalStyles.menuItem}
+                              onPress={() => {
+                                setSelectedTestIndex(globalIndex);
+                                setShowLabList(false);
+                              }}
+                            >
+                              <Text
+                                style={[
+                                  dotsModalStyles.menuItemText,
+                                  selectedTestIndex === globalIndex &&
+                                    dotsModalStyles.activeMenuText,
+                                ]}
+                              >
+                                {test}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity
+                    style={dotsModalStyles.closeMenuBtn}
+                    onPress={() => setShowLabList(false)}
+                  >
+                    <Icon name="close" size={20} color={theme.primary} />
+                  </TouchableOpacity>
+                </Pressable>
+              </Pressable>
+            </Modal>
+
+            {!readOnly ? (
+              <PatientSearchBar
+                initialPatientName={searchText}
+                onPatientSelect={handlePatientSelect}
+                onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+              />
+            ) : (
+              <View style={styles.staticPatientContainer}>
+                <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+                <Text style={styles.staticPatientName}>
+                  {initialPatientName || 'Unknown Patient'}
+                </Text>
+              </View>
+            )}
+
+            {!readOnly && (
+              <TouchableOpacity
+                style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+                onPress={() => {
+                  if (!selectedPatientId) {
+                    showAlert(
+                      'Patient Required',
+                      'Please select a patient first in the search bar.',
+                    );
+                  } else {
+                    toggleNA();
+                  }
+                }}
+              >
+                <Text
+                  style={[
+                    styles.naText,
+                    !selectedPatientId && { color: theme.textMuted },
+                  ]}
+                >
+                  Mark all as N/A
+                </Text>
+                <Icon
+                  name={isNA ? 'check-box' : 'check-box-outline-blank'}
+                  size={22}
+                  color={selectedPatientId ? theme.primary : theme.textMuted}
+                />
+              </TouchableOpacity>
+            )}
+
+            {!readOnly && (
+              <Text
+                style={[
+                  styles.disabledTextAtBottom,
+                  isNA && { color: theme.error },
+                ]}
+              >
+                {isNA
+                  ? 'All fields below are disabled.'
+                  : 'Checking this will disable all fields below.'}
+              </Text>
+            )}
+
+            <LabResultCard
+              testLabel={selectedTest}
+              resultValue={result}
+              rangeValue={normalRange}
+              onResultChange={setResult}
+              onRangeChange={setNormalRange}
+              disabled={!selectedPatientId || isNA || readOnly}
+              onDisabledPress={() => {
                 if (!selectedPatientId) {
                   showAlert(
                     'Patient Required',
                     'Please select a patient first in the search bar.',
                   );
-                } else {
-                  toggleNA();
                 }
               }}
-            >
-              <Text
-                style={[
-                  styles.naText,
-                  !selectedPatientId && { color: theme.textMuted },
-                ]}
-              >
-                Mark all as N/A
-              </Text>
-              <Icon
-                name={isNA ? 'check-box' : 'check-box-outline-blank'}
-                size={22}
-                color={selectedPatientId ? theme.primary : theme.textMuted}
-              />
-            </TouchableOpacity>
-          )}
+            />
 
-          {!readOnly && (
-            <Text
-              style={[
-                styles.disabledTextAtBottom,
-                isNA && { color: theme.error },
-              ]}
-            >
-              {isNA
-                ? 'All fields below are disabled.'
-                : 'Checking this will disable all fields below.'}
-            </Text>
-          )}
-
-          <LabResultCard
-            testLabel={selectedTest}
-            resultValue={result}
-            rangeValue={normalRange}
-            onResultChange={setResult}
-            onRangeChange={setNormalRange}
-            disabled={!selectedPatientId || isNA || readOnly}
-            onDisabledPress={() => {
-              if (!selectedPatientId) {
-                showAlert(
-                  'Patient Required',
-                  'Please select a patient first in the search bar.',
-                );
-              }
-            }}
-          />
-
-          {!readOnly ? (
-            <View style={styles.footerRow}>
-              <Animated.View style={{ opacity: bellFadeAnim }}>
-                <TouchableOpacity
-                  style={styles.alertIcon}
-                  disabled={!selectedPatientId}
-                  onPress={() => setModalVisible(true)}
-                >
-                  <Image
-                    source={
-                      isAlertActive
-                        ? alertBellActiveIcon
-                        : alertBellInactiveIcon
-                    }
-                    style={styles.fullImg}
-                  />
-                </TouchableOpacity>
-              </Animated.View>
-
-              {selectedTestIndex === LAB_TESTS.length - 1 ? (
-                <View style={styles.buttonGroup}>
+            {!readOnly ? (
+              <View style={styles.footerRow}>
+                <Animated.View style={{ opacity: bellFadeAnim }}>
                   <TouchableOpacity
-                    style={[
-                      styles.cdssBtn,
-                      !isDataEntered && {
-                        backgroundColor: theme.buttonDisabledBg,
-                        borderColor: theme.buttonDisabledBorder,
-                      },
-                    ]}
-                    onPress={handleCDSSPress}
-                    disabled={!isDataEntered}
+                    style={styles.alertIcon}
+                    disabled={!selectedPatientId}
+                    onPress={() => setModalVisible(true)}
                   >
-                    <Text
-                      style={[
-                        styles.cdssText,
-                        !isDataEntered
-                          ? { color: theme.textMuted }
-                          : { color: theme.primary },
-                      ]}
-                    >
-                      CDSS
-                    </Text>
+                    <Image
+                      source={
+                        isAlertActive
+                          ? alertBellActiveIcon
+                          : alertBellInactiveIcon
+                      }
+                      style={styles.fullImg}
+                    />
                   </TouchableOpacity>
+                </Animated.View>
+
+                {selectedTestIndex === LAB_TESTS.length - 1 ? (
+                  <View style={styles.buttonGroup}>
+                    <TouchableOpacity
+                      style={[
+                        styles.cdssBtn,
+                        !isDataEntered && {
+                          backgroundColor: theme.buttonDisabledBg,
+                          borderColor: theme.buttonDisabledBorder,
+                        },
+                      ]}
+                      onPress={handleCDSSPress}
+                      disabled={!isDataEntered}
+                    >
+                      <Text
+                        style={[
+                          styles.cdssText,
+                          !isDataEntered
+                            ? { color: theme.textMuted }
+                            : { color: theme.primary },
+                        ]}
+                      >
+                        CDSS
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.submitBtn,
+                        !isModified && {
+                          backgroundColor: theme.buttonDisabledBg,
+                          borderColor: theme.buttonDisabledBorder,
+                        },
+                      ]}
+                      onPress={handleNextOrSave}
+                      disabled={!isModified}
+                    >
+                      <Text
+                        style={[
+                          styles.submitText,
+                          !isModified && { color: theme.textMuted },
+                        ]}
+                      >
+                        {isExistingRecord ? 'UPDATE' : 'SUBMIT'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
                   <TouchableOpacity
                     style={[
-                      styles.submitBtn,
+                      styles.nextBtn,
                       !isModified && {
                         backgroundColor: theme.buttonDisabledBg,
                         borderColor: theme.buttonDisabledBorder,
                       },
                     ]}
-                    onPress={handleNextOrSave}
+                    onPress={async () => {
+                      await handleNextOrSave();
+                      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                    }}
                     disabled={!isModified}
                   >
                     <Text
                       style={[
-                        styles.submitText,
+                        styles.nextText,
                         !isModified && { color: theme.textMuted },
                       ]}
                     >
-                      {isExistingRecord ? 'UPDATE' : 'SUBMIT'}
+                      NEXT
                     </Text>
+                    <Icon
+                      name="chevron-right"
+                      size={20}
+                      color={isModified ? theme.primary : theme.textMuted}
+                    />
                   </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={[
-                    styles.nextBtn,
-                    !isModified && {
-                      backgroundColor: theme.buttonDisabledBg,
-                      borderColor: theme.buttonDisabledBorder,
-                    },
-                  ]}
-                  onPress={async () => {
-                    await handleNextOrSave();
-                    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-                  }}
-                  disabled={!isModified}
-                >
-                  <Text
-                    style={[
-                      styles.nextText,
-                      !isModified && { color: theme.textMuted },
-                    ]}
-                  >
-                    NEXT
-                  </Text>
-                  <Icon
-                    name="chevron-right"
-                    size={20}
-                    color={isModified ? theme.primary : theme.textMuted}
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={[styles.submitBtn, { marginTop: 10 }]}
-              onPress={onBack}
-            >
-              <Text style={[styles.submitText, { color: theme.primary }]}>CLOSE</Text>
-            </TouchableOpacity>
-          )}
-        </ScrollView>
-        <LinearGradient
-          colors={fadeColors}
-          style={styles.fadeBottom}
-          pointerEvents="none"
-        />
-      </View>
+                )}
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.submitBtn, { marginTop: 10 }]}
+                onPress={onBack}
+              >
+                <Text style={[styles.submitText, { color: theme.primary }]}>
+                  CLOSE
+                </Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+          <LinearGradient
+            colors={fadeColors}
+            style={styles.fadeBottom}
+            pointerEvents="none"
+          />
+        </View>
+      </Animated.View>
 
       <CDSSModal
         visible={modalVisible}
