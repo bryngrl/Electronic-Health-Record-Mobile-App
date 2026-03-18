@@ -76,7 +76,15 @@ export const useVitalSignsLogic = () => {
         const alertMsg = typeof response.data === 'string' 
           ? response.data 
           : (response.data.vital_signs || response.data.alert || response.data.message || null);
-        setDataAlert(alertMsg);
+        
+        if (alertMsg) {
+          const filtered = alertMsg.split(/[\n;]| \| /)
+            .filter(line => line && !line.toLowerCase().includes('out of range'))
+            .join('\n');
+          setDataAlert(filtered || null);
+        } else {
+          setDataAlert(null);
+        }
       } else {
         setDataAlert(null);
       }
@@ -154,7 +162,7 @@ export const useVitalSignsLogic = () => {
     }
   };
 
-  const analyzeField = useCallback(async (payload: any): Promise<{ 
+  const analyzeField = useCallback(async (payload: any, force = false): Promise<{ 
     alerts: Record<string, string | null>; 
     severity: string | null; 
     recordId: number | null 
@@ -163,16 +171,18 @@ export const useVitalSignsLogic = () => {
       const patientId = payload.patient_id || selectedPatientId;
       if (!patientId) return null;
 
-      // Create input data for cache (exclude metadata like patient_id, time, date)
-      const { patient_id, time, date, day_no, ...inputData } = payload;
+      // Filter metadata for cache key
+      const { patient_id, day_no, ...inputData } = payload;
       
-      // Check cache first
-      const cached = await getAlertFromCache('vital-signs', patientId, inputData);
-      if (cached) {
-        console.log('[VitalSigns] Returning cached alerts');
-        return { alerts: cached.alerts, severity: cached.severity, recordId: recordIdRef.current };
+      if (!force) {
+        const cached = await getAlertFromCache('vital-signs', patientId, inputData);
+        if (cached) {
+          console.log('[VS analyzeField] Returning cached alerts');
+          return { alerts: cached.alerts, severity: cached.severity, recordId: recordIdRef.current };
+        }
       }
 
+      console.log('[VS analyzeField] Fetching fresh alerts from API...');
       const today = new Date().toLocaleDateString('en-CA');
       const payloadTime = (payload.time || '').substring(0, 5);
       const existingRecord = existingRecords.find(r => {
@@ -182,50 +192,71 @@ export const useVitalSignsLogic = () => {
       let targetId = existingRecord?.id || recordIdRef.current;
 
       if (!targetId) {
+        console.log('[VS analyzeField] No targetId, creating temporary record...');
         const postResp = await apiClient.post('/vital-signs', payload);
-        const postData = postResp.data?.data || postResp.data;
-        targetId = postData?.id;
+        targetId = (postResp.data?.data || postResp.data)?.id;
         if (targetId) recordIdRef.current = targetId;
       }
 
-      if (!targetId) return null;
+      if (!targetId) {
+        console.warn('[VS analyzeField] Failed to obtain targetId');
+        return null;
+      }
 
       const response = await apiClient.put(`/vital-signs/${targetId}/assessment`, payload);
-      const data = response.data?.data || response.data;
-      let alertsObj = response.data?.alerts || data?.alerts || {};
+      const rawData = response.data?.data || response.data || {};
+      const rawAlerts = response.data?.alerts || rawData?.alerts || {};
       
-      // Normalize to object if it's a string to prevent single-character iteration
-      if (typeof alertsObj === 'string') {
-        alertsObj = { assessment_alert: alertsObj };
+      console.log('[VS analyzeField] API Raw Response Data:', JSON.stringify(rawData));
+      console.log('[VS analyzeField] API Raw Alerts:', JSON.stringify(rawAlerts));
+
+      const processedAlerts: Record<string, string | null> = {};
+      
+      const filterLine = (val: string) => {
+        if (!val || val.toLowerCase().includes('no findings')) return null;
+        const filtered = val.split(/[\n;]| \| /)
+          .map(line => line.trim())
+          .filter(line => line && !line.toLowerCase().includes('out of range'))
+          .join('\n');
+        return filtered || null;
+      };
+
+      // 1. Process alerts object (if it's an object)
+      if (rawAlerts && typeof rawAlerts === 'object' && !Array.isArray(rawAlerts)) {
+        Object.keys(rawAlerts).forEach(k => {
+          const filtered = filterLine(String(rawAlerts[k] || ''));
+          if (filtered) processedAlerts[k] = filtered;
+        });
+      } else if (typeof rawAlerts === 'string' && rawAlerts.trim()) {
+        const filtered = filterLine(rawAlerts);
+        if (filtered) processedAlerts.assessment_alert = filtered;
       }
-      
-      const returnedId: number | null = data?.id || null;
 
-      const allAlerts: Record<string, string | null> = {};
-      Object.keys(alertsObj).forEach(key => {
-        const val = alertsObj[key];
-        allAlerts[key] = (val && !val.toLowerCase().includes('no findings')) ? val.toString().trim() : null;
-      });
-
-      // Map common keys if needed
-      ['assessment_alert', 'alert'].forEach(k => {
-        if (!allAlerts[k] && data[k] && !data[k].toLowerCase().includes('no findings')) {
-          allAlerts[k] = data[k].toString().trim();
+      // 2. Fallback to top-level alert fields in data if not already captured
+      ['assessment_alert', 'alert', 'message'].forEach(k => {
+        if (!processedAlerts[k]) {
+          const filtered = filterLine(String(rawData[k] || ''));
+          if (filtered) processedAlerts[k] = filtered;
         }
       });
 
+      console.log('[VS analyzeField] Processed Alerts:', JSON.stringify(processedAlerts));
+
       let severity = 'INFO';
-      const firstAlert = Object.values(allAlerts).find(v => v !== null);
-      if (firstAlert) {
-        severity = inferSeverity(firstAlert);
+      const firstValid = Object.values(processedAlerts).find(v => v !== null);
+      if (firstValid) {
+        severity = inferSeverity(firstValid);
       } else {
         severity = null as any;
       }
 
-      // Save to cache
-      await saveAlertToCache('vital-signs', patientId, inputData, allAlerts, severity);
+      await saveAlertToCache('vital-signs', patientId, inputData, processedAlerts, severity);
 
-      return { alerts: allAlerts, severity, recordId: returnedId };
+      return { 
+        alerts: processedAlerts, 
+        severity, 
+        recordId: targetId 
+      };
     } catch (err) {
       console.error('[VS analyzeField] error:', err);
       return null;
@@ -273,18 +304,25 @@ export const useVitalSignsLogic = () => {
       
       await loadPatientData(selectedPatientId);
       
-      const alertText: string = (data?.assessment_alert || data?.alert || '').toString().trim();
-      if (alertText && !alertText.toLowerCase().includes('no findings')) {
-        const isCritical = alertText.includes('🔴') || alertText.toUpperCase().includes('CRITICAL');
+      const rawAlertText = (data?.assessment_alert || data?.alert || '').toString().trim();
+      const filteredAlertText = rawAlertText.split(/[\n;]| \| /)
+        .filter((line: string) => line && !line.toLowerCase().includes('no findings') && !line.toLowerCase().includes('out of range'))
+        .join('\n');
+
+      if (filteredAlertText) {
+        const isCritical = filteredAlertText.includes('🔴') || filteredAlertText.toUpperCase().includes('CRITICAL');
         const alertObj: { title: string, message: string, type: 'success' | 'error' } = {
           title: isCritical ? 'CRITICAL ALERT' : 'VITAL SIGNS ASSESSMENT',
-          message: alertText.replace(/ \| /g, '\n'),
+          message: filteredAlertText.replace(/ \| /g, '\n'),
           type: isCritical ? 'error' : 'success'
         };
         setBackendAlert(alertObj);
-        setBackendSeverity(inferSeverity(alertText));
-        setRealtimeAlert(alertText);
-        setRealtimeSeverity(inferSeverity(alertText));
+        setBackendSeverity(inferSeverity(filteredAlertText));
+        setRealtimeAlert(filteredAlertText);
+        setRealtimeSeverity(inferSeverity(filteredAlertText));
+      } else {
+        setRealtimeAlert(null);
+        setRealtimeSeverity(null);
       }
       setIsExistingRecord(true);
       return response.data;

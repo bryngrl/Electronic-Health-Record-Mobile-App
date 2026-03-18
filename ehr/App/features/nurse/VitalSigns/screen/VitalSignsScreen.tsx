@@ -195,7 +195,8 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
           day_no: dayNo,
           ...sanitized,
         };
-        const res = await analyzeField(payload);
+        const res = await analyzeField(payload, true);
+        console.log('[VS handleVitalChange] analyzeField result:', JSON.stringify(res));
         if (res) {
           const updatedAlerts = { ...res.alerts };
           // If current field is cleared, make sure its specific alert is also cleared locally
@@ -203,7 +204,9 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
             updatedAlerts[`${key}_alert`] = null;
           }
           setBackendAlerts(prev => ({ ...prev, ...updatedAlerts }));
-          setRealtimeAlert(Object.values(updatedAlerts).filter(v => v && !v.toLowerCase().includes('no findings')).join('\n'));
+          const alertString = Object.values(updatedAlerts).filter(v => v && !v.toLowerCase().includes('no findings')).join('\n');
+          console.log('[VS handleVitalChange] New realtimeAlert:', alertString);
+          setRealtimeAlert(alertString);
           setRealtimeSeverity(res.severity);
         }
         if (thisCount === analyzeCountRef.current) {
@@ -997,7 +1000,12 @@ const createStyles = (theme: any, commonStyles: any, _isDarkMode: boolean) =>
       fontFamily: 'AlteHaasGroteskBold',
       fontSize: 14,
     },
-    footerAction: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
+    footerAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 10,
+      marginBottom: 40,
+    },
     alertIcon: {
       width: 45,
       height: 45,
@@ -1005,7 +1013,6 @@ const createStyles = (theme: any, commonStyles: any, _isDarkMode: boolean) =>
       alignItems: 'center',
       borderRadius: 22.5,
       overflow: 'hidden',
-      marginBottom: 40,
     },
     fullImg: { width: '100%', height: '100%', resizeMode: 'contain' },
     buttonGroup: { flex: 1, flexDirection: 'row', marginLeft: 15 },
@@ -1051,7 +1058,6 @@ const createStyles = (theme: any, commonStyles: any, _isDarkMode: boolean) =>
       alignItems: 'center',
       borderWidth: 1.5,
       borderColor: theme.buttonBorder,
-      marginBottom: 40,
     },
     disabledButton: {
       backgroundColor: theme.surface,
