@@ -404,30 +404,16 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
               {isSubmitting ? (
                 <ActivityIndicator size="small" color={theme.primary} />
               ) : (
-                <>
-                  <Text
-                    style={[
-                      styles.btnText,
-                      !isModified && {
-                        color: theme.textMuted,
-                      },
-                    ]}
-                  >
-                    {isLastStage ? 'SUBMIT' : 'NEXT'}
-                  </Text>
-                  {!isLastStage && (
-                    <Text
-                      style={[
-                        styles.chevron,
-                        !isModified && {
-                          color: theme.textMuted,
-                        },
-                      ]}
-                    >
-                      ›
-                    </Text>
-                  )}
-                </>
+                <Text
+                  style={[
+                    styles.btnText,
+                    !isModified && {
+                      color: theme.textMuted,
+                    },
+                  ]}
+                >
+                  {isLastStage ? 'SUBMIT' : 'NEXT'}
+                </Text>
               )}
             </TouchableOpacity>
           ) : (
@@ -619,21 +605,22 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     },
     actionBtn: {
       backgroundColor: theme.buttonBg,
-      height: 50,
-      borderRadius: 25,
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
+      borderColor: theme.buttonBorder,
+      borderWidth: 1.5,
+      borderRadius: 50,
+      paddingVertical: 15,
       marginTop: 5,
       marginBottom: 70,
-      borderWidth: 1,
-      borderColor: theme.buttonBorder,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 30,
     },
-    btnDisabled: {
-      backgroundColor: theme.buttonDisabledBg,
-      borderColor: theme.buttonDisabledBorder,
+    btnText: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 16,
+      letterSpacing: 1,
     },
-    btnText: { color: theme.primary, fontWeight: 'bold', fontSize: 16 },
     chevron: { color: theme.primary, fontSize: 20, marginLeft: 10 },
     fadeBottom: {
       position: 'absolute',

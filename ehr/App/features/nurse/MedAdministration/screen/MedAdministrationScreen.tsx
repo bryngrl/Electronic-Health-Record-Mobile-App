@@ -445,7 +445,7 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
                 },
               ]}
               onPress={handleAction}
-              disabled={!isModified}
+              disabled={isLoading || !isModified}
             >
               <Text
                 style={[
@@ -455,13 +455,6 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
               >
                 {step === 2 ? 'SUBMIT' : 'NEXT'}
               </Text>
-              {step < 2 && (
-                <Icon
-                  name="chevron-right"
-                  size={24}
-                  color={isModified ? theme.primary : theme.textMuted}
-                />
-              )}
             </TouchableOpacity>
           ) : (
             <View style={{ marginTop: 20 }}>
@@ -644,19 +637,21 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     },
     actionBtn: {
       backgroundColor: theme.buttonBg,
-      height: 55,
-      borderRadius: 27.5,
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1.5,
       borderColor: theme.buttonBorder,
+      borderWidth: 1.5,
+      borderRadius: 50,
+      paddingVertical: 15,
       marginTop: 20,
+      marginBottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 30,
     },
     actionBtnText: {
       color: theme.primary,
       fontFamily: 'AlteHaasGroteskBold',
-      fontSize: 18,
+      fontSize: 16,
+      letterSpacing: 1,
     },
     navBtn: {
       flex: 1,
