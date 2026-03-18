@@ -44,11 +44,11 @@ interface DiagnosticsProps {
   initialPatientName?: string;
 }
 
-const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({ 
+const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
   onBack,
   readOnly = false,
   patientId,
-  initialPatientName
+  initialPatientName,
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
@@ -104,15 +104,20 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
   const [hasChanges, setHasChanges] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Saving Diagnostics...');
+  const [pendingImages, setPendingImages] = useState<
+    Record<string, { uri: string; name: string; type: string; id: string }[]>
+  >({});
 
   const isModified = useMemo(() => {
-    return hasChanges;
-  }, [hasChanges]);
+    const hasPending = Object.values(pendingImages).some(arr => arr.length > 0);
+    return hasChanges || hasPending;
+  }, [hasChanges, pendingImages]);
 
   const {
     diagnostics,
     loading,
     fetchDiagnostics,
+    selectImage,
     uploadDiagnostic,
     deleteDiagnostic,
   } = useDiagnostics();
@@ -131,8 +136,11 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
   });
 
   const isDataEntered = useMemo(() => {
-    return diagnostics.length > 0;
-  }, [diagnostics]);
+    return (
+      diagnostics.length > 0 ||
+      Object.values(pendingImages).some(arr => arr.length > 0)
+    );
+  }, [diagnostics, pendingImages]);
 
   const showAlert = (
     title: string,
@@ -157,6 +165,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
     if (selectedPatientId) {
       fetchDiagnostics(selectedPatientId);
       setHasChanges(false);
+      setPendingImages({});
     }
   }, [selectedPatientId, fetchDiagnostics]);
 
@@ -171,22 +180,42 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
       );
       return;
     }
-    const result = await uploadDiagnostic(selectedPatientId, imageType);
-    if (result && result.success) {
-      setHasChanges(true);
-      showAlert('Success', 'Image added successfully.', 'success');
-    } else if (result && result.error) {
-      const msg =
-        typeof result.error === 'string'
-          ? result.error
-          : JSON.stringify(result.error);
-      showAlert('Error', msg, 'error');
+
+    const asset = await selectImage();
+    if (asset) {
+      const newPending = {
+        ...asset,
+        id: `pending_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      };
+
+      setPendingImages(prev => ({
+        ...prev,
+        [imageType]: [...(prev[imageType] || []), newPending],
+      }));
     }
   };
 
-  const handleDelete = async (diagnosticId: number) => {
+  const handleDelete = async (
+    diagnosticId: number | string,
+    imageType?: string,
+  ) => {
     if (readOnly) return; // Block in read-only
     if (!selectedPatientId) return;
+
+    if (
+      typeof diagnosticId === 'string' &&
+      diagnosticId.startsWith('pending_')
+    ) {
+      // Handle pending deletion
+      setPendingImages(prev => {
+        const updated = { ...prev };
+        for (const type in updated) {
+          updated[type] = updated[type].filter(img => img.id !== diagnosticId);
+        }
+        return updated;
+      });
+      return;
+    }
 
     showAlert(
       'Delete Image',
@@ -194,7 +223,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
       'delete',
       async () => {
         hideAlert();
-        const result = await deleteDiagnostic(diagnosticId);
+        const result = await deleteDiagnostic(Number(diagnosticId));
         if (result.success) {
           setHasChanges(true);
           await fetchDiagnostics(selectedPatientId);
@@ -206,10 +235,56 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
     );
   };
 
+  const handleDeleteAll = async (imageType: string) => {
+    if (readOnly) return;
+    if (!selectedPatientId) return;
+
+    const serverImages = diagnostics.filter(d => d.type === imageType);
+    const hasPending = (pendingImages[imageType] || []).length > 0;
+
+    if (serverImages.length === 0 && !hasPending) return;
+
+    showAlert(
+      'Delete All',
+      `Are you sure you want to delete all ${imageType.replace(
+        '_',
+        ' ',
+      )} images?`,
+      'delete',
+      async () => {
+        hideAlert();
+        setIsLoading(true);
+        setLoadingMessage('Deleting Images...');
+
+        // Clear pending first
+        setPendingImages(prev => ({
+          ...prev,
+          [imageType]: [],
+        }));
+
+        // Delete server images
+        for (const img of serverImages) {
+          if (img.id) {
+            await deleteDiagnostic(img.id);
+          }
+        }
+
+        await fetchDiagnostics(selectedPatientId);
+        setIsLoading(false);
+        showAlert(
+          'Success',
+          'All selected images have been deleted.',
+          'success',
+        );
+      },
+    );
+  };
+
   const handlePatientSelect = (id: number | null, name: string) => {
     setSelectedPatientId(id ? id.toString() : null);
     setSearchText(name);
     setHasChanges(false);
+    setPendingImages({});
   };
 
   const diagnosticTypes = [
@@ -220,14 +295,20 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
   ];
 
   const getDiagnosticsForType = (type: string) => {
-    // Build URL from path + app's BASE_URL to avoid server-computed image_url using wrong host (e.g. 127.0.0.1)
     const storageBase = BASE_URL.replace('/api', '/storage');
-    return diagnostics
+    const serverImages = diagnostics
       .filter(d => d.type === type)
       .map(d => ({
         id: d.id as number,
-        url: d.path ? `${storageBase}/${d.path}` : d.image_url,
+        url: d.image_url || (d.path ? `${storageBase}/${d.path}` : ''),
       }));
+
+    const pending = (pendingImages[type] || []).map(img => ({
+      id: img.id,
+      url: img.uri,
+    }));
+
+    return [...serverImages, ...pending];
   };
 
   const formatDate = () => {
@@ -326,18 +407,20 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
           scrollEnabled={scrollEnabled}
         >
           <View style={{ height: 20 }} />
-          
+
           {/* SEARCH BAR TOGGLE */}
           {!readOnly ? (
             <PatientSearchBar
-                initialPatientName={searchText}
-                onPatientSelect={handlePatientSelect}
-                onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+              initialPatientName={searchText}
+              onPatientSelect={handlePatientSelect}
+              onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
             />
           ) : (
             <View style={styles.staticPatientContainer}>
-                <Text style={styles.staticPatientLabel}>PATIENT:</Text>
-                <Text style={styles.staticPatientName}>{initialPatientName || "Unknown Patient"}</Text>
+              <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+              <Text style={styles.staticPatientName}>
+                {initialPatientName || 'Unknown Patient'}
+              </Text>
             </View>
           )}
 
@@ -399,7 +482,8 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
                         viewMode={viewMode}
                         images={images}
                         onImport={() => handleImport(item.id)}
-                        onDelete={handleDelete}
+                        onDelete={id => handleDelete(id, item.id)}
+                        onDeleteAll={() => handleDeleteAll(item.id)}
                         disabled={loading || readOnly}
                         hideImport={readOnly}
                       />
@@ -434,7 +518,8 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
                       viewMode={viewMode}
                       images={images}
                       onImport={() => handleImport(item.id)}
-                      onDelete={handleDelete}
+                      onDelete={id => handleDelete(id, item.id)}
+                      onDeleteAll={() => handleDeleteAll(item.id)}
                       disabled={loading || readOnly}
                       hideImport={readOnly}
                     />
@@ -443,32 +528,68 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
               })}
             </View>
           )}
-          
+
           {/* BUTTON: SUBMIT (Nurse) / CLOSE (Doctor) */}
           <TouchableOpacity
             style={[
               styles.submitButton,
-              !readOnly && !isModified && {
-                backgroundColor: theme.buttonDisabledBg,
-                borderColor: theme.buttonDisabledBorder,
-              },
+              !readOnly &&
+                !isModified && {
+                  backgroundColor: theme.buttonDisabledBg,
+                  borderColor: theme.buttonDisabledBorder,
+                },
             ]}
             disabled={!readOnly && !isModified}
             onPress={async () => {
               if (readOnly) {
                 onBack();
               } else if (selectedPatientId) {
-                setIsLoading(true);
-                setLoadingMessage('Saving Diagnostics...');
-                // Simulate a brief delay if needed, or just let the state reflect completion
-                await new Promise(resolve => setTimeout(resolve, 800));
-                setIsLoading(false);
                 showAlert(
-                  'Success',
-                  'Diagnostic records have been saved successfully.',
+                  'Confirm Submission',
+                  'Are you sure you want to save these diagnostic records?',
                   'success',
+                  async () => {
+                    hideAlert();
+                    setIsLoading(true);
+                    setLoadingMessage('Uploading Images...');
+
+                    let hasError = false;
+                    let errorMsg = '';
+
+                    // Upload all pending images
+                    for (const type in pendingImages) {
+                      for (const asset of pendingImages[type]) {
+                        const result = await uploadDiagnostic(
+                          selectedPatientId,
+                          type,
+                          asset,
+                        );
+                        if (!result?.success) {
+                          hasError = true;
+                          errorMsg =
+                            result?.error || 'Failed to upload some images.';
+                          break;
+                        }
+                      }
+                      if (hasError) break;
+                    }
+
+                    if (hasError) {
+                      setIsLoading(false);
+                      showAlert('Error', errorMsg, 'error');
+                    } else {
+                      await fetchDiagnostics(selectedPatientId);
+                      setIsLoading(false);
+                      showAlert(
+                        'Success',
+                        'Diagnostic records have been saved successfully.',
+                        'success',
+                      );
+                      setHasChanges(false);
+                      setPendingImages({});
+                    }
+                  },
                 );
-                setHasChanges(false);
               }
             }}
           >
@@ -522,26 +643,26 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     },
     // New Static Patient styles
     staticPatientContainer: {
-        marginBottom: 20,
-        backgroundColor: theme.card,
-        padding: 15,
-        borderRadius: 15,
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: theme.border
+      marginBottom: 20,
+      backgroundColor: theme.card,
+      padding: 15,
+      borderRadius: 15,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.border,
     },
     staticPatientLabel: {
-        fontFamily: 'AlteHaasGroteskBold',
-        color: theme.primary,
-        fontSize: 12,
-        marginRight: 10
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      fontSize: 12,
+      marginRight: 10,
     },
     staticPatientName: {
-        fontFamily: 'AlteHaasGrotesk',
-        color: theme.text,
-        fontSize: 16,
-        fontWeight: 'bold'
+      fontFamily: 'AlteHaasGrotesk',
+      color: theme.text,
+      fontSize: 16,
+      fontWeight: 'bold',
     },
     toggleContainer: {
       flexDirection: 'row',
@@ -597,13 +718,13 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     listWrap: { flexDirection: 'column' },
     submitButton: {
       backgroundColor: theme.buttonBg,
-      borderWidth: 1,
-      borderColor: theme.primary,
-      borderRadius: 25,
-      height: 55,
+      borderWidth: 1.5,
+      borderColor: theme.buttonBorder,
+      borderRadius: 50,
+      paddingVertical: 15,
+      minHeight: 30,
       justifyContent: 'center',
       alignItems: 'center',
-      marginTop: 20,
     },
     disabledButton: {
       backgroundColor: theme.card,
