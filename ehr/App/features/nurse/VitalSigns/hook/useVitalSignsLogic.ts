@@ -48,11 +48,51 @@ const formatTo12h = (time24: string) => {
   return `${displayHours}:${m.toString().padStart(2, '0')} ${ampm}`;
 };
 
+const filterAlertByTime = (alertText: string, timeLabel: string) => {
+  if (!alertText) return null;
+  const otherSlots = TIME_SLOTS.filter(s => s !== timeLabel);
+  const lines = alertText.split(/[\n;]| \| /)
+    .map(l => l.trim())
+    .filter(line => {
+      if (!line) return false;
+      const lower = line.toLowerCase();
+      if (lower.includes('out of range') || lower.includes('no findings')) return false;
+      if (otherSlots.some(other => line.startsWith(other))) return false;
+      return true;
+    })
+    .map(line => line.startsWith(timeLabel) ? line.replace(`${timeLabel}:`, '').trim() : line);
+  
+  // Deduplicate identical lines
+  const uniqueLines = Array.from(new Set(lines));
+  
+  return uniqueLines.join('\n').trim() || null;
+};
+
 export const useVitalSignsLogic = () => {
   const [patientName, setPatientName] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [admissionDate, setAdmissionDate] = useState<string | null>(null);
+  const [dayNo, setDayNo] = useState<number>(1);
+
+  const calculateDayNo = useCallback((admDate?: string | null) => {
+    const dateToUse = admDate || admissionDate;
+    if (!dateToUse) return 1;
+    try {
+      const admission = new Date(dateToUse);
+      const today = new Date();
+      admission.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      const diffTime = today.getTime() - admission.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      return diffDays > 0 ? diffDays : 1;
+    } catch (e) {
+      console.error('Error calculating day_no:', e);
+      return 1;
+    }
+  }, [admissionDate]);
 
   const [vitalsHistory, setVitalsHistory] = useState<Record<string, Vitals>>({});
+  const [alertsHistory, setAlertsHistory] = useState<Record<string, { alert: string | null, severity: string | null }>>({});
   const [lastSavedVitals, setLastSavedVitals] = useState<Record<string, Vitals>>({});
   const [currentVitals, setCurrentVitals] = useState<Vitals>(initialVitals);
   const [currentTimeIndex, setCurrentTimeIndex] = useState(0);
@@ -69,28 +109,35 @@ export const useVitalSignsLogic = () => {
 
   const currentTime = useMemo(() => TIME_SLOTS[currentTimeIndex], [currentTimeIndex]);
 
-  const fetchDataAlert = async (patientId: string) => {
+  const fetchDataAlert = async (patientId: string, time24?: string) => {
+    setDataAlert(null);
+    const targetTime24 = time24 || convertTo24h(currentTime);
+    console.log(`[fetchDataAlert] Fetching alerts for Patient: ${patientId}, Time: ${targetTime24}`);
+    
     try {
-      const response = await apiClient.get(`/vital-signs/data-alert/patient/${patientId}`);
+      const url = `/vital-signs/data-alert/patient/${patientId}?time=${targetTime24}`;
+      const response = await apiClient.get(url);
+      
+      const timeLabel = time24 ? formatTo12h(time24) : currentTime;
+
       if (response.data) {
+        console.log(`[fetchDataAlert] API Response for ${targetTime24}:`, response.data);
         const alertMsg = typeof response.data === 'string' 
           ? response.data 
           : (response.data.vital_signs || response.data.alert || response.data.message || null);
         
         if (alertMsg) {
-          const filtered = alertMsg.split(/[\n;]| \| /)
-            .filter(line => line && !line.toLowerCase().includes('out of range'))
-            .join('\n');
-          setDataAlert(filtered || null);
+          const filtered = filterAlertByTime(alertMsg, timeLabel);
+          console.log(`[fetchDataAlert] Final Filtered Alert for ${timeLabel}:`, filtered);
+          setDataAlert(filtered);
         } else {
-          setDataAlert(null);
+          console.log(`[fetchDataAlert] No alert message found in response for ${targetTime24}`);
         }
       } else {
-        setDataAlert(null);
+        console.log(`[fetchDataAlert] Empty response for ${targetTime24}`);
       }
     } catch (e) {
-      console.error('Failed to fetch vital signs data alert:', e);
-      setDataAlert(null);
+      console.error('[fetchDataAlert] Failed to fetch vital signs data alert:', e);
     }
   };
 
@@ -106,21 +153,24 @@ export const useVitalSignsLogic = () => {
     );
   }, [currentVitals]);
 
-  const loadPatientData = async (patientId: string) => {
+  const loadPatientData = async (patientId: string, admDate?: string | null) => {
     try {
-      fetchDataAlert(patientId);
+      const today = new Date().toLocaleDateString('en-CA');
       const response = await apiClient.get(`/vital-signs/patient/${patientId}?patient_id=${patientId}`);
       const records = response.data || [];
       setExistingRecords(records);
       
-      const today = new Date().toLocaleDateString('en-CA');
       const history: Record<string, Vitals> = {};
+      const alerts: Record<string, { alert: string | null, severity: string | null, id: number | null }> = {};
       
+      let latestSlotIndex = -1;
+
       records.forEach((rec: any) => {
         const recDate = (rec.date || rec.created_at).split('T')[0];
         if (recDate === today) {
           const slotLabel = formatTo12h(rec.time);
-          if (TIME_SLOTS.includes(slotLabel)) {
+          const slotIdx = TIME_SLOTS.indexOf(slotLabel);
+          if (slotIdx !== -1) {
             history[slotLabel] = {
               temperature: rec.temperature || '',
               hr: rec.hr || '',
@@ -128,37 +178,86 @@ export const useVitalSignsLogic = () => {
               bp: rec.bp || '',
               spo2: rec.spo2 || '',
             };
+
+            const alertVal = rec.assessment_alert || rec.alert || '';
+            const filtered = filterAlertByTime(alertVal, slotLabel);
+            
+            alerts[slotLabel] = {
+              alert: filtered,
+              severity: filtered ? inferSeverity(filtered) : null,
+              id: rec.id || null
+            };
+
+            if (slotIdx > latestSlotIndex) latestSlotIndex = slotIdx;
           }
         }
       });
       
       setVitalsHistory(history);
+      setAlertsHistory(alerts as any);
       setLastSavedVitals(JSON.parse(JSON.stringify(history)));
       
       if (Object.keys(history).length > 0) {
         setIsExistingRecord(true);
       }
 
+      let activeTime = currentTime;
       if (history[currentTime]) {
         setCurrentVitals(history[currentTime]);
-      } else if (records.length > 0) {
-        const latest = records[0];
-        setCurrentVitals({
-          temperature: latest.temperature || '',
-          hr: latest.hr || '',
-          rr: latest.rr || '',
-          bp: latest.bp || '',
-          spo2: latest.spo2 || '',
-        });
-      } else {
+        setRealtimeAlert(alerts[currentTime]?.alert || null);
+        setRealtimeSeverity(alerts[currentTime]?.severity || null);
+        recordIdRef.current = (alerts[currentTime] as any)?.id || null;
+      } 
+      else if (latestSlotIndex !== -1) {
+        activeTime = TIME_SLOTS[latestSlotIndex];
+        setCurrentTimeIndex(latestSlotIndex);
+        setCurrentVitals(history[activeTime]);
+        setRealtimeAlert(alerts[activeTime]?.alert || null);
+        setRealtimeSeverity(alerts[activeTime]?.severity || null);
+        recordIdRef.current = (alerts[activeTime] as any)?.id || null;
+      }
+      else {
         setCurrentVitals(initialVitals);
+        setRealtimeAlert(null);
+        setRealtimeSeverity(null);
+        recordIdRef.current = null;
+      }
+
+      const activeTime24 = convertTo24h(activeTime);
+      fetchDataAlert(patientId, activeTime24);
+
+      if (history[activeTime]) {
+        const currentDayNo = calculateDayNo(admDate);
+        const payload = {
+          patient_id: parseInt(patientId, 10),
+          date: today,
+          time: activeTime24,
+          day_no: currentDayNo,
+          ...history[activeTime]
+        };
+        analyzeField(payload, true).then(res => {
+          if (res) {
+            const joined = Object.values(res.alerts).filter(v => v).join('\n');
+            const filtered = filterAlertByTime(joined, activeTime);
+            setRealtimeAlert(filtered);
+            setRealtimeSeverity(res.severity);
+            setAlertsHistory(prev => ({
+              ...prev,
+              [activeTime]: { alert: filtered, severity: res.severity }
+            }));
+          }
+        });
       }
       
     } catch (e) {
       console.error('Failed to load patient data:', e);
       setExistingRecords([]);
       setVitalsHistory({});
+      setAlertsHistory({});
       setCurrentVitals(initialVitals);
+      setRealtimeAlert(null);
+      setRealtimeSeverity(null);
+      recordIdRef.current = null;
     }
   };
 
@@ -171,76 +270,55 @@ export const useVitalSignsLogic = () => {
       const patientId = payload.patient_id || selectedPatientId;
       if (!patientId) return null;
 
-      // Filter metadata for cache key
-      const { patient_id, day_no, ...inputData } = payload;
+      const { patient_id, ...inputData } = payload;
       
       if (!force) {
         const cached = await getAlertFromCache('vital-signs', patientId, inputData);
         if (cached) {
-          console.log('[VS analyzeField] Returning cached alerts');
           return { alerts: cached.alerts, severity: cached.severity, recordId: recordIdRef.current };
         }
       }
 
-      console.log('[VS analyzeField] Fetching fresh alerts from API...');
       const today = new Date().toLocaleDateString('en-CA');
       const payloadTime = (payload.time || '').substring(0, 5);
       const existingRecord = existingRecords.find(r => {
         const recDate = (r.date || r.created_at).split('T')[0];
-        return recDate === today && (r.time || '').substring(0, 5) === payloadTime;
+        return recDate === today && (r.time || '').substring(0, 5) === payloadTime.substring(0, 5);
       });
       let targetId = existingRecord?.id || recordIdRef.current;
 
       if (!targetId) {
-        console.log('[VS analyzeField] No targetId, creating temporary record...');
         const postResp = await apiClient.post('/vital-signs', payload);
         targetId = (postResp.data?.data || postResp.data)?.id;
         if (targetId) recordIdRef.current = targetId;
       }
 
-      if (!targetId) {
-        console.warn('[VS analyzeField] Failed to obtain targetId');
-        return null;
-      }
+      if (!targetId) return null;
 
       const response = await apiClient.put(`/vital-signs/${targetId}/assessment`, payload);
       const rawData = response.data?.data || response.data || {};
       const rawAlerts = response.data?.alerts || rawData?.alerts || {};
       
-      console.log('[VS analyzeField] API Raw Response Data:', JSON.stringify(rawData));
-      console.log('[VS analyzeField] API Raw Alerts:', JSON.stringify(rawAlerts));
-
       const processedAlerts: Record<string, string | null> = {};
+      const timeLabel = formatTo12h(payloadTime);
       
       const filterLine = (val: string) => {
-        if (!val || val.toLowerCase().includes('no findings')) return null;
-        const filtered = val.split(/[\n;]| \| /)
-          .map(line => line.trim())
-          .filter(line => line && !line.toLowerCase().includes('out of range'))
-          .join('\n');
-        return filtered || null;
+        return filterAlertByTime(val, timeLabel);
       };
 
-      // 1. Process alerts object (if it's an object)
       if (rawAlerts && typeof rawAlerts === 'object' && !Array.isArray(rawAlerts)) {
         Object.keys(rawAlerts).forEach(k => {
-          const filtered = filterLine(String(rawAlerts[k] || ''));
-          if (filtered) processedAlerts[k] = filtered;
+          processedAlerts[k] = filterLine(String(rawAlerts[k] || ''));
         });
       } else if (typeof rawAlerts === 'string' && rawAlerts.trim()) {
-        const filtered = filterLine(rawAlerts);
-        if (filtered) processedAlerts.assessment_alert = filtered;
+        processedAlerts.assessment_alert = filterLine(rawAlerts);
       }
 
-      // 2. Fallback to top-level alert fields in data if not already captured
       ['assessment_alert', 'alert', 'message'].forEach(k => {
         if (!processedAlerts[k]) {
-          const filtered = filterLine(String(rawData[k] || ''));
-          if (filtered) processedAlerts[k] = filtered;
+          processedAlerts[k] = filterLine(String(rawData[k] || ''));
         }
       });
-
-      console.log('[VS analyzeField] Processed Alerts:', JSON.stringify(processedAlerts));
 
       let severity = 'INFO';
       const firstValid = Object.values(processedAlerts).find(v => v !== null);
@@ -263,7 +341,7 @@ export const useVitalSignsLogic = () => {
     }
   }, [existingRecords, selectedPatientId]);
 
-  const saveAssessment = async (dayNo?: number) => {
+  const saveAssessment = async (pDayNo?: number, slotTime?: string, slotVitals?: Vitals) => {
     if (!selectedPatientId) return null;
 
     const sanitize = (data: any) => {
@@ -276,15 +354,18 @@ export const useVitalSignsLogic = () => {
       return sanitized;
     };
 
+    const targetTime = slotTime || currentTime;
+    const targetVitals = slotVitals || currentVitals;
     const today = new Date().toLocaleDateString('en-CA');
-    const time24 = convertTo24h(currentTime);
+    const time24 = convertTo24h(targetTime);
+    const finalDayNo = pDayNo || dayNo || calculateDayNo();
 
     const payload = sanitize({
       patient_id: parseInt(selectedPatientId, 10),
       date: today,
       time: time24,
-      day_no: dayNo || 1,
-      ...currentVitals
+      day_no: finalDayNo,
+      ...targetVitals
     });
 
     try {
@@ -301,40 +382,58 @@ export const useVitalSignsLogic = () => {
       }
       
       const data = response.data?.data || response.data;
-      
-      await loadPatientData(selectedPatientId);
-      
       const rawAlertText = (data?.assessment_alert || data?.alert || '').toString().trim();
-      const filteredAlertText = rawAlertText.split(/[\n;]| \| /)
-        .filter((line: string) => line && !line.toLowerCase().includes('no findings') && !line.toLowerCase().includes('out of range'))
-        .join('\n');
+      const filteredAlertText = filterAlertByTime(rawAlertText, targetTime);
 
-      if (filteredAlertText) {
-        const isCritical = filteredAlertText.includes('🔴') || filteredAlertText.toUpperCase().includes('CRITICAL');
-        const alertObj: { title: string, message: string, type: 'success' | 'error' } = {
-          title: isCritical ? 'CRITICAL ALERT' : 'VITAL SIGNS ASSESSMENT',
-          message: filteredAlertText.replace(/ \| /g, '\n'),
-          type: isCritical ? 'error' : 'success'
-        };
-        setBackendAlert(alertObj);
-        setBackendSeverity(inferSeverity(filteredAlertText));
-        setRealtimeAlert(filteredAlertText);
-        setRealtimeSeverity(inferSeverity(filteredAlertText));
-      } else {
-        setRealtimeAlert(null);
-        setRealtimeSeverity(null);
+      const severity = filteredAlertText ? inferSeverity(filteredAlertText) : null;
+      
+      setAlertsHistory(prev => ({
+        ...prev,
+        [targetTime]: { alert: filteredAlertText || null, severity }
+      }));
+
+      if (targetTime === currentTime) {
+        if (filteredAlertText) {
+          const isCritical = filteredAlertText.includes('🔴') || filteredAlertText.toUpperCase().includes('CRITICAL');
+          setBackendAlert({
+            title: isCritical ? 'CRITICAL ALERT' : 'VITAL SIGNS ASSESSMENT',
+            message: filteredAlertText.replace(/ \| /g, '\n'),
+            type: isCritical ? 'error' : 'success'
+          });
+          setBackendSeverity(severity);
+          setRealtimeAlert(filteredAlertText);
+          setRealtimeSeverity(severity);
+        } else {
+          setRealtimeAlert(null);
+          setRealtimeSeverity(null);
+        }
       }
-      setIsExistingRecord(true);
+      
       return response.data;
     } catch (e: any) {
-      console.error('API Error saving vital signs:', e?.response?.data || e.message);
-      setBackendAlert({
-          title: 'Connection Error',
-          message: e?.response?.data?.message || e?.response?.data?.detail || e.message || 'Failed to save vital signs.',
-          type: 'error'
-      });
+      console.error(`API Error saving vital signs for ${targetTime}:`, e?.response?.data || e.message);
       return null;
     }
+  };
+
+  const saveAllAssessments = async (pDayNo?: number) => {
+    if (!selectedPatientId) return null;
+    setVitalsHistory(prev => ({ ...prev, [currentTime]: currentVitals }));
+    
+    const finalDayNo = pDayNo || dayNo || calculateDayNo();
+    const results = [];
+    results.push(await saveAssessment(finalDayNo, currentTime, currentVitals));
+
+    for (const slot of TIME_SLOTS) {
+      if (slot !== currentTime && vitalsHistory[slot]) {
+        const hasData = Object.values(vitalsHistory[slot]).some(v => v && v.trim() !== '');
+        if (hasData) {
+          results.push(await saveAssessment(finalDayNo, slot, vitalsHistory[slot]));
+        }
+      }
+    }
+    await loadPatientData(selectedPatientId);
+    return results.find(r => r !== null) || null;
   };
 
   const handleUpdateVital = (key: keyof Vitals, value: string) => {
@@ -343,91 +442,102 @@ export const useVitalSignsLogic = () => {
   };
 
   const handleNextTime = () => {
-    setVitalsHistory(prev => ({ ...prev, [currentTime]: currentVitals }));
+    const oldTime = currentTime;
+    setVitalsHistory(prev => ({ ...prev, [oldTime]: currentVitals }));
+    setAlertsHistory(prev => ({ ...prev, [oldTime]: { alert: realtimeAlert, severity: realtimeSeverity } }));
     
     if (currentTimeIndex < TIME_SLOTS.length - 1) {
       const nextIndex = currentTimeIndex + 1;
+      const nextTime = TIME_SLOTS[nextIndex];
       setCurrentTimeIndex(nextIndex);
-      const historyForNext = vitalsHistory[TIME_SLOTS[nextIndex]];
-      setCurrentVitals(historyForNext || initialVitals);
+      setCurrentVitals(vitalsHistory[nextTime] || initialVitals);
+      const alertsForNext = alertsHistory[nextTime];
       setBackendAlert(null);
-      setRealtimeAlert(null);
-      setRealtimeSeverity(null);
+      setRealtimeAlert(alertsForNext?.alert || null);
+      setRealtimeSeverity(alertsForNext?.severity || null);
+      if (selectedPatientId) {
+        fetchDataAlert(selectedPatientId, convertTo24h(nextTime));
+      }
     }
   };
 
   const handlePrevTime = () => {
-    setVitalsHistory(prev => ({ ...prev, [currentTime]: currentVitals }));
+    const oldTime = currentTime;
+    setVitalsHistory(prev => ({ ...prev, [oldTime]: currentVitals }));
+    setAlertsHistory(prev => ({ ...prev, [oldTime]: { alert: realtimeAlert, severity: realtimeSeverity } }));
 
     if (currentTimeIndex > 0) {
       const prevIndex = currentTimeIndex - 1;
+      const prevTime = TIME_SLOTS[prevIndex];
       setCurrentTimeIndex(prevIndex);
-      const historyForPrev = vitalsHistory[TIME_SLOTS[prevIndex]];
-      setCurrentVitals(historyForPrev || initialVitals);
+      setCurrentVitals(vitalsHistory[prevTime] || initialVitals);
+      const alertsForPrev = alertsHistory[prevTime];
       setBackendAlert(null);
-      setRealtimeAlert(null);
-      setRealtimeSeverity(null);
+      setRealtimeAlert(alertsForPrev?.alert || null);
+      setRealtimeSeverity(alertsForPrev?.severity || null);
+      if (selectedPatientId) {
+        fetchDataAlert(selectedPatientId, convertTo24h(prevTime));
+      }
     }
   };
 
   const chartData = useMemo(() => {
     const keys: (keyof Vitals)[] = ['temperature', 'hr', 'rr', 'bp', 'spo2'];
     const result: Record<string, any[]> = {};
-
     keys.forEach(key => {
       result[key] = TIME_SLOTS.map(slot => {
-        let valueStr = '';
-        if (slot === currentTime) {
-          valueStr = currentVitals[key];
-        } else if (vitalsHistory[slot]) {
-          valueStr = vitalsHistory[slot][key];
-        }
-        
-        const numericValue = parseFloat(valueStr.split('/')[0]) || 0;
-        
-        return {
-          time: slot,
-          value: numericValue,
-        };
+        let valueStr = (slot === currentTime) ? currentVitals[key] : (vitalsHistory[slot] ? vitalsHistory[slot][key] : '');
+        return { time: slot, value: parseFloat(valueStr.split('/')[0]) || 0 };
       });
     });
     return result;
   }, [currentVitals, vitalsHistory, currentTime]);
 
-  const setSelectedPatient = (id: string | null, name: string) => {
+  const setSelectedPatient = (id: string | null, name: string, admDate?: string) => {
     setSelectedPatientId(id);
     setPatientName(name);
-    setIsExistingRecord(false);
-    recordIdRef.current = null;
-    setRealtimeAlert(null);
-    setRealtimeSeverity(null);
-    setBackendSeverity(null);
+    setAdmissionDate(admDate || null);
+    
     if (id) {
-      loadPatientData(id);
+      const calculated = calculateDayNo(admDate);
+      setDayNo(calculated);
+      loadPatientData(id, admDate);
     } else {
+      setDayNo(1);
       setVitalsHistory({});
+      setAlertsHistory({});
       setLastSavedVitals({});
       setCurrentVitals(initialVitals);
       setExistingRecords([]);
     }
+    setIsExistingRecord(false);
+    recordIdRef.current = null;
+    setRealtimeAlert(null);
+    setRealtimeSeverity(null);
+    setBackendAlert(null);
+    setBackendSeverity(null);
   };
 
   const selectTime = (index: number) => {
-    const oldTime = TIME_SLOTS[currentTimeIndex];
+    const oldTime = currentTime;
     setVitalsHistory(prev => ({ ...prev, [oldTime]: currentVitals }));
-    
+    setAlertsHistory(prev => ({ ...prev, [oldTime]: { alert: realtimeAlert, severity: realtimeSeverity } }));
     setCurrentTimeIndex(index);
     const newTime = TIME_SLOTS[index];
-    const historyForSlot = vitalsHistory[newTime];
-    setCurrentVitals(historyForSlot || initialVitals);
-    setRealtimeAlert(null);
-    setRealtimeSeverity(null);
+    setCurrentVitals(vitalsHistory[newTime] || initialVitals);
+    const alertsForSlot = alertsHistory[newTime];
+    setRealtimeAlert(alertsForSlot?.alert || null);
+    setRealtimeSeverity(alertsForSlot?.severity || null);
+    if (selectedPatientId) {
+      fetchDataAlert(selectedPatientId, convertTo24h(newTime));
+    }
   };
 
   const reset = () => {
     setPatientName('');
     setSelectedPatientId(null);
     setVitalsHistory({});
+    setAlertsHistory({});
     setLastSavedVitals({});
     setCurrentVitals(initialVitals);
     setCurrentTimeIndex(0);
@@ -437,22 +547,22 @@ export const useVitalSignsLogic = () => {
 
   const isModified = useMemo(() => {
     if (!selectedPatientId) return false;
-    const saved = lastSavedVitals[currentTime] || initialVitals;
-    return (
-      currentVitals.temperature !== saved.temperature ||
-      currentVitals.hr !== saved.hr ||
-      currentVitals.rr !== saved.rr ||
-      currentVitals.bp !== saved.bp ||
-      currentVitals.spo2 !== saved.spo2
-    );
-  }, [currentVitals, lastSavedVitals, currentTime, selectedPatientId]);
+    const currentSaved = lastSavedVitals[currentTime] || initialVitals;
+    if (currentVitals.temperature !== currentSaved.temperature || currentVitals.hr !== currentSaved.hr || currentVitals.rr !== currentSaved.rr || currentVitals.bp !== currentSaved.bp || currentVitals.spo2 !== currentSaved.spo2) return true;
+    for (const slot of TIME_SLOTS) {
+      if (slot === currentTime) continue;
+      if (vitalsHistory[slot]) {
+        const saved = lastSavedVitals[slot] || initialVitals;
+        if (vitalsHistory[slot].temperature !== saved.temperature || vitalsHistory[slot].hr !== saved.hr || vitalsHistory[slot].rr !== saved.rr || vitalsHistory[slot].bp !== saved.bp || vitalsHistory[slot].spo2 !== saved.spo2) return true;
+      }
+    }
+    return false;
+  }, [currentVitals, vitalsHistory, lastSavedVitals, currentTime, selectedPatientId]);
 
   const updateDPIE = useCallback(async (recordId: number, stepKey: string, text: string) => {
     try {
       const sanitizedText = text.trim() === '' ? 'N/A' : text;
-      const response = await apiClient.put(`/vital-signs/${recordId}/${stepKey}`, {
-        [stepKey]: sanitizedText
-      });
+      const response = await apiClient.put(`/vital-signs/${recordId}/${stepKey}`, { [stepKey]: sanitizedText });
       return response.data;
     } catch (err) {
       console.error(`Error updating Vital Signs ${stepKey}:`, err);
@@ -473,6 +583,7 @@ export const useVitalSignsLogic = () => {
     handleNextTime,
     handlePrevTime,
     saveAssessment,
+    saveAllAssessments,
     analyzeField,
     updateDPIE,
     isMenuVisible,
@@ -493,5 +604,6 @@ export const useVitalSignsLogic = () => {
     isExistingRecord,
     setIsExistingRecord,
     isModified,
+    dayNo,
   };
 };

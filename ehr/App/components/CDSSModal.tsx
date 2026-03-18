@@ -47,9 +47,12 @@ const CDSSModal: React.FC<CDSSModalProps> = ({
     // Ensure we are working with a string
     const stringText = Array.isArray(text) ? text.join('\n') : String(text);
     
-    const lines = bulletFormat
+    const rawLines = bulletFormat
       ? stringText.split(/[\n;]+| \| /).filter(l => l.trim())
       : stringText.split(/[\n;]| \| /).filter(l => l.trim());
+    
+    // Deduplicate lines while preserving order
+    const lines = Array.from(new Set(rawLines));
     
     const isMultiple = bulletFormat && lines.length > 1;
 

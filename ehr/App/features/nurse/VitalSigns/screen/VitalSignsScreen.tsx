@@ -90,12 +90,14 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     analyzeField,
     dataAlert,
     saveAssessment,
+    saveAllAssessments,
     isMenuVisible,
     setIsMenuVisible,
     reset,
     isExistingRecord,
     setIsExistingRecord,
     isModified,
+    dayNo,
   } = useVitalSignsLogic();
 
   const [chartIndex, setChartIndex] = useState(0);
@@ -109,6 +111,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [recordId, setRecordId] = useState<number | null>(null);
   const [isNA, setIsNA] = useState(false);
+
   const toggleNA = useCallback(async () => {
     const newState = !isNA;
     setIsNA(newState);
@@ -122,29 +125,15 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     };
 
     if (newState) {
-      // Apply N/A to all fields
       Object.keys(naVitals).forEach(key => {
         handleUpdateVital(key as any, 'N/A');
       });
       
-      // Immediately sync to backend
       if (selectedPatientId) {
-        const today = new Date().toLocaleDateString('en-CA');
-        const time24 = convertTo24h(currentTime);
-        const dayNo = parseInt(calculateDayNumber(), 10) || 1;
-        
-        const payload = {
-          patient_id: parseInt(selectedPatientId, 10),
-          date: today,
-          time: time24,
-          day_no: dayNo,
-          ...naVitals,
-        };
-        
-        await saveAssessment(dayNo); // This will use the current state which we just updated
+        await saveAssessment(dayNo);
       }
     }
-  }, [isNA, handleUpdateVital, selectedPatientId, currentTime, calculateDayNumber, saveAssessment]);
+  }, [isNA, handleUpdateVital, selectedPatientId, dayNo, saveAssessment]);
 
   const [isAlertLoading, setIsAlertLoading] = useState(false);
   const fieldTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -162,17 +151,6 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     }
   }, [readOnly, patientId, setSelectedPatient, initialPatientName]);
 
-  const calculateDayNumber = useCallback(() => {
-    if (!selectedPatient?.admission_date) return '';
-    const admission = new Date(selectedPatient.admission_date);
-    const today = new Date();
-    admission.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-    const diffTime = today.getTime() - admission.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays > 0 ? diffDays.toString() : '1';
-  }, [selectedPatient]);
-
   const handleVitalChange = useCallback(
     (key: string, value: string) => {
       handleUpdateVital(key as any, value);
@@ -189,7 +167,6 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
         Object.entries(currentData).forEach(([k, v]) => {
           sanitized[k] = v && v.trim() ? v : 'N/A';
         });
-        const dayNo = parseInt(calculateDayNumber(), 10) || 1;
         const payload = {
           patient_id: parseInt(selectedPatientId, 10),
           date: today,
@@ -198,16 +175,13 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
           ...sanitized,
         };
         const res = await analyzeField(payload, true);
-        console.log('[VS handleVitalChange] analyzeField result:', JSON.stringify(res));
         if (res) {
           const updatedAlerts = { ...res.alerts };
-          // If current field is cleared, make sure its specific alert is also cleared locally
           if (!value.trim()) {
             updatedAlerts[`${key}_alert`] = null;
           }
           setBackendAlerts(prev => ({ ...prev, ...updatedAlerts }));
           const alertString = Object.values(updatedAlerts).filter(v => v && !v.toLowerCase().includes('no findings')).join('\n');
-          console.log('[VS handleVitalChange] New realtimeAlert:', alertString);
           setRealtimeAlert(alertString);
           setRealtimeSeverity(res.severity);
         }
@@ -224,7 +198,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
       currentTimeIndex,
       setRealtimeAlert,
       setRealtimeSeverity,
-      calculateDayNumber,
+      dayNo,
     ],
   );
 
@@ -284,8 +258,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     Object.values(fieldTimers.current).forEach(t => clearTimeout(t));
     fieldTimers.current = {};
 
-    const dayNo = parseInt(calculateDayNumber(), 10) || 1;
-    const res = await saveAssessment(dayNo);
+    const res = await (saveAllAssessments ? saveAllAssessments(dayNo) : saveAssessment(dayNo));
     const actualData = res?.data || res;
     const id = actualData?.id || actualData?.vital_id;
 
@@ -294,8 +267,8 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
       setIsExistingRecord(true);
       setSuccessMessage({
         title: isExistingRecord
-          ? 'SUCCESSFULLY UPDATED'
-          : 'SUCCESSFULLY SUBMITTED',
+          ? 'Successfully Updated'
+          : 'Successfully Submitted',
         message: isExistingRecord
           ? 'Vital signs updated successfully.'
           : 'Vital signs submitted successfully.',
@@ -308,7 +281,6 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     if (!selectedPatientId) {
       return setAlertVisible(true);
     }
-    const dayNo = parseInt(calculateDayNumber(), 10);
     const res = await saveAssessment(dayNo);
     if (res && res.id) {
       setRecordId(res.id);
@@ -445,11 +417,10 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
           scrollEnabled={scrollEnabled}
         >
           <View style={{ height: 20 }} />
-          {/* Info Section / Search Bar */}
           {!readOnly ? (
             <PatientSearchBar
               onPatientSelect={(id, name, patientObj) => {
-                setSelectedPatient(id ? id.toString() : null, name);
+                setSelectedPatient(id ? id.toString() : null, name, patientObj?.admission_date);
                 setSelectedPatientFull(patientObj);
               }}
               onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
@@ -480,7 +451,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
             <View style={{ flex: 1 }}>
               <Text style={styles.fieldLabel}>DAY NO :</Text>
               <View style={[styles.pillInput, styles.dropdownRow]}>
-                <Text style={styles.dateVal}>{calculateDayNumber()}</Text>
+                <Text style={styles.dateVal}>{dayNo}</Text>
                 <Image
                   source={arrowIcon}
                   style={[
@@ -492,7 +463,6 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
             </View>
           </View>
 
-          {/* CHART CAROUSEL */}
           <View style={styles.chartCarousel}>
             {chartIndex > 0 && (
               <TouchableOpacity
@@ -593,7 +563,6 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
             <Text style={styles.timeText}>{currentTime}</Text>
           </View>
 
-          {/* Vital Cards */}
           <View style={{ opacity: 1 }}>
             <VitalCard
               label="Temperature"
@@ -797,7 +766,6 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
         />
       </View>
 
-      {/* Alert Component */}
       <SweetAlert
         visible={alertVisible}
         title={
@@ -827,7 +795,6 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
         confirmText="OK"
       />
 
-      {/* Success Alert */}
       <SweetAlert
         visible={successVisible}
         title={successMessage.title || 'SUCCESS'}
@@ -870,7 +837,6 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
         severity={realtimeSeverity || backendSeverity || undefined}
       />
 
-      {/* Time Selection Menu */}
       <Modal transparent visible={isMenuVisible} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.menuContainer}>
