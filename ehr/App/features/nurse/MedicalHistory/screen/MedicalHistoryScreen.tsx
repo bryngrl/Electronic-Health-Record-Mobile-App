@@ -130,7 +130,12 @@ const FIELD_LABELS: Record<string, string> = {
   social: 'SOCIAL',
 };
 
-const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly = false, patientId, initialPatientName }) => {
+const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
+  onBack,
+  readOnly = false,
+  patientId,
+  initialPatientName,
+}) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
@@ -237,8 +242,15 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
 
         const newFormData = {
           present: getFirst(data.present_illness) || initialFormData.present,
-          past: getFirst(data.past_history || data.past_medical_surgical || data.past_medical) || initialFormData.past,
-          allergies: getFirst(data.allergies || data.known_condition_allergies) || initialFormData.allergies,
+          past:
+            getFirst(
+              data.past_history ||
+                data.past_medical_surgical ||
+                data.past_medical,
+            ) || initialFormData.past,
+          allergies:
+            getFirst(data.allergies || data.known_condition_allergies) ||
+            initialFormData.allergies,
           vaccination:
             getFirst(data.vaccination) || initialFormData.vaccination,
           developmental:
@@ -315,7 +327,11 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
     try {
       if (isModified) {
         // Save only if the current step has been modified
-        await saveMedicalHistoryStep(selectedPatientId, currentKey, currentData);
+        await saveMedicalHistoryStep(
+          selectedPatientId,
+          currentKey,
+          currentData,
+        );
 
         // Update lastSavedData for this step immediately
         setLastSavedData(prev => ({
@@ -368,7 +384,8 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
   const isModified = useMemo(() => {
     if (!selectedPatientId) return false;
     const currentData = formData[currentStepKey as keyof typeof formData];
-    const savedData = lastSavedData[currentStepKey as keyof typeof lastSavedData];
+    const savedData =
+      lastSavedData[currentStepKey as keyof typeof lastSavedData];
     return JSON.stringify(currentData) !== JSON.stringify(savedData);
   }, [formData, lastSavedData, currentStepKey, selectedPatientId]);
 
@@ -413,7 +430,14 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
               <Text style={styles.title}>Medical History</Text>
               <Text style={styles.dateText}>{formatDate()}</Text>
               {readOnly && (
-                <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: '#E8572A',
+                    fontFamily: 'AlteHaasGroteskBold',
+                    marginTop: 5,
+                  }}
+                >
                   [READ ONLY]
                 </Text>
               )}
@@ -439,54 +463,54 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
           <PatientSearchBar
             onPatientSelect={id => setSelectedPatientId(id)}
             onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-            initialPatientName={readOnly ? (initialPatientName || '') : undefined}
+            initialPatientName={readOnly ? initialPatientName || '' : undefined}
           />
 
           {!readOnly && (
-          <TouchableOpacity
-            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
-            onPress={() => {
-              if (!selectedPatientId) {
-                showAlert(
-                  'Patient Required',
-                  'Please select a patient first in the search bar.',
-                );
-              } else {
-                toggleNA();
-              }
-            }}
-          >
-            <Text
-              style={[
-                styles.naText,
-                !selectedPatientId && { color: theme.textMuted },
-              ]}
+            <TouchableOpacity
+              style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+              onPress={() => {
+                if (!selectedPatientId) {
+                  showAlert(
+                    'Patient Required',
+                    'Please select a patient first in the search bar.',
+                  );
+                } else {
+                  toggleNA();
+                }
+              }}
             >
-              Mark all as N/A
-            </Text>
-            <Icon
-              name={
-                isNAStep[currentStepKey]
-                  ? 'check-box'
-                  : 'check-box-outline-blank'
-              }
-              size={22}
-              color={selectedPatientId ? theme.primary : theme.textMuted}
-            />
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.naText,
+                  !selectedPatientId && { color: theme.textMuted },
+                ]}
+              >
+                Mark all as N/A
+              </Text>
+              <Icon
+                name={
+                  isNAStep[currentStepKey]
+                    ? 'check-box'
+                    : 'check-box-outline-blank'
+                }
+                size={22}
+                color={selectedPatientId ? theme.primary : theme.textMuted}
+              />
+            </TouchableOpacity>
           )}
 
           {!readOnly && (
-          <Text
-            style={[
-              styles.disabledTextAtBottom,
-              isNAStep[currentStepKey] && { color: theme.error },
-            ]}
-          >
-            {isNAStep[currentStepKey]
-              ? 'All fields below are disabled.'
-              : 'Checking this will disable all fields below.'}
-          </Text>
+            <Text
+              style={[
+                styles.disabledTextAtBottom,
+                isNAStep[currentStepKey] && { color: theme.error },
+              ]}
+            >
+              {isNAStep[currentStepKey]
+                ? 'All fields below are disabled.'
+                : 'Checking this will disable all fields below.'}
+            </Text>
           )}
 
           <View style={styles.stepHeader}>
@@ -505,7 +529,9 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
                 ] || ''
               }
               onChangeText={(val: string) => updateField(field, val)}
-              disabled={!selectedPatientId || isNAStep[currentStepKey] || readOnly}
+              disabled={
+                !selectedPatientId || isNAStep[currentStepKey] || readOnly
+              }
               onDisabledPress={() => {
                 if (!selectedPatientId) {
                   showAlert(
@@ -518,29 +544,76 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
           ))}
 
           {!readOnly ? (
-            <View style={styles.btnContainer}>
-              <Button
-                title={step === steps.length - 1 ? 'SUBMIT' : 'NEXT'}
+            <View style={styles.footerRow}>
+              <TouchableOpacity
+                style={[
+                  styles.submitBtn,
+                  !isModified && {
+                    backgroundColor: theme.buttonDisabledBg,
+                    borderColor: theme.buttonDisabledBorder,
+                  },
+                ]}
                 onPress={handleNext}
-                disabled={!selectedPatientId}
-              />
+                disabled={!isModified}
+              >
+                <Text
+                  style={[
+                    styles.submitText,
+                    !isModified && { color: theme.textMuted },
+                  ]}
+                >
+                  {step === steps.length - 1 ? 'SUBMIT' : 'NEXT'}
+                </Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <View style={{ marginTop: 10 }}>
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
                 <TouchableOpacity
-                  style={[styles.navBtn, step === 0 && { backgroundColor: theme.buttonDisabledBg, borderColor: theme.buttonDisabledBorder }]}
-                  onPress={() => { setStep(step - 1); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
+                  style={[
+                    styles.navBtn,
+                    step === 0 && {
+                      backgroundColor: theme.buttonDisabledBg,
+                      borderColor: theme.buttonDisabledBorder,
+                    },
+                  ]}
+                  onPress={() => {
+                    setStep(step - 1);
+                    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                  }}
                   disabled={step === 0}
                 >
-                  <Text style={[styles.navBtnText, step === 0 && { color: theme.textMuted }]}>‹ PREV</Text>
+                  <Text
+                    style={[
+                      styles.navBtnText,
+                      step === 0 && { color: theme.textMuted },
+                    ]}
+                  >
+                    ‹ PREV
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.navBtn, step === steps.length - 1 && { backgroundColor: theme.buttonDisabledBg, borderColor: theme.buttonDisabledBorder }]}
-                  onPress={() => { setStep(step + 1); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
+                  style={[
+                    styles.navBtn,
+                    step === steps.length - 1 && {
+                      backgroundColor: theme.buttonDisabledBg,
+                      borderColor: theme.buttonDisabledBorder,
+                    },
+                  ]}
+                  onPress={() => {
+                    setStep(step + 1);
+                    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                  }}
                   disabled={step === steps.length - 1}
                 >
-                  <Text style={[styles.navBtnText, step === steps.length - 1 && { color: theme.textMuted }]}>NEXT ›</Text>
+                  <Text
+                    style={[
+                      styles.navBtnText,
+                      step === steps.length - 1 && { color: theme.textMuted },
+                    ]}
+                  >
+                    NEXT ›
+                  </Text>
                 </TouchableOpacity>
               </View>
               <TouchableOpacity style={styles.navBtn} onPress={onBack}>
@@ -612,7 +685,27 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       color: theme.textMuted,
       textAlign: 'right',
     },
-    btnContainer: { marginTop: 10 },
+    footerRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: 10,
+      paddingBottom: 40,
+    },
+    submitBtn: {
+      flex: 1,
+      backgroundColor: theme.buttonBg,
+      paddingVertical: 15,
+      borderRadius: 25,
+      alignItems: 'center',
+      marginHorizontal: 5,
+      borderWidth: 1.5,
+      borderColor: theme.buttonBorder,
+    },
+    submitText: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 16,
+    },
     navBtn: {
       flex: 1,
       backgroundColor: theme.buttonBg,

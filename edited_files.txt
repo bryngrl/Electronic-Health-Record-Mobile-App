@@ -1,2 +1,0 @@
-ehr/App/features/Dashboard/screen/HomeScreen.tsx
-ehr/App/features/DemographicProfile/screen/DemographicProfileScreen.tsx

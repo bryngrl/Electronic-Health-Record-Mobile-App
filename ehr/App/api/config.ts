@@ -1,4 +1,3 @@
-
 const LOCAL_IP = '192.168.1.29';
 const BACKEND_PORT = 8000;
 
@@ -9,8 +8,6 @@ const PROD_BASE_URL = `https://${WEBSITE}/api`;
 const isProd = false; // Set to true for production builds, false for development
 
 export const BASE_URL = isProd ? PROD_BASE_URL : DEV_BASE_URL;
-export const HOST = isProd
-  ? WEBSITE
-  : LOCAL_IP;
+export const HOST = isProd ? WEBSITE : LOCAL_IP;
 
 export { BACKEND_PORT };
