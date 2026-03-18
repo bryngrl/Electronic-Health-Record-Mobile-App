@@ -16,6 +16,11 @@ import {
   Image,
   Platform,
 } from 'react-native';
+import { BlurView } from '@react-native-community/blur';
+import {
+  createDotsSettingsModalStyle,
+  blurProps,
+} from '../../styles/DotsSettingsModalStyle';
 
 const backArrow = require('@assets/icons/back_arrow.png');
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -45,6 +50,10 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
     [theme, commonStyles, isDarkMode],
+  );
+  const dotsModalStyles = useMemo(
+    () => createDotsSettingsModalStyle(theme),
+    [theme],
   );
 
   const {
@@ -423,36 +432,41 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
       </View>
 
       {/* Options Menu Modal */}
-      <Modal transparent visible={isMenuVisible} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.menuContainer}>
-            <Text style={styles.menuTitle}>SELECT STAGE</Text>
+      <Modal
+        transparent
+        visible={isMenuVisible}
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={dotsModalStyles.modalOverlay}>
+          <BlurView style={dotsModalStyles.blurView} {...blurProps} />
+          <View style={dotsModalStyles.menuContainer}>
+            <Text style={dotsModalStyles.menuTitle}>SELECT STAGE</Text>
 
-            <FlatList
-              data={RECON_STAGES}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({ item, index }) => (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {RECON_STAGES.map((item, index) => (
                 <TouchableOpacity
-                  style={styles.menuItem}
+                  key={index}
+                  style={dotsModalStyles.menuItem}
                   onPress={() => handleSelectStage(index)}
                 >
                   <Text
                     style={[
-                      styles.menuItemText,
-                      stageIndex === index && styles.activeMenuText,
+                      dotsModalStyles.menuItemText,
+                      stageIndex === index && dotsModalStyles.activeMenuText,
                     ]}
                   >
                     {item}
                   </Text>
                 </TouchableOpacity>
-              )}
-            />
+              ))}
+            </ScrollView>
 
             <TouchableOpacity
-              style={styles.closeMenuBtn}
+              style={dotsModalStyles.closeMenuBtn}
               onPress={() => setIsMenuVisible(false)}
             >
-              <Text style={styles.closeMenuText}>CLOSE</Text>
+              <Text style={dotsModalStyles.closeMenuText}>CLOSE</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -543,43 +557,6 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     },
     btnText: { color: theme.primary, fontWeight: 'bold', fontSize: 16 },
     chevron: { color: theme.primary, fontSize: 20, marginLeft: 10 },
-
-    // Menu Modal Styles
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: theme.overlay,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    menuContainer: {
-      width: '85%',
-      backgroundColor: theme.card,
-      borderRadius: 25,
-      padding: 25,
-      maxHeight: '80%',
-    },
-    menuTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: theme.primary,
-      marginBottom: 20,
-      textAlign: 'center',
-    },
-    menuItem: {
-      paddingVertical: 15,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-    },
-    menuItemText: { fontSize: 16, color: theme.text, textAlign: 'center' },
-    activeMenuText: { color: theme.secondary, fontWeight: 'bold' },
-    closeMenuBtn: {
-      marginTop: 20,
-      backgroundColor: theme.surface,
-      paddingVertical: 12,
-      borderRadius: 20,
-      alignItems: 'center',
-    },
-    closeMenuText: { color: theme.primary, fontWeight: 'bold' },
     fadeBottom: {
       position: 'absolute',
       bottom: 0,

@@ -18,6 +18,7 @@ import {
   Modal,
   Image,
 } from 'react-native';
+import { BlurView } from '@react-native-community/blur';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import HistoryInputCard from '../components/HistoryInputCard';
@@ -26,6 +27,10 @@ import { useMedicalHistory } from '../hook/useMedicalHistory';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
+import {
+  createDotsSettingsModalStyle,
+  blurProps,
+} from '../../styles/DotsSettingsModalStyle';
 
 const dotsIcon = require('@assets/icons/dots_icon.png');
 
@@ -144,6 +149,10 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
     [theme, commonStyles, isDarkMode],
+  );
+  const dotsModalStyles = useMemo(
+    () => createDotsSettingsModalStyle(theme),
+    [theme],
   );
 
   const { saveMedicalHistoryStep, fetchMedicalHistory } = useMedicalHistory();
@@ -651,22 +660,28 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
       </View>
 
       {/* Options Menu Modal */}
-      <Modal transparent visible={isMenuVisible} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.menuContainer}>
-            <Text style={styles.menuTitle}>SELECT STAGE</Text>
+      <Modal
+        transparent
+        visible={isMenuVisible}
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={dotsModalStyles.modalOverlay}>
+          <BlurView style={dotsModalStyles.blurView} {...blurProps} />
+          <View style={dotsModalStyles.menuContainer}>
+            <Text style={dotsModalStyles.menuTitle}>SELECT STAGE</Text>
 
             <ScrollView>
               {steps.map((item, index) => (
                 <TouchableOpacity
                   key={index}
-                  style={styles.menuItem}
+                  style={dotsModalStyles.menuItem}
                   onPress={() => handleSelectStage(index)}
                 >
                   <Text
                     style={[
-                      styles.menuItemText,
-                      step === index && styles.activeMenuText,
+                      dotsModalStyles.menuItemText,
+                      step === index && dotsModalStyles.activeMenuText,
                     ]}
                   >
                     {item.title}
@@ -676,10 +691,10 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
             </ScrollView>
 
             <TouchableOpacity
-              style={styles.closeMenuBtn}
+              style={dotsModalStyles.closeMenuBtn}
               onPress={() => setIsMenuVisible(false)}
             >
-              <Text style={styles.closeMenuText}>CLOSE</Text>
+              <Text style={dotsModalStyles.closeMenuText}>CLOSE</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -784,47 +799,6 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       height: 60,
     },
     dotsIcon: { width: 18, height: 18, resizeMode: 'contain', marginTop: 15 },
-    // Menu Modal Styles
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: theme.overlay,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    menuContainer: {
-      width: '85%',
-      backgroundColor: theme.card,
-      borderRadius: 25,
-      padding: 25,
-      maxHeight: '80%',
-    },
-    menuTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: theme.primary,
-      marginBottom: 20,
-      textAlign: 'center',
-    },
-    menuItem: {
-      paddingVertical: 15,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border,
-    },
-    menuItemText: { 
-      fontSize: 16, 
-      color: theme.text, 
-      textAlign: 'center',
-      fontFamily: 'AlteHaasGroteskBold',
-    },
-    activeMenuText: { color: theme.secondary, fontWeight: 'bold' },
-    closeMenuBtn: {
-      marginTop: 20,
-      backgroundColor: theme.surface,
-      paddingVertical: 12,
-      borderRadius: 20,
-      alignItems: 'center',
-    },
-    closeMenuText: { color: theme.primary, fontWeight: 'bold' },
   });
 
 export default MedicalHistoryScreen;

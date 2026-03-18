@@ -9,7 +9,9 @@ import {
   Image,
   StatusBar,
   Animated,
+  Modal,
 } from 'react-native';
+import { BlurView } from '@react-native-community/blur';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import LabResultCard from '../components/LabResultCard';
@@ -21,6 +23,10 @@ import { useAppTheme } from '@App/theme/ThemeContext';
 import { useLabValuesScreen } from './useLabValuesScreen';
 import { LAB_TESTS, LAB_CATEGORIES, getTestPrefix } from './constants';
 import { createStyles } from './styles';
+import {
+  createDotsSettingsModalStyle,
+  blurProps,
+} from '../../styles/DotsSettingsModalStyle';
 
 const alertBellActiveIcon = require('@assets/icons/alert_bell_icon.png');
 const alertBellInactiveIcon = require('@assets/icons/alert_bell_icon_inactive.png');
@@ -34,6 +40,10 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(() => createStyles(theme, commonStyles, isDarkMode), [theme, commonStyles, isDarkMode]);
+  const dotsModalStyles = useMemo(
+    () => createDotsSettingsModalStyle(theme),
+    [theme],
+  );
   const scrollViewRef = useRef<ScrollView>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const bellFadeAnim = useRef(new Animated.Value(1)).current;
@@ -174,39 +184,59 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
           scrollEnabled={scrollEnabled}
         >
           <View style={{ height: 20 }} />
-          {showLabList && (
-            <View style={styles.dropdownOverlay}>
-              <ScrollView nestedScrollEnabled={true}>
-                {LAB_CATEGORIES.map((category, catIndex) => (
-                  <View key={catIndex}>
-                    <View style={styles.categoryHeader}>
-                      <Text style={styles.categoryHeaderText}>
-                        {category.title}
-                      </Text>
-                    </View>
-                    {category.tests.map(test => {
-                      const globalIndex = LAB_TESTS.indexOf(test);
-                      return (
-                        <TouchableOpacity
-                          key={globalIndex}
-                          style={styles.dropdownItem}
-                          onPress={() => {
-                            setSelectedTestIndex(globalIndex);
-                            setShowLabList(false);
-                          }}
-                        >
-                          <Text style={styles.dropdownItemText}>{test}</Text>
-                          {selectedTestIndex === globalIndex && (
-                            <Icon name="check" size={16} color={theme.primary} />
-                          )}
-                        </TouchableOpacity>
-                      );
-                    })}
+      <Modal
+        transparent
+        visible={showLabList}
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={dotsModalStyles.modalOverlay}>
+          <BlurView style={dotsModalStyles.blurView} {...blurProps} />
+          <View style={dotsModalStyles.menuContainer}>
+            <Text style={dotsModalStyles.menuTitle}>SELECT LABORATORY</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {LAB_CATEGORIES.map((category, catIndex) => (
+                <View key={catIndex}>
+                  <View style={styles.categoryHeader}>
+                    <Text style={styles.categoryHeaderText}>
+                      {category.title}
+                    </Text>
                   </View>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+                  {category.tests.map(test => {
+                    const globalIndex = LAB_TESTS.indexOf(test);
+                    return (
+                      <TouchableOpacity
+                        key={globalIndex}
+                        style={dotsModalStyles.menuItem}
+                        onPress={() => {
+                          setSelectedTestIndex(globalIndex);
+                          setShowLabList(false);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            dotsModalStyles.menuItemText,
+                            selectedTestIndex === globalIndex &&
+                              dotsModalStyles.activeMenuText,
+                          ]}
+                        >
+                          {test}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={dotsModalStyles.closeMenuBtn}
+              onPress={() => setShowLabList(false)}
+            >
+              <Text style={dotsModalStyles.closeMenuText}>CLOSE</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
           {!readOnly ? (
             <PatientSearchBar
