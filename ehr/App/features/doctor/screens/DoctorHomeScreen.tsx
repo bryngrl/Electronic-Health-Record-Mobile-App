@@ -242,7 +242,7 @@ const DoctorHomeScreen = ({
           </View>
           <TouchableOpacity
             onPress={() => setModalVisible(true)}
-            style={{ marginTop: 10, padding: 5 }}
+            style={{ padding: 5 }}
             activeOpacity={0.6}
             hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
           >
