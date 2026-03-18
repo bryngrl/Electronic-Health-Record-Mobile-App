@@ -14,7 +14,6 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import DoctorBottomNav from '../components/DoctorBottomNav';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import RNBlobUtil from 'react-native-blob-util';
 import { AccountModal } from '../../../components/AccountModal';
 import PatientSearchBar from '../../../components/PatientSearchBar';
 import { BASE_URL } from '../../../api/apiClient';
@@ -66,6 +65,15 @@ const DoctorReportsScreen = ({
     setIsLoading(true);
 
     try {
+      const RNBlobUtil = require('react-native-blob-util').default;
+      if (!RNBlobUtil) {
+        Alert.alert(
+          'Unavailable',
+          'PDF generation is not available in this build. Please reinstall the app.',
+        );
+        return;
+      }
+
       const token = await AsyncStorage.getItem('token');
       const pdfUrl = `${BASE_URL}/doctor/patient/${selectedPatientId}/pdf`;
       const fileName = `${patientName.replace(/\s+/g, '_')}_Results.pdf`;

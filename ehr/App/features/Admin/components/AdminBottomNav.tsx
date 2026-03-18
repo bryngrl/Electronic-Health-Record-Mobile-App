@@ -41,17 +41,17 @@ const AdminBottomNav = ({ activeTab, onNavigate }: AdminBottomNavProps) => {
           <Icon
             name={icon}
             size={22}
-            color={
-              isActive ? (isDarkMode ? theme.primary : '#29A539') : '#848484'
-            }
+            style={[
+              !isActive && { color: '#848484' },
+              isActive && !isDarkMode && { color: '#29A539' },
+              isDarkMode && isActive && { color: theme.primary },
+            ]}
           />
           <Text
             style={[
               styles.navLabel,
-              isActive && {
-                color: isDarkMode ? theme.primary : '#29A539',
-                fontWeight: 'bold',
-              },
+              isActive && { color: '#29A539', fontWeight: 'bold' },
+              isDarkMode && isActive && { color: theme.primary },
             ]}
           >
             {label}
@@ -62,36 +62,25 @@ const AdminBottomNav = ({ activeTab, onNavigate }: AdminBottomNavProps) => {
   };
 
   return (
-    <>
+    <Shadow
+      distance={7}
+      startColor={'rgba(0, 0, 0, 0.1)'}
+      containerStyle={styles.shadowContainer}
+      style={[styles.shadowShape, { backgroundColor: theme.card || '#FFFFFF' }]}
+    >
       <View
-        style={[styles.bottomFill, { backgroundColor: theme.background }]}
-      />
-      <Shadow
-        distance={7}
-        startColor={'rgba(0, 0, 0, 0.1)'}
-        containerStyle={styles.shadowContainer}
-        style={[
-          styles.shadowShape,
-          { backgroundColor: theme.card || '#FFFFFF' },
-        ]}
+        style={[styles.bottomNav, { backgroundColor: theme.card || '#FFFFFF' }]}
       >
-        <View
-          style={[
-            styles.bottomNav,
-            { backgroundColor: theme.card || '#FFFFFF' },
-          ]}
-        >
-          {tabs.map(tab => (
-            <NavItem
-              key={tab.id}
-              label={tab.label}
-              id={tab.id}
-              icon={tab.icon}
-            />
-          ))}
-        </View>
-      </Shadow>
-    </>
+        {tabs.map(tab => (
+          <NavItem
+            key={tab.id}
+            label={tab.label}
+            id={tab.id}
+            icon={tab.icon}
+          />
+        ))}
+      </View>
+    </Shadow>
   );
 };
 
@@ -105,14 +94,6 @@ const createStyles = (theme: any, isDarkMode: boolean, bottomInset: number) =>
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 1000,
-    },
-    bottomFill: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: Math.max(bottomInset, 16) + 50,
-      zIndex: 999,
     },
     shadowShape: {
       width: '100%',
@@ -137,12 +118,10 @@ const createStyles = (theme: any, isDarkMode: boolean, bottomInset: number) =>
       height: '100%',
     },
     activeNavItem: {
-      backgroundColor:
-        theme.navActiveBg ||
-        (isDarkMode ? 'rgba(41, 165, 57, 0.15)' : '#E0FFDD'),
+      backgroundColor: theme.navActiveBg,
       borderRadius: 50,
-      width: '95%',
-      height: 55,
+      width: 85, // Fixed width matching the Nurse style
+      height: 55, // Fixed height matching the Nurse style
     },
     navLabel: {
       fontSize: 11,

@@ -9,6 +9,7 @@ import {
   Pressable,
   Platform,
 } from 'react-native';
+import BlurViewSafe from './BlurViewSafe';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -17,13 +18,6 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-
-let BlurViewSafe: any = null;
-try {
-  BlurViewSafe = require('@react-native-community/blur').BlurView;
-} catch (e) {
-  BlurViewSafe = null;
-}
 
 const THEME = {
   success: { color: '#2BB673', icon: 'check-circle-outline' as const },
@@ -61,8 +55,6 @@ export default function SweetAlert({
   dismissOnBackdrop = true,
 }: SweetAlertProps) {
   const theme = THEME[type];
-
-  const HasBlur = !!BlurViewSafe;
 
   const progress = useSharedValue(0);
 
@@ -108,17 +100,12 @@ export default function SweetAlert({
         <Animated.View style={[styles.cardWrap, cardStyle]}>
           <View style={styles.card}>
             {}
-            {HasBlur ? (
               <BlurViewSafe
                 style={StyleSheet.absoluteFill}
                 blurType={blurType}
                 blurAmount={25}
                 reducedTransparencyFallbackColor="rgba(255,255,255,0.92)"
               />
-            ) : (
-        
-              <View style={[StyleSheet.absoluteFill, styles.fallbackFrost]} />
-            )}
 
             {/* Glass tint overlay (works for both Blur + fallback) */}
             <View style={styles.glassTint} />

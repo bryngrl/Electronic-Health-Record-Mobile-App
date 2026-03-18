@@ -18,10 +18,10 @@ import {
   Animated,
   useWindowDimensions,
   TouchableWithoutFeedback,
-  Dimensions,
   StatusBar,
+  Image, // Added Image import
 } from 'react-native';
-import { BlurView } from '@react-native-community/blur';
+import BlurViewSafe from '@components/BlurViewSafe';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import apiClient from '@api/apiClient';
 import SweetAlert from '@components/SweetAlert';
@@ -48,7 +48,6 @@ export const AdminUserDetails = ({
   const [auditLogs, setAuditLogs] = useState([]);
   const [isRoleModalVisible, setRoleModalVisible] = useState(false);
 
-  // --- POSITIONING STATES ---
   const [modalY, setModalY] = useState(0);
   const [modalX, setModalX] = useState(0);
   const [modalWidth, setModalWidth] = useState(0);
@@ -218,7 +217,7 @@ export const AdminUserDetails = ({
           style={[StyleSheet.absoluteFill, { opacity: backdropOpacity }]}
         >
           {Platform.OS === 'ios' ? (
-            <BlurView
+            <BlurViewSafe
               style={StyleSheet.absoluteFill}
               blurType={isDarkMode ? 'dark' : 'light'}
               blurAmount={10}
@@ -264,26 +263,18 @@ export const AdminUserDetails = ({
                   },
                 ]}
               >
-                {['nurse', 'doctor', 'admin'].map(role => (
+                {['nurse', 'doctor'].map(role => (
                   <TouchableOpacity
                     key={role}
                     style={[
                       styles.dropdownPill,
                       role === 'nurse'
                         ? styles.nurseBadge
-                        : role === 'doctor'
-                        ? styles.doctorBadge
-                        : {
-                            backgroundColor: theme.card,
-                            borderWidth: 1,
-                            borderColor: theme.border,
-                          },
+                        : styles.doctorBadge,
                       currentUser.role?.toLowerCase() === role &&
                         (role === 'nurse'
                           ? styles.selectedBorderNurse
-                          : role === 'doctor'
-                          ? styles.selectedBorderDoctor
-                          : { borderColor: theme.primary }),
+                          : styles.selectedBorderDoctor),
                       { marginTop: role === 'nurse' ? 4 : 8 },
                     ]}
                     onPress={() => handleUpdateRole(role)}
@@ -293,9 +284,7 @@ export const AdminUserDetails = ({
                         styles.roleBadgeText,
                         role === 'nurse'
                           ? styles.nurseText
-                          : role === 'doctor'
-                          ? styles.doctorText
-                          : { color: theme.text },
+                          : styles.doctorText,
                       ]}
                     >
                       {role.charAt(0).toUpperCase() +
@@ -335,22 +324,11 @@ export const AdminUserDetails = ({
                   activeOpacity={0.8}
                   style={[
                     styles.roleBadge,
-                    isNurse
-                      ? styles.nurseBadge
-                      : isDoctor
-                      ? styles.doctorBadge
-                      : {
-                          backgroundColor: theme.card,
-                          borderWidth: 1,
-                          borderColor: theme.border,
-                        },
+                    isNurse ? styles.nurseBadge : isDoctor ? styles.doctorBadge : { backgroundColor: theme.card, borderWidth: 1, borderColor: theme.border },
                   ]}
                   onPress={e => {
                     e.currentTarget.measureInWindow((x, y, width, height) => {
-                      const statusBarHeight =
-                        Platform.OS === 'android'
-                          ? StatusBar.currentHeight || 0
-                          : 0;
+                      const statusBarHeight = Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0;
                       setModalY(y - statusBarHeight + height + 5);
                       setModalX(x);
                       setModalWidth(width);
@@ -358,31 +336,14 @@ export const AdminUserDetails = ({
                     });
                   }}
                 >
-                  <Text
-                    style={[
-                      styles.roleBadgeText,
-                      isNurse
-                        ? styles.nurseText
-                        : isDoctor
-                        ? styles.doctorText
-                        : { color: theme.text },
-                      { flex: 1 },
-                    ]}
-                  >
-                    {currentUser.role
-                      ? currentUser.role.charAt(0).toUpperCase() +
-                        currentUser.role.slice(1).toLowerCase()
-                      : ''}
+                  <Text style={[styles.roleBadgeText, isNurse ? styles.nurseText : isDoctor ? styles.doctorText : { color: theme.text }, { flex: 1 }]}>
+                    {currentUser.role ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1).toLowerCase() : ''}
                   </Text>
-                  <Icon
-                    name="keyboard-arrow-down"
-                    size={18}
-                    color={
-                      isNurse ? NURSE_TEXT : isDoctor ? DOCTOR_TEXT : theme.text
-                    }
-                  />
+                  <Icon name="keyboard-arrow-down" size={18} color={isNurse ? NURSE_TEXT : isDoctor ? DOCTOR_TEXT : theme.text} />
                 </TouchableOpacity>
               </View>
+
+              {/* --- UPDATED EDIT BUTTON WITH IMAGE --- */}
               <TouchableOpacity
                 style={styles.editButton}
                 onPress={() => {
@@ -392,150 +353,64 @@ export const AdminUserDetails = ({
                   });
                 }}
               >
-                <Icon name="edit-note" size={35} color="#29A539" />
+                <Image 
+                  source={require('@assets/icons/edit_icon.png')}
+                  style={styles.editIconImage}
+                  resizeMode="contain"
+                />
               </TouchableOpacity>
             </View>
 
-            <Text style={[styles.sectionTitle, { color: theme.primary }]}>
-              Account Information
-            </Text>
+            <Text style={[styles.sectionTitle, { color: theme.primary }]}>Account Information</Text>
 
             <View style={styles.infoGrid}>
               <View style={styles.infoBox}>
                 <Text style={styles.label}>Username :</Text>
-                <Text style={[styles.value, { color: theme.text }]}>
-                  {currentUser.username || '---'}
-                </Text>
+                <Text style={[styles.value, { color: theme.text }]}>{currentUser.username || '---'}</Text>
               </View>
               <View style={styles.infoBox}>
                 <Text style={styles.label}>Sex :</Text>
-                <Text style={[styles.value, { color: theme.text }]}>
-                  {currentUser.sex || '---'}
-                </Text>
+                <Text style={[styles.value, { color: theme.text }]}>{currentUser.sex || '---'}</Text>
               </View>
             </View>
 
             <View style={styles.infoBoxFull}>
               <Text style={styles.label}>Email :</Text>
-              <Text style={[styles.value, { color: theme.text }]}>
-                {currentUser.email || '---'}
-              </Text>
+              <Text style={[styles.value, { color: theme.text }]}>{currentUser.email || '---'}</Text>
             </View>
             <View style={styles.infoBoxFull}>
               <Text style={styles.label}>Address :</Text>
-              <Text style={[styles.value, { color: theme.text }]}>
-                {currentUser.address || '---'}
-              </Text>
+              <Text style={[styles.value, { color: theme.text }]}>{currentUser.address || '---'}</Text>
             </View>
 
             <View style={styles.infoGrid}>
               <View style={styles.infoBox}>
                 <Text style={styles.label}>Birth Place :</Text>
-                <Text style={[styles.value, { color: theme.text }]}>
-                  {currentUser.birthplace || '---'}
-                </Text>
+                <Text style={[styles.value, { color: theme.text }]}>{currentUser.birthplace || '---'}</Text>
               </View>
               <View style={styles.infoBox}>
                 <Text style={styles.label}>Age :</Text>
-                <Text style={[styles.value, { color: theme.text }]}>
-                  {currentUser.age ? `${currentUser.age} years old` : '---'}
-                </Text>
+                <Text style={[styles.value, { color: theme.text }]}>{currentUser.age ? `${currentUser.age} years old` : '---'}</Text>
               </View>
             </View>
 
-            <View
-              style={[
-                styles.auditTableContainer,
-                { borderColor: theme.border, backgroundColor: theme.card },
-              ]}
-            >
-              <View
-                style={[
-                  styles.auditTableHeader,
-                  {
-                    backgroundColor: isDarkMode
-                      ? theme.border
-                      : TABLE_HEADER_BG_LIGHT,
-                  },
-                ]}
-              >
+            <View style={[styles.auditTableContainer, { borderColor: theme.border, backgroundColor: theme.card }]}>
+              <View style={[styles.auditTableHeader, { backgroundColor: isDarkMode ? theme.border : TABLE_HEADER_BG_LIGHT }]}>
                 <Text style={styles.auditHeaderTitle}>Audit Log</Text>
               </View>
-              <View
-                style={[
-                  styles.auditSubHeader,
-                  {
-                    backgroundColor: isDarkMode ? theme.background : '#F9FFF9',
-                    borderBottomColor: theme.border,
-                  },
-                ]}
-              >
+              <View style={[styles.auditSubHeader, { backgroundColor: isDarkMode ? theme.background : '#F9FFF9', borderBottomColor: theme.border }]}>
                 <Text style={styles.columnLabel}>Action</Text>
-                <Text
-                  style={[styles.columnLabel, { flex: 1.5, marginLeft: 15 }]}
-                >
-                  Details
-                </Text>
-                <Text
-                  style={[
-                    styles.columnLabel,
-                    { flex: 1.2, textAlign: 'right' },
-                  ]}
-                >
-                  Date & Time
-                </Text>
+                <Text style={[styles.columnLabel, { flex: 1.5, marginLeft: 15 }]}>Details</Text>
+                <Text style={[styles.columnLabel, { flex: 1.2, textAlign: 'right' }]}>Date & Time</Text>
               </View>
               <View style={{ height: 280 }}>
-                {loading ? (
-                  <ActivityIndicator
-                    style={{ marginTop: 40 }}
-                    color="#29A539"
-                  />
-                ) : (
-                  <ScrollView
-                    nestedScrollEnabled
-                    showsVerticalScrollIndicator={true}
-                  >
+                {loading ? <ActivityIndicator style={{ marginTop: 40 }} color="#29A539" /> : (
+                  <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={true}>
                     {auditLogs.map((log: any, index) => (
-                      <View
-                        key={index}
-                        style={[
-                          styles.logRow,
-                          { borderBottomColor: theme.border },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.logText,
-                            { flex: 1, color: theme.text },
-                          ]}
-                        >
-                          {log.action}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.logText,
-                            {
-                              flex: 1.5,
-                              color: theme.textMuted,
-                              marginLeft: 15,
-                            },
-                          ]}
-                        >
-                          {log.sentence}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.logText,
-                            {
-                              flex: 1.2,
-                              textAlign: 'right',
-                              color: theme.textMuted,
-                            },
-                          ]}
-                        >
-                          {log.date}
-                        </Text>
+                      <View key={index} style={[styles.logRow, { borderBottomColor: theme.border }]}>
+                        <Text style={[styles.logText, { flex: 1, color: theme.text }]}>{log.action}</Text>
+                        <Text style={[styles.logText, { flex: 1.5, color: theme.textMuted, marginLeft: 15 }]}>{log.sentence}</Text>
+                        <Text style={[styles.logText, { flex: 1.2, textAlign: 'right', color: theme.textMuted }]}>{log.date}</Text>
                       </View>
                     ))}
                   </ScrollView>
@@ -545,34 +420,19 @@ export const AdminUserDetails = ({
 
             <View style={styles.footerTimeline}>
               <View style={styles.timelineItem}>
-                <View
-                  style={[styles.verticalBar, { backgroundColor: '#29A539' }]}
-                />
+                <View style={[styles.verticalBar, { backgroundColor: '#29A539' }]} />
                 <View>
                   <Text style={styles.timelineLabel}>Created date</Text>
-                  <Text
-                    style={[styles.timelineValue, { color: theme.textMuted }]}
-                  >
-                    {currentUser.created_at
-                      ? new Date(currentUser.created_at).toLocaleDateString(
-                          'en-US',
-                          { month: 'long', day: 'numeric', year: 'numeric' },
-                        )
-                      : '---'}
+                  <Text style={[styles.timelineValue, { color: theme.textMuted }]}>
+                    {currentUser.created_at ? new Date(currentUser.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '---'}
                   </Text>
                 </View>
               </View>
               <View style={[styles.timelineItem, { marginTop: 30 }]}>
-                <View
-                  style={[styles.verticalBar, { backgroundColor: '#29A539' }]}
-                />
+                <View style={[styles.verticalBar, { backgroundColor: '#29A539' }]} />
                 <View>
                   <Text style={styles.timelineLabel}>Last Login</Text>
-                  <Text
-                    style={[styles.timelineValue, { color: theme.textMuted }]}
-                  >
-                    3 hours ago
-                  </Text>
+                  <Text style={[styles.timelineValue, { color: theme.textMuted }]}>3 hours ago</Text>
                 </View>
               </View>
             </View>
@@ -656,11 +516,14 @@ const createStyles = (theme: any, isDarkMode: boolean, windowHeight: number) =>
     editButton: {
       width: 45,
       height: 45,
-      borderRadius: 15,
-      borderWidth: 1.5,
-      borderColor: '#49D65B',
       justifyContent: 'center',
       alignItems: 'center',
+      backgroundColor: isDarkMode ? theme.card : '#FFFFFF',
+    },
+    editIconImage: {
+      width: 45,
+      height: 45,
+      
     },
     sectionTitle: {
       fontSize: 18,
@@ -759,3 +622,5 @@ const createStyles = (theme: any, isDarkMode: boolean, windowHeight: number) =>
     nurseText: { color: '#EDB62C' },
     doctorText: { color: '#0075C3' },
   });
+
+export default AdminUserDetails;

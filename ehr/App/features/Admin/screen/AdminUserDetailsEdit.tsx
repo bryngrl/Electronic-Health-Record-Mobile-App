@@ -170,7 +170,7 @@ const AdminUserDetailsEdit = ({ route, navigation }: any) => {
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const triggerRefs = useRef<{ [key: string]: TouchableOpacity | null }>({});
 
-  const roles = ['nurse', 'doctor', 'admin'];
+  const roles = ['nurse', 'doctor'];
   const genders = ['Male', 'Female'];
   const months = [
     '01',
@@ -678,8 +678,6 @@ const AdminUserDetailsEdit = ({ route, navigation }: any) => {
                           opt === 'nurse' && { color: NURSE_TEXT },
                         openDropdown === 'role' &&
                           opt === 'doctor' && { color: DOCTOR_TEXT },
-                        openDropdown === 'role' &&
-                          opt === 'admin' && { color: ADMIN_TEXT_RED },
                       ]}
                     >
                       {opt.toUpperCase()}
