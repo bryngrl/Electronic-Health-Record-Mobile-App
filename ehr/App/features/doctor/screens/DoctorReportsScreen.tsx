@@ -1,23 +1,19 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  Image,
   Alert,
-  ActivityIndicator,
   Platform,
-  Modal,
-  Animated,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import DoctorBottomNav from '../components/DoctorBottomNav';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNBlobUtil from 'react-native-blob-util';
 import { AccountModal } from '../../../components/AccountModal';
 import PatientSearchBar from '../../../components/PatientSearchBar';
-import { BASE_URL } from '../../../api/apiClient';
+import LoadingOverlay from '../../../components/LoadingOverlay';
+import { BASE_URL } from '../../../api/config';
 import { useAppTheme } from '@App/theme/ThemeContext';
 import { createStyles } from './DoctorReportsScreen.styles';
 
@@ -38,28 +34,6 @@ const DoctorReportsScreen = ({
     () => createStyles(theme, isDarkMode),
     [theme, isDarkMode],
   );
-
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    if (isLoading) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.15,
-            duration: 700,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 700,
-            useNativeDriver: true,
-          }),
-        ]),
-      ).start();
-    } else {
-      pulseAnim.setValue(1);
-    }
-  }, [isLoading]);
 
   const handleGeneratePDF = async () => {
     if (!selectedPatientId) return;
@@ -107,7 +81,6 @@ const DoctorReportsScreen = ({
         contentContainerStyle={styles.scrollContent}
         scrollEnabled={scrollEnabled}
       >
-        {/* Header - Consistent with Home */}
         <View style={styles.header}>
           <View>
             <Text style={styles.welcome}>Reports</Text>
@@ -121,7 +94,6 @@ const DoctorReportsScreen = ({
           </View>
         </View>
 
-        {/* Dynamic Search Bar with Dropdown */}
         <PatientSearchBar
           onPatientSelect={(id, name) => {
             setSelectedPatientId(id);
@@ -136,7 +108,6 @@ const DoctorReportsScreen = ({
           apiEndpoint="/doctor/patients"
         />
 
-        {/* Conditional Content based on selection */}
         {!selectedPatientId ? (
           <View style={styles.instructionContainer}>
             <Text style={styles.instructionText}>
@@ -167,24 +138,10 @@ const DoctorReportsScreen = ({
         onLogout={() => setModalVisible(false)}
       />
 
-      {/* PDF Loading Overlay — swap the logo source below to use a custom .png */}
-      <Modal
-        visible={isLoading}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-      >
-        <View style={styles.loadingOverlay}>
-          <Animated.Image
-            source={require('@assets/icons/loading.png')}
-            style={[styles.loadingLogo, { transform: [{ scale: pulseAnim }] }]}
-            resizeMode="contain"
-          />
-          <Text style={styles.loadingText}>Generating PDF...</Text>
-        </View>
-      </Modal>
+      <LoadingOverlay visible={isLoading} message="Generating PDF..." />
     </View>
   );
 };
 
 export default DoctorReportsScreen;
+

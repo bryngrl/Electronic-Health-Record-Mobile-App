@@ -2,6 +2,7 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL, HOST, BACKEND_PORT } from './config';
+export { BASE_URL, HOST, BACKEND_PORT };
 import { authEmitter, AUTH_EVENTS } from '@features/Auth/AuthEmitter';
 
 const apiClient = axios.create({
