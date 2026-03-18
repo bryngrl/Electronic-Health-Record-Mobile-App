@@ -308,6 +308,10 @@ export const useLabValuesScreen = (onBack: () => void) => {
     return result !== savedResult || normalRange !== savedRange;
   }, [result, normalRange, allLabData, selectedTestIndex, isNA, selectedPatientId]);
 
+  const isDataEntered = useMemo(() => {
+    return (result.trim() !== '' && result !== 'N/A') || (normalRange.trim() !== '' && normalRange !== 'N/A');
+  }, [result, normalRange]);
+
   return {
     searchText, setSearchText,
     selectedPatientId,
@@ -333,5 +337,6 @@ export const useLabValuesScreen = (onBack: () => void) => {
     handleNextOrSave,
     generateFindingsSummary,
     isModified,
+    isDataEntered,
   };
 };

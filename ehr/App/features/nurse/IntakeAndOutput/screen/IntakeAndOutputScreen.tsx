@@ -277,25 +277,24 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.cdssButton,
-                    !isModified && {
+                    !isDataEntered && {
                       backgroundColor: theme.buttonDisabledBg,
                       borderColor: theme.buttonDisabledBorder,
                     },
                   ]}
                   onPress={handleCDSSPress}
-                  disabled={!isModified}
+                  disabled={!isDataEntered}
                 >
                   <Text
                     style={[
                       styles.cdssBtnText,
-                      !isModified
-                        ? { color: theme.textMuted }
-                        : { color: theme.primary },
+                      !isDataEntered && { color: theme.textMuted },
                     ]}
                   >
                     CDSS
                   </Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   style={[
                     styles.submitButton,

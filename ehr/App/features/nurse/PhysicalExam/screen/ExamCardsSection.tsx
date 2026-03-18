@@ -75,18 +75,18 @@ const ExamCardsSection: React.FC<ExamCardsSectionProps> = ({
           <TouchableOpacity
             style={[
               styles.cdssBtn,
-              !isModified && {
+              !isDataEntered && {
                 backgroundColor: theme.buttonDisabledBg,
                 borderColor: theme.buttonDisabledBorder,
               },
             ]}
             onPress={handleCDSSPress}
-            disabled={!isModified}
+            disabled={!isDataEntered}
           >
             <Text
               style={[
                 styles.cdssText,
-                !isModified && { color: theme.textMuted },
+                !isDataEntered && { color: theme.textMuted },
               ]}
             >
               CDSS

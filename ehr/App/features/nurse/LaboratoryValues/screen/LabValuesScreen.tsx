@@ -61,6 +61,7 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
     generateFindingsSummary,
     isAlertLoading,
     isModified,
+    isDataEntered,
   } = useLabValuesScreen(onBack);
 
   useEffect(() => {
@@ -303,18 +304,18 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
                   <TouchableOpacity
                     style={[
                       styles.cdssBtn,
-                      !isModified && {
+                      !isDataEntered && {
                         backgroundColor: theme.buttonDisabledBg,
                         borderColor: theme.buttonDisabledBorder,
                       },
                     ]}
                     onPress={handleCDSSPress}
-                    disabled={!isModified}
+                    disabled={!isDataEntered}
                   >
                     <Text
                       style={[
                         styles.cdssText,
-                        !isModified
+                        !isDataEntered
                           ? { color: theme.textMuted }
                           : { color: theme.primary },
                       ]}
