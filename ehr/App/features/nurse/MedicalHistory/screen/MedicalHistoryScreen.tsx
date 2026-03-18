@@ -187,6 +187,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
 
   const [formData, setFormData] = useState(initialFormData);
   const [lastSavedData, setLastSavedData] = useState(initialFormData);
+  const preNASnapshotRef = useRef<typeof initialFormData | null>(null);
   const [isNAStep, setIsNAStep] = useState<Record<string, boolean>>({
     present: false,
     past: false,
@@ -203,7 +204,14 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
     setIsNAStep(prev => ({ ...prev, [currentKey]: newState }));
 
     if (newState) {
-      // Set all fields in this step to "N/A"
+      // Save snapshot of CURRENT step before setting to N/A
+      if (!preNASnapshotRef.current) {
+        preNASnapshotRef.current = JSON.parse(JSON.stringify(formData));
+      } else {
+        preNASnapshotRef.current[currentKey as keyof typeof initialFormData] = 
+          JSON.parse(JSON.stringify(formData[currentKey as keyof typeof initialFormData]));
+      }
+
       const fields = STEP_FIELDS[currentKey];
       const updatedSection = {
         ...(formData[currentKey as keyof typeof formData] as any),
@@ -213,17 +221,22 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
       });
       setFormData(prev => ({ ...prev, [currentKey]: updatedSection }));
     } else {
-      // Clear fields if they were "N/A"
-      const fields = STEP_FIELDS[currentKey];
-      const updatedSection = {
-        ...(formData[currentKey as keyof typeof formData] as any),
-      };
-      fields.forEach(f => {
-        if (updatedSection[f] === 'N/A') {
-          updatedSection[f] = '';
-        }
-      });
-      setFormData(prev => ({ ...prev, [currentKey]: updatedSection }));
+      // Restore from snapshot
+      if (preNASnapshotRef.current && preNASnapshotRef.current[currentKey as keyof typeof initialFormData]) {
+        const restoredSection = preNASnapshotRef.current[currentKey as keyof typeof initialFormData];
+        setFormData(prev => ({ ...prev, [currentKey]: restoredSection }));
+      } else {
+        const fields = STEP_FIELDS[currentKey];
+        const updatedSection = {
+          ...(formData[currentKey as keyof typeof formData] as any),
+        };
+        fields.forEach(f => {
+          if (updatedSection[f] === 'N/A') {
+            updatedSection[f] = '';
+          }
+        });
+        setFormData(prev => ({ ...prev, [currentKey]: updatedSection }));
+      }
     }
   };
 

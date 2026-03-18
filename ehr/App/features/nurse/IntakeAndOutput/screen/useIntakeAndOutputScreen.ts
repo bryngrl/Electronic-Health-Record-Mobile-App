@@ -44,8 +44,9 @@ export const useIntakeAndOutputScreen = (onBack: () => void, readOnly: boolean, 
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
   const [scrollEnabled, setScrollEnabled] = useState(true);
-  const [isNA, setIsNA] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const [isNA, setIsNA] = useState(false);
+  const preNASnapshotRef = useRef<typeof intakeOutput | null>(null);
   const fieldTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [backendAlert, setLocalBackendAlert] = useState<string | null>(null);
   const [backendSeverity, setLocalBackendSeverity] = useState<string | null>(null);
@@ -129,17 +130,27 @@ export const useIntakeAndOutputScreen = (onBack: () => void, readOnly: boolean, 
 
     let updatedData: typeof intakeOutput;
     if (newState) {
+      // Save current state before setting to N/A
+      preNASnapshotRef.current = { ...intakeOutput };
+
       updatedData = {
         oral_intake: 'N/A',
         iv_fluids_volume: 'N/A',
         urine_output: 'N/A',
       };
     } else {
-      updatedData = {
-        oral_intake: intakeOutput.oral_intake === 'N/A' ? '' : intakeOutput.oral_intake,
-        iv_fluids_volume: intakeOutput.iv_fluids_volume === 'N/A' ? '' : intakeOutput.iv_fluids_volume,
-        urine_output: intakeOutput.urine_output === 'N/A' ? '' : intakeOutput.urine_output,
-      };
+      // Restore from snapshot
+      if (preNASnapshotRef.current) {
+        updatedData = { ...preNASnapshotRef.current };
+        preNASnapshotRef.current = null;
+      } else {
+        // Fallback: Clear if no snapshot
+        updatedData = {
+          oral_intake: '',
+          iv_fluids_volume: '',
+          urine_output: '',
+        };
+      }
     }
     setIntakeOutput(updatedData);
     intakeOutputRef.current = updatedData;
@@ -147,7 +158,7 @@ export const useIntakeAndOutputScreen = (onBack: () => void, readOnly: boolean, 
     if (selectedPatientId) {
       try {
         const dayNo = parseInt(calculateDayNumber(), 10) || 1;
-        const result = await saveAssessment(dayNo);
+        const result = await saveAssessment(dayNo, updatedData);
         const record = result?.data || result;
         const alerts = result?.alerts || record?.alerts || {};
         const updatedAlerts: Record<string, string | null> = {};

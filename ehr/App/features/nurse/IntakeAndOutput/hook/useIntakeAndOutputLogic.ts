@@ -164,18 +164,19 @@ export const useIntakeAndOutputLogic = () => {
     }
   }, [selectedPatientId]);
 
-  const saveAssessment = useCallback(async (dayNo?: number) => {
+  const saveAssessment = useCallback(async (dayNo?: number, customData?: IntakeOutputData) => {
     if (!selectedPatientId) return null;
     setLoading(true);
     try {
       const toInt = (val: string) => { const n = parseInt(val, 10); return isNaN(n) ? null : n; };
       const today = new Date().toLocaleDateString('en-CA');
+      const dataToSave = customData || intakeOutput;
       const payload = {
         patient_id: parseInt(selectedPatientId, 10),
         day_no: dayNo || 1,
-        oral_intake: toInt(intakeOutput.oral_intake),
-        iv_fluids_volume: toInt(intakeOutput.iv_fluids_volume),
-        urine_output: toInt(intakeOutput.urine_output),
+        oral_intake: toInt(dataToSave.oral_intake),
+        iv_fluids_volume: toInt(dataToSave.iv_fluids_volume),
+        urine_output: toInt(dataToSave.urine_output),
       };
       const existingToday = existingRecords.find(r => {
         const recDate = (r.date || r.created_at).split('T')[0];
@@ -200,7 +201,7 @@ export const useIntakeAndOutputLogic = () => {
         setAssessmentAlert(alertText);
         setAssessmentSeverity(inferSeverity(alertText));
       }
-      setLastSavedData({ ...intakeOutput });
+      setLastSavedData({ ...dataToSave });
       fetchLatestIntakeOutput(parseInt(selectedPatientId, 10));
       return data;
     } catch (e) {

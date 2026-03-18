@@ -120,11 +120,16 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [recordId, setRecordId] = useState<number | null>(null);
   const [isNA, setIsNA] = useState(false);
+  const preNASnapshotRef = useRef<any>(null);
 
   const toggleNA = useCallback(async () => {
     const newState = !isNA;
     setIsNA(newState);
-    
+
+    // Clear any pending CDSS analysis timers
+    Object.values(fieldTimers.current).forEach(clearTimeout);
+    fieldTimers.current = {};
+
     const naVitals = {
       temperature: 'N/A',
       hr: 'N/A',
@@ -134,16 +139,31 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     };
 
     if (newState) {
+      // Save current state before setting to N/A
+      preNASnapshotRef.current = { ...vitals };
+
       Object.keys(naVitals).forEach(key => {
         handleUpdateVital(key as any, 'N/A');
       });
-      
+
       if (selectedPatientId) {
         await saveAssessment(dayNo);
       }
+    } else {
+      // Restore from snapshot
+      if (preNASnapshotRef.current) {
+        Object.keys(preNASnapshotRef.current).forEach(key => {
+          handleUpdateVital(key as any, preNASnapshotRef.current[key]);
+        });
+        preNASnapshotRef.current = null;
+      } else {
+        // Fallback: Clear if no snapshot
+        Object.keys(naVitals).forEach(key => {
+          handleUpdateVital(key as any, '');
+        });
+      }
     }
-  }, [isNA, handleUpdateVital, selectedPatientId, dayNo, saveAssessment]);
-
+  }, [isNA, handleUpdateVital, selectedPatientId, dayNo, saveAssessment, vitals]);
   const [isAlertLoading, setIsAlertLoading] = useState(false);
   const fieldTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const analyzeCountRef = useRef(0);

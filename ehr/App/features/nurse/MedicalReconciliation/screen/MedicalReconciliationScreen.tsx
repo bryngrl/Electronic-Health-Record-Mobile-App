@@ -85,6 +85,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
   const [currentDate, setCurrentDate] = useState('');
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [isNA, setIsNA] = useState(false);
+  const preNASnapshotRef = useRef<Record<number, any>>({});
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -99,13 +100,25 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
     setIsNA(newState);
     const fields = ['med', 'dose', 'route', 'freq', 'indication', 'extra'];
     if (newState) {
+      // Save snapshot for CURRENT stage before setting to N/A
+      preNASnapshotRef.current[stageIndex] = { ...values };
+      
       fields.forEach(f => handleUpdate(f as any, 'N/A'));
     } else {
-      fields.forEach(f => {
-        if ((values as any)[f] === 'N/A') {
-          handleUpdate(f as any, '');
-        }
-      });
+      if (preNASnapshotRef.current[stageIndex]) {
+        // Restore from snapshot
+        const snapshot = preNASnapshotRef.current[stageIndex];
+        fields.forEach(f => {
+          handleUpdate(f as any, snapshot[f]);
+        });
+        delete preNASnapshotRef.current[stageIndex];
+      } else {
+        fields.forEach(f => {
+          if ((values as any)[f] === 'N/A') {
+            handleUpdate(f as any, '');
+          }
+        });
+      }
     }
   };
 
@@ -264,7 +277,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
 
           {!readOnly && (
           <TouchableOpacity
-            style={[styles.naRow, !patientId && { opacity: 1 }]}
+            style={[styles.naRow, !patientId && { opacity: 0.5 }]}
             onPress={() => {
               if (!patientId) {
                 triggerPatientAlert();
@@ -276,7 +289,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
             <Text
               style={[
                 styles.naText,
-                !patientId && { color: theme.primary },
+                !patientId && { color: theme.textMuted },
               ]}
             >
               Mark all as N/A

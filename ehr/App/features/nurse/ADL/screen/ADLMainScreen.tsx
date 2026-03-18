@@ -39,6 +39,7 @@ const ADLScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: 
     adlId, isExistingRecord,
     isAdpieActive, setIsAdpieActive,
     formData, isNA, getBackendAlert, getBackendSeverity,
+    toggleNA,
     updateField, handleCDSSPress, handleSave,
     generateFindingsSummary, isDataEntered, calculateDayNumber,
     isModified,

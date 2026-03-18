@@ -59,9 +59,10 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
 
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [isNA, setIsNA] = useState(false);
+  const preNASnapshotRef = useRef<Record<number, any>>({});
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
-  
+
   // Dedicated state for selected patient ID to trigger fetching properly
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
   const lastFetchedRef = useRef<{ id: number | null; date: string }>({ id: null, date: '' });
@@ -76,22 +77,33 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
       const fields = ['medication', 'dose', 'route', 'frequency', 'comments'];
 
       if (newState) {
+        // Save snapshot for CURRENT step before setting to N/A
+        preNASnapshotRef.current[step] = { ...newMed };
+
         fields.forEach(f => {
           (newMed as any)[f] = 'N/A';
         });
       } else {
-        fields.forEach(f => {
-          if ((newMed as any)[f] === 'N/A') {
-            (newMed as any)[f] = '';
-          }
-        });
+        if (preNASnapshotRef.current[step]) {
+          // Restore from snapshot
+          const snapshot = preNASnapshotRef.current[step];
+          fields.forEach(f => {
+            (newMed as any)[f] = snapshot[f];
+          });
+          delete preNASnapshotRef.current[step];
+        } else {
+          fields.forEach(f => {
+            if ((newMed as any)[f] === 'N/A') {
+              (newMed as any)[f] = '';
+            }
+          });
+        }
       }
 
       updatedMeds[step] = newMed;
       return { ...prev, medications: updatedMeds };
     });
   };
-
   useEffect(() => {
     if (selectedPatientId) {
       const currentMed = formData.medications[step];

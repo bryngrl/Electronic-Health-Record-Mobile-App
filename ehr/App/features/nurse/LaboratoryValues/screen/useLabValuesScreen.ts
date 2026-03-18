@@ -24,6 +24,7 @@ export const useLabValuesScreen = (onBack: () => void) => {
   const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [isNA, setIsNA] = useState(false);
+  const preNASnapshotRef = useRef<Record<string, string> | null>(null);
 
   const [labId, setLabId] = useState<number | null>(null);
   const labIdRef = useRef<number | null>(null);
@@ -184,17 +185,30 @@ export const useLabValuesScreen = (onBack: () => void) => {
     const newState = !isNA;
     setIsNA(newState);
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    
+
     let updatedResult: string;
     let updatedRange: string;
 
+    const prefix = getTestPrefix(LAB_TESTS[selectedTestIndex]);
+
     if (newState) {
+      // Save snapshot of current test's result/range before setting to N/A
+      preNASnapshotRef.current = {
+        result: result,
+        range: normalRange,
+      };
       updatedResult = 'N/A';
       updatedRange = 'N/A';
     } else {
-      const prefix = getTestPrefix(LAB_TESTS[selectedTestIndex]);
-      updatedResult = allLabData[`${prefix}_result`] || '';
-      updatedRange = allLabData[`${prefix}_normal_range`] || '';
+      // Restore from snapshot if available, otherwise fallback to allLabData
+      if (preNASnapshotRef.current) {
+        updatedResult = preNASnapshotRef.current.result;
+        updatedRange = preNASnapshotRef.current.range;
+        preNASnapshotRef.current = null;
+      } else {
+        updatedResult = allLabData[`${prefix}_result`] || '';
+        updatedRange = allLabData[`${prefix}_normal_range`] || '';
+      }
     }
 
     setResult(updatedResult);

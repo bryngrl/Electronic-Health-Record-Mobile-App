@@ -79,6 +79,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
 
   const [isNA, setIsNA] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const preNASnapshotRef = useRef<any>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   // --- DOCTOR VIEWING LOGIC ---
@@ -123,15 +124,31 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
     const newState = !isNA;
     setIsNA(newState);
     if (newState) {
+      // Save snapshot before setting to N/A
+      preNASnapshotRef.current = {
+        ivFluid,
+        rate,
+        site,
+        status,
+      };
       setIvFluid('N/A');
       setRate('N/A');
       setSite('N/A');
       setStatus('N/A');
     } else {
-      if (ivFluid === 'N/A') setIvFluid('');
-      if (rate === 'N/A') setRate('');
-      if (site === 'N/A') setSite('');
-      if (status === 'N/A') setStatus('');
+      if (preNASnapshotRef.current) {
+        // Restore from snapshot
+        setIvFluid(preNASnapshotRef.current.ivFluid);
+        setRate(preNASnapshotRef.current.rate);
+        setSite(preNASnapshotRef.current.site);
+        setStatus(preNASnapshotRef.current.status);
+        preNASnapshotRef.current = null;
+      } else {
+        if (ivFluid === 'N/A') setIvFluid('');
+        if (rate === 'N/A') setRate('');
+        if (site === 'N/A') setSite('');
+        if (status === 'N/A') setStatus('');
+      }
     }
   };
 
