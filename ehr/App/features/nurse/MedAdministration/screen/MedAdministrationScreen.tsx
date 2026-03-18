@@ -11,6 +11,7 @@ import {
   BackHandler,
   Modal,
   Image,
+  Pressable,
 } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
 import {
@@ -524,9 +525,9 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
         animationType="fade"
         statusBarTranslucent
       >
-        <View style={dotsModalStyles.modalOverlay}>
+        <Pressable style={dotsModalStyles.modalOverlay} onPress={() => setIsMenuVisible(false)}>
           <BlurView style={dotsModalStyles.blurView} {...blurProps} />
-          <View style={dotsModalStyles.menuContainer}>
+          <Pressable style={dotsModalStyles.menuContainer} onPress={e => e.stopPropagation()}>
             <Text style={dotsModalStyles.menuTitle}>SELECT TIME SLOT</Text>
             <ScrollView showsVerticalScrollIndicator={false}>
               {timeSlots.map((item: string, index: number) => (
@@ -550,10 +551,10 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
               style={dotsModalStyles.closeMenuBtn}
               onPress={() => setIsMenuVisible(false)}
             >
-              <Text style={dotsModalStyles.closeMenuText}>CLOSE</Text>
+              <Icon name="close" size={20} color={theme.primary} />
             </TouchableOpacity>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       <SweetAlert

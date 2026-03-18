@@ -22,8 +22,10 @@ export const createDotsSettingsModalStyle = (theme: any) =>
       backgroundColor: theme.card,
       borderRadius: 25,
       padding: 25,
+      paddingTop: 45, // Extra space for top close icon
       maxHeight: '80%',
       zIndex: 100,
+      position: 'relative',
     },
     menuTitle: {
       fontSize: 18,
@@ -48,15 +50,21 @@ export const createDotsSettingsModalStyle = (theme: any) =>
       fontFamily: 'AlteHaasGroteskBold',
     },
     closeMenuBtn: {
-      marginTop: 20,
+      position: 'absolute',
+      top: 15,
+      right: 15,
+      zIndex: 110,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       backgroundColor: theme.surface,
-      paddingVertical: 12,
-      borderRadius: 20,
+      justifyContent: 'center',
       alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.border,
     },
     closeMenuText: {
-      color: theme.primary,
-      fontFamily: 'AlteHaasGroteskBold',
+      display: 'none', // Hide the word CLOSE
     },
   });
 

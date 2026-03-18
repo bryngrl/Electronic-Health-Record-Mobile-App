@@ -19,6 +19,7 @@ import {
   Dimensions,
   BackHandler,
   Animated,
+  Pressable,
 } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
 import {
@@ -163,16 +164,27 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
         });
       }
     }
-  }, [isNA, handleUpdateVital, selectedPatientId, dayNo, saveAssessment, vitals]);
+  }, [
+    isNA,
+    handleUpdateVital,
+    selectedPatientId,
+    dayNo,
+    saveAssessment,
+    vitals,
+  ]);
   const [isAlertLoading, setIsAlertLoading] = useState(false);
   const fieldTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const analyzeCountRef = useRef(0);
   const bellFadeAnim = useRef(new Animated.Value(1)).current;
 
   const vitalsRef = useRef(vitals);
-  useEffect(() => { vitalsRef.current = vitals; }, [vitals]);
+  useEffect(() => {
+    vitalsRef.current = vitals;
+  }, [vitals]);
 
-  const [backendAlerts, setBackendAlerts] = useState<Record<string, string | null>>({});
+  const [backendAlerts, setBackendAlerts] = useState<
+    Record<string, string | null>
+  >({});
 
   useEffect(() => {
     if (readOnly && patientId) {
@@ -210,7 +222,9 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
             updatedAlerts[`${key}_alert`] = null;
           }
           setBackendAlerts(prev => ({ ...prev, ...updatedAlerts }));
-          const alertString = Object.values(updatedAlerts).filter(v => v && !v.toLowerCase().includes('no findings')).join('\n');
+          const alertString = Object.values(updatedAlerts)
+            .filter(v => v && !v.toLowerCase().includes('no findings'))
+            .join('\n');
           setRealtimeAlert(alertString);
           setRealtimeSeverity(res.severity);
         }
@@ -287,7 +301,9 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     Object.values(fieldTimers.current).forEach(t => clearTimeout(t));
     fieldTimers.current = {};
 
-    const res = await (saveAllAssessments ? saveAllAssessments(dayNo) : saveAssessment(dayNo));
+    const res = await (saveAllAssessments
+      ? saveAllAssessments(dayNo)
+      : saveAssessment(dayNo));
     const actualData = res?.data || res;
     const id = actualData?.id || actualData?.vital_id;
 
@@ -449,7 +465,11 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
           {!readOnly ? (
             <PatientSearchBar
               onPatientSelect={(id, name, patientObj) => {
-                setSelectedPatient(id ? id.toString() : null, name, patientObj?.admission_date);
+                setSelectedPatient(
+                  id ? id.toString() : null,
+                  name,
+                  patientObj?.admission_date,
+                );
                 setSelectedPatientFull(patientObj);
               }}
               onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
@@ -872,9 +892,15 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
         animationType="fade"
         statusBarTranslucent
       >
-        <View style={dotsModalStyles.modalOverlay}>
+        <Pressable
+          style={dotsModalStyles.modalOverlay}
+          onPress={() => setIsMenuVisible(false)}
+        >
           <BlurView style={dotsModalStyles.blurView} {...blurProps} />
-          <View style={dotsModalStyles.menuContainer}>
+          <Pressable
+            style={dotsModalStyles.menuContainer}
+            onPress={e => e.stopPropagation()}
+          >
             <Text style={dotsModalStyles.menuTitle}>SELECT TIME SLOT</Text>
             <ScrollView showsVerticalScrollIndicator={false}>
               {TIME_SLOTS.map((item, index) => (
@@ -886,7 +912,8 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                   <Text
                     style={[
                       dotsModalStyles.menuItemText,
-                      currentTimeIndex === index && dotsModalStyles.activeMenuText,
+                      currentTimeIndex === index &&
+                        dotsModalStyles.activeMenuText,
                     ]}
                   >
                     {item}
@@ -898,10 +925,10 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
               style={dotsModalStyles.closeMenuBtn}
               onPress={() => setIsMenuVisible(false)}
             >
-              <Text style={dotsModalStyles.closeMenuText}>CLOSE</Text>
+              <Icon name="close" size={20} color={theme.primary} />
             </TouchableOpacity>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );
@@ -982,12 +1009,14 @@ const createStyles = (theme: any, commonStyles: any, _isDarkMode: boolean) =>
       alignItems: 'center',
       borderWidth: 2,
       borderColor: theme.secondary,
+      display: 'none', //hide for now as per new design
     },
     arrowImg: {
       width: 25,
       height: 25,
       resizeMode: 'contain',
       backgroundColor: 'transparent',
+      display: 'none', //hide for now as per new design
     },
 
     timeBanner: {

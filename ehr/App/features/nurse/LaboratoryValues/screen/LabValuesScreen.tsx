@@ -10,6 +10,7 @@ import {
   StatusBar,
   Animated,
   Modal,
+  Pressable,
 } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -190,9 +191,9 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
         animationType="fade"
         statusBarTranslucent
       >
-        <View style={dotsModalStyles.modalOverlay}>
+        <Pressable style={dotsModalStyles.modalOverlay} onPress={() => setShowLabList(false)}>
           <BlurView style={dotsModalStyles.blurView} {...blurProps} />
-          <View style={dotsModalStyles.menuContainer}>
+          <Pressable style={dotsModalStyles.menuContainer} onPress={e => e.stopPropagation()}>
             <Text style={dotsModalStyles.menuTitle}>SELECT LABORATORY</Text>
             <ScrollView showsVerticalScrollIndicator={false}>
               {LAB_CATEGORIES.map((category, catIndex) => (
@@ -232,10 +233,10 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
               style={dotsModalStyles.closeMenuBtn}
               onPress={() => setShowLabList(false)}
             >
-              <Text style={dotsModalStyles.closeMenuText}>CLOSE</Text>
+              <Icon name="close" size={20} color={theme.primary} />
             </TouchableOpacity>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
           {!readOnly ? (
