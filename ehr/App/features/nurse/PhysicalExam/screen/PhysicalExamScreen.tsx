@@ -137,7 +137,7 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack, readOnly = fa
             <TouchableOpacity
               style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
               onPress={() => {
-                if (!selectedPatientId) showAlert('Patient Required', 'Please select a patient first.');
+                if (!selectedPatientId) showAlert('Patient Required', 'Please select a patient first in the search bar.');
                 else toggleNA();
               }}
             >
@@ -158,25 +158,23 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack, readOnly = fa
             </Text>
           )}
 
-          <View pointerEvents={selectedPatientId ? 'auto' : 'none'}>
-            <ExamCardsSection
-              formData={formData}
-              selectedPatientId={selectedPatientId}
-              isNA={isNA}
-              getBackendAlert={getBackendAlert}
-              getBackendSeverity={getBackendSeverity}
-              updateField={updateField}
-              showAlert={showAlert}
-              styles={styles}
-              theme={theme}
-              handleCDSSPress={handleCDSSPress}
-              handleSave={handleSave}
-              isDataEntered={isDataEntered}
-              isModified={isModified}
-              readOnly={readOnly}
-              onBack={onBack}
-            />
-          </View>
+          <ExamCardsSection
+            formData={formData}
+            selectedPatientId={selectedPatientId}
+            isNA={isNA}
+            getBackendAlert={getBackendAlert}
+            getBackendSeverity={getBackendSeverity}
+            updateField={updateField}
+            showAlert={showAlert}
+            styles={styles}
+            theme={theme}
+            handleCDSSPress={handleCDSSPress}
+            handleSave={handleSave}
+            isDataEntered={isDataEntered}
+            isModified={isModified}
+            readOnly={readOnly}
+            onBack={onBack}
+          />
         </ScrollView>
         <LinearGradient colors={fadeColors} style={styles.fadeBottom} pointerEvents="none" />
       </View>

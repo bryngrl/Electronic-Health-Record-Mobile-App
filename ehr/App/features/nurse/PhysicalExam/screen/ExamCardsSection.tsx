@@ -38,7 +38,7 @@ const ExamCardsSection: React.FC<ExamCardsSectionProps> = ({
   onBack,
 }) => {
   const patientRequired = () =>
-    !selectedPatientId && showAlert('Patient Required', 'Please select a patient first.');
+    !selectedPatientId && showAlert('Patient Required', 'Please select a patient first in the search bar.');
 
   const cards = [
     { label: 'GENERAL APPEARANCE', field: 'general_appearance' },
