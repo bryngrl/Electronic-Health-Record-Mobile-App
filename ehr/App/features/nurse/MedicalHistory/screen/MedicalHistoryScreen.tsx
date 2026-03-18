@@ -33,6 +33,8 @@ import {
   blurProps,
 } from '../../styles/DotsSettingsModalStyle';
 
+import LoadingOverlay from '@components/LoadingOverlay';
+
 const dotsIcon = require('@assets/icons/dots_icon.png');
 
 interface MedicalHistoryProps {
@@ -197,6 +199,8 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
     developmental: false,
   });
   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Saving Medical History...');
 
   const toggleNA = () => {
     const currentKey = steps[step].key;
@@ -338,6 +342,24 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
     { title: 'DEVELOPMENTAL HISTORY', key: 'developmental' },
   ];
 
+  const currentStepKey = steps[step].key;
+  const currentFields = STEP_FIELDS[currentStepKey];
+
+  const isModified = useMemo(() => {
+    if (!selectedPatientId) return false;
+    const currentData = formData[currentStepKey as keyof typeof formData];
+    const savedData =
+      lastSavedData[currentStepKey as keyof typeof lastSavedData];
+    return JSON.stringify(currentData) !== JSON.stringify(savedData);
+  }, [formData, lastSavedData, currentStepKey, selectedPatientId]);
+
+  const isDataEntered = useMemo(() => {
+    const currentData = formData[currentStepKey as keyof typeof formData];
+    return Object.values(currentData).some(
+      v => typeof v === 'string' && v.trim() !== '' && v !== 'N/A',
+    );
+  }, [formData, currentStepKey]);
+
   const handleNext = async () => {
     if (!selectedPatientId) {
       return showAlert(
@@ -351,6 +373,8 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
 
     try {
       if (isModified) {
+        setIsLoading(true);
+        setLoadingMessage('Saving Medical History...');
         // Save only if the current step has been modified
         await saveMedicalHistoryStep(
           selectedPatientId,
@@ -360,6 +384,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
 
         // Re-fetch data to ensure everything is in sync with server and cache
         await loadPatientData(selectedPatientId);
+        setIsLoading(false);
       }
 
       if (step < steps.length - 1) {
@@ -377,6 +402,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
     } catch (error: any) {
+      setIsLoading(false);
       showAlert('Error', error.message || 'Failed to save history.');
     }
   };
@@ -415,24 +441,6 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
       [currentKey]: { ...prev[currentKey], [field]: val },
     }));
   };
-
-  const currentStepKey = steps[step].key;
-  const currentFields = STEP_FIELDS[currentStepKey];
-
-  const isModified = useMemo(() => {
-    if (!selectedPatientId) return false;
-    const currentData = formData[currentStepKey as keyof typeof formData];
-    const savedData =
-      lastSavedData[currentStepKey as keyof typeof lastSavedData];
-    return JSON.stringify(currentData) !== JSON.stringify(savedData);
-  }, [formData, lastSavedData, currentStepKey, selectedPatientId]);
-
-  const isDataEntered = useMemo(() => {
-    const currentData = formData[currentStepKey as keyof typeof formData];
-    return Object.values(currentData).some(
-      v => typeof v === 'string' && v.trim() !== '' && v !== 'N/A',
-    );
-  }, [formData, currentStepKey]);
 
   const isNA = isNAStep[currentStepKey];
 
@@ -728,6 +736,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
         onConfirm={() => setAlertConfig({ ...alertConfig, visible: false })}
         confirmText="OK"
       />
+      <LoadingOverlay visible={isLoading} message={loadingMessage} />
     </SafeAreaView>
   );
 };

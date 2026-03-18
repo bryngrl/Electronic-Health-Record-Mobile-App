@@ -29,6 +29,8 @@ import { useDiagnostics, DiagnosticRecord } from '../hook/useDiagnostics';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
+import LoadingOverlay from '@components/LoadingOverlay';
+
 const backArrow = require('@assets/icons/back_arrow.png');
 const nextArrow = require('@assets/icons/next_arrow.png');
 
@@ -100,14 +102,20 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
   );
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Saving Diagnostics...');
 
   const isModified = useMemo(() => {
     return hasChanges;
   }, [hasChanges]);
 
-  const isDataEntered = useMemo(() => {
-    return diagnostics.length > 0;
-  }, [diagnostics]);
+  const {
+    diagnostics,
+    loading,
+    fetchDiagnostics,
+    uploadDiagnostic,
+    deleteDiagnostic,
+  } = useDiagnostics();
 
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
@@ -122,13 +130,9 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
     type: 'success',
   });
 
-  const {
-    diagnostics,
-    loading,
-    fetchDiagnostics,
-    uploadDiagnostic,
-    deleteDiagnostic,
-  } = useDiagnostics();
+  const isDataEntered = useMemo(() => {
+    return diagnostics.length > 0;
+  }, [diagnostics]);
 
   const showAlert = (
     title: string,
@@ -450,10 +454,15 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
               },
             ]}
             disabled={!readOnly && !isModified}
-            onPress={() => {
+            onPress={async () => {
               if (readOnly) {
                 onBack();
               } else if (selectedPatientId) {
+                setIsLoading(true);
+                setLoadingMessage('Saving Diagnostics...');
+                // Simulate a brief delay if needed, or just let the state reflect completion
+                await new Promise(resolve => setTimeout(resolve, 800));
+                setIsLoading(false);
                 showAlert(
                   'Success',
                   'Diagnostic records have been saved successfully.',
@@ -490,6 +499,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
         onConfirm={alertConfig.onConfirm || hideAlert}
         confirmText={alertConfig.type === 'delete' ? 'DELETE' : 'OK'}
       />
+      <LoadingOverlay visible={isLoading} message={loadingMessage} />
     </View>
   );
 };

@@ -26,6 +26,8 @@ import PatientSearchBar from '@components/PatientSearchBar';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
+import LoadingOverlay from '@components/LoadingOverlay';
+
 const dotsIcon = require('@assets/icons/dots_icon.png');
 
 const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: {
@@ -60,6 +62,8 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
 
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [isNA, setIsNA] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Saving Medication Administration...');
   const preNASnapshotRef = useRef<Record<number, any>>({});
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -204,11 +208,14 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
 
     try {
       if (isModified) {
+        setIsLoading(true);
+        setLoadingMessage('Saving Medication Administration...');
         // Save current step data (uses POST updateOrCreate as per API guide)
         await saveMedAdministration();
 
         // Re-fetch data to ensure everything is in sync with server and cache
         await fetchPatientData(selectedPatientId, formData.date);
+        setIsLoading(false);
       }
 
       if (step === 2) {
@@ -225,6 +232,7 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
     } catch (error: any) {
+      setIsLoading(false);
       showAlert(
         'Error',
         error.message || 'Failed to save medication administration.',
@@ -565,6 +573,7 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
         onConfirm={() => setAlertConfig({ ...alertConfig, visible: false })}
         confirmText="OK"
       />
+      <LoadingOverlay visible={isLoading} message={loadingMessage} />
     </SafeAreaView>
   );
 };

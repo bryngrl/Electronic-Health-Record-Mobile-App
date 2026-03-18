@@ -16,6 +16,8 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
+import LoadingOverlay from '@components/LoadingOverlay';
+
 const backArrow = require('@assets/icons/back_arrow.png');
 import useIvsAndLinesData from '../hook/useIvsAndLinesData';
 import DataCard from '../components/DataCard';
@@ -79,6 +81,8 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
 
   const [isNA, setIsNA] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Saving IVs and Lines...');
   const preNASnapshotRef = useRef<any>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -214,8 +218,11 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
       return;
     }
 
+    setIsLoading(true);
+    setLoadingMessage('Saving IVs and Lines...');
     try {
       const result = await handleSubmit();
+      setIsLoading(false);
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       if (result.action === 'update') {
         showAlert(
@@ -231,6 +238,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
         );
       }
     } catch (error: any) {
+      setIsLoading(false);
       showAlert(
         'Submission Failed',
         error.message || 'Something went wrong. Please try again.',
@@ -424,6 +432,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
         onCancel={() => setAlertConfig({ ...alertConfig, visible: false })}
         confirmText="OK"
       />
+      <LoadingOverlay visible={isLoading} message={loadingMessage} />
     </SafeAreaView>
   );
 };

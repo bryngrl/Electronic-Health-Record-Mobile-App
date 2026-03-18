@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import {
   View,
   Text,
@@ -30,6 +36,8 @@ import { useMedicalReconLogic } from '../hook/useMedicalReconLogic';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
+
+import LoadingOverlay from '@components/LoadingOverlay';
 
 const dotsIcon = require('@assets/icons/dots_icon.png');
 
@@ -102,7 +110,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
     if (newState) {
       // Save snapshot for CURRENT stage before setting to N/A
       preNASnapshotRef.current[stageIndex] = { ...values };
-      
+
       fields.forEach(f => handleUpdate(f as any, 'N/A'));
     } else {
       if (preNASnapshotRef.current[stageIndex]) {
@@ -241,7 +249,14 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
               <Text style={styles.title}>Medical{'\n'}Reconciliation</Text>
               <Text style={styles.subDate}>{currentDate}</Text>
               {readOnly && (
-                <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: '#E8572A',
+                    fontFamily: 'AlteHaasGroteskBold',
+                    marginTop: 5,
+                  }}
+                >
                   [READ ONLY]
                 </Text>
               )}
@@ -270,49 +285,51 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
         >
           <View style={{ height: 20 }} />
           <PatientSearchBar
-            initialPatientName={readOnly ? (initialPatientName || '') : patientName}
+            initialPatientName={
+              readOnly ? initialPatientName || '' : patientName
+            }
             onPatientSelect={handlePatientSelect}
             onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
           />
 
           {!readOnly && (
-          <TouchableOpacity
-            style={[styles.naRow, !patientId && { opacity: 0.5 }]}
-            onPress={() => {
-              if (!patientId) {
-                triggerPatientAlert();
-              } else {
-                toggleNA();
-              }
-            }}
-          >
-            <Text
-              style={[
-                styles.naText,
-                !patientId && { color: theme.textMuted },
-              ]}
+            <TouchableOpacity
+              style={[styles.naRow, !patientId && { opacity: 0.5 }]}
+              onPress={() => {
+                if (!patientId) {
+                  triggerPatientAlert();
+                } else {
+                  toggleNA();
+                }
+              }}
             >
-              Mark all as N/A
-            </Text>
-            <Icon
-              name={isNA ? 'check-box' : 'check-box-outline-blank'}
-              size={22}
-              color={patientId ? theme.primary : theme.textMuted}
-            />
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.naText,
+                  !patientId && { color: theme.textMuted },
+                ]}
+              >
+                Mark all as N/A
+              </Text>
+              <Icon
+                name={isNA ? 'check-box' : 'check-box-outline-blank'}
+                size={22}
+                color={patientId ? theme.primary : theme.textMuted}
+              />
+            </TouchableOpacity>
           )}
 
           {!readOnly && (
-          <Text
-            style={[
-              styles.disabledTextAtBottom,
-              isNA && { color: theme.error },
-            ]}
-          >
-            {isNA
-              ? 'All fields below are disabled.'
-              : 'Checking this will disable all fields below.'}
-          </Text>
+            <Text
+              style={[
+                styles.disabledTextAtBottom,
+                isNA && { color: theme.error },
+              ]}
+            >
+              {isNA
+                ? 'All fields below are disabled.'
+                : 'Checking this will disable all fields below.'}
+            </Text>
           )}
 
           {/* STAGE Indicator */}
@@ -321,9 +338,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
           </View>
 
           {/* INPUT Cards Flow - Wrapped in Pressable for validation */}
-          <View
-            style={{ opacity: 1 }}
-          >
+          <View style={{ opacity: 1 }}>
             <MedicalReconCard
               label="Medication"
               value={values.med}
@@ -375,63 +390,102 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
 
           {/* FOOTER */}
           {!readOnly ? (
-          <TouchableOpacity
-            style={[
-              styles.actionBtn,
-              !isModified &&
-                { borderColor: theme.buttonDisabledBorder, backgroundColor: theme.buttonDisabledBg },
-            ]}
-            onPress={handleNextPress}
-            disabled={isSubmitting || !isModified}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color={theme.primary} />
-            ) : (
-              <>
-                <Text
-                  style={[
-                    styles.btnText,
-                    !isModified && {
-                      color: theme.textMuted,
-                    },
-                  ]}
-                >
-                  {isLastStage ? 'SUBMIT' : 'NEXT'}
-                </Text>
-                {!isLastStage && (
+            <TouchableOpacity
+              style={[
+                styles.actionBtn,
+                !isModified && {
+                  borderColor: theme.buttonDisabledBorder,
+                  backgroundColor: theme.buttonDisabledBg,
+                },
+              ]}
+              onPress={handleNextPress}
+              disabled={isSubmitting || !isModified}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color={theme.primary} />
+              ) : (
+                <>
                   <Text
                     style={[
-                      styles.chevron,
+                      styles.btnText,
                       !isModified && {
                         color: theme.textMuted,
                       },
                     ]}
                   >
-                    ›
+                    {isLastStage ? 'SUBMIT' : 'NEXT'}
                   </Text>
-                )}
-              </>
-            )}
-          </TouchableOpacity>
+                  {!isLastStage && (
+                    <Text
+                      style={[
+                        styles.chevron,
+                        !isModified && {
+                          color: theme.textMuted,
+                        },
+                      ]}
+                    >
+                      ›
+                    </Text>
+                  )}
+                </>
+              )}
+            </TouchableOpacity>
           ) : (
             <View style={{ marginTop: 10 }}>
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
                 <TouchableOpacity
-                  style={[styles.actionBtn, { flex: 1, marginTop: 0, marginBottom: 0 }, stageIndex === 0 && { backgroundColor: theme.buttonDisabledBg, borderColor: theme.buttonDisabledBorder }]}
-                  onPress={() => { setStageIndex(stageIndex - 1); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
+                  style={[
+                    styles.actionBtn,
+                    { flex: 1, marginTop: 0, marginBottom: 0 },
+                    stageIndex === 0 && {
+                      backgroundColor: theme.buttonDisabledBg,
+                      borderColor: theme.buttonDisabledBorder,
+                    },
+                  ]}
+                  onPress={() => {
+                    setStageIndex(stageIndex - 1);
+                    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                  }}
                   disabled={stageIndex === 0}
                 >
-                  <Text style={[styles.btnText, stageIndex === 0 && { color: theme.textMuted }]}>‹ PREV</Text>
+                  <Text
+                    style={[
+                      styles.btnText,
+                      stageIndex === 0 && { color: theme.textMuted },
+                    ]}
+                  >
+                    ‹ PREV
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.actionBtn, { flex: 1, marginTop: 0, marginBottom: 0 }, isLastStage && { backgroundColor: theme.buttonDisabledBg, borderColor: theme.buttonDisabledBorder }]}
-                  onPress={() => { setStageIndex(stageIndex + 1); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
+                  style={[
+                    styles.actionBtn,
+                    { flex: 1, marginTop: 0, marginBottom: 0 },
+                    isLastStage && {
+                      backgroundColor: theme.buttonDisabledBg,
+                      borderColor: theme.buttonDisabledBorder,
+                    },
+                  ]}
+                  onPress={() => {
+                    setStageIndex(stageIndex + 1);
+                    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                  }}
                   disabled={isLastStage}
                 >
-                  <Text style={[styles.btnText, isLastStage && { color: theme.textMuted }]}>NEXT ›</Text>
+                  <Text
+                    style={[
+                      styles.btnText,
+                      isLastStage && { color: theme.textMuted },
+                    ]}
+                  >
+                    NEXT ›
+                  </Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={[styles.actionBtn, { marginBottom: 0 }]} onPress={onBack}>
+              <TouchableOpacity
+                style={[styles.actionBtn, { marginBottom: 0 }]}
+                onPress={onBack}
+              >
                 <Text style={styles.btnText}>CLOSE</Text>
               </TouchableOpacity>
             </View>
@@ -451,9 +505,15 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
         animationType="fade"
         statusBarTranslucent
       >
-        <Pressable style={dotsModalStyles.modalOverlay} onPress={() => setIsMenuVisible(false)}>
+        <Pressable
+          style={dotsModalStyles.modalOverlay}
+          onPress={() => setIsMenuVisible(false)}
+        >
           <BlurView style={dotsModalStyles.blurView} {...blurProps} />
-          <Pressable style={dotsModalStyles.menuContainer} onPress={e => e.stopPropagation()}>
+          <Pressable
+            style={dotsModalStyles.menuContainer}
+            onPress={e => e.stopPropagation()}
+          >
             <Text style={dotsModalStyles.menuTitle}>SELECT STAGE</Text>
 
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -505,6 +565,10 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
           scrollViewRef.current?.scrollTo({ y: 0, animated: true });
         }}
       />
+      <LoadingOverlay
+        visible={isSubmitting}
+        message="Saving Medical Reconciliation..."
+      />
     </SafeAreaView>
   );
 };
@@ -551,6 +615,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       color: theme.secondary,
       fontFamily: 'AlteHaasGroteskBold',
       fontSize: 14,
+      textAlign: 'center',
     },
     actionBtn: {
       backgroundColor: theme.buttonBg,
