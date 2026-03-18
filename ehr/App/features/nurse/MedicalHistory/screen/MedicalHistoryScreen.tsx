@@ -123,7 +123,7 @@ const FIELD_LABELS: Record<string, string> = {
   dosage: 'DOSAGE',
   side_effect: 'SIDE EFFECT',
   comment: 'COMMENT',
-  gross_motor: 'GROS MOTOR',
+  gross_motor: 'GROSS MOTOR',
   fine_motor: 'FINE MOTOR',
   language: 'LANGUAGE',
   cognitive: 'COGNITIVE',
