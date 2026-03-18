@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import apiClient from '@api/apiClient';
+import { getAlertFromCache, saveAlertToCache } from '@App/utils/cdssCache';
 
 export interface IntakeOutputData {
   oral_intake: string;
@@ -102,6 +103,19 @@ export const useIntakeAndOutputLogic = () => {
     recordId: number | null 
   } | null> => {
     try {
+      const patientId = payload.patient_id || selectedPatientId;
+      if (!patientId) return null;
+
+      // Create input data for cache (exclude metadata)
+      const { patient_id, day_no, ...inputData } = payload;
+
+      // Check cache first
+      const cached = await getAlertFromCache('intake-and-output', patientId, inputData);
+      if (cached) {
+        console.log('[IntakeAndOutput] Returning cached alerts');
+        return { alerts: cached.alerts, severity: cached.severity, recordId: recordIdRef.current };
+      }
+
       const targetId = recordIdRef.current;
       let response;
       if (targetId) {
@@ -140,12 +154,15 @@ export const useIntakeAndOutputLogic = () => {
         severity = null as any;
       }
 
+      // Save to cache
+      await saveAlertToCache('intake-and-output', patientId, inputData, allAlerts, severity);
+
       return { alerts: allAlerts, severity, recordId: returnedId };
     } catch (err) {
       console.error('[IO analyzeField] error:', err);
       return null;
     }
-  }, []);
+  }, [selectedPatientId]);
 
   const saveAssessment = useCallback(async (dayNo?: number) => {
     if (!selectedPatientId) return null;

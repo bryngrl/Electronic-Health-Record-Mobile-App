@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import apiClient from '@api/apiClient';
+import { getAlertFromCache, saveAlertToCache } from '@App/utils/cdssCache';
 
 const TIME_SLOTS = ['6:00 AM', '8:00 AM', '12:00 PM', '2:00 PM', '6:00 PM', '8:00 PM', '12:00 AM'];
 
@@ -159,6 +160,19 @@ export const useVitalSignsLogic = () => {
     recordId: number | null 
   } | null> => {
     try {
+      const patientId = payload.patient_id || selectedPatientId;
+      if (!patientId) return null;
+
+      // Create input data for cache (exclude metadata like patient_id, time, date)
+      const { patient_id, time, date, day_no, ...inputData } = payload;
+      
+      // Check cache first
+      const cached = await getAlertFromCache('vital-signs', patientId, inputData);
+      if (cached) {
+        console.log('[VitalSigns] Returning cached alerts');
+        return { alerts: cached.alerts, severity: cached.severity, recordId: recordIdRef.current };
+      }
+
       const today = new Date().toLocaleDateString('en-CA');
       const payloadTime = (payload.time || '').substring(0, 5);
       const existingRecord = existingRecords.find(r => {
@@ -202,12 +216,15 @@ export const useVitalSignsLogic = () => {
         severity = null as any;
       }
 
+      // Save to cache
+      await saveAlertToCache('vital-signs', patientId, inputData, allAlerts, severity);
+
       return { alerts: allAlerts, severity, recordId: returnedId };
     } catch (err) {
       console.error('[VS analyzeField] error:', err);
       return null;
     }
-  }, [existingRecords]);
+  }, [existingRecords, selectedPatientId]);
 
   const saveAssessment = async (dayNo?: number) => {
     if (!selectedPatientId) return null;

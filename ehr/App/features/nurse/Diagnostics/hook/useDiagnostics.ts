@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient, { BASE_URL } from '@api/apiClient';
 import * as ImagePicker from 'react-native-image-picker';
+import { getDataFromCache, saveDataToCache } from '@App/utils/cdssCache';
 
 export interface DiagnosticRecord {
   id?: number;
@@ -19,6 +20,13 @@ export const useDiagnostics = () => {
   const [loading, setLoading] = useState(false);
 
   const fetchDiagnostics = useCallback(async (patientId: string) => {
+    // Check cache first
+    const cached = await getDataFromCache('diagnostics', patientId);
+    if (cached) {
+      console.log('[Diagnostics] Returning cached data');
+      setDiagnostics(cached);
+    }
+
     setLoading(true);
     try {
       const response = await apiClient.get(`/diagnostics/patient/${patientId}?patient_id=${patientId}`);
@@ -30,13 +38,17 @@ export const useDiagnostics = () => {
         diagnostic_id: d.diagnostic_id || d.id,
       }));
       setDiagnostics(mappedData);
+      await saveDataToCache('diagnostics', patientId, mappedData);
     } catch (error) {
       console.error('Error fetching diagnostics:', error);
-      setDiagnostics([]);
+      // If error but we have cached data, don't clear it
+      if (!diagnostics.length) {
+        setDiagnostics([]);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [diagnostics.length]);
 
   const uploadDiagnostic = async (patientId: string, imageType: string) => {
     try {

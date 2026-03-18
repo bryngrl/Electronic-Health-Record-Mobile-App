@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import apiClient from '@api/apiClient';
+import { getAlertFromCache, saveAlertToCache } from '@App/utils/cdssCache';
 
 export const usePhysicalExam = () => {
   const [dataAlert, setDataAlert] = useState<any>(null);
@@ -40,6 +41,13 @@ export const usePhysicalExam = () => {
     examId: number | null 
   } | null> => {
     try {
+      // Check cache first
+      const cached = await getAlertFromCache('physical-exam', patientId, fullData);
+      if (cached) {
+        console.log('[PhysicalExam] Returning cached alerts');
+        return { alerts: cached.alerts, severity: cached.severity, examId: examId };
+      }
+
       const body = { ...fullData, patient_id: patientId };
       const sanitized = sanitize(body);
       
@@ -96,6 +104,9 @@ export const usePhysicalExam = () => {
       } else {
         severity = null as any;
       }
+
+      // Save to cache
+      await saveAlertToCache('physical-exam', patientId, fullData, allAlerts, severity);
 
       console.log(`[CDSS][${fieldName}] severity="${severity}"`);
       return { alerts: allAlerts, severity, examId: returnedExamId };

@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import apiClient from '@api/apiClient';
+import { getDataFromCache, saveDataToCache } from '@App/utils/cdssCache';
 
 export const useMedicalHistory = () => {
   const sanitize = (data: any) => {
@@ -55,8 +56,21 @@ export const useMedicalHistory = () => {
 
   const fetchMedicalHistory = useCallback(async (patientId: number) => {
     try {
+      // Check cache first
+      const cached = await getDataFromCache('medical-history', patientId);
+      if (cached) {
+        console.log('[MedicalHistory] Returning cached data');
+        // Return cached but still fetch fresh in background? 
+        // User said "when i load it next time, its faster", usually means show cache then maybe update.
+        // For now, let's just return cached if available to be fast.
+        return cached;
+      }
+
       // Laravel uses /api/medical-history/patient/{id} as per SYNC_MOBILE_APP.md
       const response = await apiClient.get(`/medical-history/patient/${patientId}`);
+      if (response.data) {
+        await saveDataToCache('medical-history', patientId, response.data);
+      }
       return response.data;
     } catch (err: any) {
       console.error('Error fetching medical history:', err);

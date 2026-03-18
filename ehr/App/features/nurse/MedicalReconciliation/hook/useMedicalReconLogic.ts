@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import apiClient from '@api/apiClient';
+import { getDataFromCache, saveDataToCache } from '@App/utils/cdssCache';
 
 export const RECON_STAGES = [
   "PATIENT'S CURRENT MEDICATION",
@@ -61,6 +62,15 @@ export const useMedicalReconLogic = () => {
 
   const fetchPatientMedications = useCallback(async (id: number) => {
     if (!id) return;
+
+    // Check cache first
+    const cached = await getDataFromCache('medical-reconciliation', id);
+    if (cached) {
+      console.log('[MedicalRecon] Returning cached data');
+      setReconData(cached);
+      setLastSavedReconData(JSON.parse(JSON.stringify(cached)));
+    }
+
     setIsLoading(true);
     try {
       console.log(`[MedicalRecon] Fetching for patient ${id}`);
@@ -101,6 +111,7 @@ export const useMedicalReconLogic = () => {
 
       setReconData(newData);
       setLastSavedReconData(JSON.parse(JSON.stringify(newData)));
+      await saveDataToCache('medical-reconciliation', id, newData);
     } catch (error) {
       console.error('Error fetching patient medications:', error);
     } finally {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import apiClient from '@api/apiClient';
+import { getDataFromCache, saveDataToCache } from '@App/utils/cdssCache';
 
 const useIvsAndLinesData = () => {
   // State for the patient name text input
@@ -37,11 +38,24 @@ const useIvsAndLinesData = () => {
       }
 
       try {
+        // Check cache first
+        const cached = await getDataFromCache('ivs-and-lines', selectedPatientId);
+        if (cached) {
+          console.log('[IvsAndLines] Returning cached data');
+          setIvFluid(cached.iv_fluid);
+          setRate(cached.rate);
+          setSite(cached.site);
+          setStatus(cached.status);
+          setLastSavedData(cached);
+          if (cached.id) setRecordId(cached.id);
+        }
+
         const response = await apiClient.get(`/ivs-and-lines/${selectedPatientId}`);
         // If there's at least one record, load the most recent one
         if (response.data) {
           const record = Array.isArray(response.data) ? response.data[0] : response.data;
           const initialData = {
+            id: record.id,
             iv_fluid: record.iv_fluid || '',
             rate: record.rate || '',
             site: record.site || '',
@@ -53,6 +67,7 @@ const useIvsAndLinesData = () => {
           setStatus(initialData.status);
           setLastSavedData(initialData);
           setRecordId(record.id);
+          await saveDataToCache('ivs-and-lines', selectedPatientId, initialData);
         } else {
           setIvFluid('');
           setRate('');

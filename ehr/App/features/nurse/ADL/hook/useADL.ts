@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import apiClient from '@api/apiClient';
+import { getAlertFromCache, saveAlertToCache } from '@App/utils/cdssCache';
 
 export const useADL = () => {
   const [dataAlert, setDataAlert] = useState<string | null>(null);
@@ -42,6 +43,13 @@ export const useADL = () => {
     adlId: number | null 
   } | null> => {
     try {
+      // Check cache first
+      const cached = await getAlertFromCache('adl', patientId, fullData);
+      if (cached) {
+        console.log('[ADL] Returning cached alerts');
+        return { alerts: cached.alerts, severity: cached.severity, adlId: currentAdlId };
+      }
+
       const body = { ...fullData, patient_id: patientId };
       const sanitized = sanitize(body);
 
@@ -91,6 +99,9 @@ export const useADL = () => {
       } else {
         severity = null as any;
       }
+
+      // Save to cache
+      await saveAlertToCache('adl', patientId, fullData, allAlerts, severity);
 
       return { alerts: allAlerts, severity, adlId: returnedAdlId };
     } catch (e) {

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import apiClient from '@api/apiClient';
+import { getAlertFromCache, saveAlertToCache } from '@App/utils/cdssCache';
 
 const inferSeverity = (text: string): string => {
   const upper = text.toUpperCase();
@@ -105,6 +106,13 @@ export const useLabValues = () => {
     labId: number | null 
   } | null> => {
     try {
+      // Check cache first
+      const cached = await getAlertFromCache('lab-values', patientId, fullData);
+      if (cached) {
+        console.log('[LabValues] Returning cached alerts');
+        return { alerts: cached.alerts, severity: cached.severity, labId: currentLabId };
+      }
+
       const body = sanitize({ ...fullData, patient_id: patientId });
       let response;
       if (currentLabId) {
@@ -135,6 +143,9 @@ export const useLabValues = () => {
       } else {
         severity = null as any;
       }
+
+      // Save to cache
+      await saveAlertToCache('lab-values', patientId, fullData, allAlerts, severity);
 
       return { alerts: allAlerts, severity, labId: returnedLabId };
     } catch (e) {

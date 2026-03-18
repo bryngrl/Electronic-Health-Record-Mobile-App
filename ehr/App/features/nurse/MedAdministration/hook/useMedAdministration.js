@@ -1,6 +1,7 @@
 // MedAdministration/hook/useMedAdministration.js
 import { useState, useCallback } from 'react';
 import apiClient from '@api/apiClient';
+import { getDataFromCache, saveDataToCache } from '@App/utils/cdssCache';
 
 const getTodayFormatted = () =>
   new Date().toLocaleDateString('en-US', {
@@ -68,6 +69,18 @@ export const useMedAdministration = () => {
     if (!patientId) return;
     
     try {
+      // Check cache first
+      const cached = await getDataFromCache('med-administration', patientId);
+      if (cached) {
+        console.log('[MedAdmin] Returning cached data');
+        setFormData(prev => ({
+          ...prev,
+          medications: cached,
+          patient_id: patientId,
+        }));
+        setLastSavedMeds(JSON.parse(JSON.stringify(cached)));
+      }
+
       const rawDate = toRawDate(dateStr);
       console.log(`[MedAdmin] Fetching for patient ${patientId} on ${rawDate}`);
       
@@ -101,6 +114,7 @@ export const useMedAdministration = () => {
         patient_id: patientId,
       }));
       setLastSavedMeds(JSON.parse(JSON.stringify(updatedMeds)));
+      await saveDataToCache('med-administration', patientId, updatedMeds);
     } catch (error) {
       console.error('Error in fetchPatientData:', error);
     }
