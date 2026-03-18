@@ -11,7 +11,6 @@ import {
   Platform,
   RefreshControl,
   StatusBar,
-  BackHandler,
   useWindowDimensions
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -20,9 +19,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import AdminBottomNav from '../components/AdminBottomNav';
 import apiClient from '@api/apiClient';
-import { AccountModal } from '@components/AccountModal';
 import { useAppTheme } from '@App/theme/ThemeContext';
-import AdminRegisterScreen from './AdminRegisterScreen'; 
+import AdminRegisterScreen from './AdminRegisterScreen';
+
 
 const RECENT_SEARCHES_KEY = '@admin_recent_users';
 
@@ -35,7 +34,6 @@ const AdminUserSearchScreen = ({ navigation }: any) => {
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isAccountModalVisible, setAccountModalVisible] = useState(false);
 
   const { height: windowHeight } = useWindowDimensions();
 
@@ -96,14 +94,16 @@ const AdminUserSearchScreen = ({ navigation }: any) => {
   };
 
   const handleTabNavigation = (tab: 'Users' | 'Register' | 'Settings') => {
-    if (tab === 'Users') {
-      if (navigation.goBack) navigation.goBack();
-      else setActiveTab(tab);
-    } 
-    else if (tab === 'Settings') setAccountModalVisible(true);
-    else setActiveTab(tab);
+    if (tab === 'Settings') {
+      // Navigate to the settings screen instead of toggling a modal
+      navigation.navigate('AdminSettingsScreen');
+    } else {
+      // Toggle between Users and Register internally
+      setActiveTab(tab);
+    }
   };
 
+  // Logic to render the Register sub-screen
   if (activeTab === 'Register') {
     return <AdminRegisterScreen onNavigateTab={setActiveTab} navigation={navigation} />;
   }
@@ -116,8 +116,6 @@ const AdminUserSearchScreen = ({ navigation }: any) => {
         translucent={true}
       />
       <SafeAreaView style={styles.root}>
-        <AccountModal visible={isAccountModalVisible} onClose={() => { setAccountModalVisible(false); setActiveTab('Users'); }} />
-
         <ScrollView 
           showsVerticalScrollIndicator={false} 
           contentContainerStyle={styles.scrollContent}
@@ -168,6 +166,7 @@ const AdminUserSearchScreen = ({ navigation }: any) => {
 
         <View style={styles.floatingNavContainer} pointerEvents="box-none">
           <View style={{ height: windowHeight, width: '100%' }} pointerEvents="box-none">
+            {/* activeTab passed as Users because this is the root Users screen */}
             <AdminBottomNav activeTab="Users" onNavigate={handleTabNavigation} />
           </View>
         </View>

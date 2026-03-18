@@ -13,7 +13,8 @@ import {
   PanResponder,
   StatusBar,
 } from 'react-native';
-import { BlurView } from '@react-native-community/blur'; // New Import
+import BlurViewSafe from 
+'./BlurViewSafe';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAppTheme } from '@App/theme/ThemeContext';
 import { useAuth } from '@features/Auth/AuthContext';
@@ -111,7 +112,7 @@ export const AccountModal = ({ visible, onClose, onLogout }: any) => {
             style={[StyleSheet.absoluteFill, { opacity: backdropOpacity }]}
           >
             {Platform.OS === 'ios' ? (
-              <BlurView
+              <BlurViewSafe
                 style={StyleSheet.absoluteFill}
                 blurType={isDarkMode ? 'dark' : 'light'}
                 blurAmount={10}

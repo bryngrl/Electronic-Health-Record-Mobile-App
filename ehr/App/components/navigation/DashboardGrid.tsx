@@ -147,6 +147,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     },
     bulbContainer: {
       padding: 8,
+      marginTop: -10,
       borderRadius: 50,
       borderWidth: 1,
       borderColor: isDarkMode ? theme.border : '#EBEBEB',

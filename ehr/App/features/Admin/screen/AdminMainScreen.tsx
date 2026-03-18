@@ -680,6 +680,7 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
     userName: {
       fontSize: 14,
       marginLeft: 8,
+      width:120,
       color: theme.text,
       fontFamily: 'AlteHaasGrotesk',
     },
