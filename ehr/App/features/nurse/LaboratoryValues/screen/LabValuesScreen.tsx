@@ -24,6 +24,7 @@ import { createStyles } from './styles';
 
 const alertBellActiveIcon = require('@assets/icons/alert_bell_icon.png');
 const alertBellInactiveIcon = require('@assets/icons/alert_bell_icon_inactive.png');
+const dotsIcon = require('@assets/icons/dots_icon.png');
 
 const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: {
   onBack: any;
@@ -152,7 +153,7 @@ const LabValuesScreen = ({ onBack, readOnly = false, patientId, initialPatientNa
               )}
             </View>
             <TouchableOpacity onPress={() => setShowLabList(!showLabList)}>
-              <Icon name="more-vert" size={35} color={theme.primary} />
+              <Image source={dotsIcon} style={styles.dotsIcon} />
             </TouchableOpacity>
           </View>
         </View>

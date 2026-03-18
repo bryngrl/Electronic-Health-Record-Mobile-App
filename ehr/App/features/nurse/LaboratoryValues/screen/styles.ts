@@ -6,6 +6,7 @@ export const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean)
   scrollContent: { paddingBottom: 40 },
   header: commonStyles.header,
   title: commonStyles.title,
+  dotsIcon: { width: 18, height: 18, resizeMode: 'contain', marginTop: 8 },
   dateText: { fontSize: 13, fontFamily: 'AlteHaasGroteskBold', color: theme.textMuted },
   naRow: {
     flexDirection: 'row',
