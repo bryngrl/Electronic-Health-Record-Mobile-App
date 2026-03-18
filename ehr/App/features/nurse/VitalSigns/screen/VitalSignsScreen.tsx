@@ -238,7 +238,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     title: '',
     message: '',
   });
-  const isAlertActive = !!selectedPatientId && !!(realtimeAlert || currentAlert);
+  const isAlertActive = !!selectedPatientId && isDataEntered;
 
   useEffect(() => {
     bellFadeAnim.setValue(0.35);

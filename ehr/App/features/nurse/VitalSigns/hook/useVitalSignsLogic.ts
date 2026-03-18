@@ -192,7 +192,13 @@ export const useVitalSignsLogic = () => {
 
       const response = await apiClient.put(`/vital-signs/${targetId}/assessment`, payload);
       const data = response.data?.data || response.data;
-      const alertsObj = response.data?.alerts || data?.alerts || {};
+      let alertsObj = response.data?.alerts || data?.alerts || {};
+      
+      // Normalize to object if it's a string to prevent single-character iteration
+      if (typeof alertsObj === 'string') {
+        alertsObj = { assessment_alert: alertsObj };
+      }
+      
       const returnedId: number | null = data?.id || null;
 
       const allAlerts: Record<string, string | null> = {};

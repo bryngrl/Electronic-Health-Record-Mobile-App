@@ -42,10 +42,15 @@ const CDSSModal: React.FC<CDSSModalProps> = ({
 
   const severityStyle = getSeverityStyle(severity);
   const renderFormattedText = (text: string) => {
-    if (!text || typeof text !== 'string') return null;
+    if (!text) return null;
+    
+    // Ensure we are working with a string
+    const stringText = Array.isArray(text) ? text.join('\n') : String(text);
+    
     const lines = bulletFormat
-      ? text.split(/;\s*| \| |\n/).filter(l => l.trim())
-      : text.split(/ \| |\n/).filter(l => l.trim());
+      ? stringText.split(/[\n;]+| \| /).filter(l => l.trim())
+      : stringText.split(/[\n;]| \| /).filter(l => l.trim());
+    
     const isMultiple = bulletFormat && lines.length > 1;
 
     return lines.map((line, index) => {
