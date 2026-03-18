@@ -11,6 +11,7 @@ import {
   Switch,
   Animated,
   PanResponder,
+  StatusBar,
 } from 'react-native';
 import { BlurView } from '@react-native-community/blur'; // New Import
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -97,7 +98,13 @@ export const AccountModal = ({ visible, onClose, onLogout }: any) => {
         visible={visible}
         animationType="none"
         onRequestClose={handleDismiss}
+        statusBarTranslucent
       >
+        <StatusBar
+          barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+          backgroundColor="transparent"
+          translucent={true}
+        />
         <View style={styles.overlay}>
           {/* Animated Blur/Dim Backdrop */}
           <Animated.View
