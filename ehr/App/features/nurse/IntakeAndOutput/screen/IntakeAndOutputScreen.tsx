@@ -24,6 +24,7 @@ import { createStyles } from './styles';
 
 const alertBellActiveIcon = require('@assets/icons/alert_bell_icon.png');
 const alertBellInactiveIcon = require('@assets/icons/alert_bell_icon_inactive.png');
+const arrowIcon = require('@assets/icons/ARROW.png');
 
 interface IntakeAndOutputScreenProps {
   onBack: () => void;
@@ -166,10 +167,17 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
 
           <View style={{ width: '100%', marginBottom: 15 }}>
             <Text style={styles.fieldLabel}>DAY NO :</Text>
-            <View style={styles.pillInput}>
+            <View style={[styles.pillInput, styles.dropdownRow]}>
               <Text style={styles.dateVal}>
-                {currentDayNo || calculateDayNumber() || '—'}
+                {currentDayNo || calculateDayNumber() || ''}
               </Text>
+              <Image
+                source={arrowIcon}
+                style={[
+                  styles.arrowIconImage,
+                  { tintColor: theme.textMuted },
+                ]}
+              />
             </View>
           </View>
 

@@ -152,7 +152,7 @@ const ADLScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: 
                   <Icon
                     name="arrow-drop-down"
                     size={24}
-                    color={theme.primary}
+                    color={theme.textMuted}
                     style={{ position: 'absolute', right: 10 }}
                   />
                 </View>
