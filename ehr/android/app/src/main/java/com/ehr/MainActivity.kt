@@ -12,6 +12,14 @@ class MainActivity : ReactActivity() {
     setTheme(R.style.AppTheme)
     window.statusBarColor = getColor(R.color.splash_background)
     super.onCreate(null)
+
+    // Preserve green background during startup to avoid white flash
+    window.setBackgroundDrawableResource(R.color.splash_background)
+
+    // Switch to theme background after splash screen (5s delay) for keyboard compatibility
+    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+        window.setBackgroundDrawableResource(R.color.app_background)
+    }, 2000)
   }
 
   /**
