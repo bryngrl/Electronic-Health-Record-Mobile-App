@@ -293,14 +293,6 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   }, [text, currentIdx, feature]);
 
   const handleNext = async () => {
-    if (!text.trim()) {
-      showAlert(
-        'Input Required',
-        `Please enter the ${STEPS[currentIdx].label} text.`,
-      );
-      return;
-    }
-
     setLoading(true);
     try {
       const step = STEPS[currentIdx];
@@ -365,6 +357,8 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
       </View>
     );
   }
+
+  const isNextDisabled = !text.trim() || loading;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -524,14 +518,26 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
               <Icon name="arrow-back" size={24} color={theme.primary} />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.nextBtn, loading && { opacity: 0.7 }]}
+              style={[
+                styles.nextBtn,
+                isNextDisabled && {
+                  backgroundColor: theme.buttonDisabledBg,
+                  borderColor: theme.buttonDisabledBorder,
+                },
+                loading && { opacity: 0.7 },
+              ]}
               onPress={handleNext}
-              disabled={loading}
+              disabled={isNextDisabled}
             >
               {loading ? (
                 <ActivityIndicator size="small" color={theme.primary} />
               ) : (
-                <Text style={styles.nextText}>
+                <Text
+                  style={[
+                    styles.nextText,
+                    isNextDisabled && { color: theme.textMuted },
+                  ]}
+                >
                   {currentIdx === 3 ? 'SUBMIT' : 'NEXT'}
                 </Text>
               )}
@@ -570,7 +576,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     container: commonStyles.container,
     scrollContent: {
       flexGrow: 1,
-      paddingBottom: 20,
+      paddingBottom: 80,
     },
     header: commonStyles.header,
     title: commonStyles.title,
