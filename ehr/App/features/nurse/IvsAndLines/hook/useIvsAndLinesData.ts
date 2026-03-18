@@ -50,10 +50,10 @@ const useIvsAndLinesData = () => {
           if (cached.id) setRecordId(cached.id);
         }
 
-        const response = await apiClient.get(`/ivs-and-lines/${selectedPatientId}`);
+        const response = await apiClient.get(`/ivs-and-lines/patient/${selectedPatientId}`);
         // If there's at least one record, load the most recent one
-        if (response.data) {
-          const record = Array.isArray(response.data) ? response.data[0] : response.data;
+        if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+          const record = response.data[0];
           const initialData = {
             id: record.id,
             iv_fluid: record.iv_fluid || '',
@@ -95,6 +95,7 @@ const useIvsAndLinesData = () => {
       const sanitize = (val: string) => (val.trim() === '' ? 'N/A' : val);
 
       const payload = {
+        patient_id: selectedPatientId,
         iv_fluid: sanitize(ivFluid),
         rate: sanitize(rate),
         site: sanitize(site),
@@ -104,13 +105,13 @@ const useIvsAndLinesData = () => {
       let response;
       if (recordId) {
         // UPDATE existing record
-        response = await apiClient.put(`/ivs-and-lines/${selectedPatientId}`, payload);
+        response = await apiClient.put(`/ivs-and-lines/${recordId}`, payload);
         setLastSavedData({ ...payload });
         setIsSubmitting(false);
         return { action: 'update', data: response.data };
       } else {
         // CREATE new record
-        response = await apiClient.post(`/ivs-and-lines/${selectedPatientId}`, payload);
+        response = await apiClient.post(`/ivs-and-lines`, payload);
         if (response.data?.id) {
             setRecordId(response.data.id);
         }
