@@ -56,13 +56,33 @@ export const useEditPatient = (patientId: number) => {
       });
 
       if (data.contact_name) {
-        setContacts([
-          {
-            name: data.contact_name,
-            relationship: data.contact_relationship || '',
-            number: data.contact_number || '',
-          },
-        ]);
+        let names = data.contact_name;
+        let relationships = data.contact_relationship;
+        let numbers = data.contact_number;
+
+        const ensureArray = (val: any) => {
+          if (Array.isArray(val)) return val;
+          if (typeof val === 'string' && val.startsWith('[')) {
+            try {
+              const parsed = JSON.parse(val);
+              if (Array.isArray(parsed)) return parsed;
+            } catch (e) {}
+          }
+          return val ? [val] : [];
+        };
+
+        const nameArr = ensureArray(names);
+        const relArr = ensureArray(relationships);
+        const numArr = ensureArray(numbers);
+
+        if (nameArr.length > 0) {
+          const loadedContacts = nameArr.map((name: string, index: number) => ({
+            name: name || '',
+            relationship: relArr[index] || '',
+            number: numArr[index] || '',
+          }));
+          setContacts(loadedContacts);
+        }
       }
     } catch (error) {
       console.error('Error loading patient data:', error);
@@ -128,9 +148,9 @@ export const useEditPatient = (patientId: number) => {
       admission_date: form.admission_date || new Date().toISOString().split('T')[0],
       room_no: form.room_no,
       bed_no: form.bed_no,
-      contact_name: contacts[0].name,
-      contact_relationship: contacts[0].relationship,
-      contact_number: contacts[0].number,
+      contact_name: contacts.map(c => c.name.trim()),
+      contact_relationship: contacts.map(c => c.relationship.trim()),
+      contact_number: contacts.map(c => c.number.trim()),
       user_id: form.user_id,
       is_active: true,
     };

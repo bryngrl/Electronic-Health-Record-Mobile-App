@@ -20,6 +20,7 @@ import {
   BackHandler,
   Animated,
   Pressable,
+  TextInput,
 } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
 import {
@@ -125,6 +126,12 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
   const [recordId, setRecordId] = useState<number | null>(null);
   const [isNA, setIsNA] = useState(false);
   const preNASnapshotRef = useRef<any>(null);
+
+  const temperatureRef = useRef<TextInput>(null);
+  const hrRef = useRef<TextInput>(null);
+  const rrRef = useRef<TextInput>(null);
+  const bpRef = useRef<TextInput>(null);
+  const spo2Ref = useRef<TextInput>(null);
 
   const toggleNA = useCallback(async () => {
     const newState = !isNA;
@@ -660,6 +667,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
 
             <View style={{ opacity: 1 }}>
               <VitalCard
+                inputRef={temperatureRef}
                 label="Temperature"
                 value={vitals.temperature}
                 onChangeText={v => handleVitalChange('temperature', v)}
@@ -669,8 +677,11 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                     setAlertVisible(true);
                   }
                 }}
+                returnKeyType="next"
+                onSubmitEditing={() => hrRef.current?.focus()}
               />
               <VitalCard
+                inputRef={hrRef}
                 label="HR"
                 value={vitals.hr}
                 onChangeText={v => handleVitalChange('hr', v)}
@@ -680,8 +691,11 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                     setAlertVisible(true);
                   }
                 }}
+                returnKeyType="next"
+                onSubmitEditing={() => rrRef.current?.focus()}
               />
               <VitalCard
+                inputRef={rrRef}
                 label="RR"
                 value={vitals.rr}
                 onChangeText={v => handleVitalChange('rr', v)}
@@ -691,8 +705,11 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                     setAlertVisible(true);
                   }
                 }}
+                returnKeyType="next"
+                onSubmitEditing={() => bpRef.current?.focus()}
               />
               <VitalCard
+                inputRef={bpRef}
                 label="BP"
                 value={vitals.bp}
                 onChangeText={v => handleVitalChange('bp', v)}
@@ -703,8 +720,11 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                     setAlertVisible(true);
                   }
                 }}
+                returnKeyType="next"
+                onSubmitEditing={() => spo2Ref.current?.focus()}
               />
               <VitalCard
+                inputRef={spo2Ref}
                 label="SP02"
                 value={vitals.spo2}
                 onChangeText={v => handleVitalChange('spo2', v)}
@@ -714,6 +734,8 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                     setAlertVisible(true);
                   }
                 }}
+                returnKeyType="done"
+                onSubmitEditing={() => spo2Ref.current?.blur()}
               />
             </View>
 
