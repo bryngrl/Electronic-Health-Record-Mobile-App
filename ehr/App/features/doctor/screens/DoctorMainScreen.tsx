@@ -81,7 +81,15 @@ export default function DoctorMainScreen() {
         case 'IntakeOutput':
             return <IntakeAndOutputScreen onBack={handleBack} readOnly={true} patientId={selectedPatientData.patientId} initialPatientName={selectedPatientData.patientName} admissionDate={selectedPatientData.admissionDate} />;
         case 'ADL':
-            return <ADLScreen onBack={handleBack} readOnly={true} patientId={selectedPatientData.patientId} initialPatientName={selectedPatientData.patientName} admissionDate={selectedPatientData.admissionDate} />;
+            return <ADLScreen 
+                onBack={handleBack} 
+                readOnly={true} 
+                patientId={selectedPatientData.patientId} 
+                initialPatientName={selectedPatientData.patientName} 
+                admissionDate={selectedPatientData.admissionDate}
+                recordId={selectedPatientData.recordId}
+                recordDate={selectedPatientData.recordDate}
+            />;
         case 'Diagnostics':
             return <DiagnosticsScreen onBack={handleBack} readOnly={true} patientId={selectedPatientData.patientId} initialPatientName={selectedPatientData.patientName} admissionDate={selectedPatientData.admissionDate} />;
         case 'IvsLines':

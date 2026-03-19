@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { BackHandler, Animated } from 'react-native';
+import apiClient from '@api/apiClient';
 import { useADL } from '../hook/useADL';
 import { initialFormData, ALERT_KEY_MAP } from './constants';
 
-export const useADLScreen = (onBack: () => void) => {
+export const useADLScreen = (onBack: () => void, recordId: number | null = null, readOnly: boolean = false) => {
   const {
     saveADLAssessment,
     analyzeField,
@@ -35,6 +36,7 @@ export const useADLScreen = (onBack: () => void) => {
   ) => setAlertConfig({ visible: true, title, message, type });
 
   const [adlId, setAdlId] = useState<number | null>(null);
+  const [recordDayNo, setRecordDayNo] = useState<string | null>(null);
   const [isExistingRecord, setIsExistingRecord] = useState(false);
   const [backendAlerts, setBackendAlerts] = useState<
     Record<string, string | null>
@@ -129,7 +131,27 @@ export const useADLScreen = (onBack: () => void) => {
     async (patientId: number) => {
       preNASnapshotRef.current = null;
       fetchDataAlert(patientId);
-      const data = await fetchLatestADL(patientId);
+      
+      let data;
+      if (recordId) {
+        try {
+          // Use patient-based endpoint and filter, since direct ID endpoint might not exist
+          const res = await apiClient.get(`/adl/patient/${patientId}?patient_id=${patientId}`);
+          const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+          data = list.find((item: any) => item.id === recordId);
+          
+          if (!data) {
+            console.warn(`[ADL] Record ${recordId} not found in patient list, falling back to latest`);
+            data = await fetchLatestADL(patientId);
+          }
+        } catch (e) {
+          console.error('[ADL] Failed to fetch via patient list', e);
+          data = await fetchLatestADL(patientId);
+        }
+      } else {
+        data = await fetchLatestADL(patientId);
+      }
+
       if (data) {
         const today = new Date().toLocaleDateString('en-CA');
         const recordDate = (data.date || data.created_at || '').split('T')[0];
@@ -138,11 +160,17 @@ export const useADLScreen = (onBack: () => void) => {
           setAdlId(data.id);
           adlIdRef.current = data.id;
           setIsExistingRecord(true);
+        } else if (recordId && data.id === recordId) {
+          setAdlId(data.id);
+          adlIdRef.current = data.id;
+          setIsExistingRecord(true); // Treat as existing if specifically requested
         } else {
           setAdlId(null);
           adlIdRef.current = null;
           setIsExistingRecord(false);
         }
+
+        setRecordDayNo(data.day_no?.toString() || null);
 
         const newFormData = {
           mobility_assessment: data.mobility_assessment || '',
@@ -166,6 +194,7 @@ export const useADLScreen = (onBack: () => void) => {
       } else {
         setAdlId(null);
         adlIdRef.current = null;
+        setRecordDayNo(null);
         setIsExistingRecord(false);
         setFormData(initialFormData);
         formDataRef.current = initialFormData;
@@ -176,7 +205,7 @@ export const useADLScreen = (onBack: () => void) => {
         fieldTimers.current = {};
       }
     },
-    [fetchLatestADL, fetchDataAlert, analyzeField],
+    [fetchLatestADL, fetchDataAlert, analyzeField, recordId],
   );
 
   useEffect(() => {
@@ -187,6 +216,7 @@ export const useADLScreen = (onBack: () => void) => {
       } else {
         setAdlId(null);
         adlIdRef.current = null;
+        setRecordDayNo(null);
         setIsExistingRecord(false);
         setFormData(initialFormData);
         setLastSavedData(initialFormData);
@@ -342,6 +372,9 @@ export const useADLScreen = (onBack: () => void) => {
   };
 
   const calculateDayNumber = () => {
+    if (readOnly && recordDayNo) return recordDayNo;
+    if (isExistingRecord && recordDayNo) return recordDayNo;
+
     if (!selectedPatient?.admission_date) return '';
     const admission = new Date(selectedPatient.admission_date);
     const today = new Date();

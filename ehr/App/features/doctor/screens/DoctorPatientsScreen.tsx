@@ -202,10 +202,10 @@ const DoctorPatientsScreen = ({
       const patientName = `${selectedPatient.first_name ?? ''} ${
         selectedPatient.last_name ?? ''
       }`.trim();
-      onNavigate(route, { 
-        patientId, 
+      onNavigate(route, {
+        patientId,
         patientName,
-        admissionDate: selectedPatient.admission_date
+        admissionDate: selectedPatient.admission_date,
       });
     }
   };
@@ -238,7 +238,7 @@ const DoctorPatientsScreen = ({
             onPress={() => setAccountModalVisible(true)}
             style={{ marginTop: 10 }}
           >
-            <Icon name="keyboard-arrow-down" size={24} color={theme.text} />
+            {/* <Icon name="keyboard-arrow-down" size={24} color={theme.text} /> */}
           </TouchableOpacity>
         </View>
 

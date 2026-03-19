@@ -25,12 +25,16 @@ const ADLScreen = ({
   patientId,
   initialPatientName,
   admissionDate,
+  recordId,
+  recordDate,
 }: {
   onBack: any;
   readOnly?: boolean;
   patientId?: number;
   initialPatientName?: string;
   admissionDate?: string;
+  recordId?: number;
+  recordDate?: string;
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
@@ -68,17 +72,18 @@ const ADLScreen = ({
     isLoading,
     loadingMessage,
     screenOpacity,
-  } = useADLScreen(onBack);
+  } = useADLScreen(onBack, recordId || null, readOnly);
 
   useEffect(() => {
     if (readOnly && patientId) {
       setSelectedPatient({
         id: patientId,
         full_name: initialPatientName || '',
+        admission_date: admissionDate,
       });
       setSearchText(initialPatientName || '');
     }
-  }, [readOnly, patientId]);
+  }, [readOnly, patientId, admissionDate]);
 
   if (isAdpieActive && adlId && selectedPatient) {
     return (
@@ -103,6 +108,8 @@ const ADLScreen = ({
     ? ['rgba(18,18,18,1)', 'rgba(18,18,18,0)']
     : ['rgba(255,255,255,1)', 'rgba(255,255,255,0)'];
 
+  const displayDate = recordDate ? new Date(recordDate) : new Date();
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <LoadingOverlay visible={isLoading} message={loadingMessage} />
@@ -121,7 +128,7 @@ const ADLScreen = ({
                   Activities of Daily Living
                 </Text>
                 <Text style={styles.dateText}>
-                  {new Date().toLocaleDateString('en-US', {
+                  {displayDate.toLocaleDateString('en-US', {
                     weekday: 'long',
                     month: 'long',
                     day: 'numeric',
@@ -182,7 +189,7 @@ const ADLScreen = ({
                   <Text style={styles.sectionLabel}>DATE :</Text>
                   <View style={styles.inputBox}>
                     <Text style={styles.inputText}>
-                      {new Date().toLocaleDateString('en-US', {
+                      {displayDate.toLocaleDateString('en-US', {
                         month: 'long',
                         day: 'numeric',
                         year: 'numeric',

@@ -57,6 +57,7 @@ const ADLCardsSection: React.FC<ADLCardsSectionProps> = ({
           alertSeverity={getBackendSeverity(field)}
           onChangeText={val => updateField(field, val)}
           onDisabledPress={patientRequired}
+          readOnly={readOnly}
         />
       ))}
 
