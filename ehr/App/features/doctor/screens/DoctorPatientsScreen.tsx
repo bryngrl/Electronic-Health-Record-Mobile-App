@@ -11,7 +11,9 @@ import {
   Modal,
   Dimensions,
   Platform,
+  Pressable,
 } from 'react-native';
+import { BlurView } from '@react-native-community/blur';
 import DoctorBottomNav from '../components/DoctorBottomNav';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -30,7 +32,7 @@ const formatTimeAgo = (timestamp: string | null) => {
     const now = new Date();
     const updated = new Date(timestamp);
     const diffInMs = now.getTime() - updated.getTime();
-    
+
     if (diffInMs < 0) return 'Updated just now';
 
     const diffInMins = Math.floor(diffInMs / (1000 * 60));
@@ -56,7 +58,7 @@ const PatientRecordModal = ({
 }: any) => {
   const { theme } = useAppTheme();
   const modalStyles = useMemo(() => createModalStyles(theme), [theme]);
-  
+
   const stats = patient?.record_stats || {};
 
   const categories = [
@@ -80,6 +82,13 @@ const PatientRecordModal = ({
       onRequestClose={onClose}
     >
       <View style={modalStyles.overlay}>
+        <BlurView
+          style={modalStyles.blurView}
+          blurType="dark"
+          blurAmount={1}
+          reducedTransparencyFallbackColor="#21212186"
+        />
+        <Pressable style={modalStyles.blurView} onPress={onClose} />
         <View style={modalStyles.modalContainer}>
           <View style={modalStyles.header}>
             <View style={{ flex: 1 }}>
@@ -102,10 +111,14 @@ const PatientRecordModal = ({
             {loadingStats && (
               <View style={{ padding: 10, alignItems: 'center' }}>
                 <ActivityIndicator size="small" color={theme.primary} />
-                <Text style={{ fontSize: 10, color: theme.textMuted, marginTop: 4 }}>Updating stats...</Text>
+                <Text
+                  style={{ fontSize: 10, color: theme.textMuted, marginTop: 4 }}
+                >
+                  Updating stats...
+                </Text>
               </View>
             )}
-            
+
             {categories.map((item, index) => {
               const lastUpdated = stats[item.name];
               const hasUpdate = !!lastUpdated;
@@ -116,7 +129,7 @@ const PatientRecordModal = ({
                   key={index}
                   style={[
                     modalStyles.categoryCard,
-                    !hasUpdate && { opacity: 0.5 }
+                    !hasUpdate && { opacity: 0.5 },
                   ]}
                   onPress={() => hasUpdate && onSelectCategory(item.name)}
                   activeOpacity={hasUpdate ? 0.6 : 1}
@@ -131,7 +144,13 @@ const PatientRecordModal = ({
                       <Text style={modalStyles.updateText}>{updateText}</Text>
                     </View>
                   </View>
-                  {hasUpdate && <Icon name="chevron-right" size={24} color={theme.primary} />}
+                  {hasUpdate && (
+                    <Icon
+                      name="chevron-right"
+                      size={24}
+                      color={theme.primary}
+                    />
+                  )}
                 </TouchableOpacity>
               );
             })}
@@ -283,6 +302,7 @@ const DoctorPatientsScreen = ({
             onPress={() => setAccountModalVisible(true)}
             style={{ marginTop: 10 }}
           >
+            {/* arrow down */}
             {/* <Icon name="keyboard-arrow-down" size={24} color={theme.text} /> */}
           </TouchableOpacity>
         </View>
@@ -347,7 +367,7 @@ const DoctorPatientsScreen = ({
               <Text
                 style={{
                   color: theme.textMuted,
-                  fontFamily: 'AlteHaasGrotesk',
+                  fontFamily: 'AlteHaasGroteskBold',
                 }}
               >
                 No patients found.
