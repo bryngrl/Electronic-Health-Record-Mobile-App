@@ -9,6 +9,7 @@ import {
   Image,
   RefreshControl,
   StatusBar,
+  Easing,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useDoctorDashboardLogic } from '../hooks/useDoctorDashboardLogic';
@@ -59,12 +60,14 @@ const DoctorHomeScreen = ({
     Animated.parallel([
       Animated.timing(stickyOpacity, {
         toValue: showStickyHeader ? 1 : 0,
-        duration: 180,
+        duration: 250,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
         useNativeDriver: true,
       }),
       Animated.timing(stickyTranslateY, {
-        toValue: showStickyHeader ? 0 : -12,
-        duration: 180,
+        toValue: showStickyHeader ? 0 : -10,
+        duration: 250,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
         useNativeDriver: true,
       }),
     ]).start();
@@ -206,9 +209,9 @@ const DoctorHomeScreen = ({
       >
         <LinearGradient
           colors={[
-            'rgba(255, 255, 255, 0.73)',
-            'rgba(255, 255, 255, 0.51)',
-            'rgba(255, 255, 255, 0.32)',
+            isDarkMode ? '#121212b9' : 'rgba(255, 255, 255, 0.73)',
+            isDarkMode ? '#121212b1' : 'rgba(255, 255, 255, 0.51)',
+            isDarkMode ? '#12121233' : 'rgba(255, 255, 255, 0)',
           ]}
           style={styles.stickyFadeBottom}
         />

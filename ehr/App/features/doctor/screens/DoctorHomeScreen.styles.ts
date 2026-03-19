@@ -31,11 +31,6 @@ export const createStyles = (theme: any, _isDarkMode: boolean) =>
       paddingHorizontal: 15,
       borderWidth: 0,
       height: 50,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.3,
-      shadowRadius: 2,
-      elevation: 5,
     },
     searchIcon: { marginRight: 10 },
     searchBar: {
