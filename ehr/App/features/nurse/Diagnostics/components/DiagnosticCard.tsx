@@ -105,7 +105,7 @@ const DiagnosticCard: React.FC<Props> = ({
           !isGrid && styles.boxLarge,
           !hasImages && styles.dashedBorder,
           {
-            backgroundColor: readOnly ? (isDarkMode ? '#0f172a' : '#ffffff') : (isDarkMode ? '#1e293b' : '#ececec'),
+            backgroundColor: isDarkMode ? '#1e293b' : '#ececec',
             borderColor: isDarkMode ? theme.border : '#c6c6c6',
           },
           (disabled && !readOnly) && styles.disabledBox,
