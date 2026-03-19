@@ -164,9 +164,9 @@ export const useIntakeAndOutputLogic = () => {
     }
   }, [selectedPatientId]);
 
-  const saveAssessment = useCallback(async (dayNo?: number, customData?: IntakeOutputData) => {
+  const saveAssessment = useCallback(async (dayNo?: number, customData?: IntakeOutputData, showLoading: boolean = true) => {
     if (!selectedPatientId) return null;
-    setLoading(true);
+    if (showLoading) setLoading(true);
     try {
       const toInt = (val: string) => { const n = parseInt(val, 10); return isNaN(n) ? null : n; };
       const today = new Date().toLocaleDateString('en-CA');
@@ -207,7 +207,7 @@ export const useIntakeAndOutputLogic = () => {
     } catch (e) {
       return null;
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, [selectedPatientId, intakeOutput, existingRecords, fetchLatestIntakeOutput]);
 

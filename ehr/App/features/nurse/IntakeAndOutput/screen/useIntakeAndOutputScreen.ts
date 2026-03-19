@@ -161,7 +161,7 @@ export const useIntakeAndOutputScreen = (onBack: () => void, readOnly: boolean, 
     if (selectedPatientId) {
       try {
         const dayNo = parseInt(calculateDayNumber(), 10) || 1;
-        const result = await saveAssessment(dayNo, updatedData);
+        const result = await saveAssessment(dayNo, updatedData, false);
         const record = result?.data || result;
         const alerts = result?.alerts || record?.alerts || {};
         const updatedAlerts: Record<string, string | null> = {};
@@ -286,7 +286,7 @@ export const useIntakeAndOutputScreen = (onBack: () => void, readOnly: boolean, 
     Object.values(backendAlerts).some(isValidDataAlert) ||
     isValidDataAlert(assessmentAlert) ||
     isValidDataAlert(dataAlert);
-  const isAlertActive = !!selectedPatientId && hasRealAlert;
+  const isAlertActive = !!selectedPatientId && isDataEntered && hasRealAlert;
 
   const getCleanedAlertText = () => {
     const parts = [
