@@ -29,6 +29,7 @@ interface Props {
   onDeleteAll: () => void;
   disabled?: boolean;
   hideImport?: boolean;
+  readOnly?: boolean;
 }
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
@@ -42,6 +43,7 @@ const DiagnosticCard: React.FC<Props> = ({
   onDeleteAll,
   disabled,
   hideImport = false,
+  readOnly = false,
 }) => {
   const { theme, isDarkMode } = useAppTheme();
   const isGrid = viewMode === 'grid';
@@ -103,10 +105,10 @@ const DiagnosticCard: React.FC<Props> = ({
           !isGrid && styles.boxLarge,
           !hasImages && styles.dashedBorder,
           {
-            backgroundColor: isDarkMode ? '#1e293b' : '#ececec',
+            backgroundColor: readOnly ? (isDarkMode ? '#0f172a' : '#ffffff') : (isDarkMode ? '#1e293b' : '#ececec'),
             borderColor: isDarkMode ? theme.border : '#c6c6c6',
           },
-          disabled && styles.disabledBox,
+          (disabled && !readOnly) && styles.disabledBox,
         ]}
       >
         {hasImages ? (

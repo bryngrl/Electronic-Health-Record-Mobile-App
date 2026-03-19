@@ -498,6 +498,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
                         onDeleteAll={() => handleDeleteAll(item.id)}
                         disabled={loading || readOnly}
                         hideImport={readOnly}
+                        readOnly={readOnly}
                       />
                     </View>
                   );
@@ -534,6 +535,7 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
                       onDeleteAll={() => handleDeleteAll(item.id)}
                       disabled={loading || readOnly}
                       hideImport={readOnly}
+                      readOnly={readOnly}
                     />
                   </View>
                 );
