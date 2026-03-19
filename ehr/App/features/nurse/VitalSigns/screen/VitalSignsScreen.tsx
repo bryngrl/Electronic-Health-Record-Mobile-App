@@ -384,9 +384,14 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
       setIsMenuVisible(false);
       return true;
     }
+    if (currentTimeIndex > 0) {
+      handlePrevTime();
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      return true;
+    }
     onBack();
     return true;
-  }, [isAdpieActive, isMenuVisible, onBack, setIsMenuVisible]);
+  }, [isAdpieActive, isMenuVisible, onBack, setIsMenuVisible, currentTimeIndex, handlePrevTime]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
@@ -761,18 +766,18 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                     <TouchableOpacity
                       style={[
                         styles.submitButton,
-                        !isModified && {
+                        (!isModified && !isDataEntered) && {
                           backgroundColor: theme.buttonDisabledBg,
                           borderColor: theme.buttonDisabledBorder,
                         },
                       ]}
                       onPress={handleSubmitPress}
-                      disabled={!isModified}
+                      disabled={!isModified && !isDataEntered}
                     >
                       <Text
                         style={[
                           styles.submitBtnText,
-                          !isModified && { color: theme.textMuted },
+                          (!isModified && !isDataEntered) && { color: theme.textMuted },
                         ]}
                       >
                         SUBMIT
@@ -783,18 +788,18 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                   <TouchableOpacity
                     style={[
                       styles.nextButton,
-                      !isModified && {
+                      (!isModified && !isDataEntered) && {
                         backgroundColor: theme.buttonDisabledBg,
                         borderColor: theme.buttonDisabledBorder,
                       },
                     ]}
                     onPress={handleNextPress}
-                    disabled={!isModified}
+                    disabled={!isModified && !isDataEntered}
                   >
                     <Text
                       style={[
                         styles.nextBtnText,
-                        !isModified && { color: theme.textMuted },
+                        (!isModified && !isDataEntered) && { color: theme.textMuted },
                       ]}
                     >
                       NEXT ›

@@ -173,9 +173,14 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
       setIsMenuVisible(false);
       return true;
     }
+    if (stageIndex > 0) {
+      setStageIndex(stageIndex - 1);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      return true;
+    }
     onBack();
     return true;
-  }, [isMenuVisible, onBack]);
+  }, [isMenuVisible, onBack, stageIndex, setStageIndex]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
@@ -424,7 +429,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
                     borderColor: theme.buttonDisabledBorder,
                   },
                 ]}
-                onPress={onBack}
+                onPress={handleBackPress}
                 disabled={isSubmitting || stageIndex === 0}
               >
                 <Icon
@@ -437,13 +442,13 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
                 style={[
                   styles.actionBtn,
                   { marginLeft: 10, marginRight: 0 },
-                  !isModified && {
+                  (!isModified && !isDataEntered) && {
                     borderColor: theme.buttonDisabledBorder,
                     backgroundColor: theme.buttonDisabledBg,
                   },
                 ]}
                 onPress={handleNextPress}
-                disabled={isSubmitting || !isModified}
+                disabled={isSubmitting || (!isModified && !isDataEntered)}
               >
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color={theme.primary} />
@@ -451,7 +456,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
                   <Text
                     style={[
                       styles.btnText,
-                      !isModified && {
+                      (!isModified && !isDataEntered) && {
                         color: theme.textMuted,
                       },
                     ]}

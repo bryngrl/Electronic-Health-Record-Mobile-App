@@ -161,9 +161,14 @@ const MedAdministrationScreen = ({
       setIsMenuVisible(false);
       return true;
     }
+    if (step > 0) {
+      setStep(step - 1);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      return true;
+    }
     onBack();
     return true;
-  }, [isMenuVisible, onBack]);
+  }, [isMenuVisible, onBack, step, setStep]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
@@ -507,7 +512,7 @@ const MedAdministrationScreen = ({
                     borderColor: theme.buttonDisabledBorder,
                   },
                 ]}
-                onPress={onBack}
+                onPress={handleBackPress}
                 disabled={isLoading || step === 0}
               >
                 <Icon
@@ -520,18 +525,18 @@ const MedAdministrationScreen = ({
                 style={[
                   styles.actionBtn,
                   { marginLeft: 10, marginRight: 0 },
-                  !isModified && {
+                  (!isModified && !isDataEntered) && {
                     backgroundColor: theme.buttonDisabledBg,
                     borderColor: theme.buttonDisabledBorder,
                   },
                 ]}
                 onPress={handleAction}
-                disabled={isLoading || !isModified}
+                disabled={isLoading || (!isModified && !isDataEntered)}
               >
                 <Text
                   style={[
                     styles.actionBtnText,
-                    !isModified && { color: theme.textMuted },
+                    (!isModified && !isDataEntered) && { color: theme.textMuted },
                   ]}
                 >
                   {step === 2 ? 'SUBMIT' : 'NEXT'}

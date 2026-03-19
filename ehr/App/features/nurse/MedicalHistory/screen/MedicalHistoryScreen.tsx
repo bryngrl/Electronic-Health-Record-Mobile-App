@@ -267,9 +267,14 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
       setIsMenuVisible(false);
       return true;
     }
+    if (step > 0) {
+      setStep(step - 1);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      return true;
+    }
     onBack();
     return true;
-  }, [isMenuVisible, onBack]);
+  }, [isMenuVisible, onBack, step]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
@@ -628,7 +633,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
                     borderColor: theme.buttonDisabledBorder,
                   },
                 ]}
-                onPress={onBack}
+                onPress={handleBackPress}
                 disabled={isLoading || step === 0}
               >
                 <Icon
@@ -641,18 +646,18 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
                 style={[
                   styles.submitBtn,
                   { marginLeft: 10, marginRight: 0 },
-                  !isModified && {
+                  (!isModified && !isDataEntered) && {
                     backgroundColor: theme.buttonDisabledBg,
                     borderColor: theme.buttonDisabledBorder,
                   },
                 ]}
                 onPress={handleNext}
-                disabled={!isModified}
+                disabled={!isModified && !isDataEntered}
               >
                 <Text
                   style={[
                     styles.submitText,
-                    !isModified && { color: theme.textMuted },
+                    (!isModified && !isDataEntered) && { color: theme.textMuted },
                   ]}
                 >
                   {step === steps.length - 1 ? 'SUBMIT' : 'NEXT'}

@@ -142,6 +142,34 @@ const LabValuesScreen = ({
     ? ['rgba(18, 18, 18, 1)', 'rgba(18, 18, 18, 0)']
     : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0)'];
 
+  const handleBackPress = useCallback(() => {
+    if (isAdpieActive) {
+      setIsAdpieActive(false);
+      setPassedAlert(null);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      return true;
+    }
+    if (showLabList) {
+      setShowLabList(false);
+      return true;
+    }
+    if (selectedTestIndex > 0) {
+      setSelectedTestIndex(selectedTestIndex - 1);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      return true;
+    }
+    onBack();
+    return true;
+  }, [isAdpieActive, showLabList, selectedTestIndex, onBack, setPassedAlert, setShowLabList, setSelectedTestIndex]);
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      handleBackPress,
+    );
+    return () => backHandler.remove();
+  }, [handleBackPress]);
+
   if (isAdpieActive && labId && selectedPatientId) {
     return (
       <ADPIEScreen
@@ -368,7 +396,7 @@ const LabValuesScreen = ({
                       borderColor: theme.buttonDisabledBorder,
                     },
                   ]}
-                  onPress={onBack}
+                  onPress={handleBackPress}
                   disabled={isLoading || selectedTestIndex === 0}
                 >
                   <Icon
@@ -407,18 +435,18 @@ const LabValuesScreen = ({
                     <TouchableOpacity
                       style={[
                         styles.submitBtn,
-                        !isModified && {
+                        (!isModified && !isDataEntered) && {
                           backgroundColor: theme.buttonDisabledBg,
                           borderColor: theme.buttonDisabledBorder,
                         },
                       ]}
                       onPress={handleNextOrSave}
-                      disabled={!isModified}
+                      disabled={!isModified && !isDataEntered}
                     >
                       <Text
                         style={[
                           styles.submitText,
-                          !isModified && { color: theme.textMuted },
+                          (!isModified && !isDataEntered) && { color: theme.textMuted },
                         ]}
                       >
                         {isExistingRecord ? 'UPDATE' : 'SUBMIT'}
@@ -429,7 +457,7 @@ const LabValuesScreen = ({
                   <TouchableOpacity
                     style={[
                       styles.nextBtn,
-                      !isModified && {
+                      (!isModified && !isDataEntered) && {
                         backgroundColor: theme.buttonDisabledBg,
                         borderColor: theme.buttonDisabledBorder,
                       },
@@ -438,12 +466,12 @@ const LabValuesScreen = ({
                       await handleNextOrSave();
                       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
                     }}
-                    disabled={!isModified}
+                    disabled={!isModified && !isDataEntered}
                   >
                     <Text
                       style={[
                         styles.nextText,
-                        !isModified && { color: theme.textMuted },
+                        (!isModified && !isDataEntered) && { color: theme.textMuted },
                       ]}
                     >
                       NEXT
@@ -451,7 +479,7 @@ const LabValuesScreen = ({
                     <Icon
                       name="chevron-right"
                       size={20}
-                      color={isModified ? theme.primary : theme.textMuted}
+                      color={(isModified || isDataEntered) ? theme.primary : theme.textMuted}
                     />
                   </TouchableOpacity>
                 )}
