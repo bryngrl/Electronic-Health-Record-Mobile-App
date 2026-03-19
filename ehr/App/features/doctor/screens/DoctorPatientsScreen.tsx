@@ -23,42 +23,53 @@ import { createStyles, createModalStyles } from './DoctorPatientsScreen.styles';
 
 const CACHE_PATIENTS_KEY = 'doctor_cache_patients';
 
+// --- TIME AGO FORMATTER ---
+const formatTimeAgo = (timestamp: string | null) => {
+  if (!timestamp) return 'No updates';
+  try {
+    const now = new Date();
+    const updated = new Date(timestamp);
+    const diffInMs = now.getTime() - updated.getTime();
+    
+    if (diffInMs < 0) return 'Updated just now';
+
+    const diffInMins = Math.floor(diffInMs / (1000 * 60));
+    const diffInHrs = Math.floor(diffInMins / 60);
+    const diffInDays = Math.floor(diffInHrs / 24);
+
+    if (diffInMins < 1) return 'Updated just now';
+    if (diffInMins < 60) return `Updated ${diffInMins}m ago`;
+    if (diffInHrs < 24) return `Updated ${diffInHrs}h ago`;
+    return `Updated ${diffInDays}d ago`;
+  } catch (e) {
+    return 'No updates';
+  }
+};
+
 // --- UPDATED PATIENT RECORD MODAL COMPONENT (CENTERED BOX STYLE) ---
 const PatientRecordModal = ({
   visible,
   onClose,
   patient,
   onSelectCategory,
+  loadingStats,
 }: any) => {
   const { theme } = useAppTheme();
   const modalStyles = useMemo(() => createModalStyles(theme), [theme]);
+  
+  const stats = patient?.record_stats || {};
+
   const categories = [
-    { name: 'Medical History', update: 'Updated 3 hours ago', icon: 'history' },
-    {
-      name: 'Physical Exam',
-      update: 'Updated 3 hours ago',
-      icon: 'person-search',
-    },
-    { name: 'Vital Signs', update: 'Updated 3 hours ago', icon: 'show-chart' },
-    { name: 'Intake and Output', update: 'No updates', icon: 'water-drop' },
-    { name: 'Lab Values', update: 'Updated 3 hours ago', icon: 'science' },
-    { name: 'Diagnostics', update: 'Updated 3 hours ago', icon: 'biotech' },
-    { name: 'IVs & Lines', update: 'Updated 3 hours ago', icon: 'vaccines' },
-    {
-      name: 'Activities of Daily Living',
-      update: 'Updated 3 hours ago',
-      icon: 'accessibility',
-    },
-    {
-      name: 'Medical Administration',
-      update: 'Updated 3 hours ago',
-      icon: 'medication',
-    },
-    {
-      name: 'Medical Reconciliation',
-      update: 'Updated 3 hours ago',
-      icon: 'assignment-turned-in',
-    },
+    { name: 'Medical History', icon: 'history' },
+    { name: 'Physical Exam', icon: 'person-search' },
+    { name: 'Vital Signs', icon: 'show-chart' },
+    { name: 'Intake and Output', icon: 'water-drop' },
+    { name: 'Lab Values', icon: 'science' },
+    { name: 'Diagnostics', icon: 'biotech' },
+    { name: 'IVs & Lines', icon: 'vaccines' },
+    { name: 'Activities of Daily Living', icon: 'accessibility' },
+    { name: 'Medical Administration', icon: 'medication' },
+    { name: 'Medical Reconciliation', icon: 'assignment-turned-in' },
   ];
 
   return (
@@ -71,9 +82,9 @@ const PatientRecordModal = ({
       <View style={modalStyles.overlay}>
         <View style={modalStyles.modalContainer}>
           <View style={modalStyles.header}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={modalStyles.title}>Patient Record</Text>
-              <Text style={modalStyles.patientName}>
+              <Text style={modalStyles.patientName} numberOfLines={1}>
                 {patient
                   ? `${patient.first_name} ${patient.last_name}`
                   : 'Select a patient'}
@@ -88,25 +99,42 @@ const PatientRecordModal = ({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={modalStyles.scrollContent}
           >
-            {categories.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={modalStyles.categoryCard}
-                onPress={() => onSelectCategory(item.name)}
-                activeOpacity={0.6}
-              >
-                <View style={modalStyles.cardLeft}>
-                  <View style={modalStyles.iconCircle}>
-                    <Icon name={item.icon} size={22} color={theme.primary} />
+            {loadingStats && (
+              <View style={{ padding: 10, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={theme.primary} />
+                <Text style={{ fontSize: 10, color: theme.textMuted, marginTop: 4 }}>Updating stats...</Text>
+              </View>
+            )}
+            
+            {categories.map((item, index) => {
+              const lastUpdated = stats[item.name];
+              const hasUpdate = !!lastUpdated;
+              const updateText = formatTimeAgo(lastUpdated);
+
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    modalStyles.categoryCard,
+                    !hasUpdate && { opacity: 0.5 }
+                  ]}
+                  onPress={() => hasUpdate && onSelectCategory(item.name)}
+                  activeOpacity={hasUpdate ? 0.6 : 1}
+                  disabled={!hasUpdate}
+                >
+                  <View style={modalStyles.cardLeft}>
+                    <View style={modalStyles.iconCircle}>
+                      <Icon name={item.icon} size={22} color={theme.primary} />
+                    </View>
+                    <View style={modalStyles.cardInfo}>
+                      <Text style={modalStyles.categoryName}>{item.name}</Text>
+                      <Text style={modalStyles.updateText}>{updateText}</Text>
+                    </View>
                   </View>
-                  <View style={modalStyles.cardInfo}>
-                    <Text style={modalStyles.categoryName}>{item.name}</Text>
-                    <Text style={modalStyles.updateText}>{item.update}</Text>
-                  </View>
-                </View>
-                <Icon name="chevron-right" size={24} color={theme.primary} />
-              </TouchableOpacity>
-            ))}
+                  {hasUpdate && <Icon name="chevron-right" size={24} color={theme.primary} />}
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
       </View>
@@ -122,6 +150,7 @@ const DoctorPatientsScreen = ({
   const [accountModalVisible, setAccountModalVisible] = useState(false);
   const [recordVisible, setRecordVisible] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
   const [patients, setPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -169,6 +198,22 @@ const DoctorPatientsScreen = ({
   useEffect(() => {
     fetchPatients();
   }, [fetchPatients]);
+
+  const handlePatientPress = async (patient: any) => {
+    setSelectedPatient(patient);
+    setRecordVisible(true);
+    setLoadingStats(true);
+    try {
+      const res = await apiClient.get(`/doctor/patient/${patient.patient_id}`);
+      if (res.data) {
+        setSelectedPatient(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch patient stats:', err);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
 
   const filteredPatients = useMemo(() => {
     return patients.filter(
@@ -272,10 +317,7 @@ const DoctorPatientsScreen = ({
                 key={item.patient_id}
                 style={styles.patientCard}
                 activeOpacity={0.7}
-                onPress={() => {
-                  setSelectedPatient(item);
-                  setRecordVisible(true);
-                }}
+                onPress={() => handlePatientPress(item)}
               >
                 <View style={styles.patientLeft}>
                   <View style={styles.avatarPlaceholder}>
@@ -328,6 +370,7 @@ const DoctorPatientsScreen = ({
         onClose={() => setRecordVisible(false)}
         patient={selectedPatient}
         onSelectCategory={handleCategoryPress}
+        loadingStats={loadingStats}
       />
     </View>
   );
