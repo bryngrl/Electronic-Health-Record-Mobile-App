@@ -4,18 +4,21 @@ import {
   View,
   Text,
   Image,
-  SafeAreaView,
-  KeyboardAvoidingView,
   Platform,
   StatusBar,
   ScrollView,
   Keyboard,
+  KeyboardAvoidingView,
+  TouchableOpacity,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useLogin } from '../hook/useLogin';
 import { LoginForm } from '../components/LoginForm';
 import SweetAlert from '@components/SweetAlert';
 
 export default function LoginScreen() {
+  const navigation = useNavigation<any>();
+
   const {
     email,
     setEmail,
@@ -27,6 +30,7 @@ export default function LoginScreen() {
     alertConfig,
     hideAlert,
     handleLogin,
+    handleForgotPassword, // Function from updated useLogin.ts
   } = useLogin();
 
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
@@ -92,6 +96,15 @@ export default function LoginScreen() {
               isPasswordVisible={isPasswordVisible}
               togglePasswordVisibility={togglePasswordVisibility}
             />
+
+            {/* Forgot Password Trigger */}
+            <TouchableOpacity
+              onPress={() => handleForgotPassword(navigation)}
+              style={styles.forgotPasswordContainer}
+              disabled={isSubmitting}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -137,7 +150,7 @@ const styles = StyleSheet.create({
     height: 80,
   },
   logo: {
-    // base styles
+    // Base styles inherited from logoLarge/Small
   },
   bottomSheet: {
     marginTop: 40,
@@ -161,5 +174,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 35,
+  },
+  forgotPasswordContainer: {
+    alignItems: 'flex-end',
+    marginTop: 15,
+    paddingVertical: 10,
+  },
+  forgotPasswordText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '500',
+    textDecorationLine: 'underline',
+    opacity: 0.9,
   },
 });

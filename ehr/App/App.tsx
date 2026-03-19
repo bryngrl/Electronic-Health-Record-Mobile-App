@@ -1,15 +1,44 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, View, Platform, StyleSheet } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 import HomeScreen from '@features/nurse/Dashboard/screen/HomeScreen';
 import DoctorMainScreen from '@features/doctor/screens/DoctorMainScreen';
 import LoginScreen from '@features/Auth/screen/LoginScreen';
+import ChangePasswordScreen from '@features/Auth/screen/ChangePasswordScreen';
 import AdminMainScreen from '@features/Admin/screen/AdminMainScreen';
 import { ThemeProvider, useAppTheme } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from '@features/Auth/AuthContext';
 import SplashScreen from '@components/SplashScreen';
 import { ToastProvider } from './context/ToastContext';
 import useNetworkMonitor from './hooks/useNetworkMonitor';
+
+type AuthStackParamList = {
+  Login: undefined;
+  ChangePassword: { verifiedEmail: string };
+};
+
+const AuthStack = createStackNavigator<AuthStackParamList>();
+
+const AuthNavigator = () => {
+  return (
+    <NavigationContainer>
+      <AuthStack.Navigator
+        initialRouteName="Login"
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <AuthStack.Screen name="Login" component={LoginScreen} />
+        <AuthStack.Screen
+          name="ChangePassword"
+          component={ChangePasswordScreen}
+        />
+      </AuthStack.Navigator>
+    </NavigationContainer>
+  );
+};
 
 const NetworkMonitor = () => {
   useNetworkMonitor();
@@ -42,7 +71,7 @@ const MainApp = () => {
       </View>
     );
   } else if (!user) {
-    content = <LoginScreen />;
+    content = <AuthNavigator />;
   } else if (role === 'nurse') {
     content = <HomeScreen />;
   } else if (role === 'doctor') {
@@ -50,7 +79,7 @@ const MainApp = () => {
   } else if (role === 'admin') {
     content = <AdminMainScreen />;
   } else {
-    content = <LoginScreen />;
+    content = <AuthNavigator />;
   }
 
   return (

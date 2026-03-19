@@ -47,6 +47,9 @@ export const useLogin = () => {
     setAlertConfig(prev => ({ ...prev, visible: false }));
   };
 
+  /**
+   * Handle Standard Login
+   */
   const handleLogin = async () => {
     if (!email || !password) {
       showAlert('Error', 'Please fill in all fields', 'warning');
@@ -55,17 +58,10 @@ export const useLogin = () => {
 
     setIsSubmitting(true);
     try {
-      console.log('Attempting login with:', { email, password: '[HIDDEN]' });
       const response = await apiClient.post('/auth/login', {
         username: email,
         password,
       });
-
-      if (__DEV__) {
-        console.log('--- LOGIN SUCCESS: RAW BACKEND DATA ---');
-        console.log(JSON.stringify(response.data, null, 2));
-        console.log('---------------------------------------');
-      }
 
       const {
         access_token,
@@ -78,7 +74,6 @@ export const useLogin = () => {
         ...restOfUserDetails
       } = response.data;
 
-      // Extract full_name reliably
       const finalFullName = full_name || name || restOfUserDetails.user?.full_name || restOfUserDetails.user?.name;
       const finalId = user_id || id || restOfUserDetails.user?.id;
 
@@ -92,11 +87,9 @@ export const useLogin = () => {
         },
         access_token,
       );
-      // console.log('[Login] Stored email:', userEmail ?? email);
 
       showToast(`Welcome back, ${finalFullName || email}!`, 'success', 4000);
     } catch (error: any) {
-      console.error('Login error full:', error);
       let errorMessage = 'Invalid username or password';
 
       if (error.response?.data?.detail) {
@@ -118,6 +111,35 @@ export const useLogin = () => {
     }
   };
 
+  /**
+   * Handle Forgot Password Flow
+   * 1. Verifies if email exists in Laravel DB
+   * 2. Navigates to ChangePasswordScreen when account exists
+   */
+  const handleForgotPassword = async (navigation: {
+    navigate: (route: string, params?: Record<string, unknown>) => void;
+  }) => {
+    if (!email) {
+      showAlert('Email Required', 'Please enter your email address to verify your account.', 'warning');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Endpoint matches the verifyAccountForReset method in Laravel UserController
+      const response = await apiClient.post('/auth/verify-account', { email });
+
+      if (response.data.exists) {
+        navigation.navigate('ChangePassword', { verifiedEmail: email });
+      }
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'We could not find an account with that email.';
+      showAlert('Account Not Found', msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return {
     email,
     setEmail,
@@ -129,6 +151,7 @@ export const useLogin = () => {
     alertConfig,
     hideAlert,
     handleLogin,
+    handleForgotPassword, // Exported function
     width,
     height,
     isLandscape,
