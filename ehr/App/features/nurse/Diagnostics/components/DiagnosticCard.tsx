@@ -103,8 +103,8 @@ const DiagnosticCard: React.FC<Props> = ({
           !isGrid && styles.boxLarge,
           !hasImages && styles.dashedBorder,
           {
-            backgroundColor: isDarkMode ? '#1e293b' : '#d5d4d4',
-            borderColor: isDarkMode ? theme.border : '#9d9d9d',
+            backgroundColor: isDarkMode ? '#1e293b' : '#ececec',
+            borderColor: isDarkMode ? theme.border : '#c6c6c6',
           },
           disabled && styles.disabledBox,
         ]}
@@ -218,7 +218,7 @@ const DiagnosticCard: React.FC<Props> = ({
               name="cloud-upload"
               size={isGrid ? 40 : 60}
               color={
-                disabled ? '#e2e2e2' : isDarkMode ? theme.textMuted : '#585858'
+                disabled ? '#e2e2e2' : isDarkMode ? theme.textMuted : '#8a8a8a'
               }
             />
             <Text
@@ -269,8 +269,8 @@ const styles = StyleSheet.create({
   },
   placeholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   importText: { fontWeight: '600', marginTop: 8 },
-  disabledText: { color: '#585859' },
-  clickText: { color: '#C7C7CD', fontSize: 11 },
+  disabledText: { color: '#808080' },
+  clickText: { color: '#8a8a8a', fontSize: 11 },
   gridScroll: {
     flex: 1,
   },
