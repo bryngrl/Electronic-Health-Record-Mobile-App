@@ -619,10 +619,28 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
           ))}
 
           {!readOnly ? (
-            <View style={styles.footerRow}>
+            <View style={styles.footerAction}>
+              <TouchableOpacity
+                style={[
+                  styles.backBtn,
+                  step === 0 && {
+                    backgroundColor: theme.buttonDisabledBg,
+                    borderColor: theme.buttonDisabledBorder,
+                  },
+                ]}
+                onPress={onBack}
+                disabled={isLoading || step === 0}
+              >
+                <Icon
+                  name="arrow-back"
+                  size={24}
+                  color={step === 0 ? theme.textMuted : theme.primary}
+                />
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.submitBtn,
+                  { marginLeft: 10, marginRight: 0 },
                   !isModified && {
                     backgroundColor: theme.buttonDisabledBg,
                     borderColor: theme.buttonDisabledBorder,
@@ -643,55 +661,85 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
             </View>
           ) : (
             <View style={{ marginTop: 10 }}>
-              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+              <View style={styles.footerAction}>
                 <TouchableOpacity
                   style={[
-                    styles.navBtn,
+                    styles.backBtn,
                     step === 0 && {
                       backgroundColor: theme.buttonDisabledBg,
                       borderColor: theme.buttonDisabledBorder,
                     },
                   ]}
-                  onPress={() => {
-                    setStep(step - 1);
-                    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-                  }}
-                  disabled={step === 0}
+                  onPress={onBack}
+                  disabled={isLoading || step === 0}
                 >
-                  <Text
-                    style={[
-                      styles.navBtnText,
-                      step === 0 && { color: theme.textMuted },
-                    ]}
-                  >
-                    ‹ PREV
-                  </Text>
+                  <Icon
+                    name="arrow-back"
+                    size={24}
+                    color={step === 0 ? theme.textMuted : theme.primary}
+                  />
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.navBtn,
-                    step === steps.length - 1 && {
-                      backgroundColor: theme.buttonDisabledBg,
-                      borderColor: theme.buttonDisabledBorder,
-                    },
-                  ]}
-                  onPress={() => {
-                    setStep(step + 1);
-                    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+
+                <View
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    gap: 10,
+                    marginLeft: 10,
                   }}
-                  disabled={step === steps.length - 1}
                 >
-                  <Text
+                  <TouchableOpacity
                     style={[
-                      styles.navBtnText,
-                      step === steps.length - 1 && { color: theme.textMuted },
+                      styles.navBtn,
+                      step === 0 && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
                     ]}
+                    onPress={() => {
+                      setStep(step - 1);
+                      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                    }}
+                    disabled={step === 0}
                   >
-                    NEXT ›
-                  </Text>
-                </TouchableOpacity>
+                    <Text
+                      style={[
+                        styles.navBtnText,
+                        step === 0 && { color: theme.textMuted },
+                      ]}
+                    >
+                      ‹ PREV
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.navBtn,
+                      step === steps.length - 1 && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
+                    ]}
+                    onPress={() => {
+                      setStep(step + 1);
+                      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                    }}
+                    disabled={step === steps.length - 1}
+                  >
+                    <Text
+                      style={[
+                        styles.navBtnText,
+                        step === steps.length - 1 && { color: theme.textMuted },
+                      ]}
+                    >
+                      NEXT ›
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <TouchableOpacity style={styles.navBtn} onPress={onBack}>
+              <TouchableOpacity
+                style={[styles.navBtn, { marginTop: 10 }]}
+                onPress={onBack}
+              >
                 <Text style={styles.navBtnText}>CLOSE</Text>
               </TouchableOpacity>
             </View>
@@ -808,9 +856,20 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       color: theme.textMuted,
       textAlign: 'right',
     },
-    footerRow: {
-      flexDirection: 'row',
+    backBtn: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: theme.buttonBg,
       justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: theme.primary,
+    },
+    footerAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       marginTop: 10,
       paddingBottom: 40,
     },
@@ -820,7 +879,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       paddingVertical: 15,
       borderRadius: 25,
       alignItems: 'center',
-      marginHorizontal: 5,
+      marginHorizontal: 10,
       borderWidth: 1.5,
       borderColor: theme.buttonBorder,
     },
@@ -836,7 +895,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       borderRadius: 25,
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: theme.buttonBorder,
     },
     navBtnText: {

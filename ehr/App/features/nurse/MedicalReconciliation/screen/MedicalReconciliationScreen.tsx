@@ -317,13 +317,6 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
             onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
           />
 
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>DAY NO :</Text>
-            <View style={styles.pillInput}>
-              <Text style={styles.dateVal}>{calculateDayNumber()}</Text>
-            </View>
-          </View>
-
           {!readOnly && (
             <TouchableOpacity
               style={[styles.naRow, !patientId && { opacity: 0.5 }]}
@@ -422,86 +415,136 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
 
           {/* FOOTER */}
           {!readOnly ? (
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                !isModified && {
-                  borderColor: theme.buttonDisabledBorder,
-                  backgroundColor: theme.buttonDisabledBg,
-                },
-              ]}
-              onPress={handleNextPress}
-              disabled={isSubmitting || !isModified}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color={theme.primary} />
-              ) : (
-                <Text
-                  style={[
-                    styles.btnText,
-                    !isModified && {
-                      color: theme.textMuted,
-                    },
-                  ]}
-                >
-                  {isLastStage ? 'SUBMIT' : 'NEXT'}
-                </Text>
-              )}
-            </TouchableOpacity>
+            <View style={styles.footerAction}>
+              <TouchableOpacity
+                style={[
+                  styles.backBtn,
+                  stageIndex === 0 && {
+                    backgroundColor: theme.buttonDisabledBg,
+                    borderColor: theme.buttonDisabledBorder,
+                  },
+                ]}
+                onPress={onBack}
+                disabled={isSubmitting || stageIndex === 0}
+              >
+                <Icon
+                  name="arrow-back"
+                  size={24}
+                  color={stageIndex === 0 ? theme.textMuted : theme.primary}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.actionBtn,
+                  { marginLeft: 10, marginRight: 0 },
+                  !isModified && {
+                    borderColor: theme.buttonDisabledBorder,
+                    backgroundColor: theme.buttonDisabledBg,
+                  },
+                ]}
+                onPress={handleNextPress}
+                disabled={isSubmitting || !isModified}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color={theme.primary} />
+                ) : (
+                  <Text
+                    style={[
+                      styles.btnText,
+                      !isModified && {
+                        color: theme.textMuted,
+                      },
+                    ]}
+                  >
+                    {isLastStage ? 'SUBMIT' : 'NEXT'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
           ) : (
             <View style={{ marginTop: 10 }}>
-              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+              <View style={styles.footerAction}>
                 <TouchableOpacity
                   style={[
-                    styles.actionBtn,
-                    { flex: 1, marginTop: 0, marginBottom: 0 },
+                    styles.backBtn,
                     stageIndex === 0 && {
                       backgroundColor: theme.buttonDisabledBg,
                       borderColor: theme.buttonDisabledBorder,
                     },
                   ]}
-                  onPress={() => {
-                    setStageIndex(stageIndex - 1);
-                    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-                  }}
-                  disabled={stageIndex === 0}
+                  onPress={onBack}
+                  disabled={isSubmitting || stageIndex === 0}
                 >
-                  <Text
-                    style={[
-                      styles.btnText,
-                      stageIndex === 0 && { color: theme.textMuted },
-                    ]}
-                  >
-                    ‹ PREV
-                  </Text>
+                  <Icon
+                    name="arrow-back"
+                    size={24}
+                    color={stageIndex === 0 ? theme.textMuted : theme.primary}
+                  />
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.actionBtn,
-                    { flex: 1, marginTop: 0, marginBottom: 0 },
-                    isLastStage && {
-                      backgroundColor: theme.buttonDisabledBg,
-                      borderColor: theme.buttonDisabledBorder,
-                    },
-                  ]}
-                  onPress={() => {
-                    setStageIndex(stageIndex + 1);
-                    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+
+                <View
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    gap: 10,
+                    marginLeft: 10,
                   }}
-                  disabled={isLastStage}
                 >
-                  <Text
+                  <TouchableOpacity
                     style={[
-                      styles.btnText,
-                      isLastStage && { color: theme.textMuted },
+                      styles.actionBtn,
+                      { marginHorizontal: 0 },
+                      stageIndex === 0 && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
                     ]}
+                    onPress={() => {
+                      setStageIndex(stageIndex - 1);
+                      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                    }}
+                    disabled={stageIndex === 0}
                   >
-                    NEXT ›
-                  </Text>
-                </TouchableOpacity>
+                    <Text
+                      style={[
+                        styles.btnText,
+                        stageIndex === 0 && { color: theme.textMuted },
+                      ]}
+                    >
+                      ‹ PREV
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.actionBtn,
+                      { marginHorizontal: 0 },
+                      isLastStage && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
+                    ]}
+                    onPress={() => {
+                      setStageIndex(stageIndex + 1);
+                      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                    }}
+                    disabled={isLastStage}
+                  >
+                    <Text
+                      style={[
+                        styles.btnText,
+                        isLastStage && { color: theme.textMuted },
+                      ]}
+                    >
+                      NEXT ›
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
               <TouchableOpacity
-                style={[styles.actionBtn, { marginBottom: 0 }]}
+                style={[
+                  styles.actionBtn,
+                  { marginHorizontal: 0, marginBottom: 0 },
+                ]}
                 onPress={onBack}
               >
                 <Text style={styles.btnText}>CLOSE</Text>
@@ -594,7 +637,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
 const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: theme.background },
-    scrollContent: { paddingHorizontal: 40, paddingBottom: 20 },
+    scrollContent: { paddingHorizontal: 40, paddingBottom: 50 },
     header: commonStyles.header,
     title: commonStyles.title,
     subDate: {
@@ -656,17 +699,35 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontSize: 14,
       textAlign: 'center',
     },
+    backBtn: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: theme.buttonBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: theme.primary,
+    },
+    footerAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 20,
+      marginBottom: 40,
+    },
     actionBtn: {
+      flex: 1,
       backgroundColor: theme.buttonBg,
       borderColor: theme.buttonBorder,
       borderWidth: 1.5,
       borderRadius: 50,
       paddingVertical: 15,
-      marginTop: 5,
-      marginBottom: 70,
+      marginHorizontal: 10,
       alignItems: 'center',
       justifyContent: 'center',
-      minHeight: 30,
+      minHeight: 50,
+      width: '100%',
     },
     btnText: {
       color: theme.primary,

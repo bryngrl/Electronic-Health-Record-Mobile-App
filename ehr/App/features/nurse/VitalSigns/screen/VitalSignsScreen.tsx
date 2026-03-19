@@ -714,22 +714,25 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
 
             {!readOnly ? (
               <View style={styles.footerAction}>
-                <Animated.View style={{ opacity: bellFadeAnim }}>
-                  <TouchableOpacity
-                    style={styles.alertIcon}
-                    disabled={!isDataEntered}
-                    onPress={handleAlertPress}
-                  >
-                    <Image
-                      source={
-                        isAlertActive
-                          ? alertBellActiveIcon
-                          : alertBellInactiveIcon
-                      }
-                      style={styles.fullImg}
-                    />
-                  </TouchableOpacity>
-                </Animated.View>
+                <TouchableOpacity
+                  style={[
+                    styles.backBtn,
+                    currentTimeIndex === 0 && {
+                      backgroundColor: theme.buttonDisabledBg,
+                      borderColor: theme.buttonDisabledBorder,
+                    },
+                  ]}
+                  onPress={handleBackPress}
+                  disabled={isLoading || currentTimeIndex === 0}
+                >
+                  <Icon
+                    name="arrow-back"
+                    size={24}
+                    color={
+                      currentTimeIndex === 0 ? theme.textMuted : theme.primary
+                    }
+                  />
+                </TouchableOpacity>
 
                 {isLastTimeSlot ? (
                   <View style={styles.buttonGroup}>
@@ -798,52 +801,105 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                     </Text>
                   </TouchableOpacity>
                 )}
+
+                <Animated.View style={{ opacity: bellFadeAnim }}>
+                  <TouchableOpacity
+                    style={styles.alertIcon}
+                    disabled={!isDataEntered}
+                    onPress={handleAlertPress}
+                  >
+                    <Image
+                      source={
+                        isAlertActive
+                          ? alertBellActiveIcon
+                          : alertBellInactiveIcon
+                      }
+                      style={styles.fullImg}
+                    />
+                  </TouchableOpacity>
+                </Animated.View>
               </View>
             ) : (
               <View style={{ marginTop: 20 }}>
                 <View style={[styles.footerAction, { marginBottom: 10 }]}>
                   <TouchableOpacity
                     style={[
-                      styles.nextButton,
-                      isFirstTimeSlot && {
+                      styles.backBtn,
+                      currentTimeIndex === 0 && {
                         backgroundColor: theme.buttonDisabledBg,
                         borderColor: theme.buttonDisabledBorder,
                       },
                     ]}
                     onPress={handlePrevPress}
-                    disabled={isFirstTimeSlot}
+                    disabled={isLoading || currentTimeIndex === 0}
                   >
-                    <Text
-                      style={[
-                        styles.nextBtnText,
-                        isFirstTimeSlot && { color: theme.textMuted },
-                      ]}
-                    >
-                      ‹ PREV
-                    </Text>
+                    <Icon
+                      name="arrow-back"
+                      size={24}
+                      color={
+                        currentTimeIndex === 0 ? theme.textMuted : theme.primary
+                      }
+                    />
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.nextButton,
-                      isLastTimeSlot && {
-                        backgroundColor: theme.buttonDisabledBg,
-                        borderColor: theme.buttonDisabledBorder,
-                      },
-                    ]}
-                    onPress={handleNextPress}
-                    disabled={isLastTimeSlot}
+
+                  <View
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      gap: 10,
+                      marginHorizontal: 10,
+                    }}
                   >
-                    <Text
+                    <TouchableOpacity
                       style={[
-                        styles.nextBtnText,
-                        isLastTimeSlot && { color: theme.textMuted },
+                        styles.nextButton,
+                        { marginHorizontal: 0 },
+                        isFirstTimeSlot && {
+                          backgroundColor: theme.buttonDisabledBg,
+                          borderColor: theme.buttonDisabledBorder,
+                        },
                       ]}
+                      onPress={handlePrevPress}
+                      disabled={isFirstTimeSlot}
                     >
-                      NEXT ›
-                    </Text>
-                  </TouchableOpacity>
+                      <Text
+                        style={[
+                          styles.nextBtnText,
+                          isFirstTimeSlot && { color: theme.textMuted },
+                        ]}
+                      >
+                        ‹ PREV
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.nextButton,
+                        { marginHorizontal: 0 },
+                        isLastTimeSlot && {
+                          backgroundColor: theme.buttonDisabledBg,
+                          borderColor: theme.buttonDisabledBorder,
+                        },
+                      ]}
+                      onPress={handleNextPress}
+                      disabled={isLastTimeSlot}
+                    >
+                      <Text
+                        style={[
+                          styles.nextBtnText,
+                          isLastTimeSlot && { color: theme.textMuted },
+                        ]}
+                      >
+                        NEXT ›
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={{ width: 50 }} />
                 </View>
-                <TouchableOpacity style={styles.submitButton} onPress={onBack}>
+                <TouchableOpacity
+                  style={[styles.submitButton, { marginLeft: 0 }]}
+                  onPress={onBack}
+                >
                   <Text style={styles.submitBtnText}>CLOSE</Text>
                 </TouchableOpacity>
               </View>
@@ -1073,25 +1129,36 @@ const createStyles = (theme: any, commonStyles: any, _isDarkMode: boolean) =>
       fontFamily: 'AlteHaasGroteskBold',
       fontSize: 14,
     },
+    backBtn: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: theme.buttonBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: theme.primary,
+    },
     footerAction: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
       marginTop: 10,
       marginBottom: 40,
     },
     alertIcon: {
-      width: 45,
-      height: 45,
+      width: 50,
+      height: 50,
       justifyContent: 'center',
       alignItems: 'center',
-      borderRadius: 22.5,
+      borderRadius: 25,
       overflow: 'hidden',
     },
     fullImg: { width: '100%', height: '100%', resizeMode: 'contain' },
-    buttonGroup: { flex: 1, flexDirection: 'row', marginLeft: 15 },
+    buttonGroup: { flex: 1, flexDirection: 'row', marginHorizontal: 10 },
     cdssButton: {
       flex: 1,
-      height: 48,
+      height: 50,
       backgroundColor: theme.buttonBg,
       borderRadius: 25,
       justifyContent: 'center',
@@ -1107,7 +1174,7 @@ const createStyles = (theme: any, commonStyles: any, _isDarkMode: boolean) =>
     },
     submitButton: {
       flex: 1,
-      height: 48,
+      height: 50,
       backgroundColor: theme.buttonBg,
       borderRadius: 25,
       justifyContent: 'center',
@@ -1124,9 +1191,9 @@ const createStyles = (theme: any, commonStyles: any, _isDarkMode: boolean) =>
     nextButton: {
       flex: 1,
       backgroundColor: theme.buttonBg,
-      height: 48,
+      height: 50,
       borderRadius: 25,
-      marginLeft: 15,
+      marginHorizontal: 10,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1.5,

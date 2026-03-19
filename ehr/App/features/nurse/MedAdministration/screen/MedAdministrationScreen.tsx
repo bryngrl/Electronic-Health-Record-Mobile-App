@@ -498,77 +498,127 @@ const MedAdministrationScreen = ({
           />
 
           {!readOnly ? (
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                !isModified && {
-                  backgroundColor: theme.buttonDisabledBg,
-                  borderColor: theme.buttonDisabledBorder,
-                },
-              ]}
-              onPress={handleAction}
-              disabled={isLoading || !isModified}
-            >
-              <Text
+            <View style={styles.footerAction}>
+              <TouchableOpacity
                 style={[
-                  styles.actionBtnText,
-                  !isModified && { color: theme.textMuted },
+                  styles.backBtn,
+                  step === 0 && {
+                    backgroundColor: theme.buttonDisabledBg,
+                    borderColor: theme.buttonDisabledBorder,
+                  },
                 ]}
+                onPress={onBack}
+                disabled={isLoading || step === 0}
               >
-                {step === 2 ? 'SUBMIT' : 'NEXT'}
-              </Text>
-            </TouchableOpacity>
+                <Icon
+                  name="arrow-back"
+                  size={24}
+                  color={step === 0 ? theme.textMuted : theme.primary}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.actionBtn,
+                  { marginLeft: 10, marginRight: 0 },
+                  !isModified && {
+                    backgroundColor: theme.buttonDisabledBg,
+                    borderColor: theme.buttonDisabledBorder,
+                  },
+                ]}
+                onPress={handleAction}
+                disabled={isLoading || !isModified}
+              >
+                <Text
+                  style={[
+                    styles.actionBtnText,
+                    !isModified && { color: theme.textMuted },
+                  ]}
+                >
+                  {step === 2 ? 'SUBMIT' : 'NEXT'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <View style={{ marginTop: 20 }}>
-              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+              <View style={styles.footerAction}>
                 <TouchableOpacity
                   style={[
-                    styles.navBtn,
+                    styles.backBtn,
                     step === 0 && {
                       backgroundColor: theme.buttonDisabledBg,
                       borderColor: theme.buttonDisabledBorder,
                     },
                   ]}
-                  onPress={() => {
-                    setStep(step - 1);
-                    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-                  }}
-                  disabled={step === 0}
+                  onPress={onBack}
+                  disabled={isLoading || step === 0}
                 >
-                  <Text
-                    style={[
-                      styles.navBtnText,
-                      step === 0 && { color: theme.textMuted },
-                    ]}
-                  >
-                    ‹ PREV
-                  </Text>
+                  <Icon
+                    name="arrow-back"
+                    size={24}
+                    color={step === 0 ? theme.textMuted : theme.primary}
+                  />
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.navBtn,
-                    step === 2 && {
-                      backgroundColor: theme.buttonDisabledBg,
-                      borderColor: theme.buttonDisabledBorder,
-                    },
-                  ]}
-                  onPress={() => {
-                    setStep(step + 1);
-                    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+
+                <View
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    gap: 10,
+                    marginLeft: 10,
                   }}
-                  disabled={step === 2}
                 >
-                  <Text
+                  <TouchableOpacity
                     style={[
-                      styles.navBtnText,
-                      step === 2 && { color: theme.textMuted },
+                      styles.navBtn,
+                      step === 0 && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
                     ]}
+                    onPress={() => {
+                      setStep(step - 1);
+                      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                    }}
+                    disabled={step === 0}
                   >
-                    NEXT ›
-                  </Text>
-                </TouchableOpacity>
+                    <Text
+                      style={[
+                        styles.navBtnText,
+                        step === 0 && { color: theme.textMuted },
+                      ]}
+                    >
+                      ‹ PREV
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.navBtn,
+                      step === 2 && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
+                    ]}
+                    onPress={() => {
+                      setStep(step + 1);
+                      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                    }}
+                    disabled={step === 2}
+                  >
+                    <Text
+                      style={[
+                        styles.navBtnText,
+                        step === 2 && { color: theme.textMuted },
+                      ]}
+                    >
+                      NEXT ›
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <TouchableOpacity style={styles.navBtn} onPress={onBack}>
+              <TouchableOpacity
+                style={[styles.navBtn, { marginTop: 10 }]}
+                onPress={onBack}
+              >
                 <Text style={styles.navBtnText}>CLOSE</Text>
               </TouchableOpacity>
             </View>
@@ -703,17 +753,33 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontFamily: 'AlteHaasGroteskBold',
       fontSize: 14,
     },
+    backBtn: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: theme.buttonBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: theme.primary,
+    },
+    footerAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 20,
+    },
     actionBtn: {
+      flex: 1,
       backgroundColor: theme.buttonBg,
       borderColor: theme.buttonBorder,
       borderWidth: 1.5,
       borderRadius: 50,
       paddingVertical: 15,
-      marginTop: 20,
-      marginBottom: 0,
+      marginHorizontal: 10,
       alignItems: 'center',
       justifyContent: 'center',
-      minHeight: 30,
+      minHeight: 50,
     },
     actionBtnText: {
       color: theme.primary,
@@ -728,7 +794,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       borderRadius: 25,
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: theme.buttonBorder,
     },
     navBtnText: {

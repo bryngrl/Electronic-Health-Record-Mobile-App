@@ -360,22 +360,25 @@ const LabValuesScreen = ({
 
             {!readOnly ? (
               <View style={styles.footerRow}>
-                <Animated.View style={{ opacity: bellFadeAnim }}>
-                  <TouchableOpacity
-                    style={styles.alertIcon}
-                    disabled={!selectedPatientId}
-                    onPress={() => setModalVisible(true)}
-                  >
-                    <Image
-                      source={
-                        isAlertActive
-                          ? alertBellActiveIcon
-                          : alertBellInactiveIcon
-                      }
-                      style={styles.fullImg}
-                    />
-                  </TouchableOpacity>
-                </Animated.View>
+                <TouchableOpacity
+                  style={[
+                    styles.backBtn,
+                    selectedTestIndex === 0 && {
+                      backgroundColor: theme.buttonDisabledBg,
+                      borderColor: theme.buttonDisabledBorder,
+                    },
+                  ]}
+                  onPress={onBack}
+                  disabled={isLoading || selectedTestIndex === 0}
+                >
+                  <Icon
+                    name="arrow-back"
+                    size={24}
+                    color={
+                      selectedTestIndex === 0 ? theme.textMuted : theme.primary
+                    }
+                  />
+                </TouchableOpacity>
 
                 {selectedTestIndex === LAB_TESTS.length - 1 ? (
                   <View style={styles.buttonGroup}>
@@ -452,88 +455,139 @@ const LabValuesScreen = ({
                     />
                   </TouchableOpacity>
                 )}
+
+                <Animated.View style={{ opacity: bellFadeAnim }}>
+                  <TouchableOpacity
+                    style={styles.alertIcon}
+                    disabled={!selectedPatientId}
+                    onPress={() => setModalVisible(true)}
+                  >
+                    <Image
+                      source={
+                        isAlertActive
+                          ? alertBellActiveIcon
+                          : alertBellInactiveIcon
+                      }
+                      style={styles.fullImg}
+                    />
+                  </TouchableOpacity>
+                </Animated.View>
               </View>
             ) : (
               <View>
                 <View style={[styles.footerRow, { marginTop: 10 }]}>
                   <TouchableOpacity
                     style={[
-                      styles.nextBtn,
+                      styles.backBtn,
                       selectedTestIndex === 0 && {
                         backgroundColor: theme.buttonDisabledBg,
                         borderColor: theme.buttonDisabledBorder,
                       },
                     ]}
-                    onPress={() => {
-                      if (selectedTestIndex > 0) {
-                        setSelectedTestIndex(prev => prev - 1);
-                        scrollViewRef.current?.scrollTo({
-                          y: 0,
-                          animated: true,
-                        });
-                      }
-                    }}
-                    disabled={selectedTestIndex === 0}
+                    onPress={onBack}
+                    disabled={isLoading || selectedTestIndex === 0}
                   >
                     <Icon
-                      name="chevron-left"
-                      size={20}
+                      name="arrow-back"
+                      size={24}
                       color={
-                        selectedTestIndex > 0 ? theme.primary : theme.textMuted
+                        selectedTestIndex === 0 ? theme.textMuted : theme.primary
                       }
                     />
-                    <Text
-                      style={[
-                        styles.nextText,
-                        selectedTestIndex === 0 && { color: theme.textMuted },
-                      ]}
-                    >
-                      PREV
-                    </Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={[
-                      styles.nextBtn,
-                      selectedTestIndex === LAB_TESTS.length - 1 && {
-                        backgroundColor: theme.buttonDisabledBg,
-                        borderColor: theme.buttonDisabledBorder,
-                      },
-                    ]}
-                    onPress={() => {
-                      if (selectedTestIndex < LAB_TESTS.length - 1) {
-                        setSelectedTestIndex(prev => prev + 1);
-                        scrollViewRef.current?.scrollTo({
-                          y: 0,
-                          animated: true,
-                        });
-                      }
+                  <View
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      gap: 10,
+                      marginHorizontal: 10,
                     }}
-                    disabled={selectedTestIndex === LAB_TESTS.length - 1}
                   >
-                    <Text
+                    <TouchableOpacity
                       style={[
-                        styles.nextText,
-                        selectedTestIndex === LAB_TESTS.length - 1 && {
-                          color: theme.textMuted,
+                        styles.nextBtn,
+                        { marginHorizontal: 0 },
+                        selectedTestIndex === 0 && {
+                          backgroundColor: theme.buttonDisabledBg,
+                          borderColor: theme.buttonDisabledBorder,
                         },
                       ]}
+                      onPress={() => {
+                        if (selectedTestIndex > 0) {
+                          setSelectedTestIndex(prev => prev - 1);
+                          scrollViewRef.current?.scrollTo({
+                            y: 0,
+                            animated: true,
+                          });
+                        }
+                      }}
+                      disabled={selectedTestIndex === 0}
                     >
-                      NEXT
-                    </Text>
-                    <Icon
-                      name="chevron-right"
-                      size={20}
-                      color={
-                        selectedTestIndex < LAB_TESTS.length - 1
-                          ? theme.primary
-                          : theme.textMuted
-                      }
-                    />
-                  </TouchableOpacity>
+                      <Icon
+                        name="chevron-left"
+                        size={20}
+                        color={
+                          selectedTestIndex > 0
+                            ? theme.primary
+                            : theme.textMuted
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.nextText,
+                          selectedTestIndex === 0 && { color: theme.textMuted },
+                        ]}
+                      >
+                        PREV
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.nextBtn,
+                        { marginHorizontal: 0 },
+                        selectedTestIndex === LAB_TESTS.length - 1 && {
+                          backgroundColor: theme.buttonDisabledBg,
+                          borderColor: theme.buttonDisabledBorder,
+                        },
+                      ]}
+                      onPress={() => {
+                        if (selectedTestIndex < LAB_TESTS.length - 1) {
+                          setSelectedTestIndex(prev => prev + 1);
+                          scrollViewRef.current?.scrollTo({
+                            y: 0,
+                            animated: true,
+                          });
+                        }
+                      }}
+                      disabled={selectedTestIndex === LAB_TESTS.length - 1}
+                    >
+                      <Text
+                        style={[
+                          styles.nextText,
+                          selectedTestIndex === LAB_TESTS.length - 1 && {
+                            color: theme.textMuted,
+                          },
+                        ]}
+                      >
+                        NEXT
+                      </Text>
+                      <Icon
+                        name="chevron-right"
+                        size={20}
+                        color={
+                          selectedTestIndex < LAB_TESTS.length - 1
+                            ? theme.primary
+                            : theme.textMuted
+                        }
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={{ width: 50 }} />
                 </View>
                 <TouchableOpacity
-                  style={[styles.submitBtn, { marginTop: 10 }]}
+                  style={[styles.submitBtn, { marginTop: 10, marginLeft: 0 }]}
                   onPress={onBack}
                 >
                   <Text style={[styles.submitText, { color: theme.primary }]}>

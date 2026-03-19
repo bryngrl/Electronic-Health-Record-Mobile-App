@@ -115,8 +115,8 @@ const ADLScreen = ({
       <Animated.View style={{ flex: 1, opacity: screenOpacity }}>
         <View style={{ zIndex: 10 }}>
           <View style={styles.headerContainer}>
-            <View style={commonStyles.header}>
-              <View style={{ flex: 1 }}>
+            <View style={[commonStyles.header, { marginBottom: 0 }]}>
+              <View>
                 <Text style={commonStyles.title}>
                   Activities of Daily Living
                 </Text>
