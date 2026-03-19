@@ -1,5 +1,11 @@
 // MedAdministration/screen/MedAdministrationScreen.tsx
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from 'react';
 import {
   StyleSheet,
   View,
@@ -30,7 +36,12 @@ import LoadingOverlay from '@components/LoadingOverlay';
 
 const dotsIcon = require('@assets/icons/dots_icon.png');
 
-const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: {
+const MedAdministrationScreen = ({
+  onBack,
+  readOnly = false,
+  patientId,
+  initialPatientName,
+}: {
   onBack: any;
   readOnly?: boolean;
   patientId?: number;
@@ -63,14 +74,21 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [isNA, setIsNA] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('Saving Medication Administration...');
+  const [loadingMessage, setLoadingMessage] = useState(
+    'Saving Medication Administration...',
+  );
   const preNASnapshotRef = useRef<Record<number, any>>({});
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Dedicated state for selected patient ID to trigger fetching properly
-  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
-  const lastFetchedRef = useRef<{ id: number | null; date: string }>({ id: null, date: '' });
+  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(
+    null,
+  );
+  const lastFetchedRef = useRef<{ id: number | null; date: string }>({
+    id: null,
+    date: '',
+  });
 
   const toggleNA = () => {
     const newState = !isNA;
@@ -112,8 +130,13 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
   useEffect(() => {
     if (selectedPatientId) {
       const currentMed = formData.medications[step];
-      const allNA = ['medication', 'dose', 'route', 'frequency', 'comments']
-        .every(k => (currentMed as any)[k] === 'N/A');
+      const allNA = [
+        'medication',
+        'dose',
+        'route',
+        'frequency',
+        'comments',
+      ].every(k => (currentMed as any)[k] === 'N/A');
       setIsNA(allNA);
     } else {
       setIsNA(false);
@@ -167,9 +190,13 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
 
   // Robust fetching logic matching Medical History pattern
   useEffect(() => {
-    if (selectedPatientId && (selectedPatientId !== lastFetchedRef.current.id || formData.date !== lastFetchedRef.current.date)) {
-        lastFetchedRef.current = { id: selectedPatientId, date: formData.date };
-        fetchPatientData(selectedPatientId, formData.date);
+    if (
+      selectedPatientId &&
+      (selectedPatientId !== lastFetchedRef.current.id ||
+        formData.date !== lastFetchedRef.current.date)
+    ) {
+      lastFetchedRef.current = { id: selectedPatientId, date: formData.date };
+      fetchPatientData(selectedPatientId, formData.date);
     }
   }, [selectedPatientId, formData.date, fetchPatientData]);
 
@@ -188,9 +215,30 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
         patient_id: null,
         patientName: '',
         medications: [
-          { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
-          { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
-          { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
+          {
+            id: null,
+            medication: '',
+            dose: '',
+            route: '',
+            frequency: '',
+            comments: '',
+          },
+          {
+            id: null,
+            medication: '',
+            dose: '',
+            route: '',
+            frequency: '',
+            comments: '',
+          },
+          {
+            id: null,
+            medication: '',
+            dose: '',
+            route: '',
+            frequency: '',
+            comments: '',
+          },
         ],
       }));
     }
@@ -246,7 +294,10 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
         await saveMedAdministration();
         await fetchPatientData(selectedPatientId, formData.date);
       } catch (error: any) {
-        showAlert('Error', error.message || 'Failed to auto-save before navigation.');
+        showAlert(
+          'Error',
+          error.message || 'Failed to auto-save before navigation.',
+        );
         return;
       }
     }
@@ -305,7 +356,14 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
               <Text style={styles.title}>Medication {'\n'}Administration</Text>
               <Text style={styles.dateText}>{formatDate()}</Text>
               {readOnly && (
-                <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: '#E8572A',
+                    fontFamily: 'AlteHaasGroteskBold',
+                    marginTop: 5,
+                  }}
+                >
                   [READ ONLY]
                 </Text>
               )}
@@ -343,7 +401,9 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
           ) : (
             <View style={styles.staticPatientContainer}>
               <Text style={styles.staticPatientLabel}>PATIENT:</Text>
-              <Text style={styles.staticPatientName}>{initialPatientName || 'Unknown Patient'}</Text>
+              <Text style={styles.staticPatientName}>
+                {initialPatientName || 'Unknown Patient'}
+              </Text>
             </View>
           )}
 
@@ -528,9 +588,15 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
         animationType="fade"
         statusBarTranslucent
       >
-        <Pressable style={dotsModalStyles.modalOverlay} onPress={() => setIsMenuVisible(false)}>
+        <Pressable
+          style={dotsModalStyles.modalOverlay}
+          onPress={() => setIsMenuVisible(false)}
+        >
           <BlurView style={dotsModalStyles.blurView} {...blurProps} />
-          <Pressable style={dotsModalStyles.menuContainer} onPress={e => e.stopPropagation()}>
+          <Pressable
+            style={dotsModalStyles.menuContainer}
+            onPress={e => e.stopPropagation()}
+          >
             <Text style={dotsModalStyles.menuTitle}>SELECT TIME SLOT</Text>
             <ScrollView showsVerticalScrollIndicator={false}>
               {timeSlots.map((item: string, index: number) => (

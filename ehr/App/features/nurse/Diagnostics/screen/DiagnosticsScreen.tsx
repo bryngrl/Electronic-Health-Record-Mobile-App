@@ -361,6 +361,18 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
             <View style={styles.titleContainer}>
               <Text style={styles.titleText}>Diagnostics</Text>
               <Text style={styles.dateText}>{formatDate()}</Text>
+              {readOnly && (
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: '#E8572A',
+                    fontFamily: 'AlteHaasGroteskBold',
+                    marginTop: 5,
+                  }}
+                >
+                  [READ ONLY]
+                </Text>
+              )}
             </View>
 
             <View style={styles.toggleContainer}>

@@ -74,5 +74,5 @@ export const createDotsSettingsModalStyle = (theme: any) =>
 export const blurProps = {
   blurType: 'dark' as const,
   blurAmount: 1,
-  reducedTransparencyFallbackColor: 'black',
+  reducedTransparencyFallbackColor: '#21212186',
 };

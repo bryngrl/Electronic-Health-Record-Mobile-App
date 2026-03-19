@@ -207,7 +207,9 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
   });
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('Saving Medical History...');
+  const [loadingMessage, setLoadingMessage] = useState(
+    'Saving Medical History...',
+  );
 
   const toggleNA = () => {
     const currentKey = steps[step].key;
@@ -220,8 +222,12 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
       if (!preNASnapshotRef.current) {
         preNASnapshotRef.current = JSON.parse(JSON.stringify(formData));
       } else {
-        preNASnapshotRef.current[currentKey as keyof typeof initialFormData] = 
-          JSON.parse(JSON.stringify(formData[currentKey as keyof typeof initialFormData]));
+        preNASnapshotRef.current[currentKey as keyof typeof initialFormData] =
+          JSON.parse(
+            JSON.stringify(
+              formData[currentKey as keyof typeof initialFormData],
+            ),
+          );
       }
 
       const fields = STEP_FIELDS[currentKey];
@@ -234,8 +240,12 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
       setFormData(prev => ({ ...prev, [currentKey]: updatedSection }));
     } else {
       // Restore from snapshot
-      if (preNASnapshotRef.current && preNASnapshotRef.current[currentKey as keyof typeof initialFormData]) {
-        const restoredSection = preNASnapshotRef.current[currentKey as keyof typeof initialFormData];
+      if (
+        preNASnapshotRef.current &&
+        preNASnapshotRef.current[currentKey as keyof typeof initialFormData]
+      ) {
+        const restoredSection =
+          preNASnapshotRef.current[currentKey as keyof typeof initialFormData];
         setFormData(prev => ({ ...prev, [currentKey]: restoredSection }));
       } else {
         const fields = STEP_FIELDS[currentKey];
@@ -419,11 +429,18 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
       try {
         const currentKey = steps[step].key;
         const currentData = formData[currentKey as keyof typeof formData];
-        await saveMedicalHistoryStep(selectedPatientId, currentKey, currentData);
+        await saveMedicalHistoryStep(
+          selectedPatientId,
+          currentKey,
+          currentData,
+        );
         await loadPatientData(selectedPatientId);
         // Removed showAlert here as per user request (no alert on page change)
       } catch (error: any) {
-        showAlert('Error', error.message || 'Failed to auto-save before navigation.');
+        showAlert(
+          'Error',
+          error.message || 'Failed to auto-save before navigation.',
+        );
         return;
       }
     }

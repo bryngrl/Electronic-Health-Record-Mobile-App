@@ -467,7 +467,10 @@ const LabValuesScreen = ({
                     onPress={() => {
                       if (selectedTestIndex > 0) {
                         setSelectedTestIndex(prev => prev - 1);
-                        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                        scrollViewRef.current?.scrollTo({
+                          y: 0,
+                          animated: true,
+                        });
                       }
                     }}
                     disabled={selectedTestIndex === 0}
@@ -475,7 +478,9 @@ const LabValuesScreen = ({
                     <Icon
                       name="chevron-left"
                       size={20}
-                      color={selectedTestIndex > 0 ? theme.primary : theme.textMuted}
+                      color={
+                        selectedTestIndex > 0 ? theme.primary : theme.textMuted
+                      }
                     />
                     <Text
                       style={[
@@ -498,7 +503,10 @@ const LabValuesScreen = ({
                     onPress={() => {
                       if (selectedTestIndex < LAB_TESTS.length - 1) {
                         setSelectedTestIndex(prev => prev + 1);
-                        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                        scrollViewRef.current?.scrollTo({
+                          y: 0,
+                          animated: true,
+                        });
                       }
                     }}
                     disabled={selectedTestIndex === LAB_TESTS.length - 1}
@@ -506,7 +514,9 @@ const LabValuesScreen = ({
                     <Text
                       style={[
                         styles.nextText,
-                        selectedTestIndex === LAB_TESTS.length - 1 && { color: theme.textMuted },
+                        selectedTestIndex === LAB_TESTS.length - 1 && {
+                          color: theme.textMuted,
+                        },
                       ]}
                     >
                       NEXT
@@ -514,7 +524,11 @@ const LabValuesScreen = ({
                     <Icon
                       name="chevron-right"
                       size={20}
-                      color={selectedTestIndex < LAB_TESTS.length - 1 ? theme.primary : theme.textMuted}
+                      color={
+                        selectedTestIndex < LAB_TESTS.length - 1
+                          ? theme.primary
+                          : theme.textMuted
+                      }
                     />
                   </TouchableOpacity>
                 </View>

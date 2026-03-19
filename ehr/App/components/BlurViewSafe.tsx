@@ -5,61 +5,36 @@ import {
   StyleProp,
   View,
   ViewStyle,
+  UIManager,
 } from 'react-native';
 
 type BlurViewSafeProps = {
   style?: StyleProp<ViewStyle>;
-  blurType?: string;
+  blurType?: 'light' | 'dark' | 'xlight' | 'regular' | 'prominent' | 'extraDark';
   blurAmount?: number;
   reducedTransparencyFallbackColor?: string;
   children?: React.ReactNode;
 };
 
-let NativeBlurView: any = null;
-try {
-  const hasAndroidManager =
-    !!NativeModules?.BlurViewManager ||
-    !!NativeModules?.RNCBlurView ||
-    !!NativeModules?.RNBlurView;
-
-  if (Platform.OS === 'ios' || hasAndroidManager) {
-    NativeBlurView = require('@react-native-community/blur').BlurView;
-  }
-} catch {
-  NativeBlurView = null;
-}
+// Use BlurView from @react-native-community/blur
+// The user wants the original blur effect, not a fallback.
+const { BlurView } = require('@react-native-community/blur');
 
 export default function BlurViewSafe({
   style,
-  blurType,
-  blurAmount,
+  blurType = 'dark',
+  blurAmount = 10,
   reducedTransparencyFallbackColor,
   children,
 }: BlurViewSafeProps) {
-  if (NativeBlurView) {
-    return (
-      <NativeBlurView
-        style={style}
-        blurType={blurType}
-        blurAmount={blurAmount}
-        reducedTransparencyFallbackColor={reducedTransparencyFallbackColor}
-      >
-        {children}
-      </NativeBlurView>
-    );
-  }
-
   return (
-    <View
-      style={[
-        style,
-        {
-          backgroundColor:
-            reducedTransparencyFallbackColor ?? 'rgba(0,0,0,0.45)',
-        },
-      ]}
+    <BlurView
+      style={style}
+      blurType={blurType}
+      blurAmount={blurAmount}
+      reducedTransparencyFallbackColor={reducedTransparencyFallbackColor}
     >
       {children}
-    </View>
+    </BlurView>
   );
 }

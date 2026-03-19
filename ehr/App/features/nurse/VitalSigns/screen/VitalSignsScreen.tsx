@@ -194,9 +194,19 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
 
   useEffect(() => {
     if (readOnly && patientId) {
-      setSelectedPatient(patientId.toString(), initialPatientName || '', admissionDate);
+      setSelectedPatient(
+        patientId.toString(),
+        initialPatientName || '',
+        admissionDate,
+      );
     }
-  }, [readOnly, patientId, setSelectedPatient, initialPatientName, admissionDate]);
+  }, [
+    readOnly,
+    patientId,
+    setSelectedPatient,
+    initialPatientName,
+    admissionDate,
+  ]);
 
   const handleVitalChange = useCallback(
     (key: string, value: string) => {
@@ -573,7 +583,9 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
                   setChartIndex(newIndex);
                 }}
                 renderItem={({ item }) => (
-                  <View style={{ width: ITEM_WIDTH, marginRight: ITEM_SPACING }}>
+                  <View
+                    style={{ width: ITEM_WIDTH, marginRight: ITEM_SPACING }}
+                  >
                     <PreciseVitalChart
                       label={item.toUpperCase()}
                       data={chartData[item]}
