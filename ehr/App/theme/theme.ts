@@ -38,20 +38,24 @@ export const COLORS = {
     alertBellOnBg: '#FFECBD', // patient selected, alert triggered
 
     // Toast / Snackbar
-    toastSuccessBg: '#ECFDF5',
+    toastSuccessBg: '#E6FBF3',
     toastSuccessText: '#065F46',
-    toastSuccessBorder: '#6EE7B7',
-    toastErrorBg: '#FEF2F2',
-    toastErrorText: '#991B1B',
-    toastErrorBorder: '#FCA5A5',
-    toastWarningBg: '#FFFBEB',
-    toastWarningText: '#92400E',
-    toastWarningBorder: '#FCD34D',
-    toastInfoBg: '#EFF6FF',
-    toastInfoText: '#1E40AF',
-    toastInfoBorder: '#BFDBFE',
-    toastOfflineBg: '#F3F4F6',
-    toastOfflineText: '#374151',
+    toastSuccessBorder: '#10B981',
+
+    toastErrorBg: '#FDECEC',
+    toastErrorText: '#7A1C1C',
+    toastErrorBorder: '#D64545',
+
+    toastWarningBg: '#FFF7E6',
+    toastWarningText: '#8A4B08',
+    toastWarningBorder: '#EDB62C',
+
+    toastInfoBg: '#E8F1FB',
+    toastInfoText: '#1F3A5F',
+    toastInfoBorder: '#4A90E2',
+
+    toastOfflineBg: '#F4F5F7',
+    toastOfflineText: '#4B5563',
     toastOfflineBorder: '#D1D5DB',
   },
   dark: {
@@ -90,20 +94,24 @@ export const COLORS = {
     alertBellOnBg: '#78350F', // patient selected, alert triggered
 
     // Toast / Snackbar
-    toastSuccessBg: '#064E3B',
-    toastSuccessText: '#6EE7B7',
-    toastSuccessBorder: '#065F46',
-    toastErrorBg: '#450A0A',
-    toastErrorText: '#FCA5A5',
-    toastErrorBorder: '#991B1B',
-    toastWarningBg: '#451A03',
-    toastWarningText: '#FDE68A',
-    toastWarningBorder: '#92400E',
-    toastInfoBg: '#1E3A5F',
+    toastSuccessBg: '#022F2A',
+    toastSuccessText: '#34D399',
+    toastSuccessBorder: '#059669',
+
+    toastErrorBg: '#3A0D0D',
+    toastErrorText: '#F87171',
+    toastErrorBorder: '#7A1C1C',
+
+    toastWarningBg: '#3B2503',
+    toastWarningText: '#FACC15',
+    toastWarningBorder: '#8A4B08',
+
+    toastInfoBg: '#1B2C44',
     toastInfoText: '#93C5FD',
-    toastInfoBorder: '#1E40AF',
+    toastInfoBorder: '#1F3A5F',
+
     toastOfflineBg: '#1F2937',
-    toastOfflineText: '#D1D5DB',
+    toastOfflineText: '#9CA3AF',
     toastOfflineBorder: '#374151',
   },
 };
