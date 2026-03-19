@@ -229,7 +229,6 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
             )}
 
             <View
-              pointerEvents={selectedPatientId ? 'auto' : 'none'}
               style={{ opacity: 1 }}
             >
               <IntakeOutputCard

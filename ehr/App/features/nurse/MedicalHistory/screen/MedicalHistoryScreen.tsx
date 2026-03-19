@@ -392,24 +392,31 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
 
     const currentKey = steps[step].key;
     const currentData = formData[currentKey as keyof typeof formData];
+    const isLastStep = step === steps.length - 1;
 
     try {
       if (isModified) {
-        setIsLoading(true);
-        setLoadingMessage('Saving Medical History...');
-        // Save only if the current step has been modified
+        if (isLastStep) {
+          setIsLoading(true);
+          setLoadingMessage('Saving Medical History...');
+        }
+        
+        // Save the current step data
         await saveMedicalHistoryStep(
           selectedPatientId,
           currentKey,
           currentData,
         );
 
-        // Re-fetch data to ensure everything is in sync with server and cache
+        // Re-fetch data to ensure everything is in sync
         await loadPatientData(selectedPatientId);
-        setIsLoading(false);
+        
+        if (isLastStep) {
+          setIsLoading(false);
+        }
       }
 
-      if (step < steps.length - 1) {
+      if (!isLastStep) {
         setStep(step + 1);
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       } else {
@@ -419,7 +426,6 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
           'Medical History has been saved successfully.',
           'success',
         );
-        // After final submission, reset to first form as requested
         setStep(0);
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
@@ -434,13 +440,13 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
       try {
         const currentKey = steps[step].key;
         const currentData = formData[currentKey as keyof typeof formData];
+        // Save silently when navigating via menu
         await saveMedicalHistoryStep(
           selectedPatientId,
           currentKey,
           currentData,
         );
         await loadPatientData(selectedPatientId);
-        // Removed showAlert here as per user request (no alert on page change)
       } catch (error: any) {
         showAlert(
           'Error',

@@ -375,6 +375,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
               onChangeText={(v: string) => handleUpdate('med', v)}
               disabled={!patientId || isNA || readOnly}
               onDisabledPress={triggerPatientAlert}
+              readOnly={readOnly}
             />
             <MedicalReconCard
               label="Dose"
@@ -382,6 +383,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
               onChangeText={(v: string) => handleUpdate('dose', v)}
               disabled={!patientId || isNA || readOnly}
               onDisabledPress={triggerPatientAlert}
+              readOnly={readOnly}
             />
             <MedicalReconCard
               label="Route"
@@ -389,6 +391,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
               onChangeText={(v: string) => handleUpdate('route', v)}
               disabled={!patientId || isNA || readOnly}
               onDisabledPress={triggerPatientAlert}
+              readOnly={readOnly}
             />
             <MedicalReconCard
               label="Frequency"
@@ -396,6 +399,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
               onChangeText={(v: string) => handleUpdate('freq', v)}
               disabled={!patientId || isNA || readOnly}
               onDisabledPress={triggerPatientAlert}
+              readOnly={readOnly}
             />
 
             {/* Indication is hidden in Stage 3 */}
@@ -406,6 +410,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
                 onChangeText={(v: string) => handleUpdate('indication', v)}
                 disabled={!patientId || isNA || readOnly}
                 onDisabledPress={triggerPatientAlert}
+                readOnly={readOnly}
               />
             )}
 
@@ -415,6 +420,7 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
               onChangeText={(v: string) => handleUpdate('extra', v)}
               disabled={!patientId || isNA || readOnly}
               onDisabledPress={triggerPatientAlert}
+              readOnly={readOnly}
             />
           </View>
 

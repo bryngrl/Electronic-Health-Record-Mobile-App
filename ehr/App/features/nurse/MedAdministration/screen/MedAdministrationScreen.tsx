@@ -259,25 +259,32 @@ const MedAdministrationScreen = ({
       );
     }
 
+    const isLastStep = step === 2;
+
     try {
       if (isModified) {
-        setIsLoading(true);
-        setLoadingMessage('Saving Medication Administration...');
-        // Save current step data (uses POST updateOrCreate as per API guide)
+        if (isLastStep) {
+          setIsLoading(true);
+          setLoadingMessage('Saving Medication Administration...');
+        }
+        
+        // Save current step data
         await saveMedAdministration();
 
-        // Re-fetch data to ensure everything is in sync with server and cache
+        // Re-fetch data to ensure everything is in sync
         await fetchPatientData(selectedPatientId, formData.date);
-        setIsLoading(false);
+        
+        if (isLastStep) {
+          setIsLoading(false);
+        }
       }
 
-      if (step === 2) {
+      if (isLastStep) {
         showAlert(
           'Success',
           'Medication Administration records saved successfully.',
           'success',
         );
-        // Reset to first stage after final submission
         setStep(0);
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       } else {
@@ -296,6 +303,7 @@ const MedAdministrationScreen = ({
   const handleSelectStage = async (index: number) => {
     if (isModified && selectedPatientId) {
       try {
+        // Save silently when navigating via menu
         await saveMedAdministration();
         await fetchPatientData(selectedPatientId, formData.date);
       } catch (error: any) {

@@ -7,6 +7,7 @@ interface Props {
   onChangeText: (v: string) => void;
   disabled?: boolean;
   onDisabledPress?: () => void;
+  readOnly?: boolean;
 }
 
 const LINE_HEIGHT = 28;
@@ -18,6 +19,7 @@ const MedicalReconCard = ({
   onChangeText,
   disabled = false,
   onDisabledPress,
+  readOnly = false,
 }: Props) => {
   // Initialized to exactly 4 visible lines (4 * 28) plus the padding
   const [inputHeight, setInputHeight] = useState(
@@ -60,7 +62,7 @@ const MedicalReconCard = ({
         <Pressable
           style={styles.inputArea}
           onPress={() => {
-            if (disabled && onDisabledPress) {
+            if (disabled && !readOnly && onDisabledPress) {
               onDisabledPress();
             }
           }}
@@ -74,10 +76,10 @@ const MedicalReconCard = ({
             value={value}
             onChangeText={onChangeText}
             multiline
-            editable={!disabled}
+            editable={!disabled && !readOnly}
             placeholder="Type here..."
             placeholderTextColor="#C7C7CD"
-            pointerEvents={disabled ? 'none' : 'auto'}
+            pointerEvents={disabled || readOnly ? 'none' : 'auto'}
             onContentSizeChange={e => {
               setInputHeight(e.nativeEvent.contentSize.height);
             }}
