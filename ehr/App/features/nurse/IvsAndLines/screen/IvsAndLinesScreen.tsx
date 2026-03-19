@@ -279,6 +279,18 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
           <View style={[styles.headerContainer, { marginBottom: 0 }]}>
             <Text style={styles.titleText}>IVs and Lines</Text>
             <Text style={styles.dateText}>{formatDate()}</Text>
+            {readOnly && (
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: '#E8572A',
+                  fontFamily: 'AlteHaasGroteskBold',
+                  marginTop: 5,
+                }}
+              >
+                [READ ONLY]
+              </Text>
+            )}
           </View>
         </View>
         <LinearGradient
