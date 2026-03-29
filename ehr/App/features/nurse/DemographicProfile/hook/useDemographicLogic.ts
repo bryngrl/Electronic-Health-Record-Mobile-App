@@ -100,8 +100,12 @@ export const useDemographicLogic = (
 
           // Convert back to array and sort by ID or Date Descending
           const finalData = Array.from(patientMap.values()).sort((a, b) => {
-            const dateA = new Date(a.created_at || a.admission_date || 0).getTime();
-            const dateB = new Date(b.created_at || b.admission_date || 0).getTime();
+            const dateA = new Date(
+              a.created_at || a.admission_date || 0,
+            ).getTime();
+            const dateB = new Date(
+              b.created_at || b.admission_date || 0,
+            ).getTime();
             if (dateA !== dateB) return dateB - dateA;
 
             const idA = a.patient_id || a.id || 0;
@@ -126,13 +130,12 @@ export const useDemographicLogic = (
     }
   }, []);
 
-  // Use a very aggressive polling interval (2 seconds) to pick up website changes immediately.
   useEffect(() => {
     if (isSelectionMode) return;
 
     const interval = setInterval(() => {
       loadPatients(false);
-    }, 2000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [loadPatients, isSelectionMode]);

@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-export const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
+export const createStyles = (theme: any, commonStyles: any, _isDarkMode: boolean) =>
   StyleSheet.create({
     safeArea: commonStyles.safeArea,
     container: commonStyles.container,

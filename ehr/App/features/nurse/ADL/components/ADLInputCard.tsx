@@ -21,6 +21,7 @@ interface ADLInputCardProps {
   alertSeverity?: string | null;
   onChangeText: (text: string) => void;
   onDisabledPress?: () => void;
+  readOnly?: boolean;
 }
 
 const LINE_HEIGHT = 28;
@@ -34,6 +35,7 @@ const ADLInputCard = ({
   alertSeverity,
   onChangeText,
   onDisabledPress,
+  readOnly = false,
 }: ADLInputCardProps) => {
   const { theme } = useAppTheme();
   const [modalVisible, setModalVisible] = useState(false);
@@ -85,7 +87,7 @@ const ADLInputCard = ({
 
         <Pressable
           style={styles.inputArea}
-          onPress={() => disabled && onDisabledPress?.()}
+          onPress={() => disabled && !readOnly && onDisabledPress?.()}
         >
           <View style={styles.linesContainer} pointerEvents="none">
             {renderLines()}
@@ -115,8 +117,12 @@ const ADLInputCard = ({
               opacity: hasBackendAlert ? 1.0 : 0.3,
             },
           ]}
-          onPress={() => hasBackendAlert && !disabled && setModalVisible(true)}
-          disabled={!hasBackendAlert || disabled}
+          onPress={() => {
+            if (hasBackendAlert) {
+              setModalVisible(true);
+            }
+          }}
+          disabled={!hasBackendAlert}
         >
           <Image source={alert1} style={styles.alertImage} />
         </TouchableOpacity>

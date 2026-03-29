@@ -42,10 +42,18 @@ const CDSSModal: React.FC<CDSSModalProps> = ({
 
   const severityStyle = getSeverityStyle(severity);
   const renderFormattedText = (text: string) => {
-    if (!text || typeof text !== 'string') return null;
-    const lines = bulletFormat
-      ? text.split(/;\s*| \| |\n/).filter(l => l.trim())
-      : text.split(/ \| |\n/).filter(l => l.trim());
+    if (!text) return null;
+    
+    // Ensure we are working with a string
+    const stringText = Array.isArray(text) ? text.join('\n') : String(text);
+    
+    const rawLines = bulletFormat
+      ? stringText.split(/[\n;]+| \| /).filter(l => l.trim())
+      : stringText.split(/[\n;]| \| /).filter(l => l.trim());
+    
+    // Deduplicate lines while preserving order
+    const lines = Array.from(new Set(rawLines));
+    
     const isMultiple = bulletFormat && lines.length > 1;
 
     return lines.map((line, index) => {
@@ -186,7 +194,13 @@ const styles = StyleSheet.create({
   bulletRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+  normalRow: {
+    marginBottom: 10,
+  },
+  textContent: {
+    flex: 1,
   },
   bullet: {
     fontSize: 16,

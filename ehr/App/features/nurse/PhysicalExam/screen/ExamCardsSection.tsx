@@ -15,6 +15,7 @@ interface ExamCardsSectionProps {
   handleCDSSPress: () => void;
   handleSave: () => void;
   isDataEntered: boolean;
+  isModified: boolean;
   readOnly?: boolean;
   onBack?: () => void;
 }
@@ -32,11 +33,12 @@ const ExamCardsSection: React.FC<ExamCardsSectionProps> = ({
   handleCDSSPress,
   handleSave,
   isDataEntered,
+  isModified,
   readOnly = false,
   onBack,
 }) => {
   const patientRequired = () =>
-    !selectedPatientId && showAlert('Patient Required', 'Please select a patient first.');
+    !selectedPatientId && !readOnly && showAlert('Patient Required', 'Please select a patient first in the search bar.');
 
   const cards = [
     { label: 'GENERAL APPEARANCE', field: 'general_appearance' },
@@ -73,18 +75,18 @@ const ExamCardsSection: React.FC<ExamCardsSectionProps> = ({
           <TouchableOpacity
             style={[
               styles.cdssBtn,
-              (!selectedPatientId || !isDataEntered) && {
+              !isDataEntered && {
                 backgroundColor: theme.buttonDisabledBg,
                 borderColor: theme.buttonDisabledBorder,
               },
             ]}
             onPress={handleCDSSPress}
-            disabled={!selectedPatientId || !isDataEntered}
+            disabled={!isDataEntered}
           >
             <Text
               style={[
                 styles.cdssText,
-                (!selectedPatientId || !isDataEntered) && { color: theme.textMuted },
+                !isDataEntered && { color: theme.textMuted },
               ]}
             >
               CDSS
@@ -93,18 +95,18 @@ const ExamCardsSection: React.FC<ExamCardsSectionProps> = ({
           <TouchableOpacity
             style={[
               styles.submitBtn,
-              !selectedPatientId && {
+              !isModified && {
                 backgroundColor: theme.buttonDisabledBg,
                 borderColor: theme.buttonDisabledBorder,
               },
             ]}
             onPress={handleSave}
-            disabled={!selectedPatientId}
+            disabled={!isModified}
           >
             <Text
               style={[
                 styles.submitText,
-                !selectedPatientId && { color: theme.textMuted },
+                !isModified && { color: theme.textMuted },
               ]}
             >
               SUBMIT

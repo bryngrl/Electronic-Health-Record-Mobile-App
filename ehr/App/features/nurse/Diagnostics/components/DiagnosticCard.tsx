@@ -25,9 +25,11 @@ interface Props {
   viewMode: ViewMode;
   images: DiagnosticImage[];
   onImport: () => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: number | string) => void;
+  onDeleteAll: () => void;
   disabled?: boolean;
   hideImport?: boolean;
+  readOnly?: boolean;
 }
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
@@ -38,8 +40,10 @@ const DiagnosticCard: React.FC<Props> = ({
   images,
   onImport,
   onDelete,
+  onDeleteAll,
   disabled,
   hideImport = false,
+  readOnly = false,
 }) => {
   const { theme, isDarkMode } = useAppTheme();
   const isGrid = viewMode === 'grid';
@@ -101,72 +105,112 @@ const DiagnosticCard: React.FC<Props> = ({
           !isGrid && styles.boxLarge,
           !hasImages && styles.dashedBorder,
           {
-            backgroundColor: isDarkMode ? '#1e293b' : '#d5d4d4',
-            borderColor: isDarkMode ? theme.border : '#9d9d9d',
+            backgroundColor: isDarkMode ? '#1e293b' : '#ececec',
+            borderColor: isDarkMode ? theme.border : '#c6c6c6',
           },
-          disabled && styles.disabledBox,
+          (disabled && !readOnly) && styles.disabledBox,
         ]}
       >
         {hasImages ? (
-          <ScrollView 
-            style={styles.gridScroll}
-            contentContainerStyle={styles.gridContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* ADD button — hidden for doctor read-only */}
-            {!hideImport && (
-              <TouchableOpacity
-                style={[
-                  styles.squareItem,
-                  styles.addMoreSquare,
-                  {
-                    width: itemWidth,
-                    backgroundColor: isDarkMode ? '#334155' : '#c4c4c4',
-                    borderColor: isDarkMode ? theme.border : '#9d9d9d',
-                  },
-                ]}
-                onPress={onImport}
-                disabled={disabled}
-              >
-                <MaterialIcon name="add-a-photo" size={useLargeLayout ? 32 : 24} color={theme.primary} />
-                <Text style={[styles.addMoreText, { color: theme.primary, fontSize: useLargeLayout ? 12 : 10 }]}>
-                  ADD
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {images.map(img => (
-              <View key={img.id} style={[styles.squareItem, { width: itemWidth }]}>
+          <View style={{ flex: 1 }}>
+            <ScrollView
+              style={styles.gridScroll}
+              contentContainerStyle={styles.gridContainer}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* ADD button — hidden for doctor read-only */}
+              {!hideImport && (
                 <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() => setLightboxUrl(img.url)}
-                  style={{ width: '100%', height: '100%' }}
+                  style={[
+                    styles.squareItem,
+                    styles.addMoreSquare,
+                    {
+                      width: itemWidth,
+                      backgroundColor: isDarkMode ? '#334155' : '#c4c4c4',
+                      borderColor: isDarkMode ? theme.border : '#9d9d9d',
+                    },
+                  ]}
+                  onPress={onImport}
+                  disabled={disabled}
                 >
-                  <Image
-                    source={{ uri: img.url }}
-                    style={styles.squareImage}
-                    resizeMode="cover"
+                  <MaterialIcon
+                    name="add-a-photo"
+                    size={useLargeLayout ? 32 : 24}
+                    color={theme.primary}
                   />
-                </TouchableOpacity>
-                {/* Delete button — hidden for doctor read-only */}
-                {!hideImport && (
-                  <TouchableOpacity
-                    style={styles.closeCircle}
-                    onPress={() => onDelete(img.id)}
+                  <Text
+                    style={[
+                      styles.addMoreText,
+                      {
+                        color: theme.primary,
+                        fontSize: useLargeLayout ? 12 : 10,
+                      },
+                    ]}
                   >
-                    <Ionicon name="close-circle" size={useLargeLayout ? 26 : 22} color="#FF5A5A" />
+                    ADD
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {images.map(img => (
+                <View
+                  key={img.id}
+                  style={[styles.squareItem, { width: itemWidth }]}
+                >
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => setLightboxUrl(img.url)}
+                    style={{ width: '100%', height: '100%' }}
+                  >
+                    <Image
+                      source={{ uri: img.url }}
+                      style={styles.squareImage}
+                      resizeMode="cover"
+                    />
                   </TouchableOpacity>
-                )}
+                  {/* Delete button — hidden for doctor read-only */}
+                  {!hideImport && (
+                    <TouchableOpacity
+                      style={styles.closeCircle}
+                      onPress={() => onDelete(img.id)}
+                    >
+                      <Ionicon
+                        name="close-circle"
+                        size={useLargeLayout ? 26 : 22}
+                        color="#FF5A5A"
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Clear All Footer */}
+            {hasImages && !hideImport && (
+              <View style={styles.clearAllContainer}>
+                <TouchableOpacity
+                  style={styles.clearAllBtn}
+                  onPress={onDeleteAll}
+                  disabled={disabled}
+                >
+                  <Text style={styles.clearAllText}>Clear All</Text>
+                  <MaterialIcon name="delete-sweep" size={18} color="#FF5A5A" />
+                </TouchableOpacity>
               </View>
-            ))}
-          </ScrollView>
+            )}
+          </View>
+        ) : hideImport ? (
+          <View style={styles.placeholder}>
+            <MaterialIcon
+              name="image-not-supported"
+              size={isGrid ? 40 : 60}
+              color="#e2e2e2"
+            />
+            <Text style={[styles.importText, { color: '#C7C7CD' }]}>
+              No images available
+            </Text>
+          </View>
         ) : (
-          hideImport ? (
-            <View style={styles.placeholder}>
-              <MaterialIcon name="image-not-supported" size={isGrid ? 40 : 60} color="#e2e2e2" />
-              <Text style={[styles.importText, { color: '#C7C7CD' }]}>No images available</Text>
-            </View>
-          ) : (
           <TouchableOpacity
             style={styles.placeholder}
             onPress={onImport}
@@ -175,7 +219,9 @@ const DiagnosticCard: React.FC<Props> = ({
             <MaterialIcon
               name="cloud-upload"
               size={isGrid ? 40 : 60}
-              color={disabled ? '#e2e2e2' : isDarkMode ? theme.textMuted : '#585858'}
+              color={
+                disabled ? '#e2e2e2' : isDarkMode ? theme.textMuted : '#8a8a8a'
+              }
             />
             <Text
               style={[
@@ -188,7 +234,6 @@ const DiagnosticCard: React.FC<Props> = ({
             </Text>
             <Text style={styles.clickText}>Click to upload</Text>
           </TouchableOpacity>
-          )
         )}
       </View>
     </View>
@@ -203,18 +248,22 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingHorizontal: 15,
+    position: 'relative',
   },
   pillText: {
     fontFamily: 'AlteHaasGroteskBold',
-    fontSize: 14,
+    fontSize: 13,
   },
   box: {
-    height: 240, 
+    height: 240,
     borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
   },
-  boxLarge: { height: 340 }, 
+  boxLarge: { height: 340 },
   disabledBox: { opacity: 0.6 },
   dashedBorder: {
     borderStyle: 'dashed',
@@ -222,8 +271,8 @@ const styles = StyleSheet.create({
   },
   placeholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   importText: { fontWeight: '600', marginTop: 8 },
-  disabledText: { color: '#585859' },
-  clickText: { color: '#C7C7CD', fontSize: 11 },
+  disabledText: { color: '#808080' },
+  clickText: { color: '#8a8a8a', fontSize: 11 },
   gridScroll: {
     flex: 1,
   },
@@ -264,6 +313,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 11,
     elevation: 3,
+  },
+  clearAllContainer: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(228, 228, 228, 0.9)',
+  },
+  clearAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  clearAllText: {
+    fontFamily: 'AlteHaasGroteskBold',
+    fontSize: 12,
+    color: '#FF5A5A',
+    marginRight: 4,
   },
   lightboxOverlay: {
     flex: 1,

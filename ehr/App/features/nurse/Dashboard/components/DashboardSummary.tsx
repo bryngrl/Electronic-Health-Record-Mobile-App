@@ -79,10 +79,10 @@ const DashboardSummary = ({
     if (token) {
       fetchLatestPatients(true);
 
-      // Automatic polling every 2 seconds matching Demographic Profile
+      // Automatic polling every 5 seconds
       const interval = setInterval(() => {
         fetchLatestPatients(false);
-      }, 2000);
+      }, 5000);
 
       return () => clearInterval(interval);
     }
@@ -176,9 +176,18 @@ const DashboardSummary = ({
           }))
           .filter(p => p.isActive) // Dashboard should ONLY show active patients
           .sort((a, b) => {
-            const dateA = new Date(a.created_at || a.admission_date).getTime();
-            const dateB = new Date(b.created_at || b.admission_date).getTime();
-            return dateB - dateA;
+            const timeA = new Date(
+              a.created_at || a.admission_date || 0,
+            ).getTime();
+            const timeB = new Date(
+              b.created_at || b.admission_date || 0,
+            ).getTime();
+
+            if (timeB !== timeA) {
+              return timeB - timeA;
+            }
+            // Tie-breaker: use ID if available
+            return (b.id || 0) - (a.id || 0);
           });
 
         setPatients(mappedPatients);
@@ -239,7 +248,9 @@ const DashboardSummary = ({
           </View>
           <TouchableOpacity
             onPress={() => setModalVisible(true)}
-            style={{ marginTop: 10 }}
+            style={{ padding: 5 }}
+            activeOpacity={0.6}
+            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
           >
             <Icon name="keyboard-arrow-down" size={24} color={theme.text} />
           </TouchableOpacity>

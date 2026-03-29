@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { BackHandler } from 'react-native';
+import { BackHandler, Animated } from 'react-native';
 import { usePhysicalExam } from '../hook/usePhysicalExam';
 import { initialFormData, ALERT_KEY_MAP } from './constants';
 
@@ -40,7 +40,11 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
   const [assessmentAlert, setAssessmentAlert] = useState<string | null>(null);
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
+  const [lastSavedData, setLastSavedData] = useState(initialFormData);
   const [isNA, setIsNA] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Processing...');
+  const screenOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => { formDataRef.current = formData; }, [formData]);
   useEffect(() => { examIdRef.current = examId; }, [examId]);
@@ -53,27 +57,51 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
     return () => backHandler.remove();
   }, [onBack]);
 
-  const toggleNA = () => {
+  const toggleNA = async () => {
     const newState = !isNA;
     setIsNA(newState);
     Object.values(fieldTimers.current).forEach(clearTimeout);
     fieldTimers.current = {};
+    
+    let updatedFormData: typeof initialFormData;
     if (newState) {
-      // Save current form before overwriting with N/A
       preNASnapshotRef.current = { ...formData };
       const allNA = { ...formData };
       Object.keys(initialFormData).forEach(key => { (allNA as any)[key] = 'N/A'; });
-      setFormData(allNA);
-      formDataRef.current = allNA;
+      updatedFormData = allNA;
     } else {
-      // Restore snapshot if available, otherwise clear to empty
-      const restored = preNASnapshotRef.current
+      updatedFormData = preNASnapshotRef.current
         ? { ...preNASnapshotRef.current }
         : { ...initialFormData };
       preNASnapshotRef.current = null;
-      setFormData(restored);
-      formDataRef.current = restored;
     }
+    
+    setFormData(updatedFormData);
+    formDataRef.current = updatedFormData;
+
+    // Automatically save N/A state if a patient is selected
+    if (selectedPatientId) {
+      try {
+        const result = await saveAssessment(
+          { patient_id: selectedPatientId, ...updatedFormData },
+          examIdRef.current,
+        );
+        const record = result?.data || result;
+        if (record?.id) {
+          setExamId(record.id);
+          examIdRef.current = record.id;
+        }
+        // Update alerts from N/A state (likely "No Findings")
+        const alerts = result?.alerts || {};
+        const updatedAlerts: Record<string, string | null> = {};
+        Object.entries(ALERT_KEY_MAP).forEach(([_, alertKey]) => {
+          const v = alerts[alertKey] ?? record?.[alertKey];
+          updatedAlerts[alertKey] = (v && v !== 'No Findings') ? v : null;
+        });
+        setBackendAlerts(updatedAlerts);
+      } catch {
+        console.error('Failed to auto-save N/A state:');
+      }    }
   };
 
   const loadPatientData = useCallback(
@@ -82,8 +110,17 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
       fetchDataAlert(patientId);
       const data = await fetchLatestPhysicalExam(patientId);
       if (data) {
-        setExamId(data.id);
-        examIdRef.current = data.id;
+        const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+        const recordDate = (data.created_at || '').split('T')[0];
+        
+        if (recordDate === today) {
+          setExamId(data.id);
+          examIdRef.current = data.id;
+        } else {
+          setExamId(null);
+          examIdRef.current = null;
+        }
+
         const newFormData = {
           general_appearance: data.general_appearance || '',
           skin_condition: data.skin_condition || '',
@@ -95,15 +132,17 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
           neurological: data.neurological || '',
         };
         setFormData(newFormData);
+        setLastSavedData(newFormData);
         formDataRef.current = newFormData;
         setIsNA(Object.values(newFormData).every(v => v === 'N/A'));
+        
         // Load alerts from saved record using ALERT_KEY_MAP (DB column names)
-        const loaded: Record<string, string | null> = {};
-        Object.entries(ALERT_KEY_MAP).forEach(([field, alertKey]) => {
+        const loadedAlerts: Record<string, string | null> = {};
+        Object.values(ALERT_KEY_MAP).forEach(alertKey => {
           const v = data[alertKey];
-          loaded[alertKey] = (v && v !== 'No Findings') ? v : null;
+          loadedAlerts[alertKey] = (v && v !== 'No Findings') ? v : null;
         });
-        setBackendAlerts(loaded);
+        setBackendAlerts(loadedAlerts);
       } else {
         setExamId(null);
         examIdRef.current = null;
@@ -127,6 +166,7 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
         setExamId(null);
         examIdRef.current = null;
         setFormData(initialFormData);
+        setLastSavedData(initialFormData);
         setIsNA(false);
         setBackendAlerts({});
         Object.values(fieldTimers.current).forEach(clearTimeout);
@@ -135,11 +175,14 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
     }
   }, [selectedPatientId, loadPatientData]);
 
+  const isModified = Object.keys(formData).some(
+    key => (formData as any)[key] !== (lastSavedData as any)[key]
+  );
+
   const getBackendAlert = (field: string): string | null => {
     const alertKey = ALERT_KEY_MAP[field];
     if (!alertKey) return null;
-    const val = backendAlerts[alertKey];
-    return (val && val !== 'No Findings') ? val : null;
+    return backendAlerts[alertKey] ?? null;
   };
 
   const getBackendSeverity = (field: string): string | null => {
@@ -153,31 +196,35 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
     if (fieldTimers.current[field]) clearTimeout(fieldTimers.current[field]);
 
     const alertKey = ALERT_KEY_MAP[field];
-    if (!val || val.trim().length < 3 || val === 'N/A') {
-      if (alertKey) setBackendAlerts(prev => ({ ...prev, [alertKey]: null }));
-      setBackendSeverities(prev => ({ ...prev, [field]: null }));
-      return;
-    }
 
     fieldTimers.current[field] = setTimeout(async () => {
       if (!selectedPatientId) return;
+      
       const result = await analyzeField(
         parseInt(selectedPatientId, 10),
         examIdRef.current,
+        formDataRef.current,
         field,
-        val,
         alertKey!,
       );
 
-      if (result?.examId && !examIdRef.current) {
-        examIdRef.current = result.examId;
-        setExamId(result.examId);
-      }
+      if (result) {
+        if (result.examId && !examIdRef.current) {
+          examIdRef.current = result.examId;
+          setExamId(result.examId);
+        }
 
-      if (alertKey) {
-        setBackendAlerts(prev => ({ ...prev, [alertKey]: result?.alert ?? null }));
+        // Update ALL alerts from the response to keep everything in sync
+        const updatedAlerts = { ...result.alerts };
+        
+        // If current field is cleared, make sure its specific alert is also cleared locally
+        if (!val.trim()) {
+          updatedAlerts[alertKey!] = null;
+        }
+
+        setBackendAlerts(prev => ({ ...prev, ...updatedAlerts }));
+        setBackendSeverities(prev => ({ ...prev, [field]: result.severity }));
       }
-      setBackendSeverities(prev => ({ ...prev, [field]: result?.severity ?? null }));
     }, 800);
   };
 
@@ -185,6 +232,8 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
     if (!selectedPatientId) {
       return showAlert('Patient Required', 'Please select a patient first in the search bar.');
     }
+    setIsLoading(true);
+    setLoadingMessage('Saving Assessment...');
     try {
       const result = await saveAssessment(
         { patient_id: selectedPatientId, ...formData },
@@ -195,7 +244,19 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
       if (id) {
         setExamId(id);
         examIdRef.current = id;
-        setIsAdpieActive(true);
+        setLoadingMessage('Initializing ADPIE...');
+        
+        Animated.timing(screenOpacity, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }).start(() => {
+          setIsAdpieActive(true);
+          screenOpacity.setValue(1);
+          setIsLoading(false);
+        });
+
+        setLastSavedData({ ...formDataRef.current });
         // Load updated alerts from save response
         const alerts = result?.alerts || {};
         const updated: Record<string, string | null> = { ...backendAlerts };
@@ -205,9 +266,11 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
         });
         setBackendAlerts(updated);
       } else {
+        setIsLoading(false);
         showAlert('Error', 'Could not retrieve assessment ID.');
       }
-    } catch (e) {
+    } catch {
+      setIsLoading(false);
       showAlert('Error', 'Could not initiate clinical support.');
     }
   };
@@ -216,6 +279,8 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
     if (!selectedPatientId) {
       return showAlert('Patient Required', 'Please select a patient first in the search bar.');
     }
+    setIsLoading(true);
+    setLoadingMessage('Saving Physical Exam...');
     try {
       const result = await saveAssessment(
         { patient_id: selectedPatientId, ...formData },
@@ -227,6 +292,7 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
       if (newId) {
         setExamId(newId);
         examIdRef.current = newId;
+        setLastSavedData({ ...formDataRef.current });
         fetchDataAlert(parseInt(selectedPatientId, 10));
         // Refresh alerts from save response
         const alerts = result?.alerts || {};
@@ -237,12 +303,14 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
         });
         setBackendAlerts(updated);
       }
+      setIsLoading(false);
       showAlert(
         isUpdate ? 'Successfully Updated' : 'Successfully Submitted',
         `Physical Exam has been ${isUpdate ? 'updated' : 'submitted'} successfully.`,
         'success',
       );
-    } catch (e) {
+    } catch {
+      setIsLoading(false);
       showAlert('Error', 'Submission failed. Please check your connection.');
     }
   };
@@ -280,5 +348,7 @@ export const usePhysicalExamScreen = (onBack: () => void) => {
     toggleNA, loadPatientData, getBackendAlert, getBackendSeverity,
     updateField, handleCDSSPress, handleSave,
     generateFindingsSummary, isDataEntered, getCurrentDate,
+    isModified,
+    isLoading, loadingMessage, screenOpacity,
   };
 };

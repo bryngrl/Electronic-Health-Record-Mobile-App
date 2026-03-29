@@ -30,7 +30,11 @@ export const useLogin = () => {
     setIsPasswordVisible(!isPasswordVisible);
   };
 
-  const showAlert = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info' | 'delete' = 'info') => {
+  const showAlert = (
+    title: string,
+    message: string,
+    type: 'success' | 'error' | 'warning' | 'info' | 'delete' = 'info',
+  ) => {
     setAlertConfig({
       visible: true,
       title,
@@ -52,15 +56,45 @@ export const useLogin = () => {
     setIsSubmitting(true);
     try {
       console.log('Attempting login with:', { email, password: '[HIDDEN]' });
-      const response = await apiClient.post('/auth/login', { username: email, password });
+      const response = await apiClient.post('/auth/login', {
+        username: email,
+        password,
+      });
 
-      console.log('Login response:', response.data);
-      const { access_token, role, full_name, user_id, email: userEmail } = response.data;
+      if (__DEV__) {
+        console.log('--- LOGIN SUCCESS: RAW BACKEND DATA ---');
+        console.log(JSON.stringify(response.data, null, 2));
+        console.log('---------------------------------------');
+      }
 
-      await login({ id: user_id, full_name, email: userEmail ?? email, role }, access_token);
-      console.log('[Login] Stored email:', userEmail ?? email);
+      const {
+        access_token,
+        role,
+        full_name,
+        name,
+        user_id,
+        id,
+        email: userEmail,
+        ...restOfUserDetails
+      } = response.data;
 
-      showToast(`Welcome back, ${full_name || email}!`, 'success', 4000);
+      // Extract full_name reliably
+      const finalFullName = full_name || name || restOfUserDetails.user?.full_name || restOfUserDetails.user?.name;
+      const finalId = user_id || id || restOfUserDetails.user?.id;
+
+      await login(
+        {
+          id: finalId,
+          full_name: finalFullName,
+          email: userEmail ?? email,
+          role,
+          ...restOfUserDetails,
+        },
+        access_token,
+      );
+      // console.log('[Login] Stored email:', userEmail ?? email);
+
+      showToast(`Welcome back, ${finalFullName || email}!`, 'success', 4000);
     } catch (error: any) {
       console.error('Login error full:', error);
       let errorMessage = 'Invalid username or password';
@@ -68,7 +102,9 @@ export const useLogin = () => {
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
         if (Array.isArray(detail)) {
-          errorMessage = detail.map((err: any) => `${err.loc.join('.')}: ${err.msg}`).join('\n');
+          errorMessage = detail
+            .map((err: any) => `${err.loc.join('.')}: ${err.msg}`)
+            .join('\n');
         } else if (typeof detail === 'string') {
           errorMessage = detail;
         }

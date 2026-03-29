@@ -16,6 +16,8 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
+import LoadingOverlay from '@components/LoadingOverlay';
+
 const backArrow = require('@assets/icons/back_arrow.png');
 import useIvsAndLinesData from '../hook/useIvsAndLinesData';
 import DataCard from '../components/DataCard';
@@ -60,6 +62,8 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
     setStatus,
     handleSubmit,
     isSubmitting,
+    isModified,
+    isDataEntered,
   } = useIvsAndLinesData();
 
   // SweetAlert State
@@ -77,6 +81,9 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
 
   const [isNA, setIsNA] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Saving IVs and Lines...');
+  const preNASnapshotRef = useRef<any>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   // --- DOCTOR VIEWING LOGIC ---
@@ -121,15 +128,31 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
     const newState = !isNA;
     setIsNA(newState);
     if (newState) {
+      // Save snapshot before setting to N/A
+      preNASnapshotRef.current = {
+        ivFluid,
+        rate,
+        site,
+        status,
+      };
       setIvFluid('N/A');
       setRate('N/A');
       setSite('N/A');
       setStatus('N/A');
     } else {
-      if (ivFluid === 'N/A') setIvFluid('');
-      if (rate === 'N/A') setRate('');
-      if (site === 'N/A') setSite('');
-      if (status === 'N/A') setStatus('');
+      if (preNASnapshotRef.current) {
+        // Restore from snapshot
+        setIvFluid(preNASnapshotRef.current.ivFluid);
+        setRate(preNASnapshotRef.current.rate);
+        setSite(preNASnapshotRef.current.site);
+        setStatus(preNASnapshotRef.current.status);
+        preNASnapshotRef.current = null;
+      } else {
+        if (ivFluid === 'N/A') setIvFluid('');
+        if (rate === 'N/A') setRate('');
+        if (site === 'N/A') setSite('');
+        if (status === 'N/A') setStatus('');
+      }
     }
   };
 
@@ -177,11 +200,13 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
   };
 
   const showDisabledAlert = () => {
-    showAlert(
-      'Patient Required',
-      'Please select a patient first in the search bar.',
-      'error',
-    );
+    if (!readOnly) {
+      showAlert(
+        'Patient Required',
+        'Please select a patient first in the search bar.',
+        'error',
+      );
+    }
   };
 
   const handleFormSubmit = async () => {
@@ -195,8 +220,11 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
       return;
     }
 
+    setIsLoading(true);
+    setLoadingMessage('Saving IVs and Lines...');
     try {
       const result = await handleSubmit();
+      setIsLoading(false);
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       if (result.action === 'update') {
         showAlert(
@@ -212,6 +240,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
         );
       }
     } catch (error: any) {
+      setIsLoading(false);
       showAlert(
         'Submission Failed',
         error.message || 'Something went wrong. Please try again.',
@@ -250,6 +279,18 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
           <View style={[styles.headerContainer, { marginBottom: 0 }]}>
             <Text style={styles.titleText}>IVs and Lines</Text>
             <Text style={styles.dateText}>{formatDate()}</Text>
+            {readOnly && (
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: '#E8572A',
+                  fontFamily: 'AlteHaasGroteskBold',
+                  marginTop: 5,
+                }}
+              >
+                [READ ONLY]
+              </Text>
+            )}
           </View>
         </View>
         <LinearGradient
@@ -367,13 +408,13 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
           <TouchableOpacity
             style={[
               styles.submitButton,
-              (!selectedPatientId && !readOnly) && {
+              !readOnly && !isModified && {
                 backgroundColor: theme.buttonDisabledBg,
                 borderColor: theme.buttonDisabledBorder,
               },
             ]}
             onPress={handleFormSubmit}
-            disabled={isSubmitting || (!selectedPatientId && !readOnly)}
+            disabled={isSubmitting || (!readOnly && !isModified)}
           >
             {isSubmitting ? (
               <ActivityIndicator color={theme.primary} />
@@ -381,7 +422,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
               <Text
                 style={[
                   styles.submitButtonText,
-                  (!selectedPatientId && !readOnly) && { color: theme.textMuted },
+                  !readOnly && !isModified && { color: theme.textMuted },
                 ]}
               >
                 {readOnly ? 'CLOSE' : 'SUBMIT'}
@@ -405,6 +446,7 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
         onCancel={() => setAlertConfig({ ...alertConfig, visible: false })}
         confirmText="OK"
       />
+      <LoadingOverlay visible={isLoading} message={loadingMessage} />
     </SafeAreaView>
   );
 };

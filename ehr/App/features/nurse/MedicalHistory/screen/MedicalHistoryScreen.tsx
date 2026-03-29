@@ -14,8 +14,11 @@ import {
   SafeAreaView,
   StatusBar,
   BackHandler,
-  Platform,
+  Modal,
+  Image,
+  Pressable,
 } from 'react-native';
+import { BlurView } from '@react-native-community/blur';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import HistoryInputCard from '../components/HistoryInputCard';
@@ -24,12 +27,21 @@ import { useMedicalHistory } from '../hook/useMedicalHistory';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
 import { useAppTheme } from '@App/theme/ThemeContext';
+import {
+  createDotsSettingsModalStyle,
+  blurProps,
+} from '../../styles/DotsSettingsModalStyle';
+
+import LoadingOverlay from '@components/LoadingOverlay';
+
+const dotsIcon = require('@assets/icons/dots_icon.png');
 
 interface MedicalHistoryProps {
   onBack: () => void;
   readOnly?: boolean;
   patientId?: number;
   initialPatientName?: string;
+  admissionDate?: string;
 }
 
 const initialFormData = {
@@ -123,18 +135,27 @@ const FIELD_LABELS: Record<string, string> = {
   dosage: 'DOSAGE',
   side_effect: 'SIDE EFFECT',
   comment: 'COMMENT',
-  gross_motor: 'GROS MOTOR',
+  gross_motor: 'GROSS MOTOR',
   fine_motor: 'FINE MOTOR',
   language: 'LANGUAGE',
   cognitive: 'COGNITIVE',
   social: 'SOCIAL',
 };
 
-const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly = false, patientId, initialPatientName }) => {
+const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
+  onBack,
+  readOnly = false,
+  patientId,
+  initialPatientName,
+}) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
     [theme, commonStyles, isDarkMode],
+  );
+  const dotsModalStyles = useMemo(
+    () => createDotsSettingsModalStyle(theme),
+    [theme],
   );
 
   const { saveMedicalHistoryStep, fetchMedicalHistory } = useMedicalHistory();
@@ -145,6 +166,12 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const prevPatientIdRef = useRef<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (readOnly && patientId) {
+      setSelectedPatientId(patientId);
+    }
+  }, [readOnly, patientId]);
 
   // SweetAlert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -168,6 +195,8 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
   };
 
   const [formData, setFormData] = useState(initialFormData);
+  const [lastSavedData, setLastSavedData] = useState(initialFormData);
+  const preNASnapshotRef = useRef<typeof initialFormData | null>(null);
   const [isNAStep, setIsNAStep] = useState<Record<string, boolean>>({
     present: false,
     past: false,
@@ -175,6 +204,11 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
     vaccination: false,
     developmental: false,
   });
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState(
+    'Saving Medical History...',
+  );
 
   const toggleNA = () => {
     const currentKey = steps[step].key;
@@ -183,7 +217,18 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
     setIsNAStep(prev => ({ ...prev, [currentKey]: newState }));
 
     if (newState) {
-      // Set all fields in this step to "N/A"
+      // Save snapshot of CURRENT step before setting to N/A
+      if (!preNASnapshotRef.current) {
+        preNASnapshotRef.current = JSON.parse(JSON.stringify(formData));
+      } else {
+        preNASnapshotRef.current[currentKey as keyof typeof initialFormData] =
+          JSON.parse(
+            JSON.stringify(
+              formData[currentKey as keyof typeof initialFormData],
+            ),
+          );
+      }
+
       const fields = STEP_FIELDS[currentKey];
       const updatedSection = {
         ...(formData[currentKey as keyof typeof formData] as any),
@@ -193,39 +238,50 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
       });
       setFormData(prev => ({ ...prev, [currentKey]: updatedSection }));
     } else {
-      // Clear fields if they were "N/A"
-      const fields = STEP_FIELDS[currentKey];
-      const updatedSection = {
-        ...(formData[currentKey as keyof typeof formData] as any),
-      };
-      fields.forEach(f => {
-        if (updatedSection[f] === 'N/A') {
-          updatedSection[f] = '';
-        }
-      });
-      setFormData(prev => ({ ...prev, [currentKey]: updatedSection }));
+      // Restore from snapshot
+      if (
+        preNASnapshotRef.current &&
+        preNASnapshotRef.current[currentKey as keyof typeof initialFormData]
+      ) {
+        const restoredSection =
+          preNASnapshotRef.current[currentKey as keyof typeof initialFormData];
+        setFormData(prev => ({ ...prev, [currentKey]: restoredSection }));
+      } else {
+        const fields = STEP_FIELDS[currentKey];
+        const updatedSection = {
+          ...(formData[currentKey as keyof typeof formData] as any),
+        };
+        fields.forEach(f => {
+          if (updatedSection[f] === 'N/A') {
+            updatedSection[f] = '';
+          }
+        });
+        setFormData(prev => ({ ...prev, [currentKey]: updatedSection }));
+      }
     }
   };
 
-  useEffect(() => {
-    if (readOnly && patientId) {
-      setSelectedPatientId(patientId);
-    }
-  }, [readOnly, patientId]);
-
-  useEffect(() => {
-    const backAction = () => {
-      onBack();
+  const handleBackPress = useCallback(() => {
+    if (isMenuVisible) {
+      setIsMenuVisible(false);
       return true;
-    };
+    }
+    if (step > 0) {
+      setStep(step - 1);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      return true;
+    }
+    onBack();
+    return true;
+  }, [isMenuVisible, onBack, step]);
 
+  useEffect(() => {
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
-      backAction,
+      handleBackPress,
     );
-
     return () => backHandler.remove();
-  }, [onBack]);
+  }, [handleBackPress]);
 
   const loadPatientData = useCallback(
     async (patientId: number) => {
@@ -236,8 +292,15 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
 
         const newFormData = {
           present: getFirst(data.present_illness) || initialFormData.present,
-          past: getFirst(data.past_history || data.past_medical_surgical || data.past_medical) || initialFormData.past,
-          allergies: getFirst(data.allergies || data.known_condition_allergies) || initialFormData.allergies,
+          past:
+            getFirst(
+              data.past_history ||
+                data.past_medical_surgical ||
+                data.past_medical,
+            ) || initialFormData.past,
+          allergies:
+            getFirst(data.allergies || data.known_condition_allergies) ||
+            initialFormData.allergies,
           vaccination:
             getFirst(data.vaccination) || initialFormData.vaccination,
           developmental:
@@ -257,8 +320,10 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
           newISNA[key] = allNA;
         });
         setIsNAStep(newISNA);
+        setLastSavedData(newFormData);
       } else {
         setFormData(initialFormData);
+        setLastSavedData(initialFormData);
         setIsNAStep({
           present: false,
           past: false,
@@ -298,6 +363,24 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
     { title: 'DEVELOPMENTAL HISTORY', key: 'developmental' },
   ];
 
+  const currentStepKey = steps[step].key;
+  const currentFields = STEP_FIELDS[currentStepKey];
+
+  const isModified = useMemo(() => {
+    if (!selectedPatientId) return false;
+    const currentData = formData[currentStepKey as keyof typeof formData];
+    const savedData =
+      lastSavedData[currentStepKey as keyof typeof lastSavedData];
+    return JSON.stringify(currentData) !== JSON.stringify(savedData);
+  }, [formData, lastSavedData, currentStepKey, selectedPatientId]);
+
+  const isDataEntered = useMemo(() => {
+    const currentData = formData[currentStepKey as keyof typeof formData];
+    return Object.values(currentData).some(
+      v => typeof v === 'string' && v.trim() !== '' && v !== 'N/A',
+    );
+  }, [formData, currentStepKey]);
+
   const handleNext = async () => {
     if (!selectedPatientId) {
       return showAlert(
@@ -308,25 +391,72 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
 
     const currentKey = steps[step].key;
     const currentData = formData[currentKey as keyof typeof formData];
+    const isLastStep = step === steps.length - 1;
 
     try {
-      // Save only the current step
-      await saveMedicalHistoryStep(selectedPatientId, currentKey, currentData);
+      if (isModified) {
+        if (isLastStep) {
+          setIsLoading(true);
+          setLoadingMessage('Saving Medical History...');
+        }
 
-      if (step < steps.length - 1) {
+        // Save the current step data
+        await saveMedicalHistoryStep(
+          selectedPatientId,
+          currentKey,
+          currentData,
+        );
+
+        // Re-fetch data to ensure everything is in sync
+        await loadPatientData(selectedPatientId);
+
+        if (isLastStep) {
+          setIsLoading(false);
+        }
+      }
+
+      if (!isLastStep) {
         setStep(step + 1);
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       } else {
+        // Final submission alert
         showAlert(
           'Success',
           'Medical History has been saved successfully.',
           'success',
         );
-        loadPatientData(selectedPatientId);
+        setStep(0);
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
     } catch (error: any) {
+      setIsLoading(false);
       showAlert('Error', error.message || 'Failed to save history.');
     }
+  };
+
+  const handleSelectStage = async (index: number) => {
+    if (isModified && selectedPatientId) {
+      try {
+        const currentKey = steps[step].key;
+        const currentData = formData[currentKey as keyof typeof formData];
+        // Save silently when navigating via menu
+        await saveMedicalHistoryStep(
+          selectedPatientId,
+          currentKey,
+          currentData,
+        );
+        await loadPatientData(selectedPatientId);
+      } catch (error: any) {
+        showAlert(
+          'Error',
+          error.message || 'Failed to auto-save before navigation.',
+        );
+        return;
+      }
+    }
+    setStep(index);
+    setIsMenuVisible(false);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const formatDate = () => {
@@ -346,8 +476,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
     }));
   };
 
-  const currentStepKey = steps[step].key;
-  const currentFields = STEP_FIELDS[currentStepKey];
+  const isNA = isNAStep[currentStepKey];
 
   const fadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
@@ -381,11 +510,23 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
               <Text style={styles.title}>Medical History</Text>
               <Text style={styles.dateText}>{formatDate()}</Text>
               {readOnly && (
-                <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: '#E8572A',
+                    fontFamily: 'AlteHaasGroteskBold',
+                    marginTop: 5,
+                  }}
+                >
                   [READ ONLY]
                 </Text>
               )}
             </View>
+            {!readOnly && (
+              <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
+                <Image source={dotsIcon} style={styles.dotsIcon} />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
         <LinearGradient
@@ -407,54 +548,54 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
           <PatientSearchBar
             onPatientSelect={id => setSelectedPatientId(id)}
             onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-            initialPatientName={readOnly ? (initialPatientName || '') : undefined}
+            initialPatientName={readOnly ? initialPatientName || '' : undefined}
           />
 
           {!readOnly && (
-          <TouchableOpacity
-            style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
-            onPress={() => {
-              if (!selectedPatientId) {
-                showAlert(
-                  'Patient Required',
-                  'Please select a patient first in the search bar.',
-                );
-              } else {
-                toggleNA();
-              }
-            }}
-          >
-            <Text
-              style={[
-                styles.naText,
-                !selectedPatientId && { color: theme.textMuted },
-              ]}
+            <TouchableOpacity
+              style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+              onPress={() => {
+                if (!selectedPatientId) {
+                  showAlert(
+                    'Patient Required',
+                    'Please select a patient first in the search bar.',
+                  );
+                } else {
+                  toggleNA();
+                }
+              }}
             >
-              Mark all as N/A
-            </Text>
-            <Icon
-              name={
-                isNAStep[currentStepKey]
-                  ? 'check-box'
-                  : 'check-box-outline-blank'
-              }
-              size={22}
-              color={selectedPatientId ? theme.primary : theme.textMuted}
-            />
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.naText,
+                  !selectedPatientId && { color: theme.textMuted },
+                ]}
+              >
+                Mark all as N/A
+              </Text>
+              <Icon
+                name={
+                  isNAStep[currentStepKey]
+                    ? 'check-box'
+                    : 'check-box-outline-blank'
+                }
+                size={22}
+                color={selectedPatientId ? theme.primary : theme.textMuted}
+              />
+            </TouchableOpacity>
           )}
 
           {!readOnly && (
-          <Text
-            style={[
-              styles.disabledTextAtBottom,
-              isNAStep[currentStepKey] && { color: theme.error },
-            ]}
-          >
-            {isNAStep[currentStepKey]
-              ? 'All fields below are disabled.'
-              : 'Checking this will disable all fields below.'}
-          </Text>
+            <Text
+              style={[
+                styles.disabledTextAtBottom,
+                isNAStep[currentStepKey] && { color: theme.error },
+              ]}
+            >
+              {isNAStep[currentStepKey]
+                ? 'All fields below are disabled.'
+                : 'Checking this will disable all fields below.'}
+            </Text>
           )}
 
           <View style={styles.stepHeader}>
@@ -473,9 +614,11 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
                 ] || ''
               }
               onChangeText={(val: string) => updateField(field, val)}
-              disabled={!selectedPatientId || isNAStep[currentStepKey] || readOnly}
+              disabled={
+                !selectedPatientId || isNAStep[currentStepKey] || readOnly
+              }
               onDisabledPress={() => {
-                if (!selectedPatientId) {
+                if (!selectedPatientId && !readOnly) {
                   showAlert(
                     'Patient Required',
                     'Please select a patient first in the search bar.',
@@ -486,32 +629,128 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
           ))}
 
           {!readOnly ? (
-            <View style={styles.btnContainer}>
-              <Button
-                title={step === steps.length - 1 ? 'SUBMIT' : 'NEXT'}
+            <View style={styles.footerAction}>
+              <TouchableOpacity
+                style={[
+                  styles.backBtn,
+                  step === 0 && {
+                    backgroundColor: theme.buttonDisabledBg,
+                    borderColor: theme.buttonDisabledBorder,
+                  },
+                ]}
+                onPress={handleBackPress}
+                disabled={isLoading || step === 0}
+              >
+                <Icon
+                  name="arrow-back"
+                  size={24}
+                  color={step === 0 ? theme.textMuted : theme.primary}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.submitBtn,
+                  { marginLeft: 10, marginRight: 0 },
+                  !isModified &&
+                    !isDataEntered && {
+                      backgroundColor: theme.buttonDisabledBg,
+                      borderColor: theme.buttonDisabledBorder,
+                    },
+                ]}
                 onPress={handleNext}
-                disabled={!selectedPatientId}
-              />
+                disabled={!isModified && !isDataEntered}
+              >
+                <Text
+                  style={[
+                    styles.submitText,
+                    !isModified && !isDataEntered && { color: theme.textMuted },
+                  ]}
+                >
+                  {step === steps.length - 1 ? 'SUBMIT' : 'NEXT'}
+                </Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <View style={{ marginTop: 10 }}>
-              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+              <View style={styles.footerAction}>
                 <TouchableOpacity
-                  style={[styles.navBtn, step === 0 && { backgroundColor: theme.buttonDisabledBg, borderColor: theme.buttonDisabledBorder }]}
-                  onPress={() => { setStep(step - 1); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
-                  disabled={step === 0}
+                  style={[
+                    styles.backBtn,
+                    step === 0 && {
+                      backgroundColor: theme.buttonDisabledBg,
+                      borderColor: theme.buttonDisabledBorder,
+                    },
+                  ]}
+                  onPress={onBack}
+                  disabled={isLoading || step === 0}
                 >
-                  <Text style={[styles.navBtnText, step === 0 && { color: theme.textMuted }]}>‹ PREV</Text>
+                  <Icon
+                    name="arrow-back"
+                    size={24}
+                    color={step === 0 ? theme.textMuted : theme.primary}
+                  />
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.navBtn, step === steps.length - 1 && { backgroundColor: theme.buttonDisabledBg, borderColor: theme.buttonDisabledBorder }]}
-                  onPress={() => { setStep(step + 1); scrollViewRef.current?.scrollTo({ y: 0, animated: true }); }}
-                  disabled={step === steps.length - 1}
+
+                <View
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    gap: 10,
+                    marginLeft: 10,
+                  }}
                 >
-                  <Text style={[styles.navBtnText, step === steps.length - 1 && { color: theme.textMuted }]}>NEXT ›</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.navBtn,
+                      step === 0 && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
+                    ]}
+                    onPress={() => {
+                      setStep(step - 1);
+                      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                    }}
+                    disabled={step === 0}
+                  >
+                    <Text
+                      style={[
+                        styles.navBtnText,
+                        step === 0 && { color: theme.textMuted },
+                      ]}
+                    >
+                      ‹ PREV
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.navBtn,
+                      step === steps.length - 1 && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
+                    ]}
+                    onPress={() => {
+                      setStep(step + 1);
+                      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                    }}
+                    disabled={step === steps.length - 1}
+                  >
+                    <Text
+                      style={[
+                        styles.navBtnText,
+                        step === steps.length - 1 && { color: theme.textMuted },
+                      ]}
+                    >
+                      NEXT ›
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <TouchableOpacity style={styles.navBtn} onPress={onBack}>
+              <TouchableOpacity
+                style={[styles.navBtn, { marginTop: 10 }]}
+                onPress={onBack}
+              >
                 <Text style={styles.navBtnText}>CLOSE</Text>
               </TouchableOpacity>
             </View>
@@ -525,6 +764,53 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
         />
       </View>
 
+      {/* Options Menu Modal */}
+      <Modal
+        transparent
+        visible={isMenuVisible}
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <Pressable
+          style={dotsModalStyles.modalOverlay}
+          onPress={() => setIsMenuVisible(false)}
+        >
+          <BlurView style={dotsModalStyles.blurView} {...blurProps} />
+          <Pressable
+            style={dotsModalStyles.menuContainer}
+            onPress={e => e.stopPropagation()}
+          >
+            <Text style={dotsModalStyles.menuTitle}>SELECT STAGE</Text>
+
+            <ScrollView>
+              {steps.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={dotsModalStyles.menuItem}
+                  onPress={() => handleSelectStage(index)}
+                >
+                  <Text
+                    style={[
+                      dotsModalStyles.menuItemText,
+                      step === index && dotsModalStyles.activeMenuText,
+                    ]}
+                  >
+                    {item.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={dotsModalStyles.closeMenuBtn}
+              onPress={() => setIsMenuVisible(false)}
+            >
+              <Icon name="close" size={20} color={theme.primary} />
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <SweetAlert
         visible={alertConfig.visible}
         title={alertConfig.title}
@@ -533,6 +819,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({ onBack, readOnly 
         onConfirm={() => setAlertConfig({ ...alertConfig, visible: false })}
         confirmText="OK"
       />
+      <LoadingOverlay visible={isLoading} message={loadingMessage} />
     </SafeAreaView>
   );
 };
@@ -580,7 +867,38 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       color: theme.textMuted,
       textAlign: 'right',
     },
-    btnContainer: { marginTop: 10 },
+    backBtn: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: theme.buttonBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: theme.primary,
+    },
+    footerAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 10,
+      paddingBottom: 40,
+    },
+    submitBtn: {
+      flex: 1,
+      backgroundColor: theme.buttonBg,
+      paddingVertical: 15,
+      borderRadius: 25,
+      alignItems: 'center',
+      marginHorizontal: 10,
+      borderWidth: 1.5,
+      borderColor: theme.buttonBorder,
+    },
+    submitText: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 16,
+    },
     navBtn: {
       flex: 1,
       backgroundColor: theme.buttonBg,
@@ -588,7 +906,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       borderRadius: 25,
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: theme.buttonBorder,
     },
     navBtnText: {
@@ -603,6 +921,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       right: 0,
       height: 60,
     },
+    dotsIcon: { width: 18, height: 18, resizeMode: 'contain', marginTop: 15 },
   });
 
 export default MedicalHistoryScreen;

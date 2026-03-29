@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import apiClient from '@api/apiClient';
+import { getAlertFromCache, saveAlertToCache } from '@App/utils/cdssCache';
 
 export const useADL = () => {
   const [dataAlert, setDataAlert] = useState<string | null>(null);
@@ -33,55 +34,76 @@ export const useADL = () => {
   const analyzeField = useCallback(async (
     patientId: number,
     currentAdlId: number | null,
+    fullData: any,
     fieldName: string,
-    finding: string,
     alertKey: string,
-  ): Promise<{ alert: string | null; severity: string | null; adlId: number | null } | null> => {
-    if (!finding || finding.trim().length < 3 || finding === 'N/A') return null;
+  ): Promise<{ 
+    alerts: Record<string, string | null>; 
+    severity: string | null; 
+    adlId: number | null 
+  } | null> => {
     try {
+      // Check cache first
+      const cached = await getAlertFromCache('adl', patientId, fullData);
+      if (cached) {
+        console.log('[ADL] Returning cached alerts');
+        return { alerts: cached.alerts, severity: cached.severity, adlId: currentAdlId };
+      }
+
+      const body = { ...fullData, patient_id: patientId };
+      const sanitized = sanitize(body);
+
       let response;
       if (currentAdlId) {
-        response = await apiClient.put(`/adl/${currentAdlId}/assessment`, {
-          patient_id: patientId,
-          [fieldName]: finding,
-        });
+        response = await apiClient.put(`/adl/${currentAdlId}/assessment`, sanitized);
       } else {
-        response = await apiClient.post('/adl', {
-          patient_id: patientId,
-          [fieldName]: finding,
-        });
+        response = await apiClient.post('/adl', sanitized);
       }
 
-      const alerts = response.data?.alerts || {};
       const data = response.data?.data || response.data;
+      const alertsObj = response.data?.alerts || data?.alerts || {};
       const returnedAdlId: number | null = data?.id || null;
-      const alertText: string = (alerts[alertKey] || data?.[alertKey] || '').toString().trim();
 
-      if (!alertText || alertText === 'No findings.' || alertText === 'No Findings') {
-        return { alert: null, severity: null, adlId: returnedAdlId };
+      const allAlerts: Record<string, string | null> = {};
+      Object.keys(alertsObj).forEach(key => {
+        const val = alertsObj[key];
+        allAlerts[key] = (val && val !== 'No findings.' && val !== 'No Findings') ? val.toString().trim() : null;
+      });
+
+      // Also check data record directly for alert keys if not in alertsObj
+      if (alertKey && !allAlerts[alertKey] && data[alertKey] && data[alertKey] !== 'No findings.' && data[alertKey] !== 'No Findings') {
+        allAlerts[alertKey] = data[alertKey].toString().trim();
       }
 
-      const upper = alertText.toUpperCase();
+      const alertText = allAlerts[alertKey] || '';
       let severity = 'INFO';
-      if (
-        upper.includes('URGENT') || upper.includes('CRITICAL') ||
-        upper.includes('IMMEDIATELY') || upper.includes('EMERGENCY') ||
-        upper.includes('PERITONITIS') || upper.includes('SEPSIS')
-      ) {
-        severity = 'CRITICAL';
-      } else if (
-        upper.includes('EVALUATE') || upper.includes('MONITOR') ||
-        upper.includes('ASSESS') || upper.includes('REFER') ||
-        upper.includes('DISEASE') || upper.includes('INFECTION') ||
-        upper.includes('ABNORMAL') || upper.includes('SUSPECTED') ||
-        upper.includes('LIVER') || upper.includes('HEMOLYSIS') ||
-        upper.includes('JAUNDICE') || upper.includes('PALLOR') ||
-        upper.includes('TREAT') || upper.includes('ELEVATED')
-      ) {
-        severity = 'WARNING';
+      if (alertText) {
+        const upper = alertText.toUpperCase();
+        if (
+          upper.includes('URGENT') || upper.includes('CRITICAL') ||
+          upper.includes('IMMEDIATELY') || upper.includes('EMERGENCY') ||
+          upper.includes('PERITONITIS') || upper.includes('SEPSIS')
+        ) {
+          severity = 'CRITICAL';
+        } else if (
+          upper.includes('EVALUATE') || upper.includes('MONITOR') ||
+          upper.includes('ASSESS') || upper.includes('REFER') ||
+          upper.includes('DISEASE') || upper.includes('INFECTION') ||
+          upper.includes('ABNORMAL') || upper.includes('SUSPECTED') ||
+          upper.includes('LIVER') || upper.includes('HEMOLYSIS') ||
+          upper.includes('JAUNDICE') || upper.includes('PALLOR') ||
+          upper.includes('TREAT') || upper.includes('ELEVATED')
+        ) {
+          severity = 'WARNING';
+        }
+      } else {
+        severity = null as any;
       }
 
-      return { alert: alertText, severity, adlId: returnedAdlId };
+      // Save to cache
+      await saveAlertToCache('adl', patientId, fullData, allAlerts, severity);
+
+      return { alerts: allAlerts, severity, adlId: returnedAdlId };
     } catch (e) {
       return null;
     }

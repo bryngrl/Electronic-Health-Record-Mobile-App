@@ -8,6 +8,9 @@ interface VitalCardProps {
   disabled?: boolean;
   onDisabledPress?: () => void;
   keyboardType?: 'numeric' | 'numbers-and-punctuation' | 'default';
+  returnKeyType?: 'next' | 'done' | 'go' | 'search' | 'send';
+  onSubmitEditing?: () => void;
+  inputRef?: React.RefObject<TextInput>;
 }
 
 const VitalCard: React.FC<VitalCardProps> = ({
@@ -17,6 +20,9 @@ const VitalCard: React.FC<VitalCardProps> = ({
   disabled = false,
   onDisabledPress,
   keyboardType = 'numeric',
+  returnKeyType,
+  onSubmitEditing,
+  inputRef,
 }) => (
   <View style={styles.cardContainer}>
     {/* Outer Box / Label Header Area */}
@@ -33,6 +39,7 @@ const VitalCard: React.FC<VitalCardProps> = ({
       }}
     >
       <TextInput
+        ref={inputRef}
         style={styles.innerInput}
         value={value}
         onChangeText={onChangeText}
@@ -41,6 +48,8 @@ const VitalCard: React.FC<VitalCardProps> = ({
         placeholderTextColor="#C7C7CD"
         editable={!disabled}
         pointerEvents={disabled ? 'none' : 'auto'}
+        returnKeyType={returnKeyType}
+        onSubmitEditing={onSubmitEditing}
       />
     </Pressable>
   </View>

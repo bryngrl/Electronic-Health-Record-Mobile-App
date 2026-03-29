@@ -1,0 +1,46 @@
+1. General Appearance
+   * Normal: Patient appears alert, active, and interactive. (Severity: INFO)
+   * Warning: The patient appears frail and acutely ill, showing obvious signs of pain. (Severity: WARNING)
+   * Critical: Patient is unresponsive and comatose with fruity odor on breath. (Severity: CRITICAL)
+
+
+  2. Skin Condition
+   * Normal: Skin is warm and dry with normal turgor. (Severity: NONE - if no keywords match)
+   * Warning: Patient has jaundice and icteric sclera with decreased turgor. (Severity: WARNING)
+   * Critical: Observed cyanosis and blue skin with petechiae on the torso. (Severity: CRITICAL)
+
+
+  3. Eye Condition
+   * Normal: Pupils are equal, round, and reactive to light (PERRLA). (Severity: NONE)
+   * Warning: Patient reports floaters and has a droopy eyelid (ptosis). (Severity: WARNING)
+   * Critical: Sudden visual loss in the right eye with double vision (diplopia). (Severity: CRITICAL)
+
+
+  4. Oral Condition
+   * Normal: Oral mucosa is moist and pink with no lesions. (Severity: NONE)
+   * Warning: Dry mucosa and white curd-like plaques consistent with thrush. (Severity: WARNING)
+   * Critical: Patient has blue lips and a non-healing lip ulcer. (Severity: CRITICAL)
+
+
+  5. Cardiovascular
+   * Normal: Heart rate and rhythm are regular with no murmurs. (Severity: NONE)
+   * Warning: Persistent tachycardia with a holosystolic murmur heard at the apex. (Severity: WARNING)
+   * Critical: Observed central cyanosis and a diastolic murmur; bradycardia noted. (Severity: CRITICAL)
+
+
+  6. Abdomen Condition
+   * Normal: Abdomen is flat, soft on palpation, and non-distended. (Severity: NONE)
+   * Warning: Distended abdomen with tenderness in right lower quadrant. (Severity: WARNING)
+   * Critical: Pulsating mass midline with ecchymosis around umbilicus (Cullen sign). (Severity: CRITICAL)
+
+
+  7. Extremities
+   * Normal: Extremities are warm with palpable distal pulses and no edema. (Severity: NONE)
+   * Warning: Pitting edema noted in lower legs with weak posterior tibial pulse. (Severity: WARNING)
+   * Critical: Unilateral calf swelling and absent pulses in the left foot. (Severity: CRITICAL)
+
+
+  8. Neurological
+   * Normal: Alert and oriented x3, GCS 15, alert and calm. (Severity: NONE)
+   * Warning: Patient is confused and disoriented, appearing drowsy but arousable. (Severity: WARNING)
+   * Critical: GCS less than 8, unresponsive to pain, with a fixed dilated pupil. (Severity: CRITICAL)

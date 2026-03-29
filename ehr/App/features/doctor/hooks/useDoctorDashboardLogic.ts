@@ -33,6 +33,14 @@ const normalizeItem = (item: any, existingIsRead: boolean): PatientUpdate => ({
   isRead: existingIsRead,
 });
 
+const DEDUPLICATE_FEATURES = [
+  'vital-signs',
+  'medical-history',
+  'lab-values',
+  'medication',
+  'medical-reconciliation',
+];
+
 export const useDoctorDashboardLogic = () => {
   const [activeFilter, setActiveFilter] = useState<'All' | 'Unread' | 'Read'>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -105,7 +113,8 @@ export const useDoctorDashboardLogic = () => {
         // Build a map of existing items so we only update what changed
         const existingMap = new Map(prev.map(u => [u.id, u]));
 
-        const merged = rawData.map((item: any) => {
+        // Normalize first
+        const normalized = rawData.map((item: any) => {
           const itemId = `${item.type_key ?? ''}-${item.record_id ?? item.id}`;
           const existing = existingMap.get(itemId);
           // Preserve isRead for items already cached; respect API is_read for new items
@@ -113,8 +122,31 @@ export const useDoctorDashboardLogic = () => {
           return normalizeItem(item, isRead);
         });
 
-        persistUpdates(merged);
-        return merged;
+        // Deduplicate: If same patient and same feature (in DEDUPLICATE_FEATURES), keep only most recent
+        const seen = new Set<string>();
+        const deduped: PatientUpdate[] = [];
+
+        // Sort by time descending before deduping to ensure we keep the newest
+        const sorted = [...normalized].sort(
+          (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
+        );
+
+        for (const update of sorted) {
+          const feature = update.type_key;
+          if (DEDUPLICATE_FEATURES.includes(feature)) {
+            const key = `${update.patient_id}-${feature}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              deduped.push(update);
+            }
+          } else {
+            // Features not in deduplicate list are always added
+            deduped.push(update);
+          }
+        }
+
+        persistUpdates(deduped);
+        return deduped;
       });
     } catch (err) {
       console.error('Error fetching doctor updates:', err);

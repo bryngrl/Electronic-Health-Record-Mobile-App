@@ -17,6 +17,7 @@ import apiClient from '@api/apiClient';
 import LinearGradient from 'react-native-linear-gradient';
 import CDSSGuidanceModal from '@components/CDSSGuidanceModal';
 import SweetAlert from '@components/SweetAlert';
+import LoadingOverlay from '@components/LoadingOverlay';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
 const STEPS = [
@@ -293,14 +294,6 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
   }, [text, currentIdx, feature]);
 
   const handleNext = async () => {
-    if (!text.trim()) {
-      showAlert(
-        'Input Required',
-        `Please enter the ${STEPS[currentIdx].label} text.`,
-      );
-      return;
-    }
-
     setLoading(true);
     try {
       const step = STEPS[currentIdx];
@@ -352,22 +345,17 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
 
   if (initLoading) {
     return (
-      <View
-        style={[
-          styles.safeArea,
-          { justifyContent: 'center', alignItems: 'center' },
-        ]}
-      >
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={{ marginTop: 10, color: theme.text }}>
-          Initializing ADPIE...
-        </Text>
+      <View style={styles.safeArea}>
+        <LoadingOverlay visible={true} message="Initializing ADPIE..." />
       </View>
     );
   }
 
+  const isNextDisabled = !text.trim() || loading;
+
   return (
     <SafeAreaView style={styles.safeArea}>
+      <LoadingOverlay visible={loading} message="Saving progress..." />
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor="transparent"
@@ -524,17 +512,25 @@ const ADPIEScreen: React.FC<ADPIEScreenProps> = ({
               <Icon name="arrow-back" size={24} color={theme.primary} />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.nextBtn, loading && { opacity: 0.7 }]}
+              style={[
+                styles.nextBtn,
+                isNextDisabled && {
+                  backgroundColor: theme.buttonDisabledBg,
+                  borderColor: theme.buttonDisabledBorder,
+                },
+                loading && { opacity: 0.7 },
+              ]}
               onPress={handleNext}
-              disabled={loading}
+              disabled={isNextDisabled}
             >
-              {loading ? (
-                <ActivityIndicator size="small" color={theme.primary} />
-              ) : (
-                <Text style={styles.nextText}>
-                  {currentIdx === 3 ? 'SUBMIT' : 'NEXT'}
-                </Text>
-              )}
+              <Text
+                style={[
+                  styles.nextText,
+                  isNextDisabled && { color: theme.textMuted },
+                ]}
+              >
+                {currentIdx === 3 ? 'SUBMIT' : 'NEXT'}
+              </Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -570,7 +566,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
     container: commonStyles.container,
     scrollContent: {
       flexGrow: 1,
-      paddingBottom: 20,
+      paddingBottom: 80,
     },
     header: commonStyles.header,
     title: commonStyles.title,

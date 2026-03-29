@@ -30,11 +30,6 @@ export const createStyles = (theme: any, isDarkMode: boolean) =>
       paddingHorizontal: 15,
       borderWidth: 0,
       height: 50,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.3,
-      shadowRadius: 2,
-      elevation: 5,
     },
     searchIcon: { marginRight: 10 },
     searchBar: {
@@ -87,9 +82,12 @@ export const createModalStyles = (theme: any) =>
   StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.6)',
+      backgroundColor: 'rgba(0, 0, 0, 0.06)',
       justifyContent: 'center',
       alignItems: 'center',
+    },
+    blurView: {
+      ...StyleSheet.absoluteFillObject,
     },
     modalContainer: {
       width: '80%',
@@ -115,8 +113,8 @@ export const createModalStyles = (theme: any) =>
     },
     patientName: {
       fontSize: 16,
-      color: theme.textMuted,
-      fontFamily: 'AlteHaasGrotesk',
+      color: theme.text,
+      fontFamily: 'AlteHaasGroteskBold',
       marginLeft: 5,
     },
     closeButton: { padding: 5, marginTop: -5, marginRight: -5 },
@@ -125,7 +123,7 @@ export const createModalStyles = (theme: any) =>
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      backgroundColor: 'theme.card2',
+      backgroundColor: theme.card2,
       borderRadius: 18,
       padding: 10,
       marginBottom: 12,

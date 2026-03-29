@@ -7,6 +7,7 @@ import {
   ScrollView,
   SafeAreaView,
   StatusBar,
+  Animated,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -14,14 +15,26 @@ import { useAppTheme } from '@App/theme/ThemeContext';
 import PatientSearchBar from '@App/components/PatientSearchBar';
 import ADPIEScreen from '@App/components/ADPIEScreen';
 import SweetAlert from '@App/components/SweetAlert';
+import LoadingOverlay from '@App/components/LoadingOverlay';
 import { useADLScreen } from './useADLScreen';
 import ADLCardsSection from './ADLCardsSection';
 
-const ADLScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: {
+const ADLScreen = ({
+  onBack,
+  readOnly = false,
+  patientId,
+  initialPatientName,
+  admissionDate,
+  recordId,
+  recordDate,
+}: {
   onBack: any;
   readOnly?: boolean;
   patientId?: number;
   initialPatientName?: string;
+  admissionDate?: string;
+  recordId?: number;
+  recordDate?: string;
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
@@ -31,24 +44,46 @@ const ADLScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: 
   const scrollViewRef = useRef<ScrollView>(null);
 
   const {
-    searchText, setSearchText,
-    selectedPatient, setSelectedPatient,
-    scrollEnabled, setScrollEnabled,
-    alertConfig, setAlertConfig,
+    searchText,
+    setSearchText,
+    selectedPatient,
+    setSelectedPatient,
+    scrollEnabled,
+    setScrollEnabled,
+    alertConfig,
+    setAlertConfig,
     showAlert,
-    adlId, isExistingRecord,
-    isAdpieActive, setIsAdpieActive,
-    formData, isNA, getBackendAlert, getBackendSeverity,
-    toggleNA, updateField, handleCDSSPress, handleSave,
-    generateFindingsSummary, isDataEntered, calculateDayNumber,
-  } = useADLScreen(onBack);
+    adlId,
+    isExistingRecord,
+    isAdpieActive,
+    setIsAdpieActive,
+    formData,
+    isNA,
+    getBackendAlert,
+    getBackendSeverity,
+    toggleNA,
+    updateField,
+    handleCDSSPress,
+    handleSave,
+    generateFindingsSummary,
+    isDataEntered,
+    calculateDayNumber,
+    isModified,
+    isLoading,
+    loadingMessage,
+    screenOpacity,
+  } = useADLScreen(onBack, recordId || null, readOnly);
 
   useEffect(() => {
     if (readOnly && patientId) {
-      setSelectedPatient({ id: patientId, full_name: initialPatientName || '' });
+      setSelectedPatient({
+        id: patientId,
+        full_name: initialPatientName || '',
+        admission_date: admissionDate,
+      });
       setSearchText(initialPatientName || '');
     }
-  }, [readOnly, patientId]);
+  }, [readOnly, patientId, admissionDate]);
 
   if (isAdpieActive && adlId && selectedPatient) {
     return (
@@ -73,138 +108,178 @@ const ADLScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: 
     ? ['rgba(18,18,18,1)', 'rgba(18,18,18,0)']
     : ['rgba(255,255,255,1)', 'rgba(255,255,255,0)'];
 
+  const displayDate = recordDate ? new Date(recordDate) : new Date();
+
   return (
     <SafeAreaView style={styles.safeArea}>
+      <LoadingOverlay visible={isLoading} message={loadingMessage} />
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor="transparent"
         translucent={true}
       />
 
-      <View style={{ zIndex: 10 }}>
-        <View style={styles.headerContainer}>
-          <View style={commonStyles.header}>
-            <View style={{ flex: 1 }}>
-              <Text style={commonStyles.title}>Activities of Daily Living</Text>
-              <Text style={styles.dateText}>
-                {new Date().toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </Text>
-              {readOnly && (
-                <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
-                  [READ ONLY]
+      <Animated.View style={{ flex: 1, opacity: screenOpacity }}>
+        <View style={{ zIndex: 10 }}>
+          <View style={styles.headerContainer}>
+            <View style={[commonStyles.header, { marginBottom: 0 }]}>
+              <View>
+                <Text style={commonStyles.title}>
+                  Activities of Daily Living
                 </Text>
-              )}
-            </View>
-          </View>
-        </View>
-        <LinearGradient colors={headerFadeColors} style={{ height: 20 }} pointerEvents="none" />
-      </View>
-
-      <View style={{ flex: 1, marginTop: -20 }}>
-        <ScrollView
-          ref={scrollViewRef}
-          keyboardShouldPersistTaps="handled"
-          style={styles.container}
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={scrollEnabled}
-        >
-          <View style={{ height: 20 }} />
-          {!readOnly ? (
-            <PatientSearchBar
-              onPatientSelect={(id, name, patientObj) => {
-                setSearchText(name);
-                setSelectedPatient(patientObj);
-              }}
-              onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-              initialPatientName={searchText}
-            />
-          ) : (
-            <View style={styles.staticPatientContainer}>
-              <Text style={styles.staticPatientLabel}>PATIENT:</Text>
-              <Text style={styles.staticPatientName}>{initialPatientName || 'Unknown Patient'}</Text>
-            </View>
-          )}
-
-          <View style={styles.section}>
-            <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 10 }}>
-                <Text style={styles.sectionLabel}>DATE :</Text>
-                <View style={styles.inputBox}>
-                  <Text style={styles.inputText}>
-                    {new Date().toLocaleDateString('en-US', {
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
+                <Text style={styles.dateText}>
+                  {displayDate.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </Text>
+                {readOnly && (
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: '#E8572A',
+                      fontFamily: 'AlteHaasGroteskBold',
+                      marginTop: 5,
+                    }}
+                  >
+                    [READ ONLY]
                   </Text>
-                </View>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sectionLabel}>DAY NO. :</Text>
-                <View style={styles.inputBox}>
-                  <Text style={styles.inputText}>{calculateDayNumber()}</Text>
-                  <Icon
-                    name="arrow-drop-down"
-                    size={24}
-                    color={theme.primary}
-                    style={{ position: 'absolute', right: 10 }}
-                  />
-                </View>
+                )}
               </View>
             </View>
           </View>
-
-          {!readOnly && (
-            <TouchableOpacity
-              style={[styles.naRow, !selectedPatient && { opacity: 0.5 }]}
-              onPress={() =>
-                !selectedPatient
-                  ? showAlert('Patient Required', 'Please select a patient first in the search bar.')
-                  : toggleNA()
-              }
-            >
-              <Text style={[styles.naText, !selectedPatient && { color: theme.textMuted }]}>
-                Mark all as N/A
-              </Text>
-              <Icon
-                name={isNA ? 'check-box' : 'check-box-outline-blank'}
-                size={22}
-                color={selectedPatient ? theme.primary : theme.textMuted}
-              />
-            </TouchableOpacity>
-          )}
-
-          {!readOnly && (
-            <Text style={[styles.disabledTextAtBottom, isNA && { color: theme.error }]}>
-              {isNA ? 'All fields below are disabled.' : 'Checking this will disable all fields below.'}
-            </Text>
-          )}
-
-          <ADLCardsSection
-            formData={formData}
-            selectedPatient={selectedPatient}
-            isNA={isNA}
-            getBackendAlert={getBackendAlert}
-            getBackendSeverity={getBackendSeverity}
-            updateField={updateField}
-            showAlert={showAlert}
-            styles={styles}
-            theme={theme}
-            handleCDSSPress={handleCDSSPress}
-            handleSave={handleSave}
-            isDataEntered={isDataEntered}
-            adlId={adlId}
-            isExistingRecord={isExistingRecord}
-            readOnly={readOnly}
-            onBack={onBack}
+          <LinearGradient
+            colors={headerFadeColors}
+            style={{ height: 20 }}
+            pointerEvents="none"
           />
-        </ScrollView>
-        <LinearGradient colors={fadeColors} style={styles.fadeBottom} pointerEvents="none" />
-      </View>
+        </View>
+
+        <View style={{ flex: 1, marginTop: -20 }}>
+          <ScrollView
+            ref={scrollViewRef}
+            keyboardShouldPersistTaps="handled"
+            style={styles.container}
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={scrollEnabled}
+          >
+            <View style={{ height: 20 }} />
+            {!readOnly ? (
+              <PatientSearchBar
+                onPatientSelect={(id, name, patientObj) => {
+                  setSearchText(name);
+                  setSelectedPatient(patientObj);
+                }}
+                onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
+                initialPatientName={searchText}
+              />
+            ) : (
+              <View style={styles.staticPatientContainer}>
+                <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+                <Text style={styles.staticPatientName}>
+                  {initialPatientName || 'Unknown Patient'}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.section}>
+              <View style={styles.row}>
+                <View style={{ flex: 1, marginRight: 10 }}>
+                  <Text style={styles.sectionLabel}>DATE :</Text>
+                  <View style={styles.inputBox}>
+                    <Text style={styles.inputText}>
+                      {displayDate.toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </Text>
+                  </View>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sectionLabel}>DAY NO. :</Text>
+                  <View style={styles.inputBox}>
+                    <Text style={styles.inputText}>{calculateDayNumber()}</Text>
+                    <Icon
+                      name="arrow-drop-down"
+                      size={24}
+                      color={theme.textMuted}
+                      style={{ position: 'absolute', right: 10 }}
+                    />
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {!readOnly && (
+              <TouchableOpacity
+                style={[styles.naRow, !selectedPatient && { opacity: 0.5 }]}
+                onPress={() =>
+                  !selectedPatient
+                    ? showAlert(
+                        'Patient Required',
+                        'Please select a patient first in the search bar.',
+                      )
+                    : toggleNA()
+                }
+              >
+                <Text
+                  style={[
+                    styles.naText,
+                    !selectedPatient && { color: theme.textMuted },
+                  ]}
+                >
+                  Mark all as N/A
+                </Text>
+                <Icon
+                  name={isNA ? 'check-box' : 'check-box-outline-blank'}
+                  size={22}
+                  color={selectedPatient ? theme.primary : theme.textMuted}
+                />
+              </TouchableOpacity>
+            )}
+
+            {!readOnly && (
+              <Text
+                style={[
+                  styles.disabledTextAtBottom,
+                  isNA && { color: theme.error },
+                ]}
+              >
+                {isNA
+                  ? 'All fields below are disabled.'
+                  : 'Checking this will disable all fields below.'}
+              </Text>
+            )}
+
+            <ADLCardsSection
+              formData={formData}
+              selectedPatient={selectedPatient}
+              isNA={isNA}
+              getBackendAlert={getBackendAlert}
+              getBackendSeverity={getBackendSeverity}
+              updateField={updateField}
+              showAlert={showAlert}
+              styles={styles}
+              theme={theme}
+              handleCDSSPress={handleCDSSPress}
+              handleSave={handleSave}
+              isDataEntered={isDataEntered}
+              isModified={isModified}
+              adlId={adlId}
+              isExistingRecord={isExistingRecord}
+              readOnly={readOnly}
+              onBack={onBack}
+            />
+          </ScrollView>
+          <LinearGradient
+            colors={fadeColors}
+            style={styles.fadeBottom}
+            pointerEvents="none"
+          />
+        </View>
+      </Animated.View>
 
       <SweetAlert
         visible={alertConfig.visible}

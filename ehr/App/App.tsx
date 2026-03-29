@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, View, Platform } from 'react-native';
+import { ActivityIndicator, View, Platform, StyleSheet } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import HomeScreen from '@features/nurse/Dashboard/screen/HomeScreen';
 import DoctorMainScreen from '@features/doctor/screens/DoctorMainScreen';
-import AdminHomeScreen from '@features/admin/screen/AdminHomeScreen';
 import LoginScreen from '@features/Auth/screen/LoginScreen';
+import AdminMainScreen from '@features/Admin/screen/AdminMainScreen';
 import { ThemeProvider, useAppTheme } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from '@features/Auth/AuthContext';
 import SplashScreen from '@components/SplashScreen';
@@ -17,56 +17,59 @@ const NetworkMonitor = () => {
 };
 
 const MainApp = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { theme } = useAppTheme();
-  const [splashFinished, setSplashFinished] = useState(Platform.OS !== 'android');
+  const [splashFinished, setSplashFinished] = useState(
+    Platform.OS !== 'android',
+  );
 
-  // Wait for auth to resolve so splash knows which animation to play
   const nextScreen = !user ? 'Login' : 'Home';
 
-  if (!splashFinished) {
-    // Hold splash until auth state is known
-    if (isLoading) {
-      return <View style={{ flex: 1, backgroundColor: '#035022' }} />;
-    }
-    return (
-      <View style={{ flex: 1, backgroundColor: '#035022' }}>
-        <SplashScreen
-          onAnimationFinish={() => setSplashFinished(true)}
-          nextScreen={nextScreen}
-        />
-      </View>
-    );
-  }
+  const role = user?.role?.toLowerCase();
+  let content;
 
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
+  if (authLoading) {
+    content = (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: theme.background,
+        }}
+      >
         <ActivityIndicator size="large" color="#004d26" />
       </View>
     );
-  }
-
-  const role = user?.role?.toLowerCase();
-
-  let content;
-  if (!user) {
+  } else if (!user) {
     content = <LoginScreen />;
   } else if (role === 'nurse') {
     content = <HomeScreen />;
   } else if (role === 'doctor') {
     content = <DoctorMainScreen />;
   } else if (role === 'admin') {
-    content = <AdminHomeScreen />;
+    content = <AdminMainScreen />;
   } else {
-    // Fallback for unknown roles
     content = <LoginScreen />;
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-      {content}
-    </SafeAreaView>
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      {/* Main Content inside SafeAreaView - This stays stable */}
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+        {content}
+      </SafeAreaView>
+
+      {/* SplashScreen Overlay - Covers everything until finished */}
+      {!splashFinished && (
+        <View style={StyleSheet.absoluteFill}>
+          <SplashScreen
+            onAnimationFinish={() => setSplashFinished(true)}
+            nextScreen={authLoading ? undefined : nextScreen}
+          />
+        </View>
+      )}
+    </View>
   );
 };
 

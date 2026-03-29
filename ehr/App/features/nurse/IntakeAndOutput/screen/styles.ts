@@ -28,6 +28,17 @@ export const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean)
       backgroundColor: theme.card,
     },
     dateVal: { color: theme.text, fontFamily: 'AlteHaasGrotesk' },
+    dropdownRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingRight: 15,
+    },
+    arrowIconImage: {
+      width: 14,
+      height: 8,
+      resizeMode: 'contain',
+    },
     naRow: {
       flexDirection: 'row',
       alignItems: 'center',

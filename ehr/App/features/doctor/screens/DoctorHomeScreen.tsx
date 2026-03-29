@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
+  StatusBar,
+  Easing,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useDoctorDashboardLogic } from '../hooks/useDoctorDashboardLogic';
@@ -58,12 +60,14 @@ const DoctorHomeScreen = ({
     Animated.parallel([
       Animated.timing(stickyOpacity, {
         toValue: showStickyHeader ? 1 : 0,
-        duration: 180,
+        duration: 250,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
         useNativeDriver: true,
       }),
       Animated.timing(stickyTranslateY, {
-        toValue: showStickyHeader ? 0 : -12,
-        duration: 180,
+        toValue: showStickyHeader ? 0 : -10,
+        duration: 250,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
         useNativeDriver: true,
       }),
     ]).start();
@@ -99,11 +103,18 @@ const DoctorHomeScreen = ({
     onNavigate(route, {
       patientId: item.patient_id,
       patientName: item.name,
+      recordId: item.record_id,
+      recordDate: item.time_raw || item.time, // Passing raw time if available
     });
   };
 
   return (
     <View style={styles.root}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent={true}
+      />
       <Animated.View
         pointerEvents={showStickyHeader ? 'auto' : 'none'}
         onLayout={event => {
@@ -120,7 +131,7 @@ const DoctorHomeScreen = ({
         <View style={styles.stickyHeaderRow}>
           <View>
             <Text style={styles.welcome}>
-              Hello, {user?.full_name || 'Doctor'}
+              Hello, {user?.full_name?.split(' ')[0] || 'Doctor'}
             </Text>
             <Text style={styles.date}>
               {new Date().toLocaleDateString('en-US', {
@@ -132,7 +143,9 @@ const DoctorHomeScreen = ({
           </View>
           <TouchableOpacity
             onPress={() => setModalVisible(true)}
-            style={{ marginTop: 10 }}
+            style={{ marginTop: 10, padding: 5 }}
+            activeOpacity={0.6}
+            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
           >
             <Icon name="keyboard-arrow-down" size={24} color={theme.text} />
           </TouchableOpacity>
@@ -196,9 +209,9 @@ const DoctorHomeScreen = ({
       >
         <LinearGradient
           colors={[
-            'rgba(255, 255, 255, 0.73)',
-            'rgba(255, 255, 255, 0.51)',
-            'rgba(255, 255, 255, 0.32)',
+            isDarkMode ? '#121212b9' : 'rgba(255, 255, 255, 0.73)',
+            isDarkMode ? '#121212b1' : 'rgba(255, 255, 255, 0.51)',
+            isDarkMode ? '#12121233' : 'rgba(255, 255, 255, 0)',
           ]}
           style={styles.stickyFadeBottom}
         />
@@ -222,7 +235,7 @@ const DoctorHomeScreen = ({
         <View style={styles.header}>
           <View>
             <Text style={styles.welcome}>
-              Hello, {user?.full_name || 'Doctor'}
+              Hello, {user?.full_name?.split(' ')[0] || 'Doctor'}
             </Text>
             <Text style={styles.date}>
               {new Date().toLocaleDateString('en-US', {
@@ -234,13 +247,17 @@ const DoctorHomeScreen = ({
           </View>
           <TouchableOpacity
             onPress={() => setModalVisible(true)}
-            style={{ marginTop: 10 }}
+            style={{ padding: 5 }}
+            activeOpacity={0.6}
+            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
           >
             <Icon name="keyboard-arrow-down" size={24} color={theme.text} />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.searchContainer}>
+        {/* !!! SEARCH BAR !!! */}
+
+        {/* <View style={styles.searchContainer}>
           <View style={styles.searchBarWrapper}>
             <Ionicons
               name="search-outline"
@@ -256,8 +273,7 @@ const DoctorHomeScreen = ({
               onChangeText={setSearchQuery}
             />
           </View>
-        </View>
-
+        </View> */}
         <View style={styles.statsContainer}>
           <View style={styles.greenVerticalLine} />
           <View style={styles.statsRow}>
@@ -278,7 +294,6 @@ const DoctorHomeScreen = ({
             />
           </View>
         </View>
-
         <View style={styles.stickyControls}>
           <View style={styles.filterHeader}>
             <Text style={styles.sectionTitle}>Patient Updates</Text>
@@ -313,7 +328,6 @@ const DoctorHomeScreen = ({
             ))}
           </View>
         </View>
-
         <View style={styles.listContainer}>
           {filteredUpdates.length > 0
             ? filteredUpdates.map((item, index) => (
@@ -349,7 +363,13 @@ const DoctorHomeScreen = ({
                   <View style={styles.patientRightContainer}>
                     <View style={styles.patientRight}>
                       <View style={styles.badge}>
-                        <Text style={styles.badgeText}>{item.type}</Text>
+                        <Text
+                          style={styles.badgeText}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          {item.type}
+                        </Text>
                       </View>
                       <Text style={styles.timeText}>{item.time}</Text>
                     </View>

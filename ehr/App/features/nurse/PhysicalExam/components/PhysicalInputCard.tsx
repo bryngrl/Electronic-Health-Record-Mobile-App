@@ -9,7 +9,6 @@ import {
   Image,
 } from 'react-native';
 import CDSSModal from '@components/CDSSModal';
-import SweetAlert from '@components/SweetAlert';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
 const alert1 = require('@assets/icons/alert_bell_icon.png');

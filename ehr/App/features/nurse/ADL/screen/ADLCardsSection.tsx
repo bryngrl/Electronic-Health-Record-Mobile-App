@@ -16,6 +16,7 @@ interface ADLCardsSectionProps {
   handleCDSSPress: () => void;
   handleSave: () => void;
   isDataEntered: boolean;
+  isModified: boolean;
   adlId: number | null;
   isExistingRecord: boolean;
   readOnly?: boolean;
@@ -35,13 +36,14 @@ const ADLCardsSection: React.FC<ADLCardsSectionProps> = ({
   handleCDSSPress,
   handleSave,
   isDataEntered,
+  isModified,
   adlId,
   isExistingRecord,
   readOnly = false,
   onBack,
 }) => {
   const patientRequired = () =>
-    !selectedPatient && showAlert('Patient Required', 'Please select a patient first.');
+    !selectedPatient && !readOnly && showAlert('Patient Required', 'Please select a patient first.');
 
   return (
     <>
@@ -55,6 +57,7 @@ const ADLCardsSection: React.FC<ADLCardsSectionProps> = ({
           alertSeverity={getBackendSeverity(field)}
           onChangeText={val => updateField(field, val)}
           onDisabledPress={patientRequired}
+          readOnly={readOnly}
         />
       ))}
 
@@ -63,18 +66,18 @@ const ADLCardsSection: React.FC<ADLCardsSectionProps> = ({
           <TouchableOpacity
             style={[
               styles.cdssBtn,
-              (!selectedPatient || !isDataEntered) && {
+              !isDataEntered && {
                 backgroundColor: theme.buttonDisabledBg,
                 borderColor: theme.buttonDisabledBorder,
               },
             ]}
             onPress={handleCDSSPress}
-            disabled={!selectedPatient || !isDataEntered}
+            disabled={!isDataEntered}
           >
             <Text
               style={[
                 styles.cdssText,
-                (!selectedPatient || !isDataEntered) && { color: theme.textMuted },
+                !isDataEntered && { color: theme.textMuted },
               ]}
             >
               CDSS
@@ -83,18 +86,18 @@ const ADLCardsSection: React.FC<ADLCardsSectionProps> = ({
           <TouchableOpacity
             style={[
               styles.submitBtn,
-              !selectedPatient && {
+              !isModified && {
                 backgroundColor: theme.buttonDisabledBg,
                 borderColor: theme.buttonDisabledBorder,
               },
             ]}
             onPress={handleSave}
-            disabled={!selectedPatient}
+            disabled={!isModified}
           >
             <Text
               style={[
                 styles.submitText,
-                !selectedPatient && { color: theme.textMuted },
+                !isModified && { color: theme.textMuted },
               ]}
             >
               {isExistingRecord ? 'UPDATE' : 'SUBMIT'}

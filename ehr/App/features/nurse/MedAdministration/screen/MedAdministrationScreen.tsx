@@ -1,5 +1,11 @@
 // MedAdministration/screen/MedAdministrationScreen.tsx
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from 'react';
 import {
   StyleSheet,
   View,
@@ -9,7 +15,15 @@ import {
   StatusBar,
   TouchableOpacity,
   BackHandler,
+  Modal,
+  Image,
+  Pressable,
 } from 'react-native';
+import { BlurView } from '@react-native-community/blur';
+import {
+  createDotsSettingsModalStyle,
+  blurProps,
+} from '../../styles/DotsSettingsModalStyle';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MedAdministrationInputCard from '../components/MedAdministrationInputCard';
 import { useMedAdministration } from '../hook/useMedAdministration';
@@ -18,7 +32,16 @@ import PatientSearchBar from '@components/PatientSearchBar';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
-const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialPatientName }: {
+import LoadingOverlay from '@components/LoadingOverlay';
+
+const dotsIcon = require('@assets/icons/dots_icon.png');
+
+const MedAdministrationScreen = ({
+  onBack,
+  readOnly = false,
+  patientId,
+  initialPatientName,
+}: {
   onBack: any;
   readOnly?: boolean;
   patientId?: number;
@@ -28,6 +51,10 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
     [theme, commonStyles, isDarkMode],
+  );
+  const dotsModalStyles = useMemo(
+    () => createDotsSettingsModalStyle(theme),
+    [theme],
   );
 
   const {
@@ -40,15 +67,28 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
     nextStep,
     saveMedAdministration,
     fetchPatientData,
+    isModified,
+    isDataEntered,
   } = useMedAdministration();
 
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [isNA, setIsNA] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState(
+    'Saving Medication Administration...',
+  );
+  const preNASnapshotRef = useRef<Record<number, any>>({});
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
-  
+
   // Dedicated state for selected patient ID to trigger fetching properly
-  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
-  const lastFetchedRef = useRef<{ id: number | null; date: string }>({ id: null, date: '' });
+  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(
+    null,
+  );
+  const lastFetchedRef = useRef<{ id: number | null; date: string }>({
+    id: null,
+    date: '',
+  });
 
   const toggleNA = () => {
     const newState = !isNA;
@@ -60,27 +100,43 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
       const fields = ['medication', 'dose', 'route', 'frequency', 'comments'];
 
       if (newState) {
+        // Save snapshot for CURRENT step before setting to N/A
+        preNASnapshotRef.current[step] = { ...newMed };
+
         fields.forEach(f => {
           (newMed as any)[f] = 'N/A';
         });
       } else {
-        fields.forEach(f => {
-          if ((newMed as any)[f] === 'N/A') {
-            (newMed as any)[f] = '';
-          }
-        });
+        if (preNASnapshotRef.current[step]) {
+          // Restore from snapshot
+          const snapshot = preNASnapshotRef.current[step];
+          fields.forEach(f => {
+            (newMed as any)[f] = snapshot[f];
+          });
+          delete preNASnapshotRef.current[step];
+        } else {
+          fields.forEach(f => {
+            if ((newMed as any)[f] === 'N/A') {
+              (newMed as any)[f] = '';
+            }
+          });
+        }
       }
 
       updatedMeds[step] = newMed;
       return { ...prev, medications: updatedMeds };
     });
   };
-
   useEffect(() => {
     if (selectedPatientId) {
       const currentMed = formData.medications[step];
-      const allNA = ['medication', 'dose', 'route', 'frequency', 'comments']
-        .every(k => (currentMed as any)[k] === 'N/A');
+      const allNA = [
+        'medication',
+        'dose',
+        'route',
+        'frequency',
+        'comments',
+      ].every(k => (currentMed as any)[k] === 'N/A');
       setIsNA(allNA);
     } else {
       setIsNA(false);
@@ -100,19 +156,28 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
     type: 'error',
   });
 
-  useEffect(() => {
-    const backAction = () => {
-      onBack();
+  const handleBackPress = useCallback(() => {
+    if (isMenuVisible) {
+      setIsMenuVisible(false);
       return true;
-    };
+    }
+    if (step > 0) {
+      setStep(step - 1);
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      return true;
+    }
+    onBack();
+    return true;
+  }, [isMenuVisible, onBack, step, setStep]);
 
+  useEffect(() => {
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
-      backAction,
+      handleBackPress,
     );
 
     return () => backHandler.remove();
-  }, [onBack]);
+  }, [handleBackPress]);
 
   useEffect(() => {
     if (readOnly && patientId) {
@@ -130,9 +195,13 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
 
   // Robust fetching logic matching Medical History pattern
   useEffect(() => {
-    if (selectedPatientId && (selectedPatientId !== lastFetchedRef.current.id || formData.date !== lastFetchedRef.current.date)) {
-        lastFetchedRef.current = { id: selectedPatientId, date: formData.date };
-        fetchPatientData(selectedPatientId, formData.date);
+    if (
+      selectedPatientId &&
+      (selectedPatientId !== lastFetchedRef.current.id ||
+        formData.date !== lastFetchedRef.current.date)
+    ) {
+      lastFetchedRef.current = { id: selectedPatientId, date: formData.date };
+      fetchPatientData(selectedPatientId, formData.date);
     }
   }, [selectedPatientId, formData.date, fetchPatientData]);
 
@@ -151,16 +220,36 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
         patient_id: null,
         patientName: '',
         medications: [
-          { medication: '', dose: '', route: '', frequency: '', comments: '' },
-          { medication: '', dose: '', route: '', frequency: '', comments: '' },
-          { medication: '', dose: '', route: '', frequency: '', comments: '' },
+          {
+            id: null,
+            medication: '',
+            dose: '',
+            route: '',
+            frequency: '',
+            comments: '',
+          },
+          {
+            id: null,
+            medication: '',
+            dose: '',
+            route: '',
+            frequency: '',
+            comments: '',
+          },
+          {
+            id: null,
+            medication: '',
+            dose: '',
+            route: '',
+            frequency: '',
+            comments: '',
+          },
         ],
       }));
     }
   };
 
   const currentMed = formData.medications[step];
-  const isFormValid = !!selectedPatientId;
 
   const handleAction = async () => {
     if (!selectedPatientId) {
@@ -170,29 +259,64 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
       );
     }
 
-    try {
-      // Save current step data (uses POST updateOrCreate as per API guide)
-      await saveMedAdministration();
+    const isLastStep = step === 2;
 
-      if (step === 2) {
+    try {
+      if (isModified) {
+        if (isLastStep) {
+          setIsLoading(true);
+          setLoadingMessage('Saving Medication Administration...');
+        }
+        
+        // Save current step data
+        await saveMedAdministration();
+
+        // Re-fetch data to ensure everything is in sync
+        await fetchPatientData(selectedPatientId, formData.date);
+        
+        if (isLastStep) {
+          setIsLoading(false);
+        }
+      }
+
+      if (isLastStep) {
         showAlert(
           'Success',
           'Medication Administration records saved successfully.',
           'success',
         );
+        setStep(0);
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-        // Refresh data to show what was saved
-        fetchPatientData(selectedPatientId, formData.date);
       } else {
         nextStep();
         scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       }
     } catch (error: any) {
+      setIsLoading(false);
       showAlert(
         'Error',
         error.message || 'Failed to save medication administration.',
       );
     }
+  };
+
+  const handleSelectStage = async (index: number) => {
+    if (isModified && selectedPatientId) {
+      try {
+        // Save silently when navigating via menu
+        await saveMedAdministration();
+        await fetchPatientData(selectedPatientId, formData.date);
+      } catch (error: any) {
+        showAlert(
+          'Error',
+          error.message || 'Failed to auto-save before navigation.',
+        );
+        return;
+      }
+    }
+    setStep(index);
+    setIsMenuVisible(false);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const formatDate = () => {
@@ -205,10 +329,12 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
   };
 
   const onDisabledPress = () => {
-    showAlert(
-      'Patient Required',
-      'Please select a patient first in the search bar.',
-    );
+    if (!readOnly) {
+      showAlert(
+        'Patient Required',
+        'Please select a patient first in the search bar.',
+      );
+    }
   };
 
   const fadeColors = isDarkMode
@@ -243,11 +369,23 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
               <Text style={styles.title}>Medication {'\n'}Administration</Text>
               <Text style={styles.dateText}>{formatDate()}</Text>
               {readOnly && (
-                <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: '#E8572A',
+                    fontFamily: 'AlteHaasGroteskBold',
+                    marginTop: 5,
+                  }}
+                >
                   [READ ONLY]
                 </Text>
               )}
             </View>
+            {!readOnly && (
+              <TouchableOpacity onPress={() => setIsMenuVisible(true)}>
+                <Image source={dotsIcon} style={styles.dotsIcon} />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
         <LinearGradient
@@ -276,7 +414,9 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
           ) : (
             <View style={styles.staticPatientContainer}>
               <Text style={styles.staticPatientLabel}>PATIENT:</Text>
-              <Text style={styles.staticPatientName}>{initialPatientName || 'Unknown Patient'}</Text>
+              <Text style={styles.staticPatientName}>
+                {initialPatientName || 'Unknown Patient'}
+              </Text>
             </View>
           )}
 
@@ -371,79 +511,128 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
           />
 
           {!readOnly ? (
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                !selectedPatientId && {
-                  backgroundColor: theme.buttonDisabledBg,
-                  borderColor: theme.buttonDisabledBorder,
-                },
-              ]}
-              onPress={handleAction}
-              disabled={
-                !isFormValid &&
-                !isNA &&
-                !!selectedPatientId &&
-                currentMed.medication !== ''
-              }
-            >
-              <Text
+            <View style={styles.footerAction}>
+              <TouchableOpacity
                 style={[
-                  styles.actionBtnText,
-                  !selectedPatientId && { color: theme.textMuted },
+                  styles.backBtn,
+                  step === 0 && {
+                    backgroundColor: theme.buttonDisabledBg,
+                    borderColor: theme.buttonDisabledBorder,
+                  },
                 ]}
+                onPress={handleBackPress}
+                disabled={isLoading || step === 0}
               >
-                {step === 2 ? 'SUBMIT' : 'NEXT'}
-              </Text>
-              {step < 2 && (
                 <Icon
-                  name="chevron-right"
+                  name="arrow-back"
                   size={24}
-                  color={selectedPatientId ? theme.primary : theme.textMuted}
+                  color={step === 0 ? theme.textMuted : theme.primary}
                 />
-              )}
-            </TouchableOpacity>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.actionBtn,
+                  { marginLeft: 10, marginRight: 0 },
+                  (!isModified && !isDataEntered) && {
+                    backgroundColor: theme.buttonDisabledBg,
+                    borderColor: theme.buttonDisabledBorder,
+                  },
+                ]}
+                onPress={handleAction}
+                disabled={isLoading || (!isModified && !isDataEntered)}
+              >
+                <Text
+                  style={[
+                    styles.actionBtnText,
+                    (!isModified && !isDataEntered) && { color: theme.textMuted },
+                  ]}
+                >
+                  {step === 2 ? 'SUBMIT' : 'NEXT'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           ) : (
-            <View style={{ marginTop: 10 }}>
-              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+            <View style={{ marginTop: 20 }}>
+              <View style={styles.footerAction}>
                 <TouchableOpacity
                   style={[
-                    styles.actionBtn,
-                    { flex: 1 },
+                    styles.backBtn,
                     step === 0 && {
                       backgroundColor: theme.buttonDisabledBg,
                       borderColor: theme.buttonDisabledBorder,
                     },
                   ]}
-                  onPress={() => setStep(step - 1)}
-                  disabled={step === 0}
+                  onPress={onBack}
+                  disabled={isLoading || step === 0}
                 >
-                  <Text style={[styles.actionBtnText, step === 0 && { color: theme.textMuted }]}>
-                    ‹ PREV
-                  </Text>
+                  <Icon
+                    name="arrow-back"
+                    size={24}
+                    color={step === 0 ? theme.textMuted : theme.primary}
+                  />
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.actionBtn,
-                    { flex: 1 },
-                    step === 2 && {
-                      backgroundColor: theme.buttonDisabledBg,
-                      borderColor: theme.buttonDisabledBorder,
-                    },
-                  ]}
-                  onPress={() => setStep(step + 1)}
-                  disabled={step === 2}
+
+                <View
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    gap: 10,
+                    marginLeft: 10,
+                  }}
                 >
-                  <Text style={[styles.actionBtnText, step === 2 && { color: theme.textMuted }]}>
-                    NEXT ›
-                  </Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.navBtn,
+                      step === 0 && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
+                    ]}
+                    onPress={() => {
+                      setStep(step - 1);
+                      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                    }}
+                    disabled={step === 0}
+                  >
+                    <Text
+                      style={[
+                        styles.navBtnText,
+                        step === 0 && { color: theme.textMuted },
+                      ]}
+                    >
+                      ‹ PREV
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.navBtn,
+                      step === 2 && {
+                        backgroundColor: theme.buttonDisabledBg,
+                        borderColor: theme.buttonDisabledBorder,
+                      },
+                    ]}
+                    onPress={() => {
+                      setStep(step + 1);
+                      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                    }}
+                    disabled={step === 2}
+                  >
+                    <Text
+                      style={[
+                        styles.navBtnText,
+                        step === 2 && { color: theme.textMuted },
+                      ]}
+                    >
+                      NEXT ›
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
               <TouchableOpacity
-                style={styles.actionBtn}
+                style={[styles.navBtn, { marginTop: 10 }]}
                 onPress={onBack}
               >
-                <Text style={styles.actionBtnText}>CLOSE</Text>
+                <Text style={styles.navBtnText}>CLOSE</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -455,6 +644,51 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
         />
       </View>
 
+      {/* Options Menu Modal */}
+      <Modal
+        transparent
+        visible={isMenuVisible}
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <Pressable
+          style={dotsModalStyles.modalOverlay}
+          onPress={() => setIsMenuVisible(false)}
+        >
+          <BlurView style={dotsModalStyles.blurView} {...blurProps} />
+          <Pressable
+            style={dotsModalStyles.menuContainer}
+            onPress={e => e.stopPropagation()}
+          >
+            <Text style={dotsModalStyles.menuTitle}>SELECT TIME SLOT</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {timeSlots.map((item: string, index: number) => (
+                <TouchableOpacity
+                  key={index}
+                  style={dotsModalStyles.menuItem}
+                  onPress={() => handleSelectStage(index)}
+                >
+                  <Text
+                    style={[
+                      dotsModalStyles.menuItemText,
+                      step === index && dotsModalStyles.activeMenuText,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={dotsModalStyles.closeMenuBtn}
+              onPress={() => setIsMenuVisible(false)}
+            >
+              <Icon name="close" size={20} color={theme.primary} />
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <SweetAlert
         visible={alertConfig.visible}
         title={alertConfig.title}
@@ -463,6 +697,7 @@ const MedAdministrationScreen = ({ onBack, readOnly = false, patientId, initialP
         onConfirm={() => setAlertConfig({ ...alertConfig, visible: false })}
         confirmText="OK"
       />
+      <LoadingOverlay visible={isLoading} message={loadingMessage} />
     </SafeAreaView>
   );
 };
@@ -477,6 +712,27 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       fontSize: 13,
       fontFamily: 'AlteHaasGroteskBold',
       color: theme.textMuted,
+    },
+    section: { marginBottom: 15, zIndex: 10 },
+    sectionLabel: {
+      fontSize: 14,
+      fontFamily: 'AlteHaasGroteskBold',
+      color: theme.primary,
+      marginBottom: 8,
+    },
+    pillInput: {
+      height: 45,
+      borderRadius: 25,
+      borderWidth: 1.5,
+      borderColor: theme.border,
+      backgroundColor: theme.card,
+      justifyContent: 'center',
+      paddingHorizontal: 20,
+    },
+    dateVal: {
+      color: theme.text,
+      fontFamily: 'AlteHaasGrotesk',
+      fontSize: 14,
     },
     naRow: {
       flexDirection: 'row',
@@ -498,60 +754,66 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       textAlign: 'right',
       marginBottom: 15,
     },
-    section: { marginBottom: 15, zIndex: 10 },
-    sectionLabel: {
-      fontSize: 14,
-      fontFamily: 'AlteHaasGroteskBold',
-      color: theme.primary,
-      marginBottom: 8,
-    },
-    pillInput: {
-      borderWidth: 1.5,
-      borderColor: theme.border,
-      borderRadius: 25,
-      height: 45,
-      paddingHorizontal: 20,
-      justifyContent: 'center',
-      backgroundColor: theme.card,
-    },
-    dateVal: {
-      color: theme.text,
-      fontFamily: 'AlteHaasGrotesk',
-      fontSize: 14,
-    },
     timeBanner: {
       backgroundColor: theme.tableHeader,
       paddingVertical: 10,
-      borderRadius: 20,
+      borderRadius: 25,
       alignItems: 'center',
-      marginVertical: 15,
+      marginBottom: 20,
     },
     timeText: {
       color: theme.secondary,
       fontFamily: 'AlteHaasGroteskBold',
       fontSize: 14,
     },
-    actionBtn: {
-      height: 52,
+    backBtn: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
       backgroundColor: theme.buttonBg,
-      borderRadius: 26,
-      flexDirection: 'row',
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
-      borderColor: theme.buttonBorder,
-      marginTop: 10,
+      borderWidth: 1.5,
+      borderColor: theme.primary,
     },
-    disabledButton: {
-      backgroundColor: theme.card,
-      borderColor: theme.border,
-      opacity: 0.6,
+    footerAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 20,
+    },
+    actionBtn: {
+      flex: 1,
+      backgroundColor: theme.buttonBg,
+      borderColor: theme.buttonBorder,
+      borderWidth: 1.5,
+      borderRadius: 50,
+      paddingVertical: 15,
+      marginHorizontal: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 50,
     },
     actionBtnText: {
       color: theme.primary,
-      fontWeight: 'bold',
+      fontFamily: 'AlteHaasGroteskBold',
+      fontSize: 16,
+      letterSpacing: 1,
+    },
+    navBtn: {
+      flex: 1,
+      backgroundColor: theme.buttonBg,
+      height: 50,
+      borderRadius: 25,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: theme.buttonBorder,
+    },
+    navBtnText: {
+      color: theme.primary,
+      fontFamily: 'AlteHaasGroteskBold',
       fontSize: 15,
-      marginRight: 5,
     },
     fadeBottom: {
       position: 'absolute',
@@ -560,6 +822,7 @@ const createStyles = (theme: any, commonStyles: any, isDarkMode: boolean) =>
       right: 0,
       height: 60,
     },
+    dotsIcon: { width: 18, height: 18, resizeMode: 'contain', marginTop: 8 },
     staticPatientContainer: {
       marginBottom: 20,
       backgroundColor: theme.card,

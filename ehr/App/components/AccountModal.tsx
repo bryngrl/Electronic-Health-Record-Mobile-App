@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,118 +9,204 @@ import {
   Dimensions,
   Platform,
   Switch,
+  Animated,
+  PanResponder,
+  StatusBar,
 } from 'react-native';
+import BlurViewSafe from 
+'./BlurViewSafe';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAppTheme } from '@App/theme/ThemeContext';
 import { useAuth } from '@features/Auth/AuthContext';
 import SweetAlert from './SweetAlert';
 
-const { height } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-interface AccountModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onLogout?: () => void; // Optional if we use useAuth directly
-}
-
-export const AccountModal = ({
-  visible,
-  onClose,
-  onLogout,
-}: AccountModalProps) => {
+export const AccountModal = ({ visible, onClose, onLogout }: any) => {
   const { theme, isDarkMode, toggleDarkMode } = useAppTheme();
   const { user, logout } = useAuth();
   const [showLogoutAlert, setShowLogoutAlert] = React.useState(false);
-  
+
+  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const styles = useMemo(
     () => createStyles(theme, isDarkMode),
     [theme, isDarkMode],
   );
 
-  const handleLogoutPress = () => {
-    setShowLogoutAlert(true);
+  useEffect(() => {
+    if (visible) {
+      // Optimized for a faster, snappier "scroll up"
+      Animated.spring(translateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 20,    // Controlled bounce
+        stiffness: 150, // Higher stiffness for faster entry
+        mass: 0.8,      // Lower mass for less "weight" during movement
+      }).start();
+    }
+  }, [visible]);
+
+  const handleDismiss = () => {
+    Animated.timing(translateY, {
+      toValue: SCREEN_HEIGHT,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => onClose());
   };
 
-  const confirmLogout = async () => {
-    setShowLogoutAlert(false);
-    await logout();
-    if (onLogout) onLogout();
-    onClose();
-  };
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only capture if user is dragging down more than 5 pixels
+        return Math.abs(gestureState.dy) > 5 && gestureState.dy > 0;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) translateY.setValue(gestureState.dy);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 120 || gestureState.vy > 0.5) {
+          handleDismiss();
+        } else {
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 8,
+            speed: 12,
+          }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(translateY, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      },
+    }),
+  ).current;
+
+  // Backdrop Interpolation
+  const backdropOpacity = translateY.interpolate({
+    inputRange: [0, SCREEN_HEIGHT * 0.4],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
 
   return (
     <>
       <Modal
-        animationType="slide"
-        transparent={true}
+        transparent
         visible={visible}
-        onRequestClose={onClose}
+        animationType="none"
+        onRequestClose={handleDismiss}
+        statusBarTranslucent
       >
-        <TouchableWithoutFeedback onPress={onClose}>
-          <View style={styles.overlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.modalContainer}>
-                <View style={styles.handle} />
-
-                <Text style={styles.titleText}>Account</Text>
-
-                <View style={styles.profileSection}>
-                  <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>{user?.full_name?.charAt(0) || 'U'}</Text>
-                  </View>
-                  <View style={styles.profileText}>
-                    <Text style={styles.userName}>{user?.full_name || 'User'}</Text>
-                    <Text style={styles.userRole}>{user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1) || 'Role'}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.menuCard}>
-                  <View style={styles.menuItem}>
-                    <View style={styles.switchRow}>
-                      <View style={styles.iconLabelRow}>
-                        <Icon
-                          name="moon-outline"
-                          size={24}
-                          color={theme.primary}
-                        />
-                        <Text style={styles.menuText}>Dark Mode</Text>
-                      </View>
-                      <Switch
-                        trackColor={{ false: '#767577', true: theme.primary }}
-                        thumbColor={isDarkMode ? '#fff' : '#f4f3f4'}
-                        onValueChange={toggleDarkMode}
-                        value={isDarkMode}
-                      />
-                    </View>
-                  </View>
-
-                  <View style={styles.separator} />
-
-                  <TouchableOpacity style={styles.menuItem} onPress={handleLogoutPress}>
-                    <View style={styles.logoutRow}>
-                      <Icon
-                        name="log-out-outline"
-                        size={24}
-                        color={theme.error}
-                      />
-                      <Text style={styles.logoutLabel}>Log out</Text>
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              </View>
+        <StatusBar
+          barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+          backgroundColor="transparent"
+          translucent={true}
+        />
+        <View style={styles.overlay}>
+          {/* Animated Blur/Dim Backdrop */}
+          <Animated.View
+            style={[StyleSheet.absoluteFill, { opacity: backdropOpacity }]}
+          >
+            {Platform.OS === 'ios' ? (
+              <BlurViewSafe
+                style={StyleSheet.absoluteFill}
+                blurType={isDarkMode ? 'dark' : 'light'}
+                blurAmount={10}
+                reducedTransparencyFallbackColor="black"
+              />
+            ) : (
+              <View
+                style={[
+                  StyleSheet.absoluteFill,
+                  { backgroundColor: 'rgba(0,0,0,0.6)' },
+                ]}
+              />
+            )}
+            <TouchableWithoutFeedback onPress={handleDismiss}>
+              <View style={{ flex: 1 }} />
             </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
+          </Animated.View>
+
+          {/* Liquid Container */}
+          <Animated.View
+            style={[styles.modalContainer, { transform: [{ translateY }] }]}
+          >
+            {/* Gesture Handle Area - Only this part handles dragging */}
+            <View {...panResponder.panHandlers} style={styles.gestureHeader}>
+              <View style={styles.handle} />
+              <Text style={styles.titleText}>Account</Text>
+            </View>
+
+            <View style={styles.profileSection}>
+              <View style={styles.avatarBox}>
+                <Text style={styles.avatarText}>
+                  {user?.full_name?.charAt(0) || 'U'}
+                </Text>
+              </View>
+              <View style={styles.profileText}>
+                <Text style={styles.userName}>{user?.full_name || 'User'}</Text>
+                <Text style={styles.userRole}>
+                  {user?.role
+                    ? user.role.charAt(0).toUpperCase() +
+                      user.role.slice(1).toLowerCase()
+                    : 'Role'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.menuCard}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={toggleDarkMode}
+                activeOpacity={0.6}
+                hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
+              >
+                <View style={styles.switchRow}>
+                  <View style={styles.iconLabelRow}>
+                    <Icon name="moon-outline" size={24} color={theme.primary} />
+                    <Text style={styles.menuText}>Dark Mode</Text>
+                  </View>
+                  <Switch
+                    trackColor={{ false: '#767577', true: theme.primary }}
+                    thumbColor={isDarkMode ? '#fff' : '#f4f3f4'}
+                    onValueChange={toggleDarkMode}
+                    value={isDarkMode}
+                  />
+                </View>
+              </TouchableOpacity>
+              <View style={styles.separator} />
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => setShowLogoutAlert(true)}
+                activeOpacity={0.6}
+                hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
+              >
+                <View style={styles.logoutRow}>
+                  <Icon name="log-out-outline" size={24} color={theme.error} />
+                  <Text style={styles.logoutLabel}>Log out</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
       </Modal>
 
       <SweetAlert
         visible={showLogoutAlert}
         title="Logout"
-        message="Are you sure you want to log out of your account?"
+        message="Are you sure you want to log out?"
         type="warning"
         confirmText="Logout"
-        cancelText="Cancel"
-        onConfirm={confirmLogout}
+        onConfirm={async () => {
+          setShowLogoutAlert(false);
+          await logout();
+          if (onLogout) onLogout();
+          handleDismiss();
+        }}
         onCancel={() => setShowLogoutAlert(false)}
       />
     </>
@@ -129,11 +215,7 @@ export const AccountModal = ({
 
 const createStyles = (theme: any, isDarkMode: boolean) =>
   StyleSheet.create({
-    overlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.6)',
-      justifyContent: 'flex-end',
-    },
+    overlay: { flex: 1, justifyContent: 'flex-end' },
     modalContainer: {
       backgroundColor: theme.modalBg,
       borderTopLeftRadius: 35,
@@ -141,19 +223,15 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
       paddingHorizontal: 20,
       paddingTop: 12,
       paddingBottom: 40,
-      minHeight: height * 0.42,
-      zIndex: 9999,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -10 },
-          shadowOpacity: 0.1,
-          shadowRadius: 20,
-        },
-        android: {
-          elevation: 24,
-        },
-      }),
+      minHeight: SCREEN_HEIGHT * 0.45,
+      elevation: 24,
+    },
+    gestureHeader: {
+      width: '100%',
+      paddingTop: 15,
+      paddingBottom: 25,
+      alignItems: 'center',
+      backgroundColor: 'transparent',
     },
     handle: {
       width: 45,
@@ -161,48 +239,44 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
       backgroundColor: theme.modalHandle,
       borderRadius: 3,
       alignSelf: 'center',
-      marginBottom: 20,
     },
     titleText: {
       fontSize: 18,
       color: theme.primary,
       textAlign: 'center',
-      marginBottom: 25,
-      fontFamily: 'AlteHaasGroteskBold',
+      marginTop: 20,
+      fontWeight: 'bold',
     },
     profileSection: {
       flexDirection: 'row',
       backgroundColor: theme.card,
       padding: 18,
-      borderRadius: 20,
+      borderRadius: 22,
       alignItems: 'center',
       marginBottom: 15,
       borderWidth: 1,
       borderColor: theme.border,
     },
     avatarBox: {
-      width: 52,
-      height: 52,
+      width: 55,
+      height: 55,
       backgroundColor: theme.primary,
-      borderRadius: 12,
+      borderRadius: 15,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    avatarText: { color: '#FFF', fontSize: 22, fontWeight: 'bold' },
+    avatarText: { color: '#FFF', fontSize: 24, fontWeight: 'bold' },
     profileText: { marginLeft: 16 },
-    userName: {
-      fontSize: 18,
-      color: theme.primary,
-      fontFamily: 'AlteHaasGroteskBold',
-    },
+    userName: { fontSize: 18, color: theme.primary, fontWeight: 'bold' },
     userRole: {
-      fontSize: 14,
+      fontSize: 13,
       color: theme.textMuted,
-      fontFamily: 'AlteHaasGrotesk',
+      fontWeight: '600',
+      marginTop: 2,
     },
     menuCard: {
       backgroundColor: theme.card,
-      borderRadius: 20,
+      borderRadius: 22,
       overflow: 'hidden',
       borderWidth: 1,
       borderColor: theme.border,
@@ -212,17 +286,14 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
       fontSize: 16,
       color: theme.text,
       marginLeft: 12,
-      fontFamily: 'AlteHaasGroteskBold',
+      fontWeight: 'bold',
     },
     switchRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
     },
-    iconLabelRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
+    iconLabelRow: { flexDirection: 'row', alignItems: 'center' },
     separator: {
       height: 1,
       backgroundColor: theme.border,
@@ -233,6 +304,6 @@ const createStyles = (theme: any, isDarkMode: boolean) =>
       color: theme.error,
       fontSize: 16,
       marginLeft: 12,
-      fontFamily: 'AlteHaasGroteskBold',
+      fontWeight: 'bold',
     },
   });

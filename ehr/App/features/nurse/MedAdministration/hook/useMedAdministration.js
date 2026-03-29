@@ -1,6 +1,7 @@
 // MedAdministration/hook/useMedAdministration.js
 import { useState, useCallback } from 'react';
 import apiClient from '@api/apiClient';
+import { getDataFromCache, saveDataToCache } from '@App/utils/cdssCache';
 
 const getTodayFormatted = () =>
   new Date().toLocaleDateString('en-US', {
@@ -37,6 +38,21 @@ export const useMedAdministration = () => {
     ],
   });
 
+  const [lastSavedMeds, setLastSavedMeds] = useState([
+    { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
+    { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
+    { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' },
+  ]);
+
+  const isModified = JSON.stringify(formData.medications[step]) !== JSON.stringify(lastSavedMeds[step]);
+
+  const isDataEntered = ['medication', 'dose', 'route', 'frequency', 'comments'].some(
+    f => {
+      const v = formData.medications[step][f];
+      return v && typeof v === 'string' && v.trim() !== '' && v !== 'N/A';
+    },
+  );
+
   const updateCurrentMed = (field, value) => {
     setFormData(prev => {
       const newMeds = [...prev.medications];
@@ -53,6 +69,18 @@ export const useMedAdministration = () => {
     if (!patientId) return;
     
     try {
+      // Check cache first
+      const cached = await getDataFromCache('med-administration', patientId);
+      if (cached) {
+        console.log('[MedAdmin] Returning cached data');
+        setFormData(prev => ({
+          ...prev,
+          medications: cached,
+          patient_id: patientId,
+        }));
+        setLastSavedMeds(JSON.parse(JSON.stringify(cached)));
+      }
+
       const rawDate = toRawDate(dateStr);
       console.log(`[MedAdmin] Fetching for patient ${patientId} on ${rawDate}`);
       
@@ -85,6 +113,8 @@ export const useMedAdministration = () => {
         medications: updatedMeds,
         patient_id: patientId,
       }));
+      setLastSavedMeds(JSON.parse(JSON.stringify(updatedMeds)));
+      await saveDataToCache('med-administration', patientId, updatedMeds);
     } catch (error) {
       console.error('Error in fetchPatientData:', error);
     }
@@ -132,8 +162,15 @@ export const useMedAdministration = () => {
         setFormData(prev => {
           const newMeds = [...prev.medications];
           newMeds[step] = { ...newMeds[step], id: savedData.id };
+          setLastSavedMeds(JSON.parse(JSON.stringify(newMeds)));
           return { ...prev, medications: newMeds };
         });
+      } else {
+          setLastSavedMeds(prev => {
+              const newMeds = [...prev];
+              newMeds[step] = { ...formData.medications[step] };
+              return newMeds;
+          });
       }
       return savedData;
     } catch (err) {
@@ -153,5 +190,7 @@ export const useMedAdministration = () => {
     nextStep,
     saveMedAdministration,
     fetchPatientData,
+    isModified,
+    isDataEntered,
   };
 };

@@ -1,15 +1,23 @@
-import { useEffect, useRef } from 'react';
-import NetInfo from '@react-native-community/netinfo';
+import { NativeModules, useEffect, useRef } from 'react';
 import { useToast } from '../context/ToastContext';
 
 const useNetworkMonitor = () => {
-  const { showToast, hideToast } = useToast();
+  const { showToast } = useToast();
   const isFirstRun = useRef(true);
   const wasOffline = useRef(false);
 
   useEffect(() => {
+    if (!NativeModules?.RNCNetInfo) {
+      console.warn('[NetInfo] RNCNetInfo native module is not available. Skipping network monitor subscription.');
+      return;
+    }
+
+    const NetInfo =
+      require('@react-native-community/netinfo').default as typeof import('@react-native-community/netinfo').default;
+
     const unsubscribe = NetInfo.addEventListener(state => {
-      const connected = state.isConnected && state.isInternetReachable !== false;
+      const connected =
+        state.isConnected && state.isInternetReachable !== false;
 
       if (isFirstRun.current) {
         isFirstRun.current = false;
@@ -30,7 +38,7 @@ const useNetworkMonitor = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [showToast]);
 };
 
 export default useNetworkMonitor;

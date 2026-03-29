@@ -14,7 +14,13 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAppTheme } from '@App/theme/ThemeContext';
 
-export type ToastType = 'success' | 'error' | 'warning' | 'info' | 'offline' | 'online';
+export type ToastType =
+  | 'success'
+  | 'error'
+  | 'warning'
+  | 'info'
+  | 'offline'
+  | 'online';
 
 export interface ToastRef {
   show: (message: string, type?: ToastType, duration?: number) => void;
@@ -49,8 +55,16 @@ const Toast = forwardRef<ToastRef, {}>((_, ref) => {
     if (timerRef.current) clearTimeout(timerRef.current);
 
     Animated.parallel([
-      Animated.timing(translateY, { toValue: 80, duration: 250, useNativeDriver: true }),
-      Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+      Animated.timing(translateY, {
+        toValue: 80,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
     ]).start(({ finished }) => {
       if (finished) {
         setState(prev => ({ ...prev, shouldRender: false }));
@@ -113,8 +127,16 @@ const Toast = forwardRef<ToastRef, {}>((_, ref) => {
       <Text style={[styles.message, { color: colors.text }]} numberOfLines={2}>
         {state.message}
       </Text>
-      <TouchableOpacity onPress={hide} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-        <Icon name="close" size={16} color={colors.text} style={styles.closeIcon} />
+      <TouchableOpacity
+        onPress={hide}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Icon
+          name="close"
+          size={16}
+          color={colors.text}
+          style={styles.closeIcon}
+        />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -169,38 +191,40 @@ const getColors = (theme: any, type: ToastType) => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 32,
-    left: 20,
-    right: 20,
+    bottom: 30,
+    left: 16,
+    right: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    borderWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     zIndex: 99999,
-    elevation: 12,
+    elevation: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    gap: 10,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    gap: 12,
   },
+
   iconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   message: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: 'AlteHaasGrotesk',
-    lineHeight: 18,
+    lineHeight: 20,
   },
+
   closeIcon: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
 });
 

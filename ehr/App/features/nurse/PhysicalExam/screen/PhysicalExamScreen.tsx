@@ -6,12 +6,14 @@ import {
   ScrollView,
   SafeAreaView,
   StatusBar,
+  Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import ADPIEScreen from '@components/ADPIEScreen';
 import SweetAlert from '@components/SweetAlert';
 import PatientSearchBar from '@components/PatientSearchBar';
+import LoadingOverlay from '@components/LoadingOverlay';
 import { useAppTheme } from '@App/theme/ThemeContext';
 import { usePhysicalExamScreen } from './usePhysicalExamScreen';
 import ExamCardsSection from './ExamCardsSection';
@@ -22,9 +24,10 @@ interface PhysicalExamProps {
   readOnly?: boolean;
   patientId?: string;
   initialPatientName?: string;
+  admissionDate?: string;
 }
 
-const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack, readOnly = false, patientId, initialPatientName }) => {
+const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack, readOnly = false, patientId, initialPatientName, admissionDate }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
@@ -46,20 +49,19 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack, readOnly = fa
     toggleNA,
     getBackendAlert,
     getBackendSeverity,
-    updateField,
-    handleCDSSPress,
-    handleSave,
-    generateFindingsSummary,
-    isDataEntered,
-    getCurrentDate,
-  } = usePhysicalExamScreen(onBack);
+    updateField, handleCDSSPress, handleSave,
+    generateFindingsSummary, isDataEntered, getCurrentDate,
+    isModified,
+    isLoading, loadingMessage, screenOpacity,
+    } = usePhysicalExamScreen(onBack);
+
 
   useEffect(() => {
     if (readOnly && patientId) {
       setSelectedPatientId(patientId);
       setSearchText(initialPatientName || '');
     }
-  }, [readOnly, patientId]);
+  }, [readOnly, patientId, setSelectedPatientId, setSearchText, initialPatientName]);
 
   const fadeColors = isDarkMode
     ? ['rgba(18, 18, 18, 0)', 'rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)']
@@ -87,80 +89,81 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack, readOnly = fa
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <LoadingOverlay visible={isLoading} message={loadingMessage} />
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
         backgroundColor="transparent"
         translucent={true}
       />
 
-      <View style={{ zIndex: 10 }}>
-        <View style={{ paddingHorizontal: 40, backgroundColor: theme.background, paddingBottom: 15 }}>
-          <View style={[styles.header, { marginBottom: 0 }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.title}>Physical Exam</Text>
-              <Text style={styles.subTitleDate}>{getCurrentDate()}</Text>
-              {readOnly && (
-                <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
-                  [READ ONLY]
-                </Text>
-              )}
+      <Animated.View style={{ flex: 1, opacity: screenOpacity }}>
+        <View style={{ zIndex: 10 }}>
+          <View style={{ paddingHorizontal: 40, backgroundColor: theme.background, paddingBottom: 15 }}>
+            <View style={[styles.header, { marginBottom: 0 }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.title}>Physical Exam</Text>
+                <Text style={styles.subTitleDate}>{getCurrentDate()}</Text>
+                {readOnly && (
+                  <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
+                    [READ ONLY]
+                  </Text>
+                )}
+              </View>
             </View>
           </View>
+          <LinearGradient colors={headerFadeColors} style={{ height: 20 }} pointerEvents="none" />
         </View>
-        <LinearGradient colors={headerFadeColors} style={{ height: 20 }} pointerEvents="none" />
-      </View>
 
-      <View style={{ flex: 1, marginTop: -20 }}>
-        <ScrollView
-          ref={scrollViewRef}
-          keyboardShouldPersistTaps="handled"
-          style={styles.container}
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={scrollEnabled}
-        >
-          <View style={{ height: 20 }} />
-          {!readOnly ? (
-            <PatientSearchBar
-              onPatientSelect={(id, name) => {
-                setSelectedPatientId(id ? id.toString() : null);
-                setSearchText(name);
-              }}
-              initialPatientName={searchText}
-              onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
-            />
-          ) : (
-            <View style={styles.staticPatientContainer}>
-              <Text style={styles.staticPatientLabel}>PATIENT:</Text>
-              <Text style={styles.staticPatientName}>{initialPatientName || 'Unknown Patient'}</Text>
-            </View>
-          )}
-
-          {!readOnly && (
-            <TouchableOpacity
-              style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
-              onPress={() => {
-                if (!selectedPatientId) showAlert('Patient Required', 'Please select a patient first.');
-                else toggleNA();
-              }}
-            >
-              <Text style={[styles.naText, !selectedPatientId && { color: theme.textMuted }]}>
-                Mark all as N/A
-              </Text>
-              <Icon
-                name={isNA ? 'check-box' : 'check-box-outline-blank'}
-                size={22}
-                color={selectedPatientId ? theme.primary : theme.textMuted}
+        <View style={{ flex: 1, marginTop: -20 }}>
+          <ScrollView
+            ref={scrollViewRef}
+            keyboardShouldPersistTaps="handled"
+            style={styles.container}
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={scrollEnabled}
+          >
+            <View style={{ height: 20 }} />
+            {!readOnly ? (
+              <PatientSearchBar
+                onPatientSelect={(id, name) => {
+                  setSelectedPatientId(id ? id.toString() : null);
+                  setSearchText(name);
+                }}
+                initialPatientName={searchText}
+                onToggleDropdown={isOpen => setScrollEnabled(!isOpen)}
               />
-            </TouchableOpacity>
-          )}
+            ) : (
+              <View style={styles.staticPatientContainer}>
+                <Text style={styles.staticPatientLabel}>PATIENT:</Text>
+                <Text style={styles.staticPatientName}>{initialPatientName || 'Unknown Patient'}</Text>
+              </View>
+            )}
 
-          {!readOnly && (
-            <Text style={[styles.disabledTextAtBottom, isNA && { color: theme.error }]}>
-              {isNA ? 'All fields below are disabled.' : 'Checking this will disable all fields below.'}
-            </Text>
-          )}
+            {!readOnly && (
+              <TouchableOpacity
+                style={[styles.naRow, !selectedPatientId && { opacity: 0.5 }]}
+                onPress={() => {
+                  if (!selectedPatientId) showAlert('Patient Required', 'Please select a patient first in the search bar.');
+                  else toggleNA();
+                }}
+              >
+                <Text style={[styles.naText, !selectedPatientId && { color: theme.textMuted }]}>
+                  Mark all as N/A
+                </Text>
+                <Icon
+                  name={isNA ? 'check-box' : 'check-box-outline-blank'}
+                  size={22}
+                  color={selectedPatientId ? theme.primary : theme.textMuted}
+                />
+              </TouchableOpacity>
+            )}
 
-          <View pointerEvents={selectedPatientId ? 'auto' : 'none'}>
+            {!readOnly && (
+              <Text style={[styles.disabledTextAtBottom, isNA && { color: theme.error }]}>
+                {isNA ? 'All fields below are disabled.' : 'Checking this will disable all fields below.'}
+              </Text>
+            )}
+
             <ExamCardsSection
               formData={formData}
               selectedPatientId={selectedPatientId}
@@ -174,13 +177,14 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack, readOnly = fa
               handleCDSSPress={handleCDSSPress}
               handleSave={handleSave}
               isDataEntered={isDataEntered}
+              isModified={isModified}
               readOnly={readOnly}
               onBack={onBack}
             />
-          </View>
-        </ScrollView>
-        <LinearGradient colors={fadeColors} style={styles.fadeBottom} pointerEvents="none" />
-      </View>
+          </ScrollView>
+          <LinearGradient colors={fadeColors} style={styles.fadeBottom} pointerEvents="none" />
+        </View>
+      </Animated.View>
 
       <SweetAlert
         visible={alertConfig.visible}
