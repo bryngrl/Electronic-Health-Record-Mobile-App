@@ -70,6 +70,7 @@ export const useForgotPassword = () => {
     try {
       const response = await apiClient.post('/auth/forgot-password', {
         email: email,
+        source: 'mobile',
       });
 
       showAlert(
