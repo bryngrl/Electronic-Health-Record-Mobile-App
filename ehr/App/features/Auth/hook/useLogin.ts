@@ -99,7 +99,9 @@ export const useLogin = () => {
       console.error('Login error full:', error);
       let errorMessage = 'Invalid username or password';
 
-      if (error.response?.data?.detail) {
+      if (error.response?.status === 429) {
+        errorMessage = 'Too many login attempts. Please try again in 3 minutes.';
+      } else if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
         if (Array.isArray(detail)) {
           errorMessage = detail

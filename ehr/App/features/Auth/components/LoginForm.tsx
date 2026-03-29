@@ -18,6 +18,7 @@ interface LoginFormProps {
   isPasswordVisible: boolean;
   togglePasswordVisibility: () => void;
   containerStyle?: object;
+  onForgotPassword: () => void;
 }
 
 export const LoginForm = ({
@@ -30,6 +31,7 @@ export const LoginForm = ({
   isPasswordVisible,
   togglePasswordVisibility,
   containerStyle,
+  onForgotPassword,
 }: LoginFormProps) => {
   return (
     <View style={[styles.formContainer, containerStyle]}>
@@ -79,6 +81,13 @@ export const LoginForm = ({
           {isSubmitting ? 'SIGNING IN...' : 'SIGN IN'}
         </Text>
       </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.forgotPasswordButton}
+        onPress={onForgotPassword}
+      >
+        <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -127,5 +136,15 @@ const styles = StyleSheet.create({
     color: '#035022',
     fontFamily: 'AlteHaasGroteskBold',
     fontSize: 16,
+  },
+  forgotPasswordButton: {
+    marginTop: 20,
+    alignSelf: 'center',
+  },
+  forgotPasswordText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });

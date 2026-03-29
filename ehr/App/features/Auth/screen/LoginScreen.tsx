@@ -15,7 +15,7 @@ import { useLogin } from '../hook/useLogin';
 import { LoginForm } from '../components/LoginForm';
 import SweetAlert from '@components/SweetAlert';
 
-export default function LoginScreen() {
+export default function LoginScreen({ onForgotPassword }: { onForgotPassword: () => void }) {
   const {
     email,
     setEmail,
@@ -91,6 +91,7 @@ export default function LoginScreen() {
               isSubmitting={isSubmitting}
               isPasswordVisible={isPasswordVisible}
               togglePasswordVisibility={togglePasswordVisibility}
+              onForgotPassword={onForgotPassword}
             />
           </ScrollView>
         </View>

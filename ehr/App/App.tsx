@@ -4,6 +4,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import HomeScreen from '@features/nurse/Dashboard/screen/HomeScreen';
 import DoctorMainScreen from '@features/doctor/screens/DoctorMainScreen';
 import LoginScreen from '@features/Auth/screen/LoginScreen';
+import ForgotPasswordScreen from '@features/Auth/screen/ForgotPasswordScreen';
 import AdminMainScreen from '@features/Admin/screen/AdminMainScreen';
 import { ThemeProvider, useAppTheme } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from '@features/Auth/AuthContext';
@@ -19,6 +20,7 @@ const NetworkMonitor = () => {
 const MainApp = () => {
   const { user, isLoading: authLoading } = useAuth();
   const { theme } = useAppTheme();
+  const [currentScreen, setCurrentScreen] = useState<'Login' | 'ForgotPassword'>('Login');
   const [splashFinished, setSplashFinished] = useState(
     Platform.OS !== 'android',
   );
@@ -42,7 +44,11 @@ const MainApp = () => {
       </View>
     );
   } else if (!user) {
-    content = <LoginScreen />;
+    if (currentScreen === 'ForgotPassword') {
+      content = <ForgotPasswordScreen onBack={() => setCurrentScreen('Login')} />;
+    } else {
+      content = <LoginScreen onForgotPassword={() => setCurrentScreen('ForgotPassword')} />;
+    }
   } else if (role === 'nurse') {
     content = <HomeScreen />;
   } else if (role === 'doctor') {
@@ -50,7 +56,7 @@ const MainApp = () => {
   } else if (role === 'admin') {
     content = <AdminMainScreen />;
   } else {
-    content = <LoginScreen />;
+    content = <LoginScreen onForgotPassword={() => setCurrentScreen('ForgotPassword')} />;
   }
 
   return (
