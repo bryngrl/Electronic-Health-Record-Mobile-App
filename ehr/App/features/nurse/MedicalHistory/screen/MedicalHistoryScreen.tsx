@@ -14,7 +14,6 @@ import {
   SafeAreaView,
   StatusBar,
   BackHandler,
-  Platform,
   Modal,
   Image,
   Pressable,
@@ -400,7 +399,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
           setIsLoading(true);
           setLoadingMessage('Saving Medical History...');
         }
-        
+
         // Save the current step data
         await saveMedicalHistoryStep(
           selectedPatientId,
@@ -410,7 +409,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
 
         // Re-fetch data to ensure everything is in sync
         await loadPatientData(selectedPatientId);
-        
+
         if (isLastStep) {
           setIsLoading(false);
         }
@@ -652,10 +651,11 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
                 style={[
                   styles.submitBtn,
                   { marginLeft: 10, marginRight: 0 },
-                  (!isModified && !isDataEntered) && {
-                    backgroundColor: theme.buttonDisabledBg,
-                    borderColor: theme.buttonDisabledBorder,
-                  },
+                  !isModified &&
+                    !isDataEntered && {
+                      backgroundColor: theme.buttonDisabledBg,
+                      borderColor: theme.buttonDisabledBorder,
+                    },
                 ]}
                 onPress={handleNext}
                 disabled={!isModified && !isDataEntered}
@@ -663,7 +663,7 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
                 <Text
                   style={[
                     styles.submitText,
-                    (!isModified && !isDataEntered) && { color: theme.textMuted },
+                    !isModified && !isDataEntered && { color: theme.textMuted },
                   ]}
                 >
                   {step === steps.length - 1 ? 'SUBMIT' : 'NEXT'}

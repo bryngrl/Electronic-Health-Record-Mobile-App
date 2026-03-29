@@ -1,6 +1,11 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import React, {
+  useMemo,
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react';
 import {
-  StyleSheet,
   View,
   Text,
   ScrollView,
@@ -11,6 +16,7 @@ import {
   Animated,
   Modal,
   Pressable,
+  BackHandler,
 } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -160,7 +166,15 @@ const LabValuesScreen = ({
     }
     onBack();
     return true;
-  }, [isAdpieActive, showLabList, selectedTestIndex, onBack, setPassedAlert, setShowLabList, setSelectedTestIndex]);
+  }, [
+    isAdpieActive,
+    showLabList,
+    selectedTestIndex,
+    onBack,
+    setPassedAlert,
+    setShowLabList,
+    setSelectedTestIndex,
+  ]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
@@ -435,10 +449,11 @@ const LabValuesScreen = ({
                     <TouchableOpacity
                       style={[
                         styles.submitBtn,
-                        (!isModified && !isDataEntered) && {
-                          backgroundColor: theme.buttonDisabledBg,
-                          borderColor: theme.buttonDisabledBorder,
-                        },
+                        !isModified &&
+                          !isDataEntered && {
+                            backgroundColor: theme.buttonDisabledBg,
+                            borderColor: theme.buttonDisabledBorder,
+                          },
                       ]}
                       onPress={handleNextOrSave}
                       disabled={!isModified && !isDataEntered}
@@ -446,7 +461,8 @@ const LabValuesScreen = ({
                       <Text
                         style={[
                           styles.submitText,
-                          (!isModified && !isDataEntered) && { color: theme.textMuted },
+                          !isModified &&
+                            !isDataEntered && { color: theme.textMuted },
                         ]}
                       >
                         {isExistingRecord ? 'UPDATE' : 'SUBMIT'}
@@ -457,10 +473,11 @@ const LabValuesScreen = ({
                   <TouchableOpacity
                     style={[
                       styles.nextBtn,
-                      (!isModified && !isDataEntered) && {
-                        backgroundColor: theme.buttonDisabledBg,
-                        borderColor: theme.buttonDisabledBorder,
-                      },
+                      !isModified &&
+                        !isDataEntered && {
+                          backgroundColor: theme.buttonDisabledBg,
+                          borderColor: theme.buttonDisabledBorder,
+                        },
                     ]}
                     onPress={async () => {
                       await handleNextOrSave();
@@ -471,7 +488,8 @@ const LabValuesScreen = ({
                     <Text
                       style={[
                         styles.nextText,
-                        (!isModified && !isDataEntered) && { color: theme.textMuted },
+                        !isModified &&
+                          !isDataEntered && { color: theme.textMuted },
                       ]}
                     >
                       NEXT
@@ -479,7 +497,11 @@ const LabValuesScreen = ({
                     <Icon
                       name="chevron-right"
                       size={20}
-                      color={(isModified || isDataEntered) ? theme.primary : theme.textMuted}
+                      color={
+                        isModified || isDataEntered
+                          ? theme.primary
+                          : theme.textMuted
+                      }
                     />
                   </TouchableOpacity>
                 )}
@@ -519,7 +541,9 @@ const LabValuesScreen = ({
                       name="arrow-back"
                       size={24}
                       color={
-                        selectedTestIndex === 0 ? theme.textMuted : theme.primary
+                        selectedTestIndex === 0
+                          ? theme.textMuted
+                          : theme.primary
                       }
                     />
                   </TouchableOpacity>
