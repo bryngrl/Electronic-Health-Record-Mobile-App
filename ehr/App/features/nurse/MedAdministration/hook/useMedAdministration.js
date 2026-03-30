@@ -13,12 +13,10 @@ const getTodayFormatted = () =>
 const toRawDate = displayDate => {
   const d = new Date(displayDate);
   if (isNaN(d.getTime())) {
-    return new Date().toISOString().split('T')[0];
+    return new Date().toLocaleDateString('en-CA');
   }
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  // Robust YYYY-MM-DD using en-CA locale
+  return d.toLocaleDateString('en-CA');
 };
 
 export const useMedAdministration = () => {
@@ -68,11 +66,13 @@ export const useMedAdministration = () => {
   const fetchPatientData = useCallback(async (patientId, dateStr) => {
     if (!patientId) return;
     
+    const rawDate = toRawDate(dateStr);
+    const cacheKey = `med-admin-${patientId}-${rawDate}`;
+
     try {
-      // Check cache first
-      const cached = await getDataFromCache('med-administration', patientId);
+      // Check cache first (with date in key)
+      const cached = await getDataFromCache(cacheKey, patientId);
       if (cached) {
-        console.log('[MedAdmin] Returning cached data');
         setFormData(prev => ({
           ...prev,
           medications: cached,
@@ -81,32 +81,27 @@ export const useMedAdministration = () => {
         setLastSavedMeds(JSON.parse(JSON.stringify(cached)));
       }
 
-      const rawDate = toRawDate(dateStr);
-      console.log(`[MedAdmin] Fetching for patient ${patientId} on ${rawDate}`);
-      
-      const fetchSlot = async (timeStr) => {
-        try {
-          const response = await apiClient.get(`/medication-administration/patient/${patientId}/time/${timeStr}`);
-          const data = response.data;
+      console.log(`[MedAdmin] Fetching all records for patient ${patientId} on ${rawDate}`);
+      const response = await apiClient.get(`/medication-administration/patient/${patientId}`);
+      const allRecords = response.data || [];
 
-          if (data && data.exists) {
-            console.log(`[MedAdmin] Record found for ${timeStr}: ID ${data.id}`);
-            return {
-              id: data.id, // Store ID for PUT updates
-              medication: data.medication === 'N/A' ? '' : data.medication || '',
-              dose: data.dose === 'N/A' ? '' : data.dose || '',
-              route: data.route === 'N/A' ? '' : data.route || '',
-              frequency: data.frequency === 'N/A' ? '' : data.frequency || '',
-              comments: data.comments === 'N/A' ? '' : data.comments || '',
-            };
-          }
-        } catch (error) {
-          console.log(`[MedAdmin] No record for slot ${timeStr}`);
+      // Map backend records to our 3 specific time slots
+      const updatedMeds = rawTimeSlots.map(timeStr => {
+        const dbTime = timeStr + ':00';
+        const record = allRecords.find(r => r.date === rawDate && r.time === dbTime);
+
+        if (record) {
+          return {
+            id: record.id,
+            medication: record.medication === 'N/A' ? '' : record.medication || '',
+            dose: record.dose === 'N/A' ? '' : record.dose || '',
+            route: record.route === 'N/A' ? '' : record.route || '',
+            frequency: record.frequency === 'N/A' ? '' : record.frequency || '',
+            comments: record.comments === 'N/A' ? '' : record.comments || '',
+          };
         }
         return { id: null, medication: '', dose: '', route: '', frequency: '', comments: '' };
-      };
-
-      const updatedMeds = await Promise.all(rawTimeSlots.map(time => fetchSlot(time)));
+      });
 
       setFormData(prev => ({
         ...prev,
@@ -114,7 +109,7 @@ export const useMedAdministration = () => {
         patient_id: patientId,
       }));
       setLastSavedMeds(JSON.parse(JSON.stringify(updatedMeds)));
-      await saveDataToCache('med-administration', patientId, updatedMeds);
+      await saveDataToCache(cacheKey, patientId, updatedMeds);
     } catch (error) {
       console.error('Error in fetchPatientData:', error);
     }
@@ -147,30 +142,26 @@ export const useMedAdministration = () => {
     try {
       let response;
       if (item.id) {
-        // Option 3 in Guide: If we have an ID, update specifically with PUT
         console.log(`[MedAdmin] Editing existing record ID: ${item.id}`);
         response = await apiClient.put(`/medication-administration/${item.id}`, payload);
       } else {
-        // Option B in Guide: New record via POST
         console.log(`[MedAdmin] Creating new record for ${rawTimeSlots[step]}`);
         response = await apiClient.post('/medication-administration', payload);
       }
       
       const savedData = response.data?.data || response.data;
       if (savedData?.id) {
-        // Update local state with the returned ID
         setFormData(prev => {
           const newMeds = [...prev.medications];
           newMeds[step] = { ...newMeds[step], id: savedData.id };
           setLastSavedMeds(JSON.parse(JSON.stringify(newMeds)));
+          
+          // Update cache after save
+          const cacheKey = `med-admin-${formData.patient_id}-${rawDate}`;
+          saveDataToCache(cacheKey, formData.patient_id, newMeds);
+          
           return { ...prev, medications: newMeds };
         });
-      } else {
-          setLastSavedMeds(prev => {
-              const newMeds = [...prev];
-              newMeds[step] = { ...formData.medications[step] };
-              return newMeds;
-          });
       }
       return savedData;
     } catch (err) {
