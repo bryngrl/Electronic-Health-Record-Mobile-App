@@ -24,6 +24,7 @@ export const useADL = () => {
   const sanitize = (data: any) => {
     const sanitized = { ...data };
     Object.keys(sanitized).forEach(key => {
+      if (['day_no', 'patient_id', 'id'].includes(key)) return;
       if (typeof sanitized[key] === 'string' && sanitized[key].trim() === '') {
         sanitized[key] = 'N/A';
       }

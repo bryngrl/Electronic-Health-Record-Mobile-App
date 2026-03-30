@@ -98,7 +98,11 @@ export const useADLScreen = (onBack: () => void, recordId: number | null = null,
     if (selectedPatient?.id) {
       try {
         const result = await saveADLAssessment(
-          { patient_id: selectedPatient.id, ...updatedFormData },
+          {
+            patient_id: selectedPatient.id,
+            day_no: calculateDayNumber(),
+            ...updatedFormData,
+          },
           adlIdRef.current,
         );
         const record = result?.data || result;
@@ -254,7 +258,7 @@ export const useADLScreen = (onBack: () => void, recordId: number | null = null,
       const res = await analyzeField(
         selectedPatient.id,
         adlIdRef.current,
-        formDataRef.current,
+        { ...formDataRef.current, day_no: calculateDayNumber() },
         field,
         alertKey!,
       );
@@ -290,7 +294,11 @@ export const useADLScreen = (onBack: () => void, recordId: number | null = null,
     setLoadingMessage('Saving Assessment...');
     try {
       const result = await saveADLAssessment(
-        { patient_id: selectedPatient.id, ...formDataRef.current },
+        {
+          patient_id: selectedPatient.id,
+          day_no: calculateDayNumber(),
+          ...formDataRef.current,
+        },
         adlIdRef.current,
       );
       const record = result?.data || result;
@@ -339,7 +347,11 @@ export const useADLScreen = (onBack: () => void, recordId: number | null = null,
     try {
       const isUpdate = isExistingRecord;
       const result = await saveADLAssessment(
-        { patient_id: selectedPatient.id, ...formDataRef.current },
+        {
+          patient_id: selectedPatient.id,
+          day_no: calculateDayNumber(),
+          ...formDataRef.current,
+        },
         adlIdRef.current,
       );
       const record = result?.data || result;
