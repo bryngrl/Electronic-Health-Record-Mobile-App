@@ -60,6 +60,8 @@ export const useLabValuesScreen = (onBack: () => void) => {
     type: 'success' | 'error' | 'warning';
   }>({ visible: false, title: '', message: '', type: 'error' });
 
+  const [modalVisible, setModalVisible] = useState(false);
+
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showAlert = (
@@ -88,6 +90,9 @@ export const useLabValuesScreen = (onBack: () => void) => {
     const prefix = getTestPrefix(LAB_TESTS[selectedTestIndex]);
     setResult(allLabData[`${prefix}_result`] || (isNA ? 'N/A' : ''));
     setNormalRange(allLabData[`${prefix}_normal_range`] || (isNA ? 'N/A' : ''));
+    
+    // Close modal when switching tests
+    setModalVisible(false);
   }, [selectedTestIndex, allLabData, isNA]);
 
   const allLabDataRef = useRef(allLabData);
@@ -109,6 +114,18 @@ export const useLabValuesScreen = (onBack: () => void) => {
     const prefix = getTestPrefix(LAB_TESTS[selectedTestIndex]);
     const patientId = selectedPatientId;
 
+    // Check if inputs are N/A or empty
+    const isResultNA = result.trim().toLowerCase() === 'n/a' || result.trim() === '';
+    const isRangeNA = normalRange.trim().toLowerCase() === 'n/a' || normalRange.trim() === '';
+    
+    // If both are N/A or empty, clear the alert immediately
+    if (isResultNA && isRangeNA) {
+      setBackendAlerts(prev => ({ ...prev, [`${prefix}_alert`]: null }));
+      setBackendSeverities(prev => ({ ...prev, [`${prefix}_severity`]: null }));
+      setIsAlertLoading(false);
+      return;
+    }
+
     setIsAlertLoading(true);
     debounceTimer.current = setTimeout(async () => {
       const res = await analyzeLabField(
@@ -128,8 +145,8 @@ export const useLabValuesScreen = (onBack: () => void) => {
       // Update all alerts from the response
       const updatedAlerts = { ...res.alerts };
 
-      // If current field is cleared, make sure its specific alert is also cleared locally
-      if (!result.trim() && !normalRange.trim()) {
+      // Clear alert if inputs are N/A or empty
+      if (isResultNA && isRangeNA) {
         updatedAlerts[`${prefix}_alert`] = null;
       }
 
@@ -327,15 +344,45 @@ export const useLabValuesScreen = (onBack: () => void) => {
         'Please select a patient first in the search bar.',
       );
     }
-    setIsLoading(true);
-    setLoadingMessage('Saving Lab Values...');
+    
     const prefix = getTestPrefix(LAB_TESTS[selectedTestIndex]);
+    const isLastTest = selectedTestIndex === LAB_TESTS.length - 1;
+    
+    // Only show loading on last test (submit/update)
+    if (isLastTest) {
+      setIsLoading(true);
+      setLoadingMessage('Saving Lab Values...');
+    }
+    
     try {
+      // Determine what to submit based on context
+      let resultToSubmit = result;
+      let rangeToSubmit = normalRange;
+      
+      // Only use 'N/A' if explicitly set by checkbox or user typed it
+      if (!isNA) {
+        // If not using N/A checkbox, check if user literally typed "N/A" or "n/a"
+        const isResultNA = result.trim().toLowerCase() === 'n/a';
+        const isRangeNA = normalRange.trim().toLowerCase() === 'n/a';
+        
+        // If user didn't type N/A, submit empty string instead of N/A
+        if (!isResultNA && result.trim() === '') {
+          resultToSubmit = '';
+        }
+        if (!isRangeNA && normalRange.trim() === '') {
+          rangeToSubmit = '';
+        }
+      } else {
+        // N/A checkbox is checked, use 'N/A'
+        resultToSubmit = 'N/A';
+        rangeToSubmit = 'N/A';
+      }
+      
       const res = await saveLabAssessment(
         {
           patient_id: selectedPatientId,
-          [`${prefix}_result`]: result || 'N/A',
-          [`${prefix}_normal_range`]: normalRange || 'N/A',
+          [`${prefix}_result`]: resultToSubmit,
+          [`${prefix}_normal_range`]: rangeToSubmit,
         },
         labIdRef.current,
       );
@@ -351,7 +398,7 @@ export const useLabValuesScreen = (onBack: () => void) => {
         }));
       }
       setIsLoading(false);
-      if (selectedTestIndex === LAB_TESTS.length - 1) {
+      if (isLastTest) {
         showAlert(
           isExistingRecord ? 'Successfully Updated' : 'Successfully Submitted',
           `Lab Assessment has been ${
@@ -404,8 +451,8 @@ export const useLabValuesScreen = (onBack: () => void) => {
 
   const isDataEntered = useMemo(() => {
     return (
-      (result.trim() !== '' && result !== 'N/A') ||
-      (normalRange.trim() !== '' && normalRange !== 'N/A')
+      result.trim() !== '' ||
+      normalRange.trim() !== ''
     );
   }, [result, normalRange]);
 
@@ -439,6 +486,8 @@ export const useLabValuesScreen = (onBack: () => void) => {
     setAlertConfig,
     showAlert,
     dataAlert,
+    modalVisible,
+    setModalVisible,
     handlePatientSelect,
     handleCDSSPress,
     handleNextOrSave,

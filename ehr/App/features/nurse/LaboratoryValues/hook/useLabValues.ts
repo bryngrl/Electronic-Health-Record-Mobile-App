@@ -31,13 +31,8 @@ export const useLabValues = () => {
   }, []);
 
   const sanitize = (data: any) => {
-    const sanitized = { ...data };
-    Object.keys(sanitized).forEach(key => {
-      if (typeof sanitized[key] === 'string' && sanitized[key].trim() === '') {
-        sanitized[key] = 'N/A';
-      }
-    });
-    return sanitized;
+    // Keep data as-is, don't convert empty strings to 'N/A'
+    return { ...data };
   };
 
   // STEP 1: Create or Update record
@@ -88,7 +83,7 @@ export const useLabValues = () => {
     }
   };
   const updateDPIE = async (examId: number, stepKey: string, text: string) => {
-    const sanitizedText = text.trim() === '' ? 'N/A' : text;
+    const sanitizedText = text.trim() === '' ? '' : text;
     const response = await apiClient.put(`/lab-values/${examId}/${stepKey}`, {
       [stepKey]: sanitizedText,
     });

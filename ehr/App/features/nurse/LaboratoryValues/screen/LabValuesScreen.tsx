@@ -63,7 +63,6 @@ const LabValuesScreen = ({
     [theme],
   );
   const scrollViewRef = useRef<ScrollView>(null);
-  const [modalVisible, setModalVisible] = useState(false);
   const bellFadeAnim = useRef(new Animated.Value(1)).current;
 
   const {
@@ -93,6 +92,8 @@ const LabValuesScreen = ({
     setAlertConfig,
     showAlert,
     dataAlert,
+    modalVisible,
+    setModalVisible,
     handlePatientSelect,
     handleCDSSPress,
     handleNextOrSave,
@@ -120,12 +121,18 @@ const LabValuesScreen = ({
     !v.toLowerCase().includes('no findings') &&
     !v.toLowerCase().includes('no result') &&
     !v.toLowerCase().includes('no alert') &&
+    !v.toLowerCase().includes('n/a') &&
     v.toLowerCase() !== 'normal' &&
     v.trim() !== '';
 
-  const isClinicalAlert = isValidAlert(currentAlert) || isValidAlert(dataAlert);
+  // Check if current inputs are N/A or empty
+  const isResultNA = result.trim().toLowerCase() === 'n/a' || result.trim() === '';
+  const isRangeNA = normalRange.trim().toLowerCase() === 'n/a' || normalRange.trim() === '';
+  const inputsAreNA = isResultNA && isRangeNA;
+
+  const isClinicalAlert = !inputsAreNA && (isValidAlert(currentAlert) || isValidAlert(dataAlert));
   const hasInputData = result.trim() !== '' || normalRange.trim() !== '';
-  const isAlertActive = !!selectedPatientId && isClinicalAlert && hasInputData;
+  const isAlertActive = !!selectedPatientId && isClinicalAlert && hasInputData && !inputsAreNA;
 
   useEffect(() => {
     bellFadeAnim.setValue(0.35);
