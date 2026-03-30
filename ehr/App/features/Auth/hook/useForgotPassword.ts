@@ -3,8 +3,14 @@ import apiClient from '@api/apiClient';
 
 export const useForgotPassword = () => {
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isCodeSent, setIsCodeSent] = useState(false);
+  const [isCodeVerified, setIsCodeVerified] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [attempts, setAttempts] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [alertConfig, setAlertConfig] = useState<{
@@ -68,20 +74,22 @@ export const useForgotPassword = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await apiClient.post('/auth/forgot-password', {
+      await apiClient.post('/auth/forgot-password', {
         email: email,
         source: 'mobile',
       });
 
       showAlert(
         'Success',
-        'We have emailed your password reset link. Please check your email.',
+        '6-digit reset code sent to your email. Please check your inbox.',
         'success'
       );
-      setCooldown(60); // Start 60s local cooldown
+      setIsCodeSent(true);
+      setIsCodeVerified(false);
+      setCooldown(60);
+      setAttempts(0); 
     } catch (error: any) {
-      console.error('Forgot password error:', error);
-      let errorMessage = 'Failed to send password reset link.';
+      let errorMessage = 'Failed to send reset code.';
 
       if (error.response?.status === 429) {
         errorMessage = 'Too many requests. Please try again in 15 minutes.';
@@ -89,8 +97,6 @@ export const useForgotPassword = () => {
         errorMessage = error.response.data.error;
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
       }
 
       showAlert('Request Failed', errorMessage, 'error');
@@ -99,13 +105,118 @@ export const useForgotPassword = () => {
     }
   };
 
+  const handleVerifyCode = async () => {
+    if (!code || code.length !== 6) {
+      showAlert('Error', 'Please enter the 6-digit code', 'warning');
+      return;
+    }
+
+    if (attempts >= 3) {
+      showAlert('Error', 'Maximum attempts reached. Please request a new code.', 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await apiClient.post('/auth/verify-code', {
+        email: email,
+        code: code,
+      });
+
+      setIsCodeVerified(true);
+      setAttempts(0);
+      showAlert(
+        'Success',
+        'Verification code confirmed. You can now set your new password.',
+        'success'
+      );
+    } catch (error: any) {
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+      
+      let errorMessage = 'Invalid verification code.';
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
+      if (newAttempts >= 3) {
+        errorMessage += ' Maximum attempts reached. Please request a new code.';
+      } else {
+        errorMessage += ` Attempt ${newAttempts} of 3.`;
+      }
+
+      showAlert('Verification Failed', errorMessage, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!password) {
+      showAlert('Error', 'Please enter your new password', 'warning');
+      return;
+    }
+
+    if (password.length < 8) {
+      showAlert('Error', 'Password must be at least 8 characters long', 'warning');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      showAlert('Error', 'Passwords do not match', 'warning');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await apiClient.post('/auth/reset-password', {
+        email: email,
+        code: code,
+        password: password,
+        password_confirmation: confirmPassword,
+      });
+
+      showAlert(
+        'Success',
+        'Your password has been reset successfully. You can now sign in with your new password.',
+        'success'
+      );
+    } catch (error: any) {
+      let errorMessage = 'Failed to reset password.';
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
+      showAlert('Reset Failed', errorMessage, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return {
     email,
     setEmail,
+    code,
+    setCode,
+    password,
+    setPassword,
+    confirmPassword,
+    setConfirmPassword,
+    isCodeSent,
+    setIsCodeSent,
+    isCodeVerified,
+    setIsCodeVerified,
     isSubmitting,
     cooldown,
+    attempts,
     alertConfig,
     hideAlert,
     handleForgotPassword,
+    handleVerifyCode,
+    handleResetPassword,
   };
 };

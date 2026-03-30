@@ -24,11 +24,23 @@ export default function ForgotPasswordScreen({ onBack }: ForgotPasswordScreenPro
   const {
     email,
     setEmail,
+    code,
+    setCode,
+    password,
+    setPassword,
+    confirmPassword,
+    setConfirmPassword,
+    isCodeSent,
+    setIsCodeSent,
+    isCodeVerified,
+    setIsCodeVerified,
     isSubmitting,
     cooldown,
     alertConfig,
     hideAlert,
     handleForgotPassword,
+    handleVerifyCode,
+    handleResetPassword,
   } = useForgotPassword();
 
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
@@ -49,6 +61,37 @@ export default function ForgotPasswordScreen({ onBack }: ForgotPasswordScreenPro
     };
   }, []);
 
+  const handleBack = () => {
+    if (isCodeVerified) {
+      setIsCodeVerified(false);
+    } else if (isCodeSent) {
+      setIsCodeSent(false);
+    } else {
+      onBack();
+    }
+  };
+
+  const renderCodeInput = () => {
+    const displayCode = code.padEnd(6, '_');
+    return (
+      <View style={styles.codeContainer}>
+        {displayCode.split('').map((char, index) => (
+          <View key={index} style={styles.codeBox}>
+            <Text style={styles.codeText}>{char}</Text>
+          </View>
+        ))}
+        <TextInput
+          style={styles.hiddenInput}
+          value={code}
+          onChangeText={(text) => setCode(text.replace(/[^0-9]/g, '').slice(0, 6))}
+          keyboardType="number-pad"
+          maxLength={6}
+          autoFocus={true}
+        />
+      </View>
+    );
+  };
+
   return (
     <View style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
@@ -65,7 +108,7 @@ export default function ForgotPasswordScreen({ onBack }: ForgotPasswordScreenPro
         >
           <TouchableOpacity 
             style={styles.backButton} 
-            onPress={onBack}
+            onPress={handleBack}
           >
             <Icon name="arrow-back" size={30} color="#035022" />
           </TouchableOpacity>
@@ -87,46 +130,121 @@ export default function ForgotPasswordScreen({ onBack }: ForgotPasswordScreenPro
             contentContainerStyle={{ flexGrow: 1 }}
             keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.title}>Forgot Password?</Text>
-            <Text style={styles.subtitle}>Enter your email to receive a reset link.</Text>
+            <Text style={styles.title}>
+              {isCodeVerified ? 'New Password' : isCodeSent ? 'Verify Code' : 'Forgot Password?'}
+            </Text>
+            <Text style={styles.subtitle}>
+              {isCodeVerified 
+                ? 'Please enter and confirm your new password.'
+                : isCodeSent 
+                  ? 'Enter the 6-digit code sent to your email.' 
+                  : 'Enter your email to receive a 6-digit reset code.'}
+            </Text>
 
             <View style={styles.formContainer}>
-              <Text style={styles.label}>Email Address</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your email"
-                placeholderTextColor="#A0A0A0"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-              />
+              {!isCodeSent || isCodeVerified ? (
+                <>
+                  <Text style={styles.label}>Email Address</Text>
+                  <TextInput
+                    style={[styles.input, (isCodeSent || isCodeVerified) && { backgroundColor: '#f0f0f0', color: '#888' }]}
+                    placeholder="Enter your email"
+                    placeholderTextColor="#A0A0A0"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    editable={!isCodeSent && !isCodeVerified}
+                  />
+                </>
+              ) : null}
+
+              {isCodeSent && !isCodeVerified && (
+                <>
+                  <Text style={styles.label}>6-Digit Code</Text>
+                  {renderCodeInput()}
+                </>
+              )}
+
+              {isCodeVerified && (
+                <>
+                  <Text style={styles.label}>New Password</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter new password"
+                    placeholderTextColor="#A0A0A0"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                  />
+
+                  <Text style={styles.label}>Confirm New Password</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm new password"
+                    placeholderTextColor="#A0A0A0"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry
+                  />
+                </>
+              )}
 
               <TouchableOpacity
                 style={[
                   styles.submitButton, 
-                  (isSubmitting || cooldown > 0) && { opacity: 0.7 }
+                  (isSubmitting || (cooldown > 0 && !isCodeSent)) && { opacity: 0.7 }
                 ]}
                 activeOpacity={0.8}
-                onPress={handleForgotPassword}
-                disabled={isSubmitting || cooldown > 0}
+                onPress={
+                  isCodeVerified 
+                    ? handleResetPassword 
+                    : isCodeSent 
+                      ? handleVerifyCode 
+                      : handleForgotPassword
+                }
+                disabled={isSubmitting || (cooldown > 0 && !isCodeSent)}
               >
                 <Text style={styles.buttonText}>
                   {isSubmitting 
-                    ? 'SENDING...' 
-                    : cooldown > 0 
-                      ? `RESEND IN ${cooldown}S` 
-                      : 'SEND RESET LINK'
+                    ? 'PROCESSING...' 
+                    : isCodeVerified
+                      ? 'RESET PASSWORD'
+                      : isCodeSent 
+                        ? 'VERIFY CODE' 
+                        : cooldown > 0 
+                          ? `RESEND IN ${cooldown}S` 
+                          : 'SEND RESET CODE'
                   }
                 </Text>
               </TouchableOpacity>
               
-              <TouchableOpacity
-                style={styles.backToLoginButton}
-                onPress={onBack}
-              >
-                <Text style={styles.backToLoginText}>Back to Sign In</Text>
-              </TouchableOpacity>
+              {!isCodeSent && (
+                <TouchableOpacity
+                  style={styles.backToLoginButton}
+                  onPress={onBack}
+                >
+                  <Text style={styles.backToLoginText}>Back to Sign In</Text>
+                </TouchableOpacity>
+              )}
+
+              {isCodeSent && !isCodeVerified && (
+                <>
+                  {cooldown === 0 ? (
+                    <TouchableOpacity
+                      style={styles.backToLoginButton}
+                      onPress={handleForgotPassword}
+                    >
+                      <Text style={styles.backToLoginText}>Resend Code</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.backToLoginButton}>
+                      <Text style={[styles.backToLoginText, { textDecorationLine: 'none' }]}>
+                        Resend code in {cooldown}s
+                      </Text>
+                    </View>
+                  )}
+                </>
+              )}
             </View>
           </ScrollView>
         </View>
@@ -138,7 +256,7 @@ export default function ForgotPasswordScreen({ onBack }: ForgotPasswordScreenPro
         message={alertConfig.message}
         type={alertConfig.type}
         onCancel={hideAlert}
-        onConfirm={alertConfig.type === 'success' ? onBack : hideAlert}
+        onConfirm={alertConfig.type === 'success' ? (isCodeVerified && alertConfig.title === 'Success' && alertConfig.message.includes('reset successfully') ? onBack : hideAlert) : hideAlert}
       />
     </View>
   );
@@ -223,6 +341,31 @@ const styles = StyleSheet.create({
     color: '#333',
     fontSize: 16,
     fontFamily: 'AlteHaasGrotesk',
+  },
+  codeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 30,
+    position: 'relative',
+  },
+  codeBox: {
+    width: 40,
+    height: 50,
+    borderBottomWidth: 2,
+    borderBottomColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  codeText: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  hiddenInput: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    opacity: 0,
   },
   submitButton: {
     backgroundColor: '#E5FFE8',
