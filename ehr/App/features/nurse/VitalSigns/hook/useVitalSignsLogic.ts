@@ -344,15 +344,10 @@ export const useVitalSignsLogic = () => {
   const saveAssessment = async (pDayNo?: number, slotTime?: string, slotVitals?: Vitals) => {
     if (!selectedPatientId) return null;
 
-    const sanitize = (data: any) => {
-      const sanitized = { ...data };
-      Object.keys(sanitized).forEach(key => {
-        if (typeof sanitized[key] === 'string' && sanitized[key].trim() === '') {
-          sanitized[key] = 'N/A';
-        }
-      });
-      return sanitized;
-    };
+  const sanitize = (data: any) => {
+    // Keep data as-is, don't convert empty strings to 'N/A'
+    return { ...data };
+  };
 
     const targetTime = slotTime || currentTime;
     const targetVitals = slotVitals || currentVitals;

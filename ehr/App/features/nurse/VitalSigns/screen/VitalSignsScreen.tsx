@@ -127,6 +127,19 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
   const [isNA, setIsNA] = useState(false);
   const preNASnapshotRef = useRef<any>(null);
 
+  // Reset N/A state and snapshot when patient or time slot changes
+  useEffect(() => {
+    preNASnapshotRef.current = null;
+    
+    // Check if loaded vitals are all N/A
+    const allNA = vitals.temperature === 'N/A' && 
+                  vitals.hr === 'N/A' && 
+                  vitals.rr === 'N/A' && 
+                  vitals.bp === 'N/A' && 
+                  vitals.spo2 === 'N/A';
+    setIsNA(allNA);
+  }, [selectedPatientId, currentTime, vitals.temperature, vitals.hr, vitals.rr, vitals.bp, vitals.spo2]);
+
   const temperatureRef = useRef<TextInput>(null);
   const hrRef = useRef<TextInput>(null);
   const rrRef = useRef<TextInput>(null);
@@ -150,8 +163,11 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     };
 
     if (newState) {
-      // Save current state before setting to N/A
-      preNASnapshotRef.current = { ...vitals };
+      // Save current state before setting to N/A (only if not already N/A)
+      const currentNonNA = Object.keys(vitals).some(key => vitals[key as keyof typeof vitals] !== 'N/A');
+      if (currentNonNA) {
+        preNASnapshotRef.current = { ...vitals };
+      }
 
       Object.keys(naVitals).forEach(key => {
         handleUpdateVital(key as any, 'N/A');
@@ -161,17 +177,23 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
         await saveAssessment(dayNo);
       }
     } else {
-      // Restore from snapshot
-      if (preNASnapshotRef.current) {
-        Object.keys(preNASnapshotRef.current).forEach(key => {
-          handleUpdateVital(key as any, preNASnapshotRef.current[key]);
-        });
-        preNASnapshotRef.current = null;
-      } else {
-        // Fallback: Clear if no snapshot
-        Object.keys(naVitals).forEach(key => {
-          handleUpdateVital(key as any, '');
-        });
+      // Restore from snapshot or clear to empty
+      const restoreData = preNASnapshotRef.current || {
+        temperature: '',
+        hr: '',
+        rr: '',
+        bp: '',
+        spo2: '',
+      };
+      
+      Object.keys(restoreData).forEach(key => {
+        handleUpdateVital(key as any, restoreData[key]);
+      });
+      
+      preNASnapshotRef.current = null;
+      
+      if (selectedPatientId) {
+        await saveAssessment(dayNo);
       }
     }
   }, [
