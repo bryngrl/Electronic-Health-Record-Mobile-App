@@ -37,6 +37,7 @@ export const useADLScreen = (onBack: () => void, recordId: number | null = null,
 
   const [adlId, setAdlId] = useState<number | null>(null);
   const [recordDayNo, setRecordDayNo] = useState<string | null>(null);
+  const [recordDateValue, setRecordDateValue] = useState<string | null>(null);
   const [isExistingRecord, setIsExistingRecord] = useState(false);
   const [backendAlerts, setBackendAlerts] = useState<
     Record<string, string | null>
@@ -159,6 +160,7 @@ export const useADLScreen = (onBack: () => void, recordId: number | null = null,
       if (data) {
         const today = new Date().toLocaleDateString('en-CA');
         const recordDate = (data.date || data.created_at || '').split('T')[0];
+        setRecordDateValue((data.date || data.created_at || null) as string | null);
 
         if (recordDate === today) {
           setAdlId(data.id);
@@ -199,6 +201,7 @@ export const useADLScreen = (onBack: () => void, recordId: number | null = null,
         setAdlId(null);
         adlIdRef.current = null;
         setRecordDayNo(null);
+        setRecordDateValue(null);
         setIsExistingRecord(false);
         setFormData(initialFormData);
         formDataRef.current = initialFormData;
@@ -221,6 +224,7 @@ export const useADLScreen = (onBack: () => void, recordId: number | null = null,
         setAdlId(null);
         adlIdRef.current = null;
         setRecordDayNo(null);
+        setRecordDateValue(null);
         setIsExistingRecord(false);
         setFormData(initialFormData);
         setLastSavedData(initialFormData);
@@ -434,6 +438,7 @@ export const useADLScreen = (onBack: () => void, recordId: number | null = null,
     setAlertConfig,
     showAlert,
     adlId,
+    recordDateValue,
     isExistingRecord,
     isAdpieActive,
     setIsAdpieActive,

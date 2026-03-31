@@ -54,6 +54,7 @@ const ADLScreen = ({
     setAlertConfig,
     showAlert,
     adlId,
+    recordDateValue,
     isExistingRecord,
     isAdpieActive,
     setIsAdpieActive,
@@ -108,7 +109,20 @@ const ADLScreen = ({
     ? ['rgba(18,18,18,1)', 'rgba(18,18,18,0)']
     : ['rgba(255,255,255,1)', 'rgba(255,255,255,0)'];
 
-  const displayDate = recordDate ? new Date(recordDate) : new Date();
+  const parseSafeDate = (value?: string) => {
+    if (!value) return null;
+    const raw = value.trim();
+    if (!raw) return null;
+    const normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+    const parsed = new Date(normalized);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const displayDate = readOnly
+    ? parseSafeDate(recordDateValue || recordDate) ||
+      parseSafeDate(selectedPatient?.admission_date) ||
+      new Date()
+    : new Date();
 
   return (
     <SafeAreaView style={styles.safeArea}>

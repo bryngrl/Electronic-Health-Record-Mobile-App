@@ -11,7 +11,14 @@ const isValidAlert = (v: any): v is string =>
   !v.toLowerCase().includes('no alert') &&
   v.toLowerCase() !== 'normal';
 
-export const useLabValuesScreen = (onBack: () => void) => {
+const inferSeverity = (text: string): string => {
+  const upper = text.toUpperCase();
+  if (upper.includes('URGENT') || upper.includes('CRITICAL') || upper.includes('IMMEDIATELY') || upper.includes('EMERGENCY')) return 'CRITICAL';
+  if (upper.includes('EVALUATE') || upper.includes('MONITOR') || upper.includes('ASSESS') || upper.includes('REFER') || upper.includes('WARNING') || upper.includes('HIGH') || upper.includes('LOW') || upper.includes('ELEVATED')) return 'WARNING';
+  return 'INFO';
+};
+
+export const useLabValuesScreen = (onBack: () => void, readOnly: boolean = false) => {
   const {
     saveLabAssessment,
     analyzeLabField,
@@ -106,8 +113,11 @@ export const useLabValuesScreen = (onBack: () => void) => {
     allLabDataRef.current = updated;
   }, [allLabData, result, normalRange, selectedTestIndex]);
 
-  // Real-time debounce: auto-analyze after user types result/range
+  // Real-time debounce: auto-analyze after user types result/range (nurse mode only)
   useEffect(() => {
+    // Skip auto-analysis in read-only mode (doctor view)
+    if (readOnly) return;
+    
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     if (!selectedPatientId) return;
 
@@ -167,6 +177,7 @@ export const useLabValuesScreen = (onBack: () => void) => {
     selectedTestIndex,
     selectedPatientId,
     analyzeLabField,
+    readOnly,
   ]);
 
   const handlePatientSelect = useCallback(
@@ -193,7 +204,14 @@ export const useLabValuesScreen = (onBack: () => void) => {
         const today = new Date().toLocaleDateString('en-CA');
         const recordDate = (data.created_at || '').split('T')[0];
 
-        if (recordDate === today) {
+        // For nurse mode: only set labId if record is from today (to continue editing)
+        // For doctor/readOnly mode: always load data but don't set labId (no editing)
+        if (!readOnly && recordDate === today) {
+          setLabId(data.id);
+          labIdRef.current = data.id;
+          setIsExistingRecord(true);
+        } else if (readOnly) {
+          // In read-only mode, load the record ID for reference but mark as existing
           setLabId(data.id);
           labIdRef.current = data.id;
           setIsExistingRecord(true);
@@ -202,18 +220,25 @@ export const useLabValuesScreen = (onBack: () => void) => {
           labIdRef.current = null;
           setIsExistingRecord(false);
         }
+        
+        // Always load the data for display
         setAllLabData(data);
         allLabDataRef.current = data;
-        // Load existing alerts
+        
+        // Load existing alerts from the data
         const loaded: Record<string, string | null> = {};
+        const loadedSeverities: Record<string, string | null> = {};
         LAB_TESTS.forEach(test => {
           const p = getTestPrefix(test);
           const alertKey = `${p}_alert`;
-          loaded[alertKey] = isValidAlert(data[alertKey])
-            ? data[alertKey]
-            : null;
+          const alertValue = data[alertKey];
+          loaded[alertKey] = isValidAlert(alertValue) ? alertValue : null;
+          if (loaded[alertKey]) {
+            loadedSeverities[`${p}_severity`] = inferSeverity(alertValue);
+          }
         });
         setBackendAlerts(loaded);
+        setBackendSeverities(loadedSeverities);
       } else {
         setLabId(null);
         labIdRef.current = null;
@@ -224,7 +249,7 @@ export const useLabValuesScreen = (onBack: () => void) => {
         setBackendSeverities({});
       }
     },
-    [fetchDataAlert, fetchLatestLabValues],
+    [fetchDataAlert, fetchLatestLabValues, readOnly],
   );
 
   const toggleNA = async () => {

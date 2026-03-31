@@ -104,7 +104,7 @@ const LabValuesScreen = ({
     isLoading,
     loadingMessage,
     screenOpacity,
-  } = useLabValuesScreen(onBack);
+  } = useLabValuesScreen(onBack, readOnly);
 
   useEffect(() => {
     if (readOnly && patientId) {

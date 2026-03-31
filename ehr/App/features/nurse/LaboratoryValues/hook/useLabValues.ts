@@ -53,15 +53,25 @@ export const useLabValues = () => {
   const fetchLatestLabValues = async (patientId: number) => {
     try {
       const response = await apiClient.get(`/lab-values/patient/${patientId}?patient_id=${patientId}`);
-      const data = response.data;
+      const responseData = response.data;
       
-      if (Array.isArray(data)) {
-        return data.length > 0 ? data[0] : null;
-      } else if (data && typeof data === 'object') {
-        // If it's a single object (or has a data key from Laravel)
-        return data.data || data;
+      // Handle various response formats from Laravel
+      let records: any[] = [];
+      
+      if (Array.isArray(responseData)) {
+        records = responseData;
+      } else if (responseData && typeof responseData === 'object') {
+        if (Array.isArray(responseData.data)) {
+          records = responseData.data;
+        } else if (responseData.data && typeof responseData.data === 'object') {
+          records = [responseData.data];
+        } else if (responseData.id) {
+          records = [responseData];
+        }
       }
-      return null;
+      
+      // Return the latest record (first one, assuming sorted desc by created_at)
+      return records.length > 0 ? records[0] : null;
     } catch (err) {
       console.error('Error fetching lab values:', err);
       return null;

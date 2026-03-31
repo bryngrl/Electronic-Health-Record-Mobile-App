@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, SafeAreaView, BackHandler, Keyboard, Platform, useWindowDimensions, StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppTheme } from '@App/theme/ThemeContext';
+import { TutorialProvider, useTutorial } from '@App/context/TutorialContext';
+import TutorialOverlay from '@App/components/TutorialOverlay';
 
 // --- NURSE FEATURE IMPORTS ---
 import DashboardSummary from '@nurse/Dashboard/components/DashboardSummary';
@@ -42,8 +44,17 @@ const DASHBOARD_ITEM_IDS = [
 ];
 
 export default function HomeScreen() {
+  return (
+    <TutorialProvider>
+      <HomeScreenContent />
+    </TutorialProvider>
+  );
+}
+
+function HomeScreenContent() {
   const { isDarkMode, theme } = useAppTheme();
   const { height: windowHeight } = useWindowDimensions();
+  const { setNavigationHandler } = useTutorial();
   const [activeTab, setActiveTab] = useState('Home');
   const [navigationHistory, setNavigationHistory] = useState<string[]>([
     'Home',
@@ -67,6 +78,13 @@ export default function HomeScreen() {
       hideSubscription.remove();
     };
   }, []);
+
+  // Register tutorial navigation handler
+  useEffect(() => {
+    setNavigationHandler((route: string) => {
+      setActiveTab(route);
+    });
+  }, [setNavigationHandler]);
 
   const saveRecentFeature = async (featureId: string) => {
     try {
@@ -242,6 +260,8 @@ export default function HomeScreen() {
           />
         </View>
       )}
+
+      <TutorialOverlay />
     </View>
   );
 }

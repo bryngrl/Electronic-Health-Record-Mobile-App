@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '@App/theme/ThemeContext';
 import { Shadow } from 'react-native-shadow-2';
+import { useTutorial } from '@App/context/TutorialContext';
 
 interface NurseBottomNavProps {
   activeRoute?: string;
@@ -36,13 +37,26 @@ const NurseBottomNav = ({
 }: NurseBottomNavProps) => {
   const { theme, isDarkMode } = useAppTheme();
   const insets = useSafeAreaInsets();
+  const { registerTarget } = useTutorial();
+
+  const homeRef = useRef<View>(null);
+  const searchRef = useRef<View>(null);
+  const dashboardRef = useRef<View>(null);
+  const registerRef = useRef<View>(null);
+
+  useEffect(() => {
+    registerTarget('home', homeRef);
+    registerTarget('search', searchRef);
+    registerTarget('dashboard', dashboardRef);
+    registerTarget('register', registerRef);
+  }, [registerTarget]);
 
   const styles = React.useMemo(
     () => createStyles(theme, isDarkMode, insets.bottom),
     [theme, isDarkMode, insets.bottom],
   );
 
-  const NavItem = ({ label, route, iconKey, onPress }: any) => {
+  const NavItem = ({ label, route, iconKey, onPress, navRef }: any) => {
     const isActive = activeRoute === route;
     const source = isActive ? icons[iconKey].active : icons[iconKey].inactive;
 
@@ -51,7 +65,7 @@ const NurseBottomNav = ({
         onPress={() => (onPress ? onPress() : onNavigate(route))}
         style={styles.navItemWrapper}
       >
-        <View style={[styles.navItem, isActive && styles.activeNavItem]}>
+        <View ref={navRef} style={[styles.navItem, isActive && styles.activeNavItem]}>
           <Image
             source={source}
             style={[
@@ -86,14 +100,15 @@ const NurseBottomNav = ({
       <View
         style={[styles.bottomNav, { backgroundColor: theme.card || '#FFFFFF' }]}
       >
-        <NavItem label="Home" route="Home" iconKey="Home" />
-        <NavItem label="Search" route="Search" iconKey="Search" />
-        <NavItem label="Dashboard" route="Dashboard" iconKey="Dashboard" />
+        <NavItem label="Home" route="Home" iconKey="Home" navRef={homeRef} />
+        <NavItem label="Search" route="Search" iconKey="Search" navRef={searchRef} />
+        <NavItem label="Dashboard" route="Dashboard" iconKey="Dashboard" navRef={dashboardRef} />
         <NavItem
           label="Add Patient"
           route="Register"
           iconKey="Register"
           onPress={onAddPatient}
+          navRef={registerRef}
         />
       </View>
     </Shadow>

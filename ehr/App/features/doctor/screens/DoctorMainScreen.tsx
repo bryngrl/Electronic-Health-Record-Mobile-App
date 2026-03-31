@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, BackHandler, StatusBar } from 'react-native';
+import { View, StyleSheet, SafeAreaView, BackHandler, StatusBar, InteractionManager } from 'react-native';
 import { useAppTheme } from '@App/theme/ThemeContext';
+import apiClient from '../../../api/apiClient';
 
 // --- DOCTOR FEATURE IMPORTS ---
 import DoctorHomeScreen from './DoctorHomeScreen';
@@ -9,6 +10,7 @@ import DoctorReportsScreen from './DoctorReportsScreen';
 import DoctorUpdatesScreen from './DoctorUpdatesScreen';
 import DoctorPatientDetailScreen from './DoctorPatientDetailScreen';
 import DoctorSettingsScreen from './DoctorSettingsScreen';
+import LoadingOverlay from '@components/LoadingOverlay';
 
 // --- NURSE SCREENS (RE-USED IN READ-ONLY) ---
 import VitalSignsScreen from '../../nurse/VitalSigns/screen/VitalSignsScreen';
@@ -28,8 +30,76 @@ export default function DoctorMainScreen() {
   const [activeTab, setActiveTab] = useState('DoctorHome');
   const [navigationHistory, setNavigationHistory] = useState<string[]>(['DoctorHome']);
   const [selectedPatientData, setSelectedPatientData] = useState<any>(null);
+  const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Loading data...');
 
-  const handleNavigation = useCallback((route: string, params?: any) => {
+  const featureLabelMap: Record<string, string> = {
+    DoctorPatientDetail: 'Patient Update',
+    VitalSigns: 'Vital Signs',
+    PhysicalExam: 'Physical Exam',
+    MedicalHistory: 'Medical History',
+    LabValues: 'Lab Values',
+    IntakeOutput: 'Intake and Output',
+    ADL: 'Activities of Daily Living',
+    Diagnostics: 'Diagnostics',
+    IvsLines: 'IVs and Lines',
+    Medication: 'Medication Administration',
+    MedicationReconciliation: 'Medication Reconciliation',
+  };
+
+  const routeToTypeKey: Record<string, string> = {
+    VitalSigns: 'vital-signs',
+    PhysicalExam: 'physical-exam',
+    MedicalHistory: 'medical-history',
+    LabValues: 'lab-values',
+    IntakeOutput: 'intake-output',
+    ADL: 'adl',
+    Diagnostics: 'diagnostics',
+    IvsLines: 'ivs-lines',
+    Medication: 'medication',
+    MedicationReconciliation: 'medical-reconciliation',
+  };
+
+  const categoryToTypeKey: Record<string, string> = {
+    vital_signs: 'vital-signs',
+    physical_exam: 'physical-exam',
+    medical_history: 'medical-history',
+    lab_values: 'lab-values',
+    intake_output: 'intake-output',
+    adl: 'adl',
+    diagnostics: 'diagnostics',
+    ivs_lines: 'ivs-lines',
+    medication: 'medication',
+    medical_reconciliation: 'medical-reconciliation',
+  };
+
+  const getTypeKeyForNavigation = (route: string, params?: any): string | null => {
+    if (route === 'DoctorPatientDetail') {
+      const category = String(params?.category ?? '').trim();
+      return categoryToTypeKey[category] ?? null;
+    }
+    return routeToTypeKey[route] ?? null;
+  };
+
+  const handleNavigation = useCallback(async (route: string, params?: any) => {
+    const featureLabel = featureLabelMap[route];
+    const patientId = params?.patientId;
+    const typeKey = getTypeKeyForNavigation(route, params);
+    const shouldPrefetch = !!patientId && !!typeKey && !!featureLabel;
+
+    if (shouldPrefetch) {
+      setLoadingMessage(`Loading ${featureLabel}...`);
+      setShowLoadingOverlay(true);
+      try {
+        await Promise.all([
+          apiClient.get(`/doctor/patient/${patientId}`),
+          apiClient.get(`/doctor/patient/${patientId}/forms/${typeKey}`),
+        ]);
+      } finally {
+        // Keep current behavior of navigating even if prefetch fails.
+      }
+    }
+
     if (params) {
       setSelectedPatientData(params);
     }
@@ -39,6 +109,12 @@ export default function DoctorMainScreen() {
       }
       return route;
     });
+
+    if (shouldPrefetch) {
+      InteractionManager.runAfterInteractions(() => {
+        setShowLoadingOverlay(false);
+      });
+    }
   }, []);
 
   const handleBack = useCallback(() => {
@@ -115,6 +191,7 @@ export default function DoctorMainScreen() {
           {getScreenContent()}
         </View>
       </SafeAreaView>
+      <LoadingOverlay visible={showLoadingOverlay} message={loadingMessage} />
     </View>
   );
 }

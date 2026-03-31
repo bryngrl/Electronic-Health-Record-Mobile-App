@@ -7,9 +7,11 @@ import {
   Pressable,
   useWindowDimensions,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAppTheme } from '@App/theme/ThemeContext';
+import { useTutorial } from '@App/context/TutorialContext';
 
 interface DashboardItem {
   id: string;
@@ -50,6 +52,7 @@ interface DashboardGridProps {
 
 export const DashboardGrid = ({ onPressItem }: DashboardGridProps) => {
   const { theme, commonStyles, isDarkMode } = useAppTheme();
+  const { startTutorial } = useTutorial();
   const styles = useMemo(
     () => createStyles(theme, commonStyles, isDarkMode),
     [theme, commonStyles, isDarkMode],
@@ -73,39 +76,45 @@ export const DashboardGrid = ({ onPressItem }: DashboardGridProps) => {
     <View style={styles.headerContainer}>
       <View style={styles.headerRow}>
         <Text style={styles.mainTitle}>Electronic Health {'\n'}Record</Text>
-        <View style={styles.bulbContainer}>
+        <TouchableOpacity 
+          style={styles.bulbContainer}
+          onPress={startTutorial}
+          activeOpacity={0.7}
+        >
           <Icon name="lightbulb-outline" size={24} color="#FBC02D" />
-        </View>
+        </TouchableOpacity>
       </View>
       <Text style={styles.subTitle}>You are currently logged in as nurse.</Text>
     </View>
   );
 
-  const renderItem = ({ item }: { item: DashboardItem }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.card,
-        { width: cardWidth, opacity: pressed ? 0.7 : 1 },
-      ]}
-      onPress={() => onPressItem(item.id)}
-    >
-      <View style={styles.cardContent}>
-        <View style={styles.iconContainer}>
-          <Icon name={item.icon} size={32} color={theme.primary} />
+  const renderItem = ({ item }: { item: DashboardItem }) => {
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.card,
+          { width: cardWidth, opacity: pressed ? 0.7 : 1 },
+        ]}
+        onPress={() => onPressItem(item.id)}
+      >
+        <View style={styles.cardContent}>
+          <View style={styles.iconContainer}>
+            <Icon name={item.icon} size={32} color={theme.primary} />
+          </View>
+          <View style={styles.textContainer}>
+            <Text style={styles.cardTitle} numberOfLines={2}>
+              {item.title}
+            </Text>
+          </View>
         </View>
-        <View style={styles.textContainer}>
-          <Text style={styles.cardTitle} numberOfLines={2}>
-            {item.title}
-          </Text>
-        </View>
-      </View>
 
-      <View style={styles.footerRow}>
-        <Text style={styles.proceedText}>Proceed</Text>
-        <Icon name="chevron-right" size={16} color={theme.textMuted} />
-      </View>
-    </Pressable>
-  );
+        <View style={styles.footerRow}>
+          <Text style={styles.proceedText}>Proceed</Text>
+          <Icon name="chevron-right" size={16} color={theme.textMuted} />
+        </View>
+      </Pressable>
+    );
+  };
 
   return (
     <FlatList
