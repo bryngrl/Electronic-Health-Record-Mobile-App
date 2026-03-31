@@ -137,7 +137,7 @@ const ADLScreen = ({
         <View style={{ zIndex: 10 }}>
           <View style={styles.headerContainer}>
             <View style={[commonStyles.header, { marginBottom: 0 }]}>
-              <View>
+              <View style={readOnly ? { paddingLeft: 18 } : undefined}>
                 <Text style={commonStyles.title}>
                   Activities of Daily Living
                 </Text>

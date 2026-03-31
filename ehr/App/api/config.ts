@@ -1,4 +1,4 @@
-const LOCAL_IP = 'localhost';
+const LOCAL_IP = '127.0.0.1';
 const BACKEND_PORT = 8000;
 
 const WEBSITE = 'electronichealthrecord.bscs3a.com';

@@ -41,6 +41,7 @@ import ADPIEScreen from '@components/ADPIEScreen';
 import PatientSearchBar from '@components/PatientSearchBar';
 import LoadingOverlay from '@components/LoadingOverlay';
 import { useAppTheme } from '@App/theme/ThemeContext';
+import apiClient from '@api/apiClient';
 
 const dotsIcon = require('@assets/icons/dots_icon.png');
 
@@ -61,6 +62,7 @@ interface VitalSignsScreenProps {
   patientId?: number;
   initialPatientName?: string;
   admissionDate?: string;
+  recordId?: number;
 }
 
 const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
@@ -69,6 +71,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
   patientId,
   initialPatientName,
   admissionDate,
+  recordId: targetRecordId,
 }) => {
   const { isDarkMode, theme, commonStyles } = useAppTheme();
   const styles = useMemo(
@@ -125,6 +128,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
   const [isAdpieActive, setIsAdpieActive] = useState(false);
   const [recordId, setRecordId] = useState<number | null>(null);
   const [isNA, setIsNA] = useState(false);
+  const [readOnlyDayNo, setReadOnlyDayNo] = useState<number | null>(null);
   const preNASnapshotRef = useRef<any>(null);
 
   // Reset N/A state and snapshot when patient or time slot changes
@@ -236,6 +240,29 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
     initialPatientName,
     admissionDate,
   ]);
+
+  useEffect(() => {
+    const loadReadOnlyDayNo = async () => {
+      if (!readOnly || !patientId) {
+        setReadOnlyDayNo(null);
+        return;
+      }
+      try {
+        const response = await apiClient.get(`/vital-signs/patient/${patientId}?patient_id=${patientId}`);
+        const records = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+        if (!Array.isArray(records) || records.length === 0) return;
+        const rec = targetRecordId
+          ? records.find((item: any) => Number(item.id) === Number(targetRecordId))
+          : [...records].sort((a: any, b: any) => Number(b.id || 0) - Number(a.id || 0))[0];
+        if (!rec) return;
+        const parsed = Number(rec.day_no);
+        if (Number.isFinite(parsed) && parsed > 0) setReadOnlyDayNo(parsed);
+      } catch (error) {
+        console.error('Failed to load read-only vital day_no:', error);
+      }
+    };
+    loadReadOnlyDayNo();
+  }, [readOnly, patientId, targetRecordId]);
 
   const handleVitalChange = useCallback(
     (key: string, value: string) => {
@@ -492,15 +519,17 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
             }}
           >
             <View style={[styles.header, { marginBottom: 0 }]}>
-              <View>
+              <View style={readOnly ? { paddingLeft: 18 } : undefined}>
                 <Text style={styles.title}>Vital Signs</Text>
-                <Text style={styles.subDate}>
-                  {new Date().toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </Text>
+                {!readOnly && (
+                  <Text style={styles.subDate}>
+                    {new Date().toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </Text>
+                )}
                 {readOnly && (
                   <Text
                     style={{
@@ -573,7 +602,7 @@ const VitalSignsScreen: React.FC<VitalSignsScreenProps> = ({
               <View style={{ flex: 1 }}>
                 <Text style={styles.fieldLabel}>DAY NO :</Text>
                 <View style={[styles.pillInput, styles.dropdownRow]}>
-                  <Text style={styles.dateVal}>{dayNo}</Text>
+                  <Text style={styles.dateVal}>{readOnly && readOnlyDayNo ? readOnlyDayNo : dayNo}</Text>
                   <Image
                     source={arrowIcon}
                     style={[

@@ -276,9 +276,9 @@ const IvsAndLinesScreen: React.FC<IvsAndLinesScreenProps> = ({
             paddingBottom: 15,
           }}
         >
-          <View style={[styles.headerContainer, { marginBottom: 0 }]}>
+          <View style={[styles.headerContainer, { marginBottom: 0, paddingLeft: readOnly ? 18 : 0 }]}>
             <Text style={styles.titleText}>IVs and Lines</Text>
-            <Text style={styles.dateText}>{formatDate()}</Text>
+            {!readOnly && <Text style={styles.dateText}>{formatDate()}</Text>}
             {readOnly && (
               <Text
                 style={{

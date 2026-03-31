@@ -506,9 +506,9 @@ const MedicalHistoryScreen: React.FC<MedicalHistoryProps> = ({
           }}
         >
           <View style={[styles.header, { marginBottom: 0 }]}>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, paddingLeft: readOnly ? 18 : 0 }}>
               <Text style={styles.title}>Medical History</Text>
-              <Text style={styles.dateText}>{formatDate()}</Text>
+              {!readOnly && <Text style={styles.dateText}>{formatDate()}</Text>}
               {readOnly && (
                 <Text
                   style={{

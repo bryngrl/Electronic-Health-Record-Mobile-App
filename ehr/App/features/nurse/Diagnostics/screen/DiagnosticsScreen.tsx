@@ -358,9 +358,9 @@ const DiagnosticsScreen: React.FC<DiagnosticsProps> = ({
           }}
         >
           <View style={[styles.headerRow, { marginBottom: 0 }]}>
-            <View style={styles.titleContainer}>
+            <View style={[styles.titleContainer, readOnly ? { paddingLeft: 18 } : null]}>
               <Text style={styles.titleText}>Diagnostics</Text>
-              <Text style={styles.dateText}>{formatDate()}</Text>
+              {!readOnly && <Text style={styles.dateText}>{formatDate()}</Text>}
               {readOnly && (
                 <Text
                   style={{

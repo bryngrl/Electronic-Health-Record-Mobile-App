@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, BackHandler, StatusBar, InteractionManager } from 'react-native';
+import { View, StyleSheet, SafeAreaView, BackHandler, StatusBar, InteractionManager, TouchableOpacity, Image } from 'react-native';
 import { useAppTheme } from '@App/theme/ThemeContext';
 import apiClient from '../../../api/apiClient';
 
@@ -147,7 +147,7 @@ export default function DoctorMainScreen() {
         case 'DoctorPatientDetail':
             return <DoctorPatientDetailScreen patientId={selectedPatientData.patientId} category={selectedPatientData.category} onBack={handleBack} />;
         case 'VitalSigns':
-            return <VitalSignsScreen onBack={handleBack} readOnly={true} patientId={selectedPatientData.patientId} initialPatientName={selectedPatientData.patientName} admissionDate={selectedPatientData.admissionDate} />;
+            return <VitalSignsScreen onBack={handleBack} readOnly={true} patientId={selectedPatientData.patientId} initialPatientName={selectedPatientData.patientName} admissionDate={selectedPatientData.admissionDate} recordId={selectedPatientData.recordId} />;
         case 'PhysicalExam':
             return <PhysicalExamScreen onBack={handleBack} readOnly={true} patientId={selectedPatientData.patientId.toString()} initialPatientName={selectedPatientData.patientName} admissionDate={selectedPatientData.admissionDate} />;
         case 'MedicalHistory':
@@ -179,6 +179,14 @@ export default function DoctorMainScreen() {
     }
   };
 
+  const isDoctorPatientReadOnlyView = ![
+    'DoctorHome',
+    'DoctorPatients',
+    'DoctorReports',
+    'DoctorUpdates',
+    'DoctorSettings',
+  ].includes(activeTab);
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
       <StatusBar
@@ -188,6 +196,27 @@ export default function DoctorMainScreen() {
       />
       <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
         <View style={{ flex: 1 }}>
+          {isDoctorPatientReadOnlyView && (
+            <TouchableOpacity
+              onPress={handleBack}
+              style={{
+                position: 'absolute',
+                top: 44,
+                left: 26,
+                zIndex: 30,
+                width: 28,
+                height: 28,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Image
+                source={require('@assets/icons/back_arrow.png')}
+                style={{ width: 22, height: 22, tintColor: '#035022' }}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          )}
           {getScreenContent()}
         </View>
       </SafeAreaView>

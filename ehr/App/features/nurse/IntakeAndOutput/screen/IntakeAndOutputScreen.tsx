@@ -130,11 +130,11 @@ const IntakeAndOutputScreen: React.FC<IntakeAndOutputScreenProps> = ({
             }}
           >
             <View style={[styles.header, { marginBottom: 0 }]}>
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, paddingLeft: readOnly ? 18 : 0 }}>
                 <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>
                   Intake and Output
                 </Text>
-                <Text style={styles.subDate}>{currentDate}</Text>
+                {!readOnly && <Text style={styles.subDate}>{currentDate}</Text>}
                 {readOnly && (
                   <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
                     [READ ONLY]

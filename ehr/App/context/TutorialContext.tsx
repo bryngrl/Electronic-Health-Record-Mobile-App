@@ -50,7 +50,7 @@ const defaultSteps: TutorialStep[] = [
     title: 'Add Patient',
     description: 'Register a new patient into the system with their details.',
     position: 'top',
-    route: 'Home',
+    route: 'Register',
   },
 ];
 

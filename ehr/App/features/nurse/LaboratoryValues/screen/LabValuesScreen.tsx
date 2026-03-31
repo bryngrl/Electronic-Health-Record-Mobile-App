@@ -226,15 +226,17 @@ const LabValuesScreen = ({
             }}
           >
             <View style={[styles.header, { marginBottom: 0 }]}>
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, paddingLeft: readOnly ? 18 : 0 }}>
                 <Text style={styles.title}>Laboratory Values</Text>
-                <Text style={styles.dateText}>
-                  {new Date().toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </Text>
+                {!readOnly && (
+                  <Text style={styles.dateText}>
+                    {new Date().toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </Text>
+                )}
                 {readOnly && (
                   <Text
                     style={{

@@ -365,9 +365,9 @@ const MedAdministrationScreen = ({
           }}
         >
           <View style={[styles.header, { marginBottom: 0 }]}>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, paddingLeft: readOnly ? 18 : 0 }}>
               <Text style={styles.title}>Medication {'\n'}Administration</Text>
-              <Text style={styles.dateText}>{formatDate()}</Text>
+              {!readOnly && <Text style={styles.dateText}>{formatDate()}</Text>}
               {readOnly && (
                 <Text
                   style={{

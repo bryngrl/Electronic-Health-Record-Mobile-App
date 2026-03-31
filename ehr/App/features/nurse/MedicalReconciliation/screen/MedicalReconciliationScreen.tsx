@@ -275,9 +275,9 @@ const MedicalReconciliationScreen: React.FC<MedicalReconciliationProps> = ({
         >
           {/* HEADER Section */}
           <View style={[styles.header, { marginBottom: 0 }]}>
-            <View>
+            <View style={readOnly ? { paddingLeft: 18 } : undefined}>
               <Text style={styles.title}>Medical{'\n'}Reconciliation</Text>
-              <Text style={styles.subDate}>{currentDate}</Text>
+              {!readOnly && <Text style={styles.subDate}>{currentDate}</Text>}
               {readOnly && (
                 <Text
                   style={{

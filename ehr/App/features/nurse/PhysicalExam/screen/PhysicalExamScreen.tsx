@@ -100,9 +100,9 @@ const PhysicalExamScreen: React.FC<PhysicalExamProps> = ({ onBack, readOnly = fa
         <View style={{ zIndex: 10 }}>
           <View style={{ paddingHorizontal: 40, backgroundColor: theme.background, paddingBottom: 15 }}>
             <View style={[styles.header, { marginBottom: 0 }]}>
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, paddingLeft: readOnly ? 18 : 0 }}>
                 <Text style={styles.title}>Physical Exam</Text>
-                <Text style={styles.subTitleDate}>{getCurrentDate()}</Text>
+                {!readOnly && <Text style={styles.subTitleDate}>{getCurrentDate()}</Text>}
                 {readOnly && (
                   <Text style={{ fontSize: 14, color: '#E8572A', fontFamily: 'AlteHaasGroteskBold', marginTop: 5 }}>
                     [READ ONLY]

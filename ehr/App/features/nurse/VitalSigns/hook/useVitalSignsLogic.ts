@@ -161,6 +161,7 @@ export const useVitalSignsLogic = () => {
       setExistingRecords(records);
       
       const history: Record<string, Vitals> = {};
+      const dayNoBySlot: Record<string, number> = {};
       const alerts: Record<string, { alert: string | null, severity: string | null, id: number | null }> = {};
       
       let latestSlotIndex = -1;
@@ -178,6 +179,12 @@ export const useVitalSignsLogic = () => {
               bp: rec.bp || '',
               spo2: rec.spo2 || '',
             };
+            if (rec.day_no !== null && rec.day_no !== undefined && rec.day_no !== '') {
+              const parsedDayNo = Number(rec.day_no);
+              if (Number.isFinite(parsedDayNo) && parsedDayNo > 0) {
+                dayNoBySlot[slotLabel] = parsedDayNo;
+              }
+            }
 
             const alertVal = rec.assessment_alert || rec.alert || '';
             const filtered = filterAlertByTime(alertVal, slotLabel);
@@ -226,8 +233,15 @@ export const useVitalSignsLogic = () => {
       const activeTime24 = convertTo24h(activeTime);
       fetchDataAlert(patientId, activeTime24);
 
+      const backendDayNo = dayNoBySlot[activeTime];
+      if (backendDayNo) {
+        setDayNo(backendDayNo);
+      } else {
+        setDayNo(calculateDayNo(admDate));
+      }
+
       if (history[activeTime]) {
-        const currentDayNo = calculateDayNo(admDate);
+        const currentDayNo = backendDayNo || calculateDayNo(admDate);
         const payload = {
           patient_id: parseInt(patientId, 10),
           date: today,
